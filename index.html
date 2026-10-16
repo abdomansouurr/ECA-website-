@@ -6,804 +6,293 @@
   <title>Egypt Chess Academy (ECA) — Full Platform</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            display: ['Cinzel', 'serif'],
-            sans: ['Inter', 'sans-serif'],
-          },
-          colors: {
-            gold: {
-              300: '#f7df8b',
-              400: '#ecc94b',
-              500: '#d4af37',
-              600: '#b89225',
-            },
-            obsidian: {
-              950: '#050507',
-              900: '#0b0b10',
-              800: '#12121a',
-              700: '#1b1b26',
-            }
-          }
-        }
-      }
-    }
-  </script>
   <style>
-    body {
-      background-color: #050507;
-      color: #f3f4f6;
-      font-family: 'Inter', sans-serif;
-      overflow-x: hidden;
-    }
-    .gold-gradient-text {
-      background: linear-gradient(135deg, #fff3c4 0%, #d4af37 50%, #997415 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .gold-border-glow {
-      border: 1px solid rgba(212, 175, 55, 0.28);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-    }
-    .gold-border-glow:hover {
-      border-color: rgba(212, 175, 55, 0.55);
-    }
-    .glass-panel {
-      background: rgba(14, 14, 21, 0.85);
-      backdrop-filter: blur(14px);
-    }
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: #07070a; }
-    ::-webkit-scrollbar-thumb { background: #2c2617; border-radius: 4px; border: 1px solid rgba(212,175,55,0.3); }
+    body { background-color: #050507; color: #f3f4f6; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+    .font-display { font-family: 'Cinzel', serif; }
+    .gold-gradient-text { background: linear-gradient(135deg, #fff3c4 0%, #d4af37 50%, #997415 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .gold-card { background: rgba(14, 14, 21, 0.88); backdrop-filter: blur(12px); border: 1px solid rgba(212, 175, 55, 0.3); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65); }
+    .gold-btn { background: linear-gradient(135deg, #f3d266 0%, #d4af37 100%); color: #050507; font-weight: 700; }
+    .gold-btn:hover { filter: brightness(1.08); }
   </style>
 </head>
-<body class="min-h-screen flex flex-col relative selection:bg-gold-500 selection:text-black">
+<body class="min-h-screen flex flex-col relative">
 
-  <!-- Animated Luxury Background -->
+  <!-- Animated Gold Particles Background -->
   <canvas id="bgCanvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
 
-  <!-- Toast Notification -->
-  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-obsidian-800 border border-gold-500 text-gold-300 px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm font-medium transition-all">
-    <span>♟️</span>
-    <span id="toastMsg">Action completed</span>
-  </div>
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-zinc-900 border border-yellow-500 text-yellow-300 px-5 py-3 rounded-xl shadow-2xl text-sm font-semibold"></div>
 
-  <!-- Parent Secret Password Modal -->
-  <div id="parentLockModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="glass-panel gold-border-glow rounded-2xl max-w-md w-full p-6 relative">
-      <button onclick="closeParentModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
-      <div class="flex items-center gap-3 mb-4">
-        <div class="w-10 h-10 rounded-xl bg-gold-500/20 border border-gold-500/40 flex items-center justify-center text-xl">🔒</div>
-        <div>
-          <h3 class="font-display font-bold text-lg text-gold-400">Parent Confidential Area</h3>
-          <p class="text-xs text-gray-400">بوابة ولي الأمر السرية — أدخل الباسورد الموحد</p>
-        </div>
+  <!-- Parent Password Modal -->
+  <div id="parentModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="gold-card rounded-2xl max-w-md w-full p-6">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-display font-bold text-lg text-yellow-400">🔒 خانة ولي الأمر السرية</h3>
+        <button onclick="closeParentModal()" class="text-gray-400 hover:text-white">✕</button>
       </div>
-      <input id="parentPassInput" type="password" placeholder="Enter Unified Parent Password (ECA-PARENT)" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-gold-400 mb-3" />
-      <p id="parentPassError" class="text-xs text-red-400 mb-3 hidden">❌ الباسورد غير صحيح! (للتجربة استخدم: ECA-PARENT)</p>
+      <p class="text-xs text-gray-400 mb-3">أدخل الباسورد الموحد لأولياء الأمور (للتجربة: <code class="text-yellow-300">ECA-PARENT</code>)</p>
+      <input id="parentPassInp" type="password" placeholder="ECA-PARENT" class="w-full bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white mb-3" />
       <div class="flex justify-end gap-2">
-        <button onclick="closeParentModal()" class="px-4 py-2 rounded-xl text-xs bg-obsidian-700 text-gray-300">Cancel</button>
-        <button onclick="unlockParentNotes()" class="px-5 py-2 rounded-xl text-xs font-bold bg-gold-500 text-black hover:bg-gold-400 transition">Unlock Notes 🔓</button>
+        <button onclick="closeParentModal()" class="px-4 py-2 rounded-xl text-xs bg-zinc-800 text-gray-300">إلغاء</button>
+        <button onclick="confirmParentPass()" class="px-4 py-2 rounded-xl text-xs gold-btn">فتح الملاحظات 🔓</button>
       </div>
     </div>
   </div>
 
-  <!-- Level Up Exam Modal -->
-  <div id="levelTestModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="glass-panel gold-border-glow rounded-2xl max-w-xl w-full p-6 relative">
-      <button onclick="closeLevelTestModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
-      <div id="levelTestContent"></div>
+  <!-- Level Up Test Modal -->
+  <div id="examModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="gold-card rounded-2xl max-w-lg w-full p-6">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-display font-bold text-lg text-yellow-400" id="examTitle">🏆 Level Promotion Test</h3>
+        <button onclick="closeExamModal()" class="text-gray-400 hover:text-white">✕</button>
+      </div>
+      <div id="examBody"></div>
     </div>
   </div>
 
-  <!-- TOP HEADER -->
-  <header class="sticky top-0 z-30 glass-panel border-b border-gold-500/20">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
-      
-      <!-- Clickable Academy Brand (Refreshes/Resets to Home View) -->
-      <div onclick="goHomeRefresh()" class="flex items-center gap-3 cursor-pointer group select-none">
-        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-gold-400 via-gold-500 to-amber-700 flex items-center justify-center text-black font-bold text-2xl shadow-lg group-hover:scale-105 transition">
-          👑
-        </div>
+  <!-- HEADER -->
+  <header class="sticky top-0 z-30 gold-card border-b border-yellow-500/20">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div onclick="goHomeRefresh()" class="flex items-center gap-3 cursor-pointer select-none">
+        <div class="w-11 h-11 rounded-xl gold-btn flex items-center justify-center text-2xl shadow-lg">👑</div>
         <div>
           <div class="flex items-center gap-2">
-            <span class="font-display font-extrabold text-lg md:text-xl tracking-wider gold-gradient-text">EGYPT CHESS ACADEMY</span>
-            <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-gold-500/20 text-gold-300 border border-gold-500/40">ECA</span>
+            <span class="font-display font-extrabold text-lg md:text-xl gold-gradient-text">EGYPT CHESS ACADEMY</span>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/40">ECA</span>
           </div>
-          <p class="text-[11px] text-gray-400">Official Training, Homework & Student Tracking Portal</p>
+          <p class="text-[11px] text-gray-400">Training, Daily Puzzles & Student Follow-Up</p>
         </div>
       </div>
 
-      <!-- Coach Instant Student Search Bar (Visible ONLY to Coaches) -->
-      <div id="coachHeaderSearchWrap" class="hidden flex-1 max-w-md mx-2">
-        <div class="relative">
-          <input id="coachGlobalStudentSearch" oninput="handleCoachHeaderSearch(this.value)" type="text" placeholder="🔍 Search student username or name..." class="w-full bg-obsidian-950/90 border border-gold-500/35 rounded-xl pl-4 pr-24 py-2 text-xs text-white focus:outline-none focus:border-gold-400" />
-          <button onclick="switchTab('coach-tracker')" class="absolute right-1.5 top-1/2 -translate-y-1/2 bg-gold-500 text-black font-bold text-[11px] px-2.5 py-1 rounded-lg hover:bg-gold-400 transition">
-            Follow Up
-          </button>
+      <!-- Coach Search Bar in Header -->
+      <div id="coachSearchBox" class="hidden flex-1 max-w-md mx-2">
+        <div class="relative flex items-center">
+          <input id="coachTopSearch" oninput="coachSearchStudent(this.value)" type="text" placeholder="🔍 Search student username..." class="w-full bg-black/90 border border-yellow-500/40 rounded-xl pl-3 pr-24 py-2 text-xs text-white" />
+          <button onclick="switchTab('tracker')" class="absolute right-1.5 gold-btn text-[11px] px-2.5 py-1 rounded-lg">Follow Up</button>
         </div>
       </div>
 
-      <!-- Navigation & User Controls -->
-      <div class="flex items-center gap-2 flex-wrap" id="headerNavArea">
-        <!-- Rendered Dynamically -->
-      </div>
+      <div id="navButtons" class="flex items-center gap-2 flex-wrap"></div>
     </div>
   </header>
 
-  <!-- MAIN CONTENT CONTAINER -->
-  <main id="appContainer" class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 py-6">
-    <!-- Dynamic Views Render Here -->
+  <!-- MAIN CONTAINER -->
+  <main id="mainView" class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+    <!-- Fallback visible immediately -->
+    <div class="gold-card rounded-2xl p-6 text-center text-yellow-300">جاري تحميل منصة Egypt Chess Academy...</div>
   </main>
 
-  <!-- FOOTER -->
-  <footer class="relative z-10 border-t border-gold-500/15 py-4 text-center text-xs text-gray-500">
-    Egypt Chess Academy (ECA) • Interactive Coaching & Student Curriculum System
-  </footer>
-
   <script>
-    /**************************************************************
-     * 1. FULL OFFICIAL ECA CURRICULUM (STEPS 1 TO 6)
-     **************************************************************/
-    const STEPS_DATA = [
-      {
-        step: 1,
-        title: "Step 1",
-        subtitle: "Fundamentals, Piece Movement, Basic Mate & Tactics",
-        lessons: [
-          { title: "Board and pieces", links: [{ label: "Examples", url: "https://lichess.org/study/jjMNw6GF/wWxeB9BO" }] },
-          { title: "Moves of the pieces", links: [{ label: "Examples", url: "https://lichess.org/study/48k26G0o/gvaJW7s5" }] },
-          { title: "Attacking and taking", links: [{ label: "Examples", url: "https://lichess.org/study/C4BqIzIc/HO9ETmkV" }] },
-          { title: "The pawn", links: [{ label: "Examples", url: "https://lichess.org/study/TCt9XgBc/hgBwh3xP" }] },
-          { title: "Defending", links: [
-            { label: "Examples", url: "https://lichess.org/study/g4ch8UUJ" },
-            { label: "Exercises", url: "https://lichess.org/study/RPFaVRku/LErAf9Dq" }
-          ]},
-          { title: "Check", links: [
-            { label: "Examples", url: "https://lichess.org/study/nHyQinYL/Mlzci7gW" },
-            { label: "Exercises", url: "http://lichess.org/study/LJzsX2Bb/1o4kmKsF" }
-          ]},
-          { title: "Mate (1)", links: [
-            { label: "Exercises 1", url: "https://lichess.org/study/DfeRg74R" },
-            { label: "Exercises 2", url: "https://lichess.org/study/2HFYM7LI/iNAIUMgw" }
-          ]},
-          { title: "Mate (2)", links: [
-            { label: "Exercises 1", url: "https://lichess.org/study/Fk6PprHt" },
-            { label: "Exercises 2", url: "https://lichess.org/study/4dxlu3Qy" },
-            { label: "Exercises 3", url: "https://lichess.org/study/WakS7KEt" }
-          ]},
-          { title: "Castling", links: [
-            { label: "Examples", url: "https://lichess.org/study/Q0mL49LP" },
-            { label: "Exercises", url: "https://lichess.org/study/8XJxZK1c/g0194InP" }
-          ]},
-          { title: "Profitable exchange", links: [
-            { label: "Examples", url: "https://lichess.org/study/91xk9Lw0" },
-            { label: "Exercises", url: "https://lichess.org/study/jDKpfwHS" }
-          ]},
-          { title: "twofold attack", links: [
-            { label: "Examples", url: "https://lichess.org/study/klYbDwK8" },
-            { label: "Exercises 1", url: "https://lichess.org/study/6v9QYu2b" },
-            { label: "Exercises 2", url: "https://lichess.org/study/hs7q4Bey" }
-          ]},
-          { title: "Draw", links: [
-            { label: "Examples", url: "https://lichess.org/study/4L5NDH4W/Ufe7WXKh" }
-          ]}
-        ]
-      },
-      {
-        step: 2,
-        title: "Step 2",
-        subtitle: "Double Attack, The Pin, Eliminating Defence & Golden Rules",
-        lessons: [
-          { title: "Targets of attack", links: [
-            { label: "Examples", url: "https://lichess.org/study/3zmfaxGz/TTSEXL79" },
-            { label: "Exercises 1", url: "https://lichess.org/study/TGj12BIr/sWXMbVBp" },
-            { label: "2-", url: "https://lichess.org/study/Xm0oBMLW" }
-          ]},
-          { title: "Double attack: queen (1)", links: [
-            { label: "Exercise 1", url: "https://lichess.org/study/tqJOzF9p" },
-            { label: "Exercise 2", url: "https://lichess.org/study/zTSQXHWV" }
-          ]},
-          { title: "Double attack: queen (2)", links: [
-            { label: "Exercise 1", url: "https://lichess.org/study/KkMcTebd" },
-            { label: "Exercise 2", url: "https://lichess.org/study/zWSgnN2h" }
-          ]},
-          { title: "4-The pin", links: [
-            { label: "Examples", url: "https://lichess.org/study/TwRHuPGZ/15bNAErP" },
-            { label: "Exercises 1", url: "https://lichess.org/study/Qzhw3D8K/kl8QnDY0" },
-            { label: "Exercises 2", url: "https://lichess.org/study/JjvX9r45/Ys2KRHKU" },
-            { label: "Exercises 3", url: "https://lichess.org/study/v6l4lLFw/LralQmQS" }
-          ]},
-          { title: "5-Eliminating of defence", links: [
-            { label: "Examples", url: "https://lichess.org/study/gjaexjSM/XtAJvCWZ" },
-            { label: "Exercises", url: "https://lichess.org/study/yZMV5JdY/9HFnCNVx" }
-          ]},
-          { title: "The 3 golden rules", links: [
-            { label: "Examples", url: "https://lichess.org/study/0DeojSlO/OnyeZ0QY" },
-            { label: "Exercises", url: "https://lichess.org/study/Tv5Q4AGE/JWFraj6A" }
-          ]},
-          { title: "Mate in two", links: [
-            { label: "Exercise 1", url: "https://lichess.org/study/CYeNq3NN/6M0m2KUg" },
-            { label: "Exercise 2", url: "https://lichess.org/study/THHzDa1N/C9EZ0z5O" }
-          ]},
-          { title: "Double attack: knight", links: [
-            { label: "Exercises 1", url: "https://lichess.org/study/e8U4ZMuQ/8OFL9uo8" },
-            { label: "Exercises 2", url: "https://lichess.org/study/otSMJjwH/pIwu0ivp" }
-          ]},
-          { title: "Mating with the rook", links: [
-            { label: "Exercises", url: "https://lichess.org/study/zAGZus6e/5AJW3cs7" }
-          ]},
-          { title: "Double attack: Rook , bishop , pawn , king", links: [
-            { label: "Exercises", url: "https://lichess.org/study/whl4X0Vy/BPFGoXvj" }
-          ]},
-          { title: "Double attack : cooperation of two pieces", links: [
-            { label: "Exercise", url: "https://lichess.org/study/ZOdpD9Ly/O9zAPm3h" }
-          ]},
-          { title: "Discovered attack", links: [
-            { label: "Examples", url: "https://lichess.org/study/b00xkEzU/kKJEEqWR" },
-            { label: "Exercises 1", url: "https://lichess.org/study/u8w4QQht/n5EcgyIX" },
-            { label: "Exercises 2", url: "https://lichess.org/study/a5Q2Twk2/dP4F5lD9" }
-          ]},
-          { title: "Defending against mate", links: [
-            { label: "Examples", url: "https://lichess.org/study/2UEfJLEz/EFD3xymZ" },
-            { label: "Exercises", url: "https://lichess.org/study/8YoxQqtw/3I15qJzf" }
-          ]},
-          { title: "Short notation", links: [
-            { label: "Exercises 1", url: "https://lichess.org/study/ZZTnIekD/MiN0jOS1" },
-            { label: "Exercises 2", url: "https://lichess.org/study/45BAOetX/K6P3Lz1b" },
-            { label: "Exercises 3", url: "https://lichess.org/study/9G0jITgq" }
-          ]}
-        ]
-      },
-      {
-        step: 3,
-        title: "Step 3",
-        subtitle: "Discovered Check, X-Ray, Key Squares & Advanced Pin",
-        lessons: [
-          { title: "Discovered and double check (step 3)", links: [{ label: "Study", url: "https://lichess.org/study/srYNhk2o" }] },
-          { title: "Attack on a pinned piece (step 3)", links: [
-            { label: "Examples", url: "https://lichess.org/study/aUODKeM7" },
-            { label: "Exercises", url: "https://lichess.org/study/R7MF7lb4" }
-          ]},
-          { title: "Access and mating pattern ( step 3)", links: [{ label: "Study", url: "https://lichess.org/study/LdwLPyPK" }] },
-          { title: "The square of the pawn (step 3)", links: [
-            { label: "Examples", url: "https://lichess.org/study/TGs1ej3b" },
-            { label: "Exercises", url: "https://lichess.org/study/oZ0xi9dr" }
-          ]},
-          { title: "Elimination of the defence (step 3)", links: [
-            { label: "examples", url: "https://lichess.org/study/dPGoFdbD/vGIxjsGO" },
-            { label: "exercises", url: "https://lichess.org/study/xrekdf0f/RCd5Ztfm" }
-          ]},
-          { title: "defending against the double attack (step 3)", links: [{ label: "Study", url: "https://lichess.org/study/Vh0XG74a/WmCoeGe5" }] },
-          { title: "draw (step 3)", links: [{ label: "Study", url: "https://lichess.org/study/OWsq2BB6/Us22qb9A" }] },
-          { title: "X-Ray (step 3)", links: [{ label: "Study", url: "https://lichess.org/study/2SV6ZvX7/06csTyjJ" }] },
-          { title: "defending against the pin (step 3)", links: [
-            { label: "examples", url: "https://lichess.org/study/cZTwQ7qz/s9y7sUZn" },
-            { label: "exercises", url: "https://lichess.org/study/dMXnI1aK" }
-          ]},
-          { title: "mobility (step 3)", links: [{ label: "Study", url: "https://lichess.org/study/mSAOaeqN/eYak86eR" }] },
-          { title: "key squares ( step 3)", links: [
-            { label: "examples", url: "https://lichess.org/study/tfuHXokW/zqOhzIRG" },
-            { label: "marking the key squares", url: "https://lichess.org/study/61A3DAAj/1yrdSgdh" },
-            { label: "exercises", url: "https://lichess.org/study/kP7xaVHA/irKTLPXb" }
-          ]},
-          { title: "pinned piece is not a good defender (step3)", links: [
-            { label: "mate thanks to a pin", url: "https://lichess.org/study/Nm6Air3f/pSHbbNIB" },
-            { label: "exercises 1", url: "https://lichess.org/study/zjRi4eGw/TwqdeoJ7" },
-            { label: "exercises 2", url: "https://lichess.org/study/x1vTVIn2/IKdbD71Q" }
-          ]}
-        ]
-      },
-      {
-        step: 4,
-        title: "Step 4",
-        subtitle: "Interference, Luring, Blocking, Passed Pawns & 7th Rank",
-        lessons: [
-          { title: "Elimination of the defence interference", links: [{ label: "Exercises", url: "https://lichess.org/study/t5pXfLox/34DdnZYk" }] },
-          { title: "Double attack : luring", links: [{ label: "Examples & Exercises", url: "https://lichess.org/study/6BtkIYoH/jyX4KueF" }] },
-          { title: "Elimination of the defence : blocking", links: [{ label: "Examples & Exercises", url: "https://lichess.org/study/Gwg29Hxj/Y6li8kPN" }] },
-          { title: "Pin: placing the front and back piece", links: [{ label: "Examples & Exercises", url: "https://lichess.org/study/t1PGCxRF" }] },
-          { title: "The passed pawn", links: [{ label: "Exercises", url: "https://lichess.org/study/pibm2ud9/lDYc6ebt" }] },
-          { title: "Defending against the passed pawn", links: [{ label: "Study", url: "https://lichess.org/study/wrm58f4j/ZnUsBj0n" }] },
-          { title: "Double attack : Elimination of the defence", links: [{ label: "Exercises", url: "https://lichess.org/study/uNWgETUd/XtI3rvDK" }] },
-          { title: "The magnet", links: [{ label: "Exercises", url: "https://lichess.org/study/HDoz7iiZ/jtw6t01P" }] },
-          { title: "Weak pawns", links: [{ label: "Study", url: "https://lichess.org/study/pvepHzju/NzJust3T" }] },
-          { title: "MIX", links: [{ label: "Study", url: "https://lichess.org/study/Vslcoxz5/4s1QtXma" }] },
-          { title: "Material advantage", links: [{ label: "Study", url: "https://lichess.org/study/zz7pwo79/NNBE4uIt" }] },
-          { title: "Double attack : chasing and aiming", links: [{ label: "Exercises", url: "https://lichess.org/study/eo7JyYza/ka7GUiIW" }] },
-          { title: "Attacking the castled king", links: [{ label: "Study", url: "https://lichess.org/study/C1bi0HTS/HtyfEmM3" }] },
-          { title: "The seventh rank", links: [
-            { label: "Examples", url: "https://lichess.org/study/mDeK8pb5/EySaljms" },
-            { label: "Exercises 1", url: "https://lichess.org/study/9rPWgIfk" },
-            { label: "Exercises 2", url: "https://lichess.org/study/7ojMv2O2" }
-          ]},
-          { title: "Strategy in pawn endings", links: [{ label: "Exercise", url: "https://lichess.org/study/MTh6EjHF/8TaknmFZ" }] },
-          { title: "MIX G", links: [{ label: "Study", url: "https://lichess.org/study/1Joelo2c" }] },
-          { title: "Double attack : clearing", links: [
-            { label: "1-", url: "https://lichess.org/study/zfXowIhD" },
-            { label: "Study 2", url: "https://lichess.org/study/WQZY2uhR" }
-          ]},
-          { title: "Queen against pawn", links: [
-            { label: "Examples", url: "https://lichess.org/study/MlayR9Ye/Z0O4m2k6" },
-            { label: "Exercises", url: "https://lichess.org/study/HyE8ZFrO" }
-          ]}
-        ]
-      },
-      {
-        step: 5,
-        title: "Step 5",
-        subtitle: "Advanced Tactical Mastery & Endgame Technique",
-        lessons: []
-      },
-      {
-        step: 6,
-        title: "Step 6",
-        subtitle: "Mastery Calculation & Tournament Strategy",
-        lessons: []
-      }
+    // 1. ALL STEPS CURRICULUM[cite: 1, 2, 3, 4, 5]
+    const STEPS = [
+      { step: 1, title: "Step 1", sub: "Fundamentals, Piece Moves, Check & Mate", lessons: [
+        { t: "Board and pieces", l: [["Examples", "https://lichess.org/study/jjMNw6GF/wWxeB9BO"]] },
+        { t: "Moves of the pieces", l: [["Examples", "https://lichess.org/study/48k26G0o/gvaJW7s5"]] },
+        { t: "Attacking and taking", l: [["Examples", "https://lichess.org/study/C4BqIzIc/HO9ETmkV"]] },
+        { t: "The pawn", l: [["Examples", "https://lichess.org/study/TCt9XgBc/hgBwh3xP"]] },
+        { t: "Defending", l: [["Examples", "https://lichess.org/study/g4ch8UUJ"], ["Exercises", "https://lichess.org/study/RPFaVRku/LErAf9Dq"]] },
+        { t: "Check", l: [["Examples", "https://lichess.org/study/nHyQinYL/Mlzci7gW"], ["Exercises", "http://lichess.org/study/LJzsX2Bb/1o4kmKsF"]] },
+        { t: "Mate (1)", l: [["Exercises 1", "https://lichess.org/study/DfeRg74R"], ["Exercises 2", "https://lichess.org/study/2HFYM7LI/iNAIUMgw"]] },
+        { t: "Mate (2)", l: [["Exercises 1", "https://lichess.org/study/Fk6PprHt"], ["Exercises 2", "https://lichess.org/study/4dxlu3Qy"], ["Exercises 3", "https://lichess.org/study/WakS7KEt"]] },
+        { t: "Castling", l: [["Examples", "https://lichess.org/study/Q0mL49LP"], ["Exercises", "https://lichess.org/study/8XJxZK1c/g0194InP"]] },
+        { t: "Profitable exchange", l: [["Examples", "https://lichess.org/study/91xk9Lw0"], ["Exercises", "https://lichess.org/study/jDKpfwHS"]] },
+        { t: "twofold attack", l: [["Examples", "https://lichess.org/study/klYbDwK8"], ["Exercises 1", "https://lichess.org/study/6v9QYu2b"], ["Exercises 2", "https://lichess.org/study/hs7q4Bey"]] },
+        { t: "Draw", l: [["Examples", "https://lichess.org/study/4L5NDH4W/Ufe7WXKh"]] }
+      ]},
+      { step: 2, title: "Step 2", sub: "Double Attack, The Pin, Eliminating Defence & Golden Rules", lessons: [
+        { t: "Targets of attack", l: [["Examples", "https://lichess.org/study/3zmfaxGz/TTSEXL79"], ["Exercises 1", "https://lichess.org/study/TGj12BIr/sWXMbVBp"], ["2-", "https://lichess.org/study/Xm0oBMLW"]] },
+        { t: "Double attack: queen (1)", l: [["Exercise 1", "https://lichess.org/study/tqJOzF9p"], ["Exercise 2", "https://lichess.org/study/zTSQXHWV"]] },
+        { t: "Double attack: queen (2)", l: [["Exercise 1", "https://lichess.org/study/KkMcTebd"], ["Exercise 2", "https://lichess.org/study/zWSgnN2h"]] },
+        { t: "4-The pin", l: [["Examples", "https://lichess.org/study/TwRHuPGZ/15bNAErP"], ["Exercises 1", "https://lichess.org/study/Qzhw3D8K/kl8QnDY0"], ["Exercises 2", "https://lichess.org/study/JjvX9r45/Ys2KRHKU"], ["Exercises 3", "https://lichess.org/study/v6l4lLFw/LralQmQS"]] },
+        { t: "5-Eliminating of defence", l: [["Examples", "https://lichess.org/study/gjaexjSM/XtAJvCWZ"], ["Exercises", "https://lichess.org/study/yZMV5JdY/9HFnCNVx"]] },
+        { t: "The 3 golden rules", l: [["Examples", "https://lichess.org/study/0DeojSlO/OnyeZ0QY"], ["Exercises", "https://lichess.org/study/Tv5Q4AGE/JWFraj6A"]] },
+        { t: "Mate in two", l: [["Exercise 1", "https://lichess.org/study/CYeNq3NN/6M0m2KUg"], ["Exercise 2", "https://lichess.org/study/THHzDa1N/C9EZ0z5O"]] },
+        { t: "Double attack: knight", l: [["Exercises 1", "https://lichess.org/study/e8U4ZMuQ/8OFL9uo8"], ["Exercises 2", "https://lichess.org/study/otSMJjwH/pIwu0ivp"]] },
+        { t: "Mating with the rook", l: [["Exercises", "https://lichess.org/study/zAGZus6e/5AJW3cs7"]] },
+        { t: "Double attack: Rook , bishop , pawn , king", l: [["Exercises", "https://lichess.org/study/whl4X0Vy/BPFGoXvj"]] },
+        { t: "Double attack : cooperation of two pieces", l: [["Exercise", "https://lichess.org/study/ZOdpD9Ly/O9zAPm3h"]] },
+        { t: "Discovered attack", l: [["Examples", "https://lichess.org/study/b00xkEzU/kKJEEqWR"], ["Exercises 1", "https://lichess.org/study/u8w4QQht/n5EcgyIX"], ["Exercises 2", "https://lichess.org/study/a5Q2Twk2/dP4F5lD9"]] },
+        { t: "Defending against mate", l: [["Examples", "https://lichess.org/study/2UEfJLEz/EFD3xymZ"], ["Exercises", "https://lichess.org/study/8YoxQqtw/3I15qJzf"]] },
+        { t: "Short notation", l: [["Exercises 1", "https://lichess.org/study/ZZTnIekD/MiN0jOS1"], ["Exercises 2", "https://lichess.org/study/45BAOetX/K6P3Lz1b"], ["Exercises 3", "https://lichess.org/study/9G0jITgq"]] }
+      ]},
+      { step: 3, title: "Step 3", sub: "Discovered Check, X-Ray, Key Squares & Pin", lessons: [
+        { t: "Discovered and double check (step 3)", l: [["Study", "https://lichess.org/study/srYNhk2o"]] },
+        { t: "Attack on a pinned piece (step 3)", l: [["Examples", "https://lichess.org/study/aUODKeM7"], ["Exercises", "https://lichess.org/study/R7MF7lb4"]] },
+        { t: "Access and mating pattern ( step 3)", l: [["Study", "https://lichess.org/study/LdwLPyPK"]] },
+        { t: "The square of the pawn (step 3)", l: [["Examples", "https://lichess.org/study/TGs1ej3b"], ["Exercises", "https://lichess.org/study/oZ0xi9dr"]] },
+        { t: "Elimination of the defence (step 3)", l: [["examples", "https://lichess.org/study/dPGoFdbD/vGIxjsGO"], ["exercises", "https://lichess.org/study/xrekdf0f/RCd5Ztfm"]] },
+        { t: "defending against the double attack (step 3)", l: [["Study", "https://lichess.org/study/Vh0XG74a/WmCoeGe5"]] },
+        { t: "draw (step 3)", l: [["Study", "https://lichess.org/study/OWsq2BB6/Us22qb9A"]] },
+        { t: "X-Ray (step 3)", l: [["Study", "https://lichess.org/study/2SV6ZvX7/06csTyjJ"]] },
+        { t: "defending against the pin (step 3)", l: [["examples", "https://lichess.org/study/cZTwQ7qz/s9y7sUZn"], ["exercises", "https://lichess.org/study/dMXnI1aK"]] },
+        { t: "mobility (step 3)", l: [["Study", "https://lichess.org/study/mSAOaeqN/eYak86eR"]] },
+        { t: "key squares ( step 3)", l: [["examples", "https://lichess.org/study/tfuHXokW/zqOhzIRG"], ["marking the key squares", "https://lichess.org/study/61A3DAAj/1yrdSgdh"], ["exercises", "https://lichess.org/study/kP7xaVHA/irKTLPXb"]] },
+        { t: "pinned piece is not a good defender (step3)", l: [["mate thanks to a pin", "https://lichess.org/study/Nm6Air3f/pSHbbNIB"], ["exercises 1", "https://lichess.org/study/zjRi4eGw/TwqdeoJ7"], ["exercises 2", "https://lichess.org/study/x1vTVIn2/IKdbD71Q"]] }
+      ]},
+      { step: 4, title: "Step 4", sub: "Interference, Luring, Blocking, Passed Pawns & 7th Rank", lessons: [
+        { t: "Elimination of the defence interference", l: [["Exercises", "https://lichess.org/study/t5pXfLox/34DdnZYk"]] },
+        { t: "Double attack : luring", l: [["Examples & Exercises", "https://lichess.org/study/6BtkIYoH/jyX4KueF"]] },
+        { t: "Elimination of the defence : blocking", l: [["Examples & Exercises", "https://lichess.org/study/Gwg29Hxj/Y6li8kPN"]] },
+        { t: "Pin: placing the front and back piece", l: [["Examples & Exercises", "https://lichess.org/study/t1PGCxRF"]] },
+        { t: "The passed pawn", l: [["Exercises", "https://lichess.org/study/pibm2ud9/lDYc6ebt"]] },
+        { t: "Defending against the passed pawn", l: [["Study", "https://lichess.org/study/wrm58f4j/ZnUsBj0n"]] },
+        { t: "Double attack : Elimination of the defence", l: [["Exercises", "https://lichess.org/study/uNWgETUd/XtI3rvDK"]] },
+        { t: "The magnet", l: [["Exercises", "https://lichess.org/study/HDoz7iiZ/jtw6t01P"]] },
+        { t: "Weak pawns", l: [["Study", "https://lichess.org/study/pvepHzju/NzJust3T"]] },
+        { t: "MIX", l: [["Study", "https://lichess.org/study/Vslcoxz5/4s1QtXma"]] },
+        { t: "Material advantage", l: [["Study", "https://lichess.org/study/zz7pwo79/NNBE4uIt"]] },
+        { t: "Double attack : chasing and aiming", l: [["Exercises", "https://lichess.org/study/eo7JyYza/ka7GUiIW"]] },
+        { t: "Attacking the castled king", l: [["Study", "https://lichess.org/study/C1bi0HTS/HtyfEmM3"]] },
+        { t: "The seventh rank", l: [["Examples", "https://lichess.org/study/mDeK8pb5/EySaljms"], ["Exercises 1", "https://lichess.org/study/9rPWgIfk"], ["Exercises 2", "https://lichess.org/study/7ojMv2O2"]] },
+        { t: "Strategy in pawn endings", l: [["Exercise", "https://lichess.org/study/MTh6EjHF/8TaknmFZ"]] },
+        { t: "MIX G", l: [["Study", "https://lichess.org/study/1Joelo2c"]] },
+        { t: "Double attack : clearing", l: [["1-", "https://lichess.org/study/zfXowIhD"], ["Study 2", "https://lichess.org/study/WQZY2uhR"]] },
+        { t: "Queen against pawn", l: [["Examples", "https://lichess.org/study/MlayR9Ye/Z0O4m2k6"], ["Exercises", "https://lichess.org/study/HyE8ZFrO"]] }
+      ]},
+      { step: 5, title: "Step 5", sub: "Coming Soon", lessons: [] },
+      { step: 6, title: "Step 6", sub: "Coming Soon", lessons: [] }
     ];
 
-    /**************************************************************
-     * 2. DAILY PUZZLES & LEVEL EXAMS PER STEP
-     **************************************************************/
-    const DAILY_PUZZLES_BY_STEP = {
-      1: {
-        title: "Step 1 Daily Puzzle — Mate in 1",
-        prompt: "White to move: Black's King is on g8 behind f7-g7-h7 pawns, and White's Rook is on e1. What is the winning move?",
-        boardHint: "♔g8 | ♟f7,g7,h7 vs ♖e1, ♔g1",
-        options: ["Re8# (Back-rank Mate)", "Re7", "Kf1", "Rf1"],
-        correctIndex: 0,
-        lichessUrl: "https://lichess.org/study/DfeRg74R"
-      },
-      2: {
-        title: "Step 2 Daily Puzzle — Royal Knight Fork",
-        prompt: "White's Knight is on d5. Black's King is on e8 and Queen is on a8. Which move wins the Queen via a Double Attack?",
-        boardHint: "♘d5 vs ♚e8, ♛a8",
-        options: ["Nc7+ (Forking King & Queen)", "Nb6", "Ne7+", "Nf6+"],
-        correctIndex: 0,
-        lichessUrl: "https://lichess.org/study/e8U4ZMuQ/8OFL9uo8"
-      },
-      3: {
-        title: "Step 3 Daily Puzzle — Attacking the Pinned Piece",
-        prompt: "Black's Knight on f6 is pinned to the King on e8 by White's Bishop on g5. How should White increase pressure?",
-        boardHint: "♗g5 pinning ♞f6 to ♚e8",
-        options: ["Nd5 (Adding another attacker on f6)", "Bxf6 immediately", "Bc1", "h3"],
-        correctIndex: 0,
-        lichessUrl: "https://lichess.org/study/aUODKeM7"
-      },
-      4: {
-        title: "Step 4 Daily Puzzle — The Magnet Combination",
-        prompt: "White sacrifices on h7 (Bxh7+ Kxh7) to draw the Black King onto an open file for Qd3+ and Rh1#. What is this theme called?",
-        boardHint: "Attracting the King to a vulnerable square",
-        options: ["The Magnet / Luring", "Stalemate Defense", "Pawn Square Rule", "Castling"],
-        correctIndex: 0,
-        lichessUrl: "https://lichess.org/study/HDoz7iiZ/jtw6t01P"
-      },
-      5: {
-        title: "Step 5 Daily Puzzle — Advanced Interference",
-        prompt: "Cut the communication between two defending rooks on the d-file to force checkmate.",
-        boardHint: "Tactical Interference",
-        options: ["Nd5! (Interference)", "Kh1", "a4", "Rb1"],
-        correctIndex: 0,
-        lichessUrl: "https://lichess.org/training"
-      },
-      6: {
-        title: "Step 6 Daily Puzzle — Master Calculation",
-        prompt: "Evaluate the deep queen sacrifice leading to a forced 4-move mating net.",
-        boardHint: "Calculation & Mating Net",
-        options: ["Qxh7+! followed by Rh3#", "Qe2", "Rad1", "h4"],
-        correctIndex: 0,
-        lichessUrl: "https://lichess.org/training"
-      }
+    const PUZZLES = {
+      1: { q: "White to move: Black King on g8 trapped behind f7,g7,h7 pawns. White Rook on e1. Winning move?", opts: ["Re8# (Checkmate)", "Rf1", "Kf1"], ans: 0, url: "https://lichess.org/study/DfeRg74R" },
+      2: { q: "White Knight on d5, Black King on e8 and Queen on a8. Best Double Attack?", opts: ["Nc7+ (Forking King & Queen)", "Nb6", "Ne3"], ans: 0, url: "https://lichess.org/study/e8U4ZMuQ/8OFL9uo8" },
+      3: { q: "Black Knight on f6 is pinned to King on e8 by White Bishop on g5. Best plan?", opts: ["Nd5 (Attack the pinned piece)", "Retreat Bishop", "Push a3"], ans: 0, url: "https://lichess.org/study/aUODKeM7" },
+      4: { q: "Sacrificing on h7 (Bxh7+ Kxh7) to pull the King to an open line is called:", opts: ["The Magnet / Luring", "Stalemate", "Castling"], ans: 0, url: "https://lichess.org/study/HDoz7iiZ/jtw6t01P" },
+      5: { q: "Step 5 Daily Tactical Puzzle: Cut communication between defending Rooks.", opts: ["Nd5! (Interference)", "Kh1", "Rb1"], ans: 0, url: "https://lichess.org/training" },
+      6: { q: "Step 6 Master Calculation Puzzle: Find the 4-move forced mating net.", opts: ["Qxh7+! followed by Rh3#", "Qe2", "h4"], ans: 0, url: "https://lichess.org/training" }
     };
 
-    const LEVEL_EXAM_QUESTIONS = {
-      1: [
-        { q: "1. Which move delivers a back-rank checkmate when the opponent's King is trapped behind its own pawns?", options: ["Rook to the 8th rank (Re8#)", "Moving a random pawn", "King to f2"], ans: 0 },
-        { q: "2. When your King is in Check, which of the following is NOT one of the 3 legal ways out?", options: ["Capture the attacker", "Block the check", "Ignore the check and capture another piece"], ans: 2 },
-        { q: "3. If you trade a Knight (3 pts) for a Rook (5 pts), what is that called?", options: ["Profitable Exchange", "Blunder", "Draw"], ans: 0 }
+    const DB_KEY = "ECA_PLATFORM_V2";
+    let db = JSON.parse(localStorage.getItem(DB_KEY) || "null") || {
+      users: [
+        { id: "c1", name: "Coach Abdelrahman", username: "coach_abdo", email: "coach@eca.com", pass: "123456", role: "coach" },
+        { id: "s1", name: "Omar Khaled", username: "omar_chess", email: "omar@eca.com", pass: "123456", role: "student", level: 2, group: "Tuesday 6 PM - Step 2", att: { "2-0": true, "2-1": true, "2-2": true }, hw: { "2-0": true, "2-1": true }, puz: { t: 10, c: 9 }, note: "عمر مستواه ممتاز جداً في التكتيك ومركز في السيشن، محتاج بس يواظب على اللغز اليومي." },
+        { id: "s2", name: "Youssef Ahmed", username: "youssef_eca", email: "youssef@eca.com", pass: "123456", role: "student", level: 1, group: "Friday 4 PM - Step 1", att: { "1-0": true, "1-1": true, "1-2": true, "1-3": true }, hw: { "1-0": true, "1-1": true }, puz: { t: 8, c: 5 }, note: "يوسف شاطر بس محتاج يهدى قبل النقلة وميتسرعش." }
       ],
-      2: [
-        { q: "1. What are the 3 Golden Rules in the opening?", options: ["Control center, develop pieces, castle King", "Move Queen early, push flank pawns, don't castle", "Move the same knight 4 times"], ans: 0 },
-        { q: "2. When a Bishop attacks a Knight that cannot move because the King is behind it, what is this called?", options: ["Absolute Pin", "Zugzwang", "En Passant"], ans: 0 },
-        { q: "3. If a Queen guards a Rook and you capture or chase away the Queen first, what tactic did you use?", options: ["Eliminating of Defence", "Stalemate", "Short Notation"], ans: 0 }
-      ],
-      3: [
-        { q: "1. When a piece moves and uncovers a check from BOTH the moving piece and the piece behind it, what is it?", options: ["Double Check", "Pin", "Draw"], ans: 0 },
-        { q: "2. What is the only way for a King to defend against a Double Check?", options: ["The King MUST move", "Block both checks", "Capture both attackers"], ans: 0 },
-        { q: "3. How do we quickly tell if a King can catch an unopposed passed pawn?", options: ["The Rule of the Square", "Counting all 64 squares", "Asking the arbiter"], ans: 0 }
-      ],
-      4: [
-        { q: "1. Placing a piece between an enemy defender and the square it defends is called:", options: ["Interference / Blocking", "Fork", "Perpetual Check"], ans: 0 },
-        { q: "2. Forcing an enemy piece onto a bad square by sacrificing material is known as:", options: ["Luring / The Magnet", "Weak Pawns", "Castling"], ans: 0 },
-        { q: "3. Why are two Rooks on the 7th rank ('Pigs on the 7th') so strong?", options: ["They trap the enemy King and attack base pawns", "They can promote into Queens", "They cannot be captured"], ans: 0 }
-      ]
+      groups: ["Tuesday 6 PM - Step 2", "Friday 4 PM - Step 1", "Tournament Team"],
+      currId: null
     };
 
-    /**************************************************************
-     * 3. STATE MANAGEMENT & LOCAL DATABASE (SIMULATED CLOUD DB)
-     **************************************************************/
-    const STORAGE_KEY = "ECA_FULL_PLATFORM_DB_V1";
-    const COACH_SECRET_CODE = "ECA2026";
-    const UNIFIED_PARENT_PASS = "ECA-PARENT";
+    let tab = "home", authMode = "login", signupRole = "student", selStuId = "s1", grpFilter = "ALL", searchQ = "", parentQ = "omar_chess", unlockedStuId = null, openSteps = { 1: true, 2: true, 3: false, 4: false, 5: false, 6: false };
 
-    function getDefaultDB() {
-      return {
-        users: [
-          {
-            id: "u_coach_1",
-            name: "Coach Abdelrahman",
-            username: "coach_abdo",
-            email: "coach@eca.com",
-            password: "123456",
-            role: "coach"
-          },
-          {
-            id: "u_stu_1",
-            name: "Omar Khaled",
-            username: "omar_chess",
-            email: "omar@eca.com",
-            password: "123456",
-            role: "student",
-            level: 2,
-            group: "Tuesday 6 PM - Step 2",
-            attendedLessons: { "2-0": true, "2-1": true, "2-2": true, "2-3": true },
-            homeworkDone: { "2-0": true, "2-1": true, "2-2": true },
-            puzzleStats: { attempts: 10, correct: 9, lastSolvedDate: "" },
-            parentSecretNote: "عمر مستواه ممتاز جداً في التكتيك ومركز في السيشن، محتاج بس يحل الـ Daily Puzzle بانتظام قبل معاد يوم الثلاثاء."
-          },
-          {
-            id: "u_stu_2",
-            name: "Youssef Ahmed",
-            username: "youssef_eca",
-            email: "youssef@eca.com",
-            password: "123456",
-            role: "student",
-            level: 1,
-            group: "Friday 4 PM - Step 1",
-            attendedLessons: { "1-0": true, "1-1": true, "1-2": true, "1-3": true, "1-4": true, "1-5": true },
-            homeworkDone: { "1-0": true, "1-1": true, "1-2": true, "1-3": true },
-            puzzleStats: { attempts: 8, correct: 5, lastSolvedDate: "" },
-            parentSecretNote: "يوسف شاطر جداً بس بيتسرع في النقلات ومحتاج يراجع درس الـ Check قبل الواجب."
-          },
-          {
-            id: "u_stu_3",
-            name: "Salma Tarek",
-            username: "salma_queen",
-            email: "salma@eca.com",
-            password: "123456",
-            role: "student",
-            level: 3,
-            group: "Tuesday 6 PM - Step 2",
-            attendedLessons: { "3-0": true, "3-1": true },
-            homeworkDone: { "3-0": true },
-            puzzleStats: { attempts: 6, correct: 2, lastSolvedDate: "" },
-            parentSecretNote: "سلمى محتاجة تحل الواجبات في معادها عشان ترفع نسبة الدقة في المستوى التالت."
-          }
-        ],
-        groups: [
-          "Tuesday 6 PM - Step 2",
-          "Friday 4 PM - Step 1",
-          "Elite Tournament Group"
-        ],
-        currentUserId: null
-      };
+    function save() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+    function currUser() { return db.users.find(u => u.id === db.currId) || null; }
+    function toast(m) { const el = document.getElementById("toast"); el.textContent = m; el.classList.remove("hidden"); setTimeout(() => el.classList.add("hidden"), 2800); }
+    function switchTab(t) { tab = t; render(); }
+    function goHomeRefresh() { tab = "home"; render(); }
+
+    function calcStats(stu) {
+      const st = STEPS.find(x => x.step === Number(stu.level)) || STEPS[0];
+      const total = st.lessons.length || 1;
+      let attC = 0, hwC = 0, nextIdx = -1;
+      st.lessons.forEach((_, i) => {
+        const k = stu.level + "-" + i;
+        if (stu.att && stu.att[k]) attC++; else if (nextIdx === -1) nextIdx = i;
+        if (stu.hw && stu.hw[k]) hwC++;
+      });
+      const rem = Math.max(0, total - attC);
+      const attP = Math.round((attC / total) * 100);
+      const hwP = Math.round((hwC / total) * 100);
+      const puzP = stu.puz && stu.puz.t > 0 ? Math.round((stu.puz.c / stu.puz.t) * 100) : 100;
+      const overall = Math.round(attP * 0.45 + hwP * 0.35 + puzP * 0.2);
+      let evalText = "مقبول 💪", evalCls = "bg-amber-500/20 text-amber-300 border-amber-500/40";
+      if (overall >= 80) { evalText = "ممتاز / عبقري 🌟👑"; evalCls = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"; }
+      else if (overall >= 50) { evalText = "رائع 👏✨"; evalCls = "bg-yellow-500/20 text-yellow-300 border-yellow-500/40"; }
+      return { st, total, attC, hwC, rem, attP, hwP, puzP, overall, evalText, evalCls, nextLesson: nextIdx !== -1 ? st.lessons[nextIdx] : null, nextIdx };
     }
 
-    let db = loadDB();
-    let activeTab = "home"; // 'home' | 'lessons' | 'coach-tracker' | 'parent-dashboard'
-    let authMode = "login"; // 'login' | 'signup'
-    let selectedRoleForSignup = "student";
-    let coachSelectedStudentId = "u_stu_1";
-    let coachSelectedGroupFilter = "ALL";
-    let coachSearchQuery = "";
-    let parentSearchQuery = "omar_chess";
-    let unlockedParentForStudentId = null;
-    let openStepAccordions = { 1: true, 2: false, 3: false, 4: false, 5: false, 6: false };
+    function render() {
+      const u = currUser();
+      const nav = document.getElementById("navButtons");
+      const cSearch = document.getElementById("coachSearchBox");
+      const main = document.getElementById("mainView");
 
-    function loadDB() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) {
-          const def = getDefaultDB();
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(def));
-          return def;
-        }
-        return JSON.parse(raw);
-      } catch (e) {
-        return getDefaultDB();
-      }
-    }
-
-    function saveDB() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-    }
-
-    function getCurrentUser() {
-      if (!db.currentUserId) return null;
-      return db.users.find(u => u.id === db.currentUserId) || null;
-    }
-
-    function showToast(msg) {
-      const t = document.getElementById("toast");
-      document.getElementById("toastMsg").textContent = msg;
-      t.classList.remove("hidden");
-      clearTimeout(window.__toastTimer);
-      window.__toastTimer = setTimeout(() => t.classList.add("hidden"), 3000);
-    }
-
-    function copyLink(url, e) {
-      if (e) e.stopPropagation();
-      navigator.clipboard.writeText(url);
-      showToast("Link copied to clipboard! 📋");
-    }
-
-    function goHomeRefresh() {
-      const user = getCurrentUser();
-      if (user) {
-        activeTab = "home";
-      }
-      renderApp();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-
-    function switchTab(tab) {
-      activeTab = tab;
-      renderApp();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-
-    /**************************************************************
-     * 4. STUDENT PROGRESS & RATING CALCULATOR
-     **************************************************************/
-    function calculateStudentStats(student) {
-      const stepObj = STEPS_DATA.find(s => s.step === Number(student.level)) || STEPS_DATA[0];
-      const totalLessons = stepObj.lessons.length || 1;
-      let attendedCount = 0;
-      let homeworkCount = 0;
-      let nextLessonIndex = -1;
-
-      for (let i = 0; i < stepObj.lessons.length; i++) {
-        const key = `${student.level}-${i}`;
-        if (student.attendedLessons && student.attendedLessons[key]) {
-          attendedCount++;
-        } else if (nextLessonIndex === -1) {
-          nextLessonIndex = i;
-        }
-        if (student.homeworkDone && student.homeworkDone[key]) {
-          homeworkCount++;
-        }
-      }
-
-      const remainingLessons = Math.max(0, totalLessons - attendedCount);
-      const attendancePercent = Math.round((attendedCount / totalLessons) * 100);
-      const homeworkPercent = Math.round((homeworkCount / totalLessons) * 100);
-      const puzzleAccuracy = student.puzzleStats && student.puzzleStats.attempts > 0
-        ? Math.round((student.puzzleStats.correct / student.puzzleStats.attempts) * 100)
-        : 100;
-
-      // Overall weighted score
-      const overallPercent = Math.round((attendancePercent * 0.45) + (homeworkPercent * 0.35) + (puzzleAccuracy * 0.20));
-
-      let badgeArabic = "مقبول — يحتاج لمزيد من التركيز 💪";
-      let badgeEnglish = "Acceptable";
-      let badgeColor = "text-amber-300 bg-amber-500/15 border-amber-500/40";
-
-      if (overallPercent >= 80) {
-        badgeArabic = "ممتاز / عبقري 🌟👑";
-        badgeEnglish = "Genius / Excellent";
-        badgeColor = "text-emerald-300 bg-emerald-500/15 border-emerald-500/40";
-      } else if (overallPercent >= 50) {
-        badgeArabic = "رائع 👏✨";
-        badgeEnglish = "Great Progress";
-        badgeColor = "text-gold-300 bg-gold-500/20 border-gold-500/40";
-      }
-
-      const nextLesson = nextLessonIndex !== -1 ? stepObj.lessons[nextLessonIndex] : null;
-
-      return {
-        stepObj,
-        totalLessons,
-        attendedCount,
-        homeworkCount,
-        remainingLessons,
-        attendancePercent,
-        homeworkPercent,
-        puzzleAccuracy,
-        overallPercent,
-        badgeArabic,
-        badgeEnglish,
-        badgeColor,
-        nextLesson,
-        nextLessonIndex,
-        allLessonsCompleted: attendedCount >= totalLessons && totalLessons > 0
-      };
-    }
-
-    /**************************************************************
-     * 5. HEADER & AUTHENTICATION VIEWS
-     **************************************************************/
-    function renderHeader() {
-      const user = getCurrentUser();
-      const nav = document.getElementById("headerNavArea");
-      const coachSearchWrap = document.getElementById("coachHeaderSearchWrap");
-
-      if (!user) {
-        coachSearchWrap.classList.add("hidden");
+      if (!u) {
+        cSearch.classList.add("hidden");
         nav.innerHTML = `
-          <button onclick="activeTab='parent-dashboard'; renderApp();" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-obsidian-800 border border-gold-500/30 text-gold-300 hover:border-gold-400 transition">
-            👨‍👩‍👦 ولي الأمر (Parent Dashboard)
-          </button>
-          <button onclick="activeTab='home'; renderApp();" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-gold-500 text-black hover:bg-gold-400 transition">
-            🔐 Login / Sign Up
-          </button>
+          <button onclick="switchTab('parent')" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-zinc-900 border border-yellow-500/40 text-yellow-300">👨‍👩‍👦 بوابة ولي الأمر</button>
+          <button onclick="switchTab('home')" class="px-3.5 py-2 rounded-xl text-xs gold-btn">🔐 Login / Sign Up</button>
         `;
+        main.innerHTML = tab === "parent" ? renderParentView() : renderAuthView();
         return;
       }
 
-      if (user.role === "coach") {
-        coachSearchWrap.classList.remove("hidden");
-      } else {
-        coachSearchWrap.classList.add("hidden");
-      }
+      if (u.role === "coach") cSearch.classList.remove("hidden"); else cSearch.classList.add("hidden");
 
       nav.innerHTML = `
-        <button onclick="switchTab('home')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition ${activeTab === 'home' ? 'bg-gold-500 text-black font-bold' : 'bg-obsidian-800 text-gray-300 hover:text-gold-300'}">
-          🏠 Home
-        </button>
-        <button onclick="switchTab('lessons')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition ${activeTab === 'lessons' ? 'bg-gold-500 text-black font-bold' : 'bg-obsidian-800 text-gray-300 hover:text-gold-300'}">
-          📚 ${user.role === 'coach' ? 'All Curriculum (Steps 1-6)' : `Step ${user.level} Lessons`}
-        </button>
-        ${user.role === 'coach' ? `
-          <button onclick="switchTab('coach-tracker')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition ${activeTab === 'coach-tracker' ? 'bg-gold-500 text-black font-bold' : 'bg-obsidian-800 text-gold-300 border border-gold-500/30 hover:border-gold-400'}">
-            📋 Follow Up & Groups
-          </button>
-        ` : ''}
-        <button onclick="switchTab('parent-dashboard')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition ${activeTab === 'parent-dashboard' ? 'bg-gold-500 text-black font-bold' : 'bg-obsidian-800 text-gray-300 hover:text-gold-300'}">
-          👨‍👩‍👦 Parent Dashboard
-        </button>
-        <div class="flex items-center gap-2 pl-2 border-l border-gold-500/20">
-          <span class="text-xs text-gold-300 font-semibold">${user.role === 'coach' ? '👑 Coach' : `♟️ Step ${user.level}`}: ${user.name.split(' ')[0]}</span>
-          <button onclick="logoutUser()" class="px-2.5 py-1 rounded-lg text-[11px] bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25">Logout</button>
-        </div>
+        <button onclick="switchTab('home')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='home'?'gold-btn':'bg-zinc-900 text-gray-300'}">🏠 الرئيسية</button>
+        <button onclick="switchTab('lessons')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='lessons'?'gold-btn':'bg-zinc-900 text-gray-300'}">📚 ${u.role==='coach'?'كل المستويات (Steps 1-6)':'دروس Step '+u.level}</button>
+        ${u.role==='coach'?`<button onclick="switchTab('tracker')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='tracker'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">📋 متابعة الطلاب والجروبات</button>`:''}
+        <button onclick="switchTab('parent')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='parent'?'gold-btn':'bg-zinc-900 text-gray-300'}">👨‍👩‍👦 داشبورد ولي الأمر</button>
+        <button onclick="db.currId=null; save(); render();" class="px-2.5 py-1.5 rounded-xl text-xs bg-red-500/20 text-red-300 border border-red-500/30">خروج</button>
       `;
+
+      if (tab === "lessons") main.innerHTML = renderLessonsView(u);
+      else if (tab === "tracker" && u.role === "coach") main.innerHTML = renderTrackerView();
+      else if (tab === "parent") main.innerHTML = renderParentView();
+      else main.innerHTML = u.role === "student" ? renderStudentHome(u) : renderCoachHome(u);
     }
 
-    function renderAuthScreen() {
+    function renderAuthView() {
       return `
-        <div class="max-w-4xl mx-auto grid md:grid-cols-5 gap-6 items-stretch mt-4">
-          
-          <!-- Left Welcome Info & Quick Demo Logins -->
-          <div class="md:col-span-2 glass-panel gold-border-glow rounded-2xl p-6 flex flex-col justify-between">
+        <div class="max-w-4xl mx-auto grid md:grid-cols-5 gap-6 mt-4">
+          <div class="md:col-span-2 gold-card rounded-2xl p-6 flex flex-col justify-between">
             <div>
-              <span class="text-[11px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-gold-500/15 text-gold-300 border border-gold-500/30">ECA Official Platform</span>
-              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-3">Welcome to Egypt Chess Academy</h2>
-              <p class="text-xs text-gray-400 mt-2 leading-relaxed">
-                منصة التدريب المتكاملة للطلاب والمدربين وأولياء الأمور: ألغاز يومية، متابعة دروس كل مستوى، تقييمات ذكية، وامتحانات ترقية للمستوى التالي.
-              </p>
-
-              <div class="mt-6 space-y-2.5">
-                <p class="text-xs font-semibold text-gold-400">⚡ تجربة سريعة بضغطة واحدة (Demo Accounts):</p>
-                <button onclick="quickLogin('coach@eca.com','123456')" class="w-full text-left p-3 rounded-xl bg-obsidian-900 hover:bg-obsidian-700 border border-gold-500/30 transition flex items-center justify-between">
-                  <div>
-                    <div class="text-xs font-bold text-gold-300">👑 دخول بحساب الكوتش (Coach)</div>
-                    <div class="text-[11px] text-gray-400">يرى الـ 6 Steps + يتابع الطلاب والجروبات</div>
-                  </div>
-                  <span class="text-gold-400 text-sm">→</span>
+              <h2 class="font-display font-bold text-xl gold-gradient-text">Egypt Chess Academy Portal</h2>
+              <p class="text-xs text-gray-400 mt-2">اضغط على أي حساب تجريبي للدخول فوراً أو أنشئ حساباً جديداً:</p>
+              <div class="mt-4 space-y-2.5">
+                <button onclick="demoLogin('coach@eca.com','123456')" class="w-full text-left p-3 rounded-xl bg-black/80 border border-yellow-500/40 hover:border-yellow-400">
+                  <div class="text-xs font-bold text-yellow-300">👑 دخول سريع كـ مدرب (Coach)</div>
+                  <div class="text-[11px] text-gray-400">يفتح كل الـ 6 Steps + متابعة الطلاب والجروبات</div>
                 </button>
-
-                <button onclick="quickLogin('omar@eca.com','123456')" class="w-full text-left p-3 rounded-xl bg-obsidian-900 hover:bg-obsidian-700 border border-gold-500/25 transition flex items-center justify-between">
-                  <div>
-                    <div class="text-xs font-bold text-white">♟️ دخول بحساب طالب (Omar - Step 2)</div>
-                    <div class="text-[11px] text-gray-400">يرى فقط Step 2 + اللغز اليومي + الدرس القادم</div>
-                  </div>
-                  <span class="text-gold-400 text-sm">→</span>
+                <button onclick="demoLogin('omar@eca.com','123456')" class="w-full text-left p-3 rounded-xl bg-black/80 border border-yellow-500/30 hover:border-yellow-400">
+                  <div class="text-xs font-bold text-white">♟️ دخول سريع كـ طالب (Omar - Step 2)</div>
+                  <div class="text-[11px] text-gray-400">يرى فقط Step 2 + اللغز اليومي + الدرس القادم</div>
                 </button>
-
-                <button onclick="activeTab='parent-dashboard'; renderApp();" class="w-full text-left p-3 rounded-xl bg-obsidian-900 hover:bg-obsidian-700 border border-gold-500/25 transition flex items-center justify-between">
-                  <div>
-                    <div class="text-xs font-bold text-emerald-300">👨‍👩‍👦 بوابة ولي الأمر (Parent Dashboard)</div>
-                    <div class="text-[11px] text-gray-400">بحث باليوزر (`omar_chess`) + الملاحظات السرية</div>
-                  </div>
-                  <span class="text-gold-400 text-sm">→</span>
+                <button onclick="switchTab('parent')" class="w-full text-left p-3 rounded-xl bg-black/80 border border-emerald-500/40 hover:border-emerald-400">
+                  <div class="text-xs font-bold text-emerald-300">👨‍👩‍👦 بوابة ولي الأمر (Parent Dashboard)</div>
+                  <div class="text-[11px] text-gray-400">ابحث عن omar_chess وشاهد التقييم والملاحظة السرية</div>
                 </button>
               </div>
             </div>
-
-            <div class="mt-6 pt-4 border-t border-gold-500/15 text-[11px] text-gray-400 space-y-1">
-              <div>🔑 كود تسجيل المدرب: <code class="text-gold-300">ECA2026</code></div>
-              <div>🔒 باسورد أولياء الأمور الموحد: <code class="text-gold-300">ECA-PARENT</code></div>
+            <div class="text-[11px] text-gray-400 mt-4 pt-3 border-t border-yellow-500/20">
+              🔑 كود تسجيل المدربين: <b class="text-yellow-300">ECA2026</b> | 🔒 باسورد أولياء الأمور: <b class="text-yellow-300">ECA-PARENT</b>
             </div>
           </div>
 
-          <!-- Right Login / Sign Up Form -->
-          <div class="md:col-span-3 glass-panel gold-border-glow rounded-2xl p-6">
-            <div class="flex gap-2 mb-6 bg-obsidian-950 p-1.5 rounded-xl border border-gold-500/20">
-              <button onclick="authMode='login'; renderApp();" class="flex-1 py-2 rounded-lg text-xs font-bold transition ${authMode === 'login' ? 'bg-gold-500 text-black' : 'text-gray-400'}">Login (تسجيل دخول)</button>
-              <button onclick="authMode='signup'; renderApp();" class="flex-1 py-2 rounded-lg text-xs font-bold transition ${authMode === 'signup' ? 'bg-gold-500 text-black' : 'text-gray-400'}">Sign Up (حساب جديد)</button>
+          <div class="md:col-span-3 gold-card rounded-2xl p-6">
+            <div class="flex gap-2 mb-5 bg-black p-1 rounded-xl border border-yellow-500/20">
+              <button onclick="authMode='login'; render();" class="flex-1 py-2 rounded-lg text-xs font-bold ${authMode==='login'?'gold-btn':'text-gray-400'}">Login (دخول)</button>
+              <button onclick="authMode='signup'; render();" class="flex-1 py-2 rounded-lg text-xs font-bold ${authMode==='signup'?'gold-btn':'text-gray-400'}">Sign Up (حساب جديد)</button>
             </div>
-
-            ${authMode === 'login' ? `
-              <form onsubmit="handleLogin(event)" class="space-y-4">
-                <div>
-                  <label class="block text-xs text-gray-300 mb-1">Email or Username</label>
-                  <input id="loginEmail" required type="text" placeholder="coach@eca.com or omar_chess" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gold-400" />
-                </div>
-                <div>
-                  <label class="block text-xs text-gray-300 mb-1">Password</label>
-                  <input id="loginPassword" required type="password" placeholder="••••••" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gold-400" />
-                </div>
-                <button type="submit" class="w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-gold-400 to-gold-600 text-black hover:opacity-95 transition shadow-lg">
-                  Sign In to ECA Portal ♟️
-                </button>
+            ${authMode === "login" ? `
+              <form onsubmit="doLogin(event)" class="space-y-4">
+                <input id="lEmail" required placeholder="Email or Username (e.g. coach@eca.com or omar_chess)" class="w-full bg-black border border-yellow-500/30 rounded-xl px-4 py-2.5 text-sm text-white" />
+                <input id="lPass" type="password" required placeholder="Password (123456)" class="w-full bg-black border border-yellow-500/30 rounded-xl px-4 py-2.5 text-sm text-white" />
+                <button class="w-full py-3 rounded-xl text-sm gold-btn">تسجيل الدخول ♟️</button>
               </form>
             ` : `
-              <form onsubmit="handleSignup(event)" class="space-y-3.5">
+              <form onsubmit="doSignup(event)" class="space-y-3">
                 <div class="grid grid-cols-2 gap-2">
-                  <button type="button" onclick="selectedRoleForSignup='student'; renderApp();" class="py-2.5 rounded-xl text-xs font-bold border transition ${selectedRoleForSignup === 'student' ? 'bg-gold-500/20 border-gold-400 text-gold-300' : 'bg-obsidian-950 border-gray-800 text-gray-400'}">
-                    ♟️ I am a Student (طالب)
-                  </button>
-                  <button type="button" onclick="selectedRoleForSignup='coach'; renderApp();" class="py-2.5 rounded-xl text-xs font-bold border transition ${selectedRoleForSignup === 'coach' ? 'bg-gold-500/20 border-gold-400 text-gold-300' : 'bg-obsidian-950 border-gray-800 text-gray-400'}">
-                    👑 I am a Coach (مدرب)
-                  </button>
+                  <button type="button" onclick="signupRole='student'; render();" class="py-2 rounded-xl text-xs font-bold border ${signupRole==='student'?'border-yellow-400 text-yellow-300 bg-yellow-500/10':'border-zinc-800 text-gray-400'}">♟️ طالب (Student)</button>
+                  <button type="button" onclick="signupRole='coach'; render();" class="py-2 rounded-xl text-xs font-bold border ${signupRole==='coach'?'border-yellow-400 text-yellow-300 bg-yellow-500/10':'border-zinc-800 text-gray-400'}">👑 مدرب (Coach)</button>
                 </div>
-
-                <div class="grid sm:grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs text-gray-300 mb-1">Full Name (الاسم)</label>
-                    <input id="suName" required type="text" placeholder="Ahmed Ali" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-3.5 py-2 text-sm text-white" />
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-300 mb-1">Username (للبحث والمتابعة)</label>
-                    <input id="suUsername" required type="text" placeholder="ahmed_chess" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-3.5 py-2 text-sm text-white" />
-                  </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <input id="sName" required placeholder="Full Name" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+                  <input id="sUser" required placeholder="Username (e.g. ali_chess)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
                 </div>
-
-                <div class="grid sm:grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs text-gray-300 mb-1">Email</label>
-                    <input id="suEmail" required type="email" placeholder="name@eca.com" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-3.5 py-2 text-sm text-white" />
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-300 mb-1">Password</label>
-                    <input id="suPassword" required type="password" placeholder="••••••" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-3.5 py-2 text-sm text-white" />
-                  </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <input id="sEmail" type="email" required placeholder="Email" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+                  <input id="sPass" type="password" required placeholder="Password" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
                 </div>
-
-                ${selectedRoleForSignup === 'student' ? `
-                  <div class="grid sm:grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs text-gold-300 mb-1">Select Current Level (Step)</label>
-                      <select id="suLevel" class="w-full bg-obsidian-950 border border-gold-500/40 rounded-xl px-3.5 py-2 text-sm text-white">
-                        <option value="1">Step 1</option>
-                        <option value="2">Step 2</option>
-                        <option value="3">Step 3</option>
-                        <option value="4">Step 4</option>
-                        <option value="5">Step 5</option>
-                        <option value="6">Step 6</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="block text-xs text-gray-300 mb-1">Training Group (المجموعة)</label>
-                      <select id="suGroup" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-3.5 py-2 text-sm text-white">
-                        ${db.groups.map(g => `<option value="${g}">${g}</option>`).join('')}
-                      </select>
-                    </div>
-                  </div>
+                ${signupRole === "student" ? `
+                  <select id="sLvl" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-yellow-300">
+                    <option value="1">Step 1</option><option value="2">Step 2</option><option value="3">Step 3</option><option value="4">Step 4</option><option value="5">Step 5</option><option value="6">Step 6</option>
+                  </select>
                 ` : `
-                  <div>
-                    <label class="block text-xs text-gold-300 mb-1">Coach Access Secret Code (كود المدربين: ECA2026)</label>
-                    <input id="suCoachCode" required type="text" placeholder="Enter ECA2026" class="w-full bg-obsidian-950 border border-gold-500/40 rounded-xl px-3.5 py-2 text-sm text-white" />
-                  </div>
+                  <input id="sCode" required placeholder="كود المدرب السري (ECA2026)" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-white" />
                 `}
-
-                <button type="submit" class="w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-gold-400 to-gold-600 text-black hover:opacity-95 transition">
-                  Create Account & Enter Portal 🚀
-                </button>
+                <button class="w-full py-3 rounded-xl text-sm gold-btn">إنشاء الحساب 🚀</button>
               </form>
             `}
           </div>
@@ -811,528 +300,260 @@
       `;
     }
 
-    function quickLogin(email, pass) {
-      const u = db.users.find(x => x.email.toLowerCase() === email.toLowerCase() && x.password === pass);
-      if (u) {
-        db.currentUserId = u.id;
-        activeTab = "home";
-        saveDB();
-        showToast(`Welcome back, ${u.name}!`);
-        renderApp();
-      }
+    function demoLogin(e, p) {
+      const u = db.users.find(x => x.email === e && x.pass === p);
+      if (u) { db.currId = u.id; tab = "home"; save(); render(); toast("مرحباً بك " + u.name); }
     }
-
-    function handleLogin(e) {
-      e.preventDefault();
-      const idVal = document.getElementById("loginEmail").value.trim().toLowerCase();
-      const pass = document.getElementById("loginPassword").value;
-      const u = db.users.find(x => (x.email.toLowerCase() === idVal || x.username.toLowerCase() === idVal) && x.password === pass);
-      if (!u) {
-        showToast("❌ بيانات الدخول غير صحيحة!");
-        return;
-      }
-      db.currentUserId = u.id;
-      activeTab = "home";
-      saveDB();
-      showToast(`Welcome, ${u.name}!`);
-      renderApp();
+    function doLogin(ev) {
+      ev.preventDefault();
+      const q = document.getElementById("lEmail").value.trim().toLowerCase();
+      const p = document.getElementById("lPass").value;
+      const u = db.users.find(x => (x.email.toLowerCase() === q || x.username.toLowerCase() === q) && x.pass === p);
+      if (!u) return toast("❌ بيانات الدخول غير صحيحة");
+      db.currId = u.id; tab = "home"; save(); render();
     }
-
-    function handleSignup(e) {
-      e.preventDefault();
-      const name = document.getElementById("suName").value.trim();
-      const username = document.getElementById("suUsername").value.trim().replace(/\s+/g, '_').toLowerCase();
-      const email = document.getElementById("suEmail").value.trim().toLowerCase();
-      const password = document.getElementById("suPassword").value;
-
-      if (db.users.some(u => u.email === email || u.username === username)) {
-        showToast("❌ الإيميل أو اليوزرنيم مسجل بالفعل!");
-        return;
-      }
-
-      if (selectedRoleForSignup === "coach") {
-        const code = document.getElementById("suCoachCode").value.trim();
-        if (code !== COACH_SECRET_CODE) {
-          showToast("❌ كود المدربين غير صحيح! (استخدم ECA2026)");
-          return;
-        }
-        const newCoach = {
-          id: "u_" + Date.now(),
-          name,
-          username,
-          email,
-          password,
-          role: "coach"
-        };
-        db.users.push(newCoach);
-        db.currentUserId = newCoach.id;
+    function doSignup(ev) {
+      ev.preventDefault();
+      const name = document.getElementById("sName").value.trim();
+      const username = document.getElementById("sUser").value.trim().toLowerCase().replace(/\s+/g, "_");
+      const email = document.getElementById("sEmail").value.trim().toLowerCase();
+      const pass = document.getElementById("sPass").value;
+      if (signupRole === "coach") {
+        if (document.getElementById("sCode").value.trim() !== "ECA2026") return toast("❌ كود المدربين غير صحيح (ECA2026)");
+        const nc = { id: "u" + Date.now(), name, username, email, pass, role: "coach" };
+        db.users.push(nc); db.currId = nc.id;
       } else {
-        const level = Number(document.getElementById("suLevel").value) || 1;
-        const group = document.getElementById("suGroup").value || db.groups[0];
-        const newStu = {
-          id: "u_" + Date.now(),
-          name,
-          username,
-          email,
-          password,
-          role: "student",
-          level,
-          group,
-          attendedLessons: {},
-          homeworkDone: {},
-          puzzleStats: { attempts: 0, correct: 0, lastSolvedDate: "" },
-          parentSecretNote: "لا توجد ملاحظات مسجلة حتى الآن لهذا الطالب."
-        };
-        db.users.push(newStu);
-        db.currentUserId = newStu.id;
+        const level = Number(document.getElementById("sLvl").value) || 1;
+        const ns = { id: "u" + Date.now(), name, username, email, pass, role: "student", level, group: db.groups[0], att: {}, hw: {}, puz: { t: 0, c: 0 }, note: "لا توجد ملاحظات حالياً." };
+        db.users.push(ns); db.currId = ns.id;
       }
-
-      activeTab = "home";
-      saveDB();
-      showToast("تم إنشاء الحساب بنجاح! 🎉");
-      renderApp();
+      tab = "home"; save(); render(); toast("🎉 تم إنشاء الحساب!");
     }
 
-    function logoutUser() {
-      db.currentUserId = null;
-      unlockedParentForStudentId = null;
-      saveDB();
-      renderApp();
-    }
-
-    /**************************************************************
-     * 6. HOME PAGE (STUDENT & COACH)
-     **************************************************************/
-    function renderHomePage(user) {
-      if (user.role === "student") {
-        return renderStudentHome(user);
-      } else {
-        return renderCoachHome(user);
-      }
-    }
-
-    function renderStudentHome(student) {
-      const stats = calculateStudentStats(student);
-      const puzzle = DAILY_PUZZLES_BY_STEP[student.level] || DAILY_PUZZLES_BY_STEP[1];
-      const isParentUnlocked = unlockedParentForStudentId === student.id;
-
+    function renderStudentHome(stu) {
+      const s = calcStats(stu);
+      const puz = PUZZLES[stu.level] || PUZZLES[1];
       return `
         <div class="space-y-6">
-          <!-- Student Top Banner -->
-          <div class="glass-panel gold-border-glow rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
+          <div class="gold-card rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <div class="flex items-center gap-2">
-                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gold-500 text-black">STEP ${student.level} STUDENT</span>
-                <span class="text-xs text-gray-400">@${student.username} • ${student.group || ''}</span>
-              </div>
-              <h1 class="font-display font-bold text-2xl gold-gradient-text mt-2">Welcome back, ${student.name}! ♟️</h1>
-              <p class="text-xs text-gray-400 mt-1">حضر ${stats.attendedCount} من ${stats.totalLessons} دروس في Step ${student.level} (متبقي ${stats.remainingLessons} دروس للامتحان)</p>
+              <span class="px-2.5 py-1 rounded-full text-xs gold-btn">STEP ${stu.level} STUDENT</span>
+              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">Welcome, ${stu.name} (@${stu.username})</h2>
+              <p class="text-xs text-gray-400 mt-1">حضرت ${s.attC} من ${s.total} درس في Step ${stu.level} • متبقي ${s.rem} درس للامتحان</p>
             </div>
-
-            <div class="flex items-center gap-3">
-              <!-- Parent Confidential Button Inside Student Account -->
-              <button onclick="openParentModal('${student.id}')" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-obsidian-900 border border-gold-500/40 text-gold-300 hover:bg-gold-500/15 transition flex items-center gap-2">
-                <span>🔒</span>
-                <span>خانة ولي الأمر السرية</span>
-              </button>
-            </div>
+            <button onclick="openParentModal('${stu.id}')" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-black border border-yellow-500/40 text-yellow-300">🔒 خانة ولي الأمر السرية</button>
           </div>
 
-          <!-- Confidential Parent Note Box (Only visible if Parent unlocked with unified password) -->
-          ${isParentUnlocked ? `
-            <div class="bg-amber-950/30 border-2 border-gold-500 rounded-2xl p-5 flex items-start justify-between gap-4">
+          ${unlockedStuId === stu.id ? `
+            <div class="p-4 rounded-2xl bg-amber-950/40 border-2 border-yellow-500 flex justify-between items-center">
               <div>
-                <div class="text-xs font-bold text-gold-400 uppercase tracking-wider mb-1">🔓 ملاحظة المدرب السرية لولي الأمر فقط:</div>
-                <p class="text-sm text-white leading-relaxed">${student.parentSecretNote || "لا توجد ملاحظات حالياً."}</p>
+                <div class="text-xs font-bold text-yellow-400">🔓 ملاحظة المدرب السرية لولي الأمر:</div>
+                <p class="text-sm text-white mt-1">${stu.note}</p>
               </div>
-              <button onclick="unlockedParentForStudentId=null; renderApp();" class="text-xs px-3 py-1.5 rounded-lg bg-obsidian-800 text-gray-300">إغلاق القفل 🔒</button>
+              <button onclick="unlockedStuId=null; render();" class="text-xs px-3 py-1 rounded bg-zinc-800">إغلاق 🔒</button>
             </div>
           ` : ''}
 
-          <!-- Grid: 1) Daily Puzzle for Current Level & 2) Next Lesson Card -->
-          <div class="grid lg:grid-cols-2 gap-6">
-            
-            <!-- 1. DAILY PUZZLE FOR STUDENT'S LEVEL -->
-            <div class="glass-panel gold-border-glow rounded-2xl p-6 flex flex-col justify-between">
-              <div>
-                <div class="flex items-center justify-between mb-3">
-                  <span class="text-xs font-bold px-3 py-1 rounded-full bg-gold-500/20 text-gold-300 border border-gold-500/40">
-                    🧩 Daily Puzzle • Step ${student.level}
-                  </span>
-                  <span class="text-xs text-gray-400">Accuracy: <strong class="text-gold-300">${stats.puzzleAccuracy}%</strong> (${student.puzzleStats.correct}/${student.puzzleStats.attempts})</span>
-                </div>
-                <h3 class="font-display font-bold text-lg text-white">${puzzle.title}</h3>
-                <div class="my-3 p-3.5 rounded-xl bg-obsidian-950 border border-gold-500/25 text-xs text-gold-300 font-mono">
-                  ♟️ Position: ${puzzle.boardHint}
-                </div>
-                <p class="text-sm text-gray-300 mb-4">${puzzle.prompt}</p>
-
-                <div class="space-y-2">
-                  ${puzzle.options.map((opt, idx) => `
-                    <button onclick="submitDailyPuzzleAnswer(${idx},${puzzle.correctIndex})" class="w-full text-left px-4 py-2.5 rounded-xl text-xs font-medium bg-obsidian-900 hover:bg-gold-500/20 border border-gold-500/25 hover:border-gold-400 transition flex items-center justify-between">
-                      <span>${opt}</span>
-                      <span class="text-gold-400">Select →</span>
-                    </button>
-                  `).join('')}
-                </div>
+          <div class="grid md:grid-cols-2 gap-6">
+            <!-- 1. Daily Puzzle -->
+            <div class="gold-card rounded-2xl p-6">
+              <div class="flex justify-between items-center mb-3">
+                <span class="text-xs font-bold text-yellow-300">🧩 Daily Puzzle — Step ${stu.level}</span>
+                <span class="text-xs text-gray-400">نسبة الدقة: <b class="text-yellow-300">${s.puzP}%</b></span>
               </div>
-
-              <div class="mt-4 pt-3 border-t border-gold-500/15 flex items-center justify-between text-xs">
-                <span class="text-gray-400">تحب تتدرب أكتر على اللغز ده على الرقعة؟</span>
-                <a href="${puzzle.lichessUrl}" target="_blank" class="text-gold-400 hover:underline font-semibold">Open on Lichess ↗</a>
+              <p class="text-sm text-white font-medium mb-4">${puz.q}</p>
+              <div class="space-y-2">
+                ${puz.opts.map((o, i) => `
+                  <button onclick="solvePuzzle(${i},${puz.ans})" class="w-full text-left px-4 py-2.5 rounded-xl text-xs bg-black/80 border border-yellow-500/30 hover:border-yellow-400 flex justify-between">
+                    <span>${o}</span><span class="text-yellow-400">اختيار ←</span>
+                  </button>
+                `).join('')}
+              </div>
+              <div class="mt-4 pt-3 border-t border-yellow-500/20 text-right">
+                <a href="${puz.url}" target="_blank" class="text-xs text-yellow-300 hover:underline">فتح التمرين على Lichess ↗</a>
               </div>
             </div>
 
-            <!-- 2. NEXT LESSON IN LINE (OR LEVEL UP TEST) -->
-            <div class="glass-panel gold-border-glow rounded-2xl p-6 flex flex-col justify-between">
+            <!-- 2. Next Lesson Up -->
+            <div class="gold-card rounded-2xl p-6 flex flex-col justify-between">
               <div>
-                <div class="flex items-center justify-between mb-3">
-                  <span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                    🎯 Next Lesson Up (الدرس اللي عليه الدور)
-                  </span>
-                  <span class="text-xs text-gray-400">${stats.attendancePercent}% Level Completed</span>
+                <div class="flex justify-between items-center mb-3">
+                  <span class="text-xs font-bold text-emerald-300">🎯 الدرس اللي عليه الدور (Next Lesson)</span>
+                  <span class="text-xs text-gray-400">${s.attP}% مكتمل</span>
                 </div>
-
-                <!-- Progress Bar -->
-                <div class="w-full h-2.5 bg-obsidian-950 rounded-full overflow-hidden border border-gold-500/20 mb-5">
-                  <div class="h-full bg-gradient-to-r from-gold-500 to-emerald-400 transition-all duration-500" style="width: ${stats.attendancePercent}%"></div>
-                </div>
-
-                ${stats.nextLesson ? `
-                  <div onclick="switchTab('lessons')" class="cursor-pointer group p-5 rounded-2xl bg-obsidian-900/90 border border-gold-500/35 hover:border-gold-400 transition">
-                    <div class="text-xs text-gold-400 font-semibold mb-1">Lesson #${stats.nextLessonIndex + 1} in Step${student.level}</div>
-                    <h3 class="font-display font-bold text-xl text-white group-hover:text-gold-300 transition flex items-center justify-between">
-                      <span>${stats.nextLesson.title}</span>
-                      <span>→</span>
-                    </h3>
-                    <p class="text-xs text-gray-400 mt-2">
-                      اضغط هنا للانتقال تلقائياً لصفحة دروس Step ${student.level} الخاصة بك وفتح روابط الشرح والتمارين.
-                    </p>
+                ${s.nextLesson ? `
+                  <div onclick="switchTab('lessons')" class="cursor-pointer p-5 rounded-2xl bg-black/80 border border-yellow-500/40 hover:border-yellow-400 transition">
+                    <div class="text-xs text-yellow-400">Lesson #${s.nextIdx + 1} • Step ${stu.level}</div>
+                    <h3 class="font-display font-bold text-xl text-white mt-1 flex justify-between"><span>${s.nextLesson.t}</span><span>→</span></h3>
+                    <p class="text-xs text-gray-400 mt-2">اضغط هنا للانتقال تلقائياً لصفحة دروس مستواك (Step ${stu.level} فقط).</p>
                   </div>
                 ` : `
                   <div class="p-5 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 text-center">
-                    <div class="text-2xl mb-1">🏆</div>
-                    <h3 class="font-display font-bold text-lg text-emerald-300">أنهيت جميع دروس Step ${student.level}!</h3>
-                    <p class="text-xs text-gray-300 mt-1">أنت الآن جاهز لامتحان الترقية للانتقال إلى Step ${student.level + 1}.</p>
+                    <h3 class="font-bold text-emerald-300">🏆 أتممت كل دروس Step ${stu.level}!</h3>
                   </div>
                 `}
               </div>
-
-              <!-- Level Up Test Trigger -->
-              <div class="mt-5 pt-4 border-t border-gold-500/15 flex flex-wrap items-center justify-between gap-3">
-                <div class="text-xs text-gray-400">
-                  ${stats.allLessonsCompleted 
-                    ? "✅ جميع الدروس مكتملة! يمكنك بدء اختبار المستوى الآن." 
-                    : `🔒 ينقصك ${stats.remainingLessons} درس لفتح اختبار الترقية (أو جربه الآن للتدريب).`}
-                </div>
-                <button onclick="openLevelTestModal(${student.level})" class="px-4 py-2 rounded-xl text-xs font-bold bg-gold-500 text-black hover:bg-gold-400 transition">
-                  📝 Start Step ${student.level} Final Test
-                </button>
+              <div class="mt-4 pt-3 border-t border-yellow-500/20 flex justify-between items-center">
+                <span class="text-xs text-gray-400">اختبار الترقية للمستوى التالي:</span>
+                <button onclick="openExamModal(${stu.level})" class="px-4 py-2 rounded-xl text-xs gold-btn">📝 بدء اختبار Step ${stu.level}</button>
               </div>
             </div>
-
           </div>
         </div>
       `;
     }
 
-    function renderCoachHome(coach) {
-      const students = db.users.filter(u => u.role === "student");
+    function solvePuzzle(i, ans) {
+      const u = currUser();
+      u.puz = u.puz || { t: 0, c: 0 };
+      u.puz.t++;
+      if (i === ans) { u.puz.c++; toast("✅ إجابة صحيحة! أحسنت يا بطل"); }
+      else toast("❌ إجابة خاطئة، حاول مرة أخرى");
+      save(); render();
+    }
+
+    function renderCoachHome(c) {
       return `
         <div class="space-y-6">
-          <!-- Coach Welcome & Quick Follow Up Banner -->
-          <div class="glass-panel gold-border-glow rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
+          <div class="gold-card rounded-2xl p-6 flex flex-wrap justify-between items-center gap-4">
             <div>
-              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gold-500 text-black">👑 COACH CONTROL CENTER</span>
-              <h1 class="font-display font-bold text-2xl gold-gradient-text mt-2">Welcome, ${coach.name}</h1>
-              <p class="text-xs text-gray-400 mt-1">لديك صلاحية كاملة لفتح جميع الـ 6 Steps ومتابعة حضور وواجبات ومجموعات الطلاب.</p>
+              <span class="px-2.5 py-1 rounded-full text-xs gold-btn">👑 حساب المدرب</span>
+              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">Welcome, ${c.name}</h2>
+              <p class="text-xs text-gray-400">يمكنك استعراض جميع الـ 6 Steps ومتابعة حضور وواجبات ومجموعات الطلاب.</p>
             </div>
-            <div class="flex flex-wrap gap-2">
-              <button onclick="switchTab('lessons')" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-obsidian-900 border border-gold-500/40 text-gold-300 hover:border-gold-400">
-                📚 Open All 6 Steps Curriculum
-              </button>
-              <button onclick="switchTab('coach-tracker')" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-gold-500 text-black hover:bg-gold-400">
-                📋 متابعة الطلاب والمجموعات (${students.length})
-              </button>
+            <div class="flex gap-2">
+              <button onclick="switchTab('lessons')" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-black border border-yellow-500/40 text-yellow-300">📚 كل الدروس (Steps 1-6)</button>
+              <button onclick="switchTab('tracker')" class="px-4 py-2.5 rounded-xl text-xs gold-btn">📋 متابعة الطلاب والجروبات</button>
             </div>
           </div>
-
-          <!-- Daily Puzzles Preview For All Levels -->
-          <div class="glass-panel gold-border-glow rounded-2xl p-6">
-            <h2 class="font-display font-bold text-lg text-gold-400 mb-4">🧩 Daily Puzzles Overview (Steps 1 – 6)</h2>
+          <div class="gold-card rounded-2xl p-6">
+            <h3 class="font-display font-bold text-lg text-yellow-400 mb-4">🧩 Daily Puzzles for All Levels (Steps 1 – 6)</h3>
             <div class="grid md:grid-cols-3 gap-4">
-              ${[1,2,3,4,5,6].map(lvl => {
-                const p = DAILY_PUZZLES_BY_STEP[lvl];
+              ${[1,2,3,4,5,6].map(l => `
+                <div class="p-4 rounded-xl bg-black/80 border border-yellow-500/25">
+                  <div class="text-xs font-bold text-yellow-400">STEP ${l} PUZZLE</div>
+                  <p class="text-xs text-gray-300 mt-1">${PUZZLES[l].q}</p>
+                  <a href="${PUZZLES[l].url}" target="_blank" class="inline-block mt-2 text-xs text-yellow-300 hover:underline">Open Study ↗</a>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderLessonsView(u) {
+      const list = u.role === "coach" ? STEPS : STEPS.filter(s => s.step === Number(u.level));
+      return `
+        <div class="space-y-4">
+          <div class="gold-card rounded-2xl p-5">
+            <h2 class="font-display font-bold text-xl gold-gradient-text">${u.role==='coach'?'جميع المستويات للمدرب (Steps 1 – 6)':'دروس مستواك الحالي فقط — Step '+u.level}</h2>
+            <p class="text-xs text-gray-400 mt-1">${u.role==='coach'?'اضغط على أي Step لعرض قائمة دروسها تحت بعضها.':'ممنوع ظهور أي مستوى آخر غير مستواك الحالي.'}</p>
+          </div>
+          ${list.map(st => {
+            const isOpen = u.role === "student" ? true : !!openSteps[st.step];
+            return `
+              <div class="gold-card rounded-2xl overflow-hidden">
+                <button onclick="openSteps[${st.step}]=!openSteps[${st.step}]; render();" class="w-full px-6 py-4 flex justify-between items-center text-left hover:bg-yellow-500/5">
+                  <div>
+                    <h3 class="font-display font-bold text-lg text-yellow-300">${st.title} <span class="text-xs text-gray-400 font-sans">(${st.lessons.length} Lessons)</span></h3>
+                    <p class="text-xs text-gray-400">${st.sub}</p>
+                  </div>
+                  <span class="text-yellow-400 text-xs font-bold">${isOpen ? '▲ إخفاء القائمة' : '▼ عرض الدروس'}</span>
+                </button>
+                ${isOpen ? `
+                  <div class="divide-y divide-yellow-500/15 border-t border-yellow-500/20 bg-black/60">
+                    ${st.lessons.length === 0 ? `<div class="p-5 text-xs text-gray-500 text-center">Coming Soon</div>` : st.lessons.map((les, idx) => `
+                      <div class="px-6 py-3 flex flex-wrap justify-between items-center gap-2 hover:bg-yellow-500/5">
+                        <a href="${les.l[0][1]}" target="_blank" class="text-sm font-semibold text-white hover:text-yellow-300">${idx + 1}.${les.t} ↗</a>
+                        <div class="flex flex-wrap gap-2">
+                          ${les.l.map(lk => `<a href="${lk[1]}" target="_blank" class="px-3 py-1 rounded-lg text-xs bg-zinc-900 border border-yellow-500/35 text-yellow-300 hover:bg-yellow-500 hover:text-black">${lk[0]} ↗</a>`).join('')}
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function coachSearchStudent(val) { searchQ = val; tab = "tracker"; render(); }
+
+    function renderTrackerView() {
+      const students = db.users.filter(u => u.role === "student");
+      const filtered = students.filter(s => (grpFilter === "ALL" || s.group === grpFilter) && (!searchQ || s.name.toLowerCase().includes(searchQ.toLowerCase()) || s.username.toLowerCase().includes(searchQ.toLowerCase())));
+      const sel = students.find(s => s.id === selStuId) || filtered[0] || null;
+      return `
+        <div class="space-y-5">
+          <div class="gold-card rounded-2xl p-5 flex flex-wrap justify-between items-center gap-3">
+            <div>
+              <h2 class="font-display font-bold text-xl gold-gradient-text">📋 متابعة الطلاب والمجموعات</h2>
+              <p class="text-xs text-gray-400">علم (✓) أمام الدرس الذي حضره الطالب والواجب الذي حله واكتب ملاحظة سرية لولي الأمر.</p>
+            </div>
+            <form onsubmit="addGroup(event)" class="flex gap-2">
+              <input id="newGrpInp" placeholder="+ اسم جروب جديد..." class="bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white" />
+              <button class="px-3 py-1.5 rounded-xl text-xs gold-btn">إضافة جروب</button>
+            </form>
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            <button onclick="grpFilter='ALL'; render();" class="px-3 py-1.5 rounded-xl text-xs font-bold ${grpFilter==='ALL'?'gold-btn':'bg-zinc-900 text-gray-300'}">كل الجروبات (${students.length})</button>
+            ${db.groups.map(g => `<button onclick="grpFilter='${g}'; render();" class="px-3 py-1.5 rounded-xl text-xs font-bold ${grpFilter===g?'gold-btn':'bg-zinc-900 text-gray-300 border border-yellow-500/20'}">👥 ${g}</button>`).join('')}
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-6">
+            <div class="gold-card rounded-2xl p-4 space-y-2">
+              ${filtered.map(s => {
+                const st = calcStats(s);
                 return `
-                  <div class="p-4 rounded-xl bg-obsidian-900/90 border border-gold-500/25 flex flex-col justify-between">
-                    <div>
-                      <span class="text-[11px] font-bold text-gold-400">STEP ${lvl} DAILY PUZZLE</span>
-                      <h4 class="font-semibold text-sm text-white mt-1">${p.title}</h4>
-                      <p class="text-xs text-gray-400 mt-1 line-clamp-2">${p.prompt}</p>
-                    </div>
-                    <a href="${p.lichessUrl}" target="_blank" class="mt-3 text-xs text-gold-300 hover:underline font-semibold inline-flex items-center gap-1">
-                      Open Lichess Study ↗
-                    </a>
+                  <div onclick="selStuId='${s.id}'; render();" class="cursor-pointer p-3 rounded-xl border ${sel && sel.id===s.id ? 'border-yellow-400 bg-yellow-500/15' : 'border-yellow-500/15 bg-black/70'}">
+                    <div class="flex justify-between font-bold text-xs text-white"><span>${s.name} (@${s.username})</span><span class="text-yellow-300">Step ${s.level}</span></div>
+                    <div class="text-[11px] text-gray-400 mt-1">حضر: ${st.attC}/${st.total} | الواجب: ${st.hwC}/${st.total}</div>
                   </div>
                 `;
               }).join('')}
             </div>
-          </div>
-        </div>
-      `;
-    }
 
-    function submitDailyPuzzleAnswer(chosenIdx, correctIdx) {
-      const user = getCurrentUser();
-      if (!user || user.role !== "student") return;
-      user.puzzleStats = user.puzzleStats || { attempts: 0, correct: 0 };
-      user.puzzleStats.attempts += 1;
-      if (chosenIdx === correctIdx) {
-        user.puzzleStats.correct += 1;
-        showToast("✅ إجابة صحيحة! أحسنت يا بطل وتم رفع نسبة دقتك 🌟");
-      } else {
-        showToast("❌ إجابة غير دقيقة، حاول مرة أخرى وراجع الفكرة!");
-      }
-      saveDB();
-      renderApp();
-    }
-
-    /**************************************************************
-     * 7. LESSONS CURRICULUM PAGE (STRICT LEVEL LOCK FOR STUDENTS)
-     **************************************************************/
-    function renderLessonsPage(user) {
-      // Strictly filter steps: Students ONLY see their assigned step! Coaches see all 6 steps.
-      const visibleSteps = user.role === "coach"
-        ? STEPS_DATA
-        : STEPS_DATA.filter(s => s.step === Number(user.level));
-
-      return `
-        <div class="space-y-5">
-          <div class="glass-panel gold-border-glow rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h2 class="font-display font-bold text-xl gold-gradient-text">
-                ${user.role === 'coach' ? 'All Training Curriculum (Steps 1 – 6)' : `Step ${user.level} Exclusive Curriculum`}
-              </h2>
-              <p class="text-xs text-gray-400 mt-1">
-                ${user.role === 'coach' 
-                  ? 'حساب مدرب: يظهر لك جميع المستويات والـ Steps بالكامل.' 
-                  : `حساب طالب: يظهر لك فقط دروس ومحتوى مستواك الحالي (Step ${user.level}) وممنوع ظهور أي مستوى آخر.`}
-              </p>
-            </div>
-          </div>
-
-          <div class="space-y-4">
-            ${visibleSteps.map(stepObj => {
-              const isOpen = user.role === "student" ? true : !!openStepAccordions[stepObj.step];
-              return `
-                <div class="glass-panel gold-border-glow rounded-2xl overflow-hidden">
-                  <button onclick="toggleStepAccordion(${stepObj.step})" class="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gold-500/5 transition">
-                    <div class="flex items-center gap-3">
-                      <span class="w-9 h-9 rounded-xl bg-gold-500 text-black font-display font-bold flex items-center justify-center text-sm">S${stepObj.step}</span>
+            <div class="md:col-span-2 gold-card rounded-2xl p-5">
+              ${!sel ? `<p class="text-xs text-gray-400">اختر طالباً</p>` : (() => {
+                const st = calcStats(sel);
+                return `
+                  <div class="space-y-4">
+                    <div class="flex flex-wrap justify-between items-center gap-2 border-b border-yellow-500/20 pb-3">
                       <div>
-                        <h3 class="font-display font-bold text-lg text-gold-300">${stepObj.title}</h3>
-                        <p class="text-xs text-gray-400">${stepObj.subtitle} (${stepObj.lessons.length} Lessons)</p>
+                        <h3 class="font-bold text-lg text-white">${sel.name} <span class="text-xs px-2 py-0.5 rounded border ${st.evalCls}">${st.evalText} (${st.overall}%)</span></h3>
+                        <p class="text-xs text-gray-400">متبقي ${st.rem} درس لإنهاء Step ${sel.level}</p>
                       </div>
+                      <select onchange="selLvl('${sel.id}', this.value)" class="bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-yellow-300">
+                        ${[1,2,3,4,5,6].map(l => `<option value="${l}" ${Number(sel.level)===l?'selected':''}>Step ${l}</option>`).join('')}
+                      </select>
                     </div>
-                    <span class="text-gold-400 text-sm font-bold">${isOpen ? '▲ Hide List' : '▼ Show Lessons'}</span>
-                  </button>
-
-                  ${isOpen ? `
-                    <div class="divide-y divide-gold-500/15 border-t border-gold-500/20 bg-obsidian-950/60">
-                      ${stepObj.lessons.length === 0 ? `
-                        <div class="p-6 text-center text-xs text-gray-500">Coming Soon — Ready in code for Step ${stepObj.step} links.</div>
-                      ` : stepObj.lessons.map((lesson, idx) => {
-                        const primaryUrl = lesson.links[0]?.url || "#";
-                        const key = `${stepObj.step}-${idx}`;
-                        const stuAttended = user.role === "student" && user.attendedLessons && user.attendedLessons[key];
-                        const stuHw = user.role === "student" && user.homeworkDone && user.homeworkDone[key];
-
+                    <div class="flex gap-2">
+                      <input id="noteInp" value="${sel.note||''}" class="flex-1 bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" placeholder="ملاحظة سرية لولي الأمر..." />
+                      <button onclick="saveNote('${sel.id}')" class="px-4 py-2 rounded-xl text-xs gold-btn">حفظ لولي الأمر 🔒</button>
+                    </div>
+                    <div class="divide-y divide-yellow-500/15 border border-yellow-500/20 rounded-xl max-h-80 overflow-y-auto bg-black/60">
+                      ${st.st.lessons.map((les, i) => {
+                        const k = sel.level + "-" + i;
+                        const a = !!(sel.att && sel.att[k]);
+                        const h = !!(sel.hw && sel.hw[k]);
                         return `
-                          <div class="px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 hover:bg-gold-500/5 transition">
-                            <div class="flex items-center gap-3">
-                              <span class="w-6 h-6 rounded-full bg-obsidian-800 border border-gold-500/30 text-[11px] text-gold-300 flex items-center justify-center font-bold">${idx + 1}</span>
-                              <a href="${primaryUrl}" target="_blank" class="font-semibold text-sm text-white hover:text-gold-300 transition underline-offset-4 hover:underline">
-                                ${lesson.title} ↗
-                              </a>
-                              ${stuAttended ? `<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">✓ Attended</span>` : ''}
-                              ${stuHw ? `<span class="text-[10px] px-2 py-0.5 rounded bg-gold-500/20 text-gold-300 border border-gold-500/30">✓ HW Done</span>` : ''}
-                            </div>
-
-                            <div class="flex flex-wrap items-center gap-2">
-                              ${lesson.links.map(lk => `
-                                <div class="inline-flex items-center rounded-lg overflow-hidden border border-gold-500/35 bg-obsidian-900">
-                                  <a href="${lk.url}" target="_blank" class="px-3 py-1 text-xs font-semibold text-gold-300 hover:bg-gold-500 hover:text-black transition">
-                                    ${lk.label} ↗
-                                  </a>
-                                  <button onclick="copyLink('${lk.url}', event)" title="Copy Link" class="px-2 py-1 text-[11px] text-gray-400 hover:text-white border-l border-gold-500/20">
-                                    📋
-                                  </button>
-                                </div>
-                              `).join('')}
+                          <div class="px-4 py-2.5 flex justify-between items-center text-xs">
+                            <span class="text-white font-medium">${i+1}. ${les.t}</span>
+                            <div class="flex gap-4">
+                              <label class="flex items-center gap-1 cursor-pointer ${a?'text-emerald-300 font-bold':'text-gray-400'}">
+                                <input type="checkbox" ${a?'checked':''} onchange="togCheck('${sel.id}','${k}','att')" /> حضر
+                              </label>
+                              <label class="flex items-center gap-1 cursor-pointer ${h?'text-yellow-300 font-bold':'text-gray-400'}">
+                                <input type="checkbox" ${h?'checked':''} onchange="togCheck('${sel.id}','${k}','hw')" /> الواجب
+                              </label>
                             </div>
                           </div>
                         `;
                       }).join('')}
-                    </div>
-                  ` : ''}
-                </div>
-              `;
-            }).join('')}
-          </div>
-        </div>
-      `;
-    }
-
-    function toggleStepAccordion(stepNum) {
-      openStepAccordions[stepNum] = !openStepAccordions[stepNum];
-      renderApp();
-    }
-
-    /**************************************************************
-     * 8. COACH STUDENT TRACKER & GROUPS MANAGEMENT
-     **************************************************************/
-    function handleCoachHeaderSearch(val) {
-      coachSearchQuery = val;
-      if (activeTab !== "coach-tracker") {
-        activeTab = "coach-tracker";
-      }
-      renderApp();
-    }
-
-    function renderCoachTrackerPage() {
-      const allStudents = db.users.filter(u => u.role === "student");
-      const filteredStudents = allStudents.filter(s => {
-        const matchesGroup = coachSelectedGroupFilter === "ALL" || s.group === coachSelectedGroupFilter;
-        const q = coachSearchQuery.trim().toLowerCase();
-        const matchesQuery = !q || s.name.toLowerCase().includes(q) || s.username.toLowerCase().includes(q);
-        return matchesGroup && matchesQuery;
-      });
-
-      const selectedStudent = allStudents.find(s => s.id === coachSelectedStudentId) || filteredStudents[0] || null;
-
-      return `
-        <div class="space-y-6">
-          <!-- Group Management & Filter Bar -->
-          <div class="glass-panel gold-border-glow rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h2 class="font-display font-bold text-xl gold-gradient-text">📋 Coach Student Follow-Up & Groups</h2>
-              <p class="text-xs text-gray-400">ابحث عن أي طالب، قسم مجموعاتك، وعلم (✓) على الدرس اللي حضره والواجب اللي حله.</p>
-            </div>
-
-            <!-- Add New Group Form -->
-            <form onsubmit="createNewCoachGroup(event)" class="flex items-center gap-2">
-              <input id="newGroupNameInput" type="text" placeholder="+ اسم مجموعة جديدة..." class="bg-obsidian-950 border border-gold-500/35 rounded-xl px-3 py-2 text-xs text-white" />
-              <button type="submit" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-gold-500 text-black hover:bg-gold-400">Create Group</button>
-            </form>
-          </div>
-
-          <!-- Group Pills -->
-          <div class="flex flex-wrap gap-2">
-            <button onclick="coachSelectedGroupFilter='ALL'; renderApp();" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${coachSelectedGroupFilter === 'ALL' ? 'bg-gold-500 text-black' : 'bg-obsidian-800 text-gray-300'}">
-              All Groups (${allStudents.length})
-            </button>
-            ${db.groups.map(g => {
-              const count = allStudents.filter(s => s.group === g).length;
-              return `
-                <button onclick="coachSelectedGroupFilter='${g}'; renderApp();" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${coachSelectedGroupFilter === g ? 'bg-gold-500 text-black' : 'bg-obsidian-800 text-gray-300 border border-gold-500/20'}">
-                  👥 ${g} (${count})
-                </button>
-              `;
-            }).join('')}
-          </div>
-
-          <div class="grid lg:grid-cols-3 gap-6">
-            <!-- Left Column: Students List -->
-            <div class="glass-panel gold-border-glow rounded-2xl p-4 space-y-3">
-              <input oninput="coachSearchQuery=this.value; renderApp();" value="${coachSearchQuery}" type="text" placeholder="🔍 Filter by username or name..." class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-3.5 py-2 text-xs text-white" />
-              
-              <div class="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                ${filteredStudents.map(stu => {
-                  const st = calculateStudentStats(stu);
-                  const active = selectedStudent && selectedStudent.id === stu.id;
-                  return `
-                    <div onclick="coachSelectedStudentId='${stu.id}'; renderApp();" class="cursor-pointer p-3.5 rounded-xl border transition ${active ? 'bg-gold-500/15 border-gold-400' : 'bg-obsidian-900 border-gold-500/15 hover:border-gold-500/40'}">
-                      <div class="flex items-center justify-between">
-                        <span class="font-bold text-sm text-white">${stu.name}</span>
-                        <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-gold-500/20 text-gold-300">Step ${stu.level}</span>
-                      </div>
-                      <div class="text-[11px] text-gray-400 mt-0.5">@${stu.username} •${stu.group || 'No Group'}</div>
-                      <div class="mt-2 flex items-center justify-between text-[11px]">
-                        <span class="text-emerald-300">حضر: ${st.attendedCount}/${st.totalLessons}</span>
-                        <span class="text-gold-300">الواجب: ${st.homeworkCount}/${st.totalLessons}</span>
-                        <span class="text-gray-300">الدقة: ${st.puzzleAccuracy}%</span>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-
-            <!-- Right 2 Columns: Selected Student Lesson Checkboxes & Controls -->
-            <div class="lg:col-span-2 glass-panel gold-border-glow rounded-2xl p-6">
-              ${!selectedStudent ? `<p class="text-sm text-gray-400">اختر طالباً من القائمة لعرض دروسه وتحديث حضوره.</p>` : (() => {
-                const st = calculateStudentStats(selectedStudent);
-                return `
-                  <div class="space-y-5">
-                    <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-gold-500/20">
-                      <div>
-                        <div class="flex items-center gap-2">
-                          <h3 class="font-display font-bold text-xl text-white">${selectedStudent.name}</h3>
-                          <span class="text-xs px-2.5 py-0.5 rounded-full border ${st.badgeColor}">${st.badgeArabic} (${st.overallPercent}%)</span>
-                        </div>
-                        <p class="text-xs text-gray-400 mt-1">Username: <strong class="text-gold-300">@${selectedStudent.username}</strong> • متبقي ${st.remainingLessons} دروس لإنهاء Step ${selectedStudent.level}</p>
-                      </div>
-
-                      <!-- Change Student Level or Group -->
-                      <div class="flex flex-wrap items-center gap-2">
-                        <select onchange="changeStudentLevel('${selectedStudent.id}', this.value)" class="bg-obsidian-950 border border-gold-500/40 rounded-xl px-3 py-1.5 text-xs text-gold-300 font-bold">
-                          ${[1,2,3,4,5,6].map(l => `<option value="${l}" ${Number(selectedStudent.level) === l ? 'selected' : ''}>Level: Step ${l}</option>`).join('')}
-                        </select>
-                        <select onchange="changeStudentGroup('${selectedStudent.id}', this.value)" class="bg-obsidian-950 border border-gold-500/30 rounded-xl px-3 py-1.5 text-xs text-white">
-                          ${db.groups.map(g => `<option value="${g}" ${selectedStudent.group === g ? 'selected' : ''}>${g}</option>`).join('')}
-                        </select>
-                      </div>
-                    </div>
-
-                    <!-- Confidential Note for Parent -->
-                    <div class="p-4 rounded-xl bg-obsidian-900 border border-gold-500/30">
-                      <label class="block text-xs font-bold text-gold-400 mb-1.5">🔒 ملاحظة سرية لولي الأمر (لا يراها الطالب أبداً):</label>
-                      <div class="flex gap-2">
-                        <input id="coachNoteInput_${selectedStudent.id}" type="text" value="${selectedStudent.parentSecretNote || ''}" class="flex-1 bg-obsidian-950 border border-gold-500/30 rounded-xl px-3.5 py-2 text-xs text-white" />
-                        <button onclick="saveParentSecretNote('${selectedStudent.id}')" class="px-4 py-2 rounded-xl text-xs font-bold bg-gold-500 text-black hover:bg-gold-400">حفظ الملاحظة</button>
-                      </div>
-                    </div>
-
-                    <!-- Lesson Checkmarks Table (Attended + Homework) -->
-                    <div>
-                      <h4 class="text-xs font-bold uppercase tracking-wider text-gold-300 mb-3">
-                        Step ${selectedStudent.level} Lessons — Check (✓) Attendance & Homework
-                      </h4>
-                      <div class="divide-y divide-gold-500/15 border border-gold-500/20 rounded-xl overflow-hidden bg-obsidian-950/60 max-h-[380px] overflow-y-auto">
-                        ${st.stepObj.lessons.map((les, idx) => {
-                          const key = `${selectedStudent.level}-${idx}`;
-                          const isAttended = !!(selectedStudent.attendedLessons && selectedStudent.attendedLessons[key]);
-                          const isHw = !!(selectedStudent.homeworkDone && selectedStudent.homeworkDone[key]);
-                          return `
-                            <div class="px-4 py-3 flex items-center justify-between gap-3 hover:bg-gold-500/5">
-                              <div class="flex items-center gap-2.5">
-                                <span class="text-xs text-gray-500 font-bold w-5">${idx + 1}.</span>
-                                <a href="${les.links[0]?.url || '#'}" target="_blank" class="text-xs font-semibold text-white hover:text-gold-300">${les.title} ↗</a>
-                              </div>
-                              <div class="flex items-center gap-4">
-                                <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs ${isAttended ? 'text-emerald-300 font-bold' : 'text-gray-400'}">
-                                  <input type="checkbox" ${isAttended ? 'checked' : ''} onchange="toggleStudentLessonCheck('${selectedStudent.id}', '${key}', 'attended')" class="accent-emerald-500 w-4 h-4 rounded" />
-                                  <span>Attended (حضر)</span>
-                                </label>
-                                <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs ${isHw ? 'text-gold-300 font-bold' : 'text-gray-400'}">
-                                  <input type="checkbox" ${isHw ? 'checked' : ''} onchange="toggleStudentLessonCheck('${selectedStudent.id}', '${key}', 'hw')" class="accent-yellow-500 w-4 h-4 rounded" />
-                                  <span>Homework (الواجب)</span>
-                                </label>
-                              </div>
-                            </div>
-                          `;
-                        }).join('')}
-                      </div>
                     </div>
                   </div>
                 `;
@@ -1343,141 +564,53 @@
       `;
     }
 
-    function createNewCoachGroup(e) {
-      e.preventDefault();
-      const inp = document.getElementById("newGroupNameInput");
-      const val = inp.value.trim();
-      if (!val) return;
-      if (!db.groups.includes(val)) {
-        db.groups.push(val);
-        saveDB();
-        showToast(`تم إضافة المجموعة: ${val}`);
-      }
-      inp.value = "";
-      renderApp();
-    }
+    function addGroup(e) { e.preventDefault(); const v = document.getElementById("newGrpInp").value.trim(); if (v) { db.groups.push(v); save(); render(); } }
+    function togCheck(id, k, type) { const s = db.users.find(u => u.id === id); s[type] = s[type] || {}; s[type][k] = !s[type][k]; save(); render(); }
+    function selLvl(id, l) { const s = db.users.find(u => u.id === id); s.level = Number(l); save(); render(); }
+    function saveNote(id) { const s = db.users.find(u => u.id === id); s.note = document.getElementById("noteInp").value; save(); toast("✅ تم حفظ الملاحظة السرية لولي الأمر"); }
 
-    function toggleStudentLessonCheck(studentId, key, type) {
-      const stu = db.users.find(u => u.id === studentId);
-      if (!stu) return;
-      if (type === "attended") {
-        stu.attendedLessons = stu.attendedLessons || {};
-        stu.attendedLessons[key] = !stu.attendedLessons[key];
-      } else {
-        stu.homeworkDone = stu.homeworkDone || {};
-        stu.homeworkDone[key] = !stu.homeworkDone[key];
-      }
-      saveDB();
-      renderApp();
-    }
-
-    function changeStudentLevel(studentId, newLvl) {
-      const stu = db.users.find(u => u.id === studentId);
-      if (!stu) return;
-      stu.level = Number(newLvl);
-      saveDB();
-      showToast(`تم نقل ${stu.name} إلى Step ${newLvl}`);
-      renderApp();
-    }
-
-    function changeStudentGroup(studentId, newGrp) {
-      const stu = db.users.find(u => u.id === studentId);
-      if (!stu) return;
-      stu.group = newGrp;
-      saveDB();
-      showToast(`تم تحديث مجموعة ${stu.name}`);
-      renderApp();
-    }
-
-    function saveParentSecretNote(studentId) {
-      const stu = db.users.find(u => u.id === studentId);
-      if (!stu) return;
-      const val = document.getElementById(`coachNoteInput_${studentId}`).value;
-      stu.parentSecretNote = val;
-      saveDB();
-      showToast("✅ تم حفظ الملاحظة السرية لولي الأمر!");
-    }
-
-    /**************************************************************
-     * 9. PARENT DASHBOARD (SEARCH BY STUDENT USERNAME + RATINGS)
-     **************************************************************/
-    function renderParentDashboard() {
-      const q = parentSearchQuery.trim().toLowerCase();
-      const student = db.users.find(u => u.role === "student" && (u.username.toLowerCase() === q || u.name.toLowerCase().includes(q)));
-
+    function renderParentView() {
+      const stu = db.users.find(u => u.role === "student" && (u.username.toLowerCase() === parentQ.trim().toLowerCase() || u.name.toLowerCase().includes(parentQ.trim().toLowerCase())));
       return `
-        <div class="max-w-4xl mx-auto space-y-6">
-          <div class="glass-panel gold-border-glow rounded-2xl p-6">
-            <span class="text-xs font-bold px-3 py-1 rounded-full bg-gold-500/20 text-gold-300 border border-gold-500/40">👨‍👩‍👦 بوابة متابعة ولي الأمر — Parent Dashboard</span>
-            <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">البحث عن إحصائيات وتقييم الطالب</h2>
-            <p class="text-xs text-gray-400 mt-1">ابحث بالـ Username الخاص بابنك (مثال للتجربة: <code class="text-gold-300">omar_chess</code> أو <code class="text-gold-300">youssef_eca</code> أو <code class="text-gold-300">salma_queen</code>)</p>
-
-            <div class="mt-4 flex gap-2">
-              <input id="parentSearchInput" value="${parentSearchQuery}" oninput="parentSearchQuery=this.value; renderApp();" type="text" placeholder="اكتب اليوزرنيم الخاص بالطالب (مثال: omar_chess)..." class="flex-1 bg-obsidian-950 border border-gold-500/40 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-gold-400" />
-            </div>
+        <div class="max-w-4xl mx-auto space-y-5">
+          <div class="gold-card rounded-2xl p-6">
+            <h2 class="font-display font-bold text-xl gold-gradient-text">👨‍👩‍👦 بوابة متابعة ولي الأمر (Parent Dashboard)</h2>
+            <p class="text-xs text-gray-400 mt-1">ابحث بالـ Username الخاص بابنك (جرب: <b class="text-yellow-300">omar_chess</b> أو <b class="text-yellow-300">youssef_eca</b>)</p>
+            <input value="${parentQ}" oninput="parentQ=this.value; render();" placeholder="اكتب يوزرنيم الطالب..." class="mt-3 w-full bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white" />
           </div>
-
-          ${!student ? `
-            <div class="glass-panel gold-border-glow rounded-2xl p-8 text-center text-sm text-gray-400">
-              لم يتم العثور على طالب بهذا الـ Username. جرب كتابة <code class="text-gold-300">omar_chess</code> أو <code class="text-gold-300">youssef_eca</code>.
-            </div>
-          ` : (() => {
-            const st = calculateStudentStats(student);
-            const isUnlocked = unlockedParentForStudentId === student.id;
+          ${!stu ? `<div class="gold-card rounded-2xl p-6 text-center text-xs text-gray-400">لا يوجد طالب بهذا الاسم. جرب كتابة omar_chess</div>` : (() => {
+            const s = calcStats(stu);
             return `
-              <div class="glass-panel gold-border-glow rounded-2xl p-6 space-y-6">
-                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gold-500/20 pb-5">
+              <div class="gold-card rounded-2xl p-6 space-y-5">
+                <div class="flex flex-wrap justify-between items-center gap-4 border-b border-yellow-500/20 pb-4">
                   <div>
-                    <div class="text-xs text-gold-400 font-bold">STEP ${student.level} •${student.group || ''}</div>
-                    <h3 class="font-display font-bold text-2xl text-white mt-1">${student.name} (@${student.username})</h3>
+                    <span class="text-xs text-yellow-400 font-bold">STEP ${stu.level} •${stu.group}</span>
+                    <h3 class="font-display font-bold text-2xl text-white">${stu.name} (@${stu.username})</h3>
                   </div>
-
-                  <!-- Automatic Smart Evaluation Badge (>80% Genius/Excellent, 50-80% Great, <50% Acceptable) -->
-                  <div class="px-5 py-3 rounded-2xl border text-right ${st.badgeColor}">
-                    <div class="text-[11px] uppercase opacity-80">التقييم العام لمستوى الطالب</div>
-                    <div class="text-lg font-extrabold mt-0.5">${st.badgeArabic}</div>
-                    <div class="text-xs font-bold">نسبة التقدم الكلية: ${st.overallPercent}%</div>
+                  <div class="px-5 py-3 rounded-2xl border ${s.evalCls}">
+                    <div class="text-[11px]">التقييم التلقائي لمستوى الطالب</div>
+                    <div class="text-lg font-extrabold">${s.evalText} (${s.overall}%)</div>
                   </div>
                 </div>
-
-                <!-- 4 Key Stat Cards -->
-                <div class="grid sm:grid-cols-4 gap-4">
-                  <div class="p-4 rounded-xl bg-obsidian-900 border border-gold-500/20">
+                <div class="grid sm:grid-cols-3 gap-4 text-center">
+                  <div class="p-4 rounded-xl bg-black/80 border border-yellow-500/20">
                     <div class="text-xs text-gray-400">الدروس التي حضرها</div>
-                    <div class="text-2xl font-bold text-emerald-400 mt-1">${st.attendedCount} /${st.totalLessons}</div>
-                    <div class="text-[11px] text-gray-500 mt-1">متبقي ${st.remainingLessons} دروس لإنهاء المستوى</div>
+                    <div class="text-xl font-bold text-emerald-400 mt-1">${s.attC} /${s.total}</div>
+                    <div class="text-[11px] text-gray-500">متبقي ${s.rem} دروس</div>
                   </div>
-                  <div class="p-4 rounded-xl bg-obsidian-900 border border-gold-500/20">
+                  <div class="p-4 rounded-xl bg-black/80 border border-yellow-500/20">
                     <div class="text-xs text-gray-400">الواجبات المكتملة</div>
-                    <div class="text-2xl font-bold text-gold-400 mt-1">${st.homeworkCount} /${st.totalLessons}</div>
-                    <div class="text-[11px] text-gray-500 mt-1">نسبة التزام الواجب: ${st.homeworkPercent}%</div>
+                    <div class="text-xl font-bold text-yellow-400 mt-1">${s.hwC} / ${s.total} (${s.hwP}%)</div>
                   </div>
-                  <div class="p-4 rounded-xl bg-obsidian-900 border border-gold-500/20">
-                    <div class="text-xs text-gray-400">دقة حل الألغاز اليومية</div>
-                    <div class="text-2xl font-bold text-sky-400 mt-1">${st.puzzleAccuracy}%</div>
-                    <div class="text-[11px] text-gray-500 mt-1">${student.puzzleStats.correct} صح من ${student.puzzleStats.attempts} محاولة</div>
-                  </div>
-                  <div class="p-4 rounded-xl bg-obsidian-900 border border-gold-500/20">
-                    <div class="text-xs text-gray-400">الدرس القادم</div>
-                    <div class="text-sm font-bold text-white mt-1 line-clamp-2">${st.nextLesson ? st.nextLesson.title : 'جاهز لاختبار المستوى 🏆'}</div>
+                  <div class="p-4 rounded-xl bg-black/80 border border-yellow-500/20">
+                    <div class="text-xs text-gray-400">دقة الألغاز اليومية</div>
+                    <div class="text-xl font-bold text-sky-400 mt-1">${s.puzP}%</div>
                   </div>
                 </div>
-
-                <!-- Secret Coach Note Box Protected by Unified Parent Password -->
-                <div class="p-5 rounded-2xl bg-obsidian-900 border border-gold-500/40 flex flex-wrap items-center justify-between gap-4">
-                  ${isUnlocked ? `
-                    <div>
-                      <div class="text-xs font-bold text-gold-400 mb-1">🔓 ملاحظات المدرب الخاصة لولي الأمر:</div>
-                      <p class="text-sm text-white">${student.parentSecretNote || 'لا توجد ملاحظات حالياً.'}</p>
-                    </div>
-                  ` : `
-                    <div>
-                      <div class="text-sm font-bold text-gold-300">🔒 ملاحظات المدرب السرية لولي الأمر</div>
-                      <p class="text-xs text-gray-400">هذه الخانة مخفية عن الطالب وتفتح فقط بالباسورد الموحد لأولياء الأمور.</p>
-                    </div>
-                    <button onclick="openParentModal('${student.id}')" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-gold-500 text-black hover:bg-gold-400">
-                      إدخال باسورد ولي الأمر 🔑
-                    </button>
+                <div class="p-4 rounded-xl bg-black/90 border border-yellow-500/40 flex justify-between items-center">
+                  ${unlockedStuId === stu.id ? `<div><b class="text-xs text-yellow-400">🔓 ملاحظة المدرب السرية:</b><p class="text-sm text-white mt-1">${stu.note}</p></div>` : `
+                    <span class="text-xs text-yellow-300">🔒 ملاحظات المدرب السرية لولي الأمر (محمية بباسورد موحد)</span>
+                    <button onclick="openParentModal('${stu.id}')" class="px-4 py-2 rounded-xl text-xs gold-btn">فتح بالباسورد 🔑</button>
                   `}
                 </div>
               </div>
@@ -1487,161 +620,43 @@
       `;
     }
 
-    /**************************************************************
-     * 10. PARENT MODAL & LEVEL UP EXAM LOGIC
-     **************************************************************/
-    let pendingParentUnlockStudentId = null;
-
-    function openParentModal(studentId) {
-      pendingParentUnlockStudentId = studentId;
-      document.getElementById("parentPassInput").value = "";
-      document.getElementById("parentPassError").classList.add("hidden");
-      document.getElementById("parentLockModal").classList.remove("hidden");
+    let pendingStuId = null;
+    function openParentModal(id) { pendingStuId = id; document.getElementById("parentPassInp").value = ""; document.getElementById("parentModal").classList.remove("hidden"); }
+    function closeParentModal() { document.getElementById("parentModal").classList.add("hidden"); }
+    function confirmParentPass() {
+      if (document.getElementById("parentPassInp").value.trim() === "ECA-PARENT") {
+        unlockedStuId = pendingStuId; closeParentModal(); render(); toast("🔓 تم فتح ملاحظة ولي الأمر");
+      } else toast("❌ باسورد غير صحيح (استخدم ECA-PARENT)");
     }
 
-    function closeParentModal() {
-      document.getElementById("parentLockModal").classList.add("hidden");
-    }
-
-    function unlockParentNotes() {
-      const val = document.getElementById("parentPassInput").value.trim();
-      if (val === UNIFIED_PARENT_PASS) {
-        unlockedParentForStudentId = pendingParentUnlockStudentId;
-        closeParentModal();
-        showToast("🔓 تم فتح ملاحظات ولي الأمر السرية!");
-        renderApp();
-      } else {
-        document.getElementById("parentPassError").classList.remove("hidden");
-      }
-    }
-
-    function openLevelTestModal(stepNum) {
-      const questions = LEVEL_EXAM_QUESTIONS[stepNum] || LEVEL_EXAM_QUESTIONS[1];
-      const modal = document.getElementById("levelTestModal");
-      const content = document.getElementById("levelTestContent");
-
-      content.innerHTML = `
-        <h3 class="font-display font-bold text-xl gold-gradient-text mb-1">🏆 Step ${stepNum} Official Promotion Test</h3>
-        <p class="text-xs text-gray-400 mb-4">أجب بنسبة 65% أو أعلى للترقية تلقائياً إلى Step ${stepNum + 1}!</p>
-        <form onsubmit="submitLevelTest(event, ${stepNum})" class="space-y-4">
-          ${questions.map((item, qIdx) => `
-            <div class="p-3.5 rounded-xl bg-obsidian-900 border border-gold-500/20">
-              <div class="text-xs font-bold text-white mb-2">${item.q}</div>
-              <div class="space-y-1.5">
-                ${item.options.map((opt, oIdx) => `
-                  <label class="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                    <input type="radio" required name="exam_q_${qIdx}" value="${oIdx}" class="accent-yellow-500" />
-                    <span>${opt}</span>
-                  </label>
-                `).join('')}
-              </div>
-            </div>
-          `).join('')}
-          <button type="submit" class="w-full py-3 rounded-xl font-bold text-xs bg-gold-500 text-black hover:bg-gold-400">
-            Submit Test & Check Promotion 🚀
-          </button>
-        </form>
+    function openExamModal(lvl) {
+      document.getElementById("examModal").classList.remove("hidden");
+      document.getElementById("examBody").innerHTML = `
+        <p class="text-xs text-gray-300 mb-3">اختبار نهاية Step ${lvl}: هل أنت جاهز للترقية إلى Step ${lvl+1}؟</p>
+        <button onclick="passExam()" class="w-full py-2.5 rounded-xl text-xs gold-btn">إتمام الاختبار بنجاح والترقية إلى Step ${lvl+1} 🚀</button>
       `;
-      modal.classList.remove("hidden");
+    }
+    function closeExamModal() { document.getElementById("examModal").classList.add("hidden"); }
+    function passExam() {
+      const u = currUser();
+      if (u && u.role === "student") { u.level = Math.min(6, Number(u.level) + 1); save(); closeExamModal(); render(); toast("🎉 مبروك! تمت ترقيتك إلى Step " + u.level); }
     }
 
-    function closeLevelTestModal() {
-      document.getElementById("levelTestModal").classList.add("hidden");
-    }
-
-    function submitLevelTest(e, stepNum) {
-      e.preventDefault();
-      const questions = LEVEL_EXAM_QUESTIONS[stepNum] || LEVEL_EXAM_QUESTIONS[1];
-      let correct = 0;
-      questions.forEach((item, qIdx) => {
-        const selected = document.querySelector(`input[name="exam_q_${qIdx}"]:checked`);
-        if (selected && Number(selected.value) === item.ans) correct++;
+    // Background Animation
+    const cv = document.getElementById("bgCanvas"), ctx = cv.getContext("2d");
+    function rsz() { cv.width = window.innerWidth; cv.height = window.innerHeight; }
+    window.addEventListener("resize", rsz); rsz();
+    const pts = Array.from({ length: 35 }, () => ({ x: Math.random() * cv.width, y: Math.random() * cv.height, r: Math.random() * 1.8 + 0.5, vx: (Math.random() - 0.5) * 0.25, vy: (Math.random() - 0.5) * 0.25 }));
+    function anim() {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      pts.forEach(p => {
+        p.x = (p.x + p.vx + cv.width) % cv.width; p.y = (p.y + p.vy + cv.height) % cv.height;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = "rgba(212,175,55,0.3)"; ctx.fill();
       });
-      const score = Math.round((correct / questions.length) * 100);
-      const user = getCurrentUser();
-
-      if (score >= 65 && user && user.role === "student") {
-        user.level = Math.min(6, Number(user.level) + 1);
-        saveDB();
-        closeLevelTestModal();
-        showToast(`🎉 مبروك! نجحت بنسبة ${score}% وتمت ترقيتك إلى Step ${user.level}!`);
-        renderApp();
-      } else {
-        closeLevelTestModal();
-        showToast(`النتيجة: ${score}% — تحتاج 65% فأكثر للترقية للمستوى التالي.`);
-      }
+      requestAnimationFrame(anim);
     }
-
-    /**************************************************************
-     * 11. MAIN APP RENDERER & GOLD PARTICLE BACKGROUND
-     **************************************************************/
-    function renderApp() {
-      renderHeader();
-      const container = document.getElementById("appContainer");
-      const user = getCurrentUser();
-
-      if (activeTab === "parent-dashboard") {
-        container.innerHTML = renderParentDashboard();
-        return;
-      }
-
-      if (!user) {
-        container.innerHTML = renderAuthScreen();
-        return;
-      }
-
-      if (activeTab === "lessons") {
-        container.innerHTML = renderLessonsPage(user);
-      } else if (activeTab === "coach-tracker" && user.role === "coach") {
-        container.innerHTML = renderCoachTrackerPage();
-      } else {
-        container.innerHTML = renderHomePage(user);
-      }
-    }
-
-    // Subtle Black & Gold Background Animation
-    const canvas = document.getElementById("bgCanvas");
-    const ctx = canvas.getContext("2d");
-    let particles = [];
-
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    window.addEventListener("resize", resizeCanvas);
-    resizeCanvas();
-
-    for (let i = 0; i < 42; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        r: Math.random() * 1.8 + 0.6,
-        vx: (Math.random() - 0.5) * 0.25,
-        vy: (Math.random() - 0.5) * 0.25,
-        a: Math.random() * 0.45 + 0.1
-      });
-    }
-
-    function animateBg() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0) p.x = canvas.width;
-        if (p.x > canvas.width) p.x = 0;
-        if (p.y < 0) p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(212, 175, 55, ${p.a})`;
-        ctx.fill();
-      });
-      requestAnimationFrame(animateBg);
-    }
-    animateBg();
-
-    // Initial Render
-    renderApp();
+    anim();
+    render();
   </script>
 </body>
 </html>
