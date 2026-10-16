@@ -1,1246 +1,1647 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Egypt Chess Academy (ECA) — Training Curriculum Portal</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                        display: ['Cinzel', 'serif'],
-                        mono: ['JetBrains Mono', 'monospace']
-                    },
-                    colors: {
-                        eca: {
-                            black: '#050507',
-                            obsidian: '#0b0b0f',
-                            card: '#111116',
-                            cardHover: '#17171f',
-                            border: '#262115',
-                            gold: '#d4af37',
-                            goldLight: '#f3d266',
-                            goldDark: '#9e7c1c'
-                        }
-                    }
-                }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Egypt Chess Academy (ECA) — Full Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Cinzel', 'serif'],
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            gold: {
+              300: '#f7df8b',
+              400: '#ecc94b',
+              500: '#d4af37',
+              600: '#b89225',
+            },
+            obsidian: {
+              950: '#050507',
+              900: '#0b0b10',
+              800: '#12121a',
+              700: '#1b1b26',
             }
+          }
         }
-    </script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-    <style>
-        body {
-            background-color: #050507;
-            color: #f4f1ea;
-            overflow-x: hidden;
-        }
-
-        /* Ambient Gold Glow & Subtle Vignette */
-        .gold-ambient-glow {
-            background: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.10) 0%, rgba(5, 5, 7, 0) 65%);
-        }
-
-        /* Metallic Gold Gradient Text */
-        .text-gold-gradient {
-            background: linear-gradient(135deg, #fff6d6 0%, #f3d266 35%, #d4af37 70%, #9e7c1c 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        /* Metallic Gold Button / Badge */
-        .bg-gold-gradient {
-            background: linear-gradient(135deg, #f3d266 0%, #d4af37 55%, #b38b22 100%);
-        }
-
-        /* Smooth Accordion Vertical Collapse/Expand */
-        .accordion-content {
-            display: grid;
-            grid-template-rows: 0fr;
-            transition: grid-template-rows 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
-            opacity: 0;
-        }
-        .accordion-content.open {
-            grid-template-rows: 1fr;
-            opacity: 1;
-        }
-        .accordion-inner {
-            overflow: hidden;
-        }
-
-        /* Lesson Vertical Row Hover Effect */
-        .lesson-row {
-            transition: background-color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
-        }
-        .lesson-row:hover {
-            background-color: rgba(212, 175, 55, 0.06);
-        }
-
-        /* Custom Gold & Black Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #050507;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #2b2414;
-            border-radius: 9999px;
-            border: 1px solid rgba(212, 175, 55, 0.25);
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #d4af37;
-        }
-
-        .refresh-spin {
-            animation: spin 0.55s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-    </style>
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #050507;
+      color: #f3f4f6;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+    .gold-gradient-text {
+      background: linear-gradient(135deg, #fff3c4 0%, #d4af37 50%, #997415 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .gold-border-glow {
+      border: 1px solid rgba(212, 175, 55, 0.28);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+    .gold-border-glow:hover {
+      border-color: rgba(212, 175, 55, 0.55);
+    }
+    .glass-panel {
+      background: rgba(14, 14, 21, 0.85);
+      backdrop-filter: blur(14px);
+    }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #07070a; }
+    ::-webkit-scrollbar-thumb { background: #2c2617; border-radius: 4px; border: 1px solid rgba(212,175,55,0.3); }
+  </style>
 </head>
-<body class="min-h-screen flex flex-col font-sans selection:bg-[#d4af37] selection:text-black relative">
+<body class="min-h-screen flex flex-col relative selection:bg-gold-500 selection:text-black">
 
-    <!-- ===================================================================== -->
-    <!-- EYE-FRIENDLY AMBIENT BLACK & GOLD ANIMATED CANVAS BACKGROUND          -->
-    <!-- ===================================================================== -->
-    <canvas id="ambient-bg-canvas" class="fixed inset-0 w-full h-full pointer-events-none z-0"></canvas>
-    <div class="fixed inset-0 pointer-events-none z-0 gold-ambient-glow"></div>
+  <!-- Animated Luxury Background -->
+  <canvas id="bgCanvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
 
-    <!-- ===================================================================== -->
-    <!-- TOP HEADER: Clickable Egypt Chess Academy (ECA) Brand                 -->
-    <!-- ===================================================================== -->
-    <header class="sticky top-0 z-30 backdrop-blur-xl bg-[#050507]/85 border-b border-[#d4af37]/20">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
-            
-            <!-- CLICKABLE BRAND LOGO & NAME (Resets/Refreshes Portal Home) -->
-            <button id="eca-home-brand" type="button" onclick="resetToHome()" class="group flex items-center gap-3.5 text-left focus:outline-none rounded-2xl p-1.5 -ml-1.5 hover:bg-[#d4af37]/10 transition-all" title="Click to refresh & return to ECA Home">
-                <div class="relative w-12 h-12 rounded-2xl bg-gold-gradient flex items-center justify-center shadow-lg shadow-[#d4af37]/20 group-hover:scale-105 group-active:scale-95 transition-transform">
-                    <i id="brand-knight-icon" class="fa-solid fa-chess-knight text-black text-2xl"></i>
-                    <span class="absolute -bottom-1 -right-1 px-1.5 py-0.2 bg-black text-[#f3d266] font-mono text-[10px] font-bold rounded-md border border-[#d4af37]/60 shadow">
-                        ECA
-                    </span>
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-obsidian-800 border border-gold-500 text-gold-300 px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm font-medium transition-all">
+    <span>♟️</span>
+    <span id="toastMsg">Action completed</span>
+  </div>
+
+  <!-- Parent Secret Password Modal -->
+  <div id="parentLockModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-panel gold-border-glow rounded-2xl max-w-md w-full p-6 relative">
+      <button onclick="closeParentModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-gold-500/20 border border-gold-500/40 flex items-center justify-center text-xl">🔒</div>
+        <div>
+          <h3 class="font-display font-bold text-lg text-gold-400">Parent Confidential Area</h3>
+          <p class="text-xs text-gray-400">بوابة ولي الأمر السرية — أدخل الباسورد الموحد</p>
+        </div>
+      </div>
+      <input id="parentPassInput" type="password" placeholder="Enter Unified Parent Password (ECA-PARENT)" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-gold-400 mb-3" />
+      <p id="parentPassError" class="text-xs text-red-400 mb-3 hidden">❌ الباسورد غير صحيح! (للتجربة استخدم: ECA-PARENT)</p>
+      <div class="flex justify-end gap-2">
+        <button onclick="closeParentModal()" class="px-4 py-2 rounded-xl text-xs bg-obsidian-700 text-gray-300">Cancel</button>
+        <button onclick="unlockParentNotes()" class="px-5 py-2 rounded-xl text-xs font-bold bg-gold-500 text-black hover:bg-gold-400 transition">Unlock Notes 🔓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Level Up Exam Modal -->
+  <div id="levelTestModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-panel gold-border-glow rounded-2xl max-w-xl w-full p-6 relative">
+      <button onclick="closeLevelTestModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
+      <div id="levelTestContent"></div>
+    </div>
+  </div>
+
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-30 glass-panel border-b border-gold-500/20">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Clickable Academy Brand (Refreshes/Resets to Home View) -->
+      <div onclick="goHomeRefresh()" class="flex items-center gap-3 cursor-pointer group select-none">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-gold-400 via-gold-500 to-amber-700 flex items-center justify-center text-black font-bold text-2xl shadow-lg group-hover:scale-105 transition">
+          👑
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-display font-extrabold text-lg md:text-xl tracking-wider gold-gradient-text">EGYPT CHESS ACADEMY</span>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-gold-500/20 text-gold-300 border border-gold-500/40">ECA</span>
+          </div>
+          <p class="text-[11px] text-gray-400">Official Training, Homework & Student Tracking Portal</p>
+        </div>
+      </div>
+
+      <!-- Coach Instant Student Search Bar (Visible ONLY to Coaches) -->
+      <div id="coachHeaderSearchWrap" class="hidden flex-1 max-w-md mx-2">
+        <div class="relative">
+          <input id="coachGlobalStudentSearch" oninput="handleCoachHeaderSearch(this.value)" type="text" placeholder="🔍 Search student username or name..." class="w-full bg-obsidian-950/90 border border-gold-500/35 rounded-xl pl-4 pr-24 py-2 text-xs text-white focus:outline-none focus:border-gold-400" />
+          <button onclick="switchTab('coach-tracker')" class="absolute right-1.5 top-1/2 -translate-y-1/2 bg-gold-500 text-black font-bold text-[11px] px-2.5 py-1 rounded-lg hover:bg-gold-400 transition">
+            Follow Up
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation & User Controls -->
+      <div class="flex items-center gap-2 flex-wrap" id="headerNavArea">
+        <!-- Rendered Dynamically -->
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main id="appContainer" class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+    <!-- Dynamic Views Render Here -->
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="relative z-10 border-t border-gold-500/15 py-4 text-center text-xs text-gray-500">
+    Egypt Chess Academy (ECA) • Interactive Coaching & Student Curriculum System
+  </footer>
+
+  <script>
+    /**************************************************************
+     * 1. FULL OFFICIAL ECA CURRICULUM (STEPS 1 TO 6)
+     **************************************************************/
+    const STEPS_DATA = [
+      {
+        step: 1,
+        title: "Step 1",
+        subtitle: "Fundamentals, Piece Movement, Basic Mate & Tactics",
+        lessons: [
+          { title: "Board and pieces", links: [{ label: "Examples", url: "https://lichess.org/study/jjMNw6GF/wWxeB9BO" }] },
+          { title: "Moves of the pieces", links: [{ label: "Examples", url: "https://lichess.org/study/48k26G0o/gvaJW7s5" }] },
+          { title: "Attacking and taking", links: [{ label: "Examples", url: "https://lichess.org/study/C4BqIzIc/HO9ETmkV" }] },
+          { title: "The pawn", links: [{ label: "Examples", url: "https://lichess.org/study/TCt9XgBc/hgBwh3xP" }] },
+          { title: "Defending", links: [
+            { label: "Examples", url: "https://lichess.org/study/g4ch8UUJ" },
+            { label: "Exercises", url: "https://lichess.org/study/RPFaVRku/LErAf9Dq" }
+          ]},
+          { title: "Check", links: [
+            { label: "Examples", url: "https://lichess.org/study/nHyQinYL/Mlzci7gW" },
+            { label: "Exercises", url: "http://lichess.org/study/LJzsX2Bb/1o4kmKsF" }
+          ]},
+          { title: "Mate (1)", links: [
+            { label: "Exercises 1", url: "https://lichess.org/study/DfeRg74R" },
+            { label: "Exercises 2", url: "https://lichess.org/study/2HFYM7LI/iNAIUMgw" }
+          ]},
+          { title: "Mate (2)", links: [
+            { label: "Exercises 1", url: "https://lichess.org/study/Fk6PprHt" },
+            { label: "Exercises 2", url: "https://lichess.org/study/4dxlu3Qy" },
+            { label: "Exercises 3", url: "https://lichess.org/study/WakS7KEt" }
+          ]},
+          { title: "Castling", links: [
+            { label: "Examples", url: "https://lichess.org/study/Q0mL49LP" },
+            { label: "Exercises", url: "https://lichess.org/study/8XJxZK1c/g0194InP" }
+          ]},
+          { title: "Profitable exchange", links: [
+            { label: "Examples", url: "https://lichess.org/study/91xk9Lw0" },
+            { label: "Exercises", url: "https://lichess.org/study/jDKpfwHS" }
+          ]},
+          { title: "twofold attack", links: [
+            { label: "Examples", url: "https://lichess.org/study/klYbDwK8" },
+            { label: "Exercises 1", url: "https://lichess.org/study/6v9QYu2b" },
+            { label: "Exercises 2", url: "https://lichess.org/study/hs7q4Bey" }
+          ]},
+          { title: "Draw", links: [
+            { label: "Examples", url: "https://lichess.org/study/4L5NDH4W/Ufe7WXKh" }
+          ]}
+        ]
+      },
+      {
+        step: 2,
+        title: "Step 2",
+        subtitle: "Double Attack, The Pin, Eliminating Defence & Golden Rules",
+        lessons: [
+          { title: "Targets of attack", links: [
+            { label: "Examples", url: "https://lichess.org/study/3zmfaxGz/TTSEXL79" },
+            { label: "Exercises 1", url: "https://lichess.org/study/TGj12BIr/sWXMbVBp" },
+            { label: "2-", url: "https://lichess.org/study/Xm0oBMLW" }
+          ]},
+          { title: "Double attack: queen (1)", links: [
+            { label: "Exercise 1", url: "https://lichess.org/study/tqJOzF9p" },
+            { label: "Exercise 2", url: "https://lichess.org/study/zTSQXHWV" }
+          ]},
+          { title: "Double attack: queen (2)", links: [
+            { label: "Exercise 1", url: "https://lichess.org/study/KkMcTebd" },
+            { label: "Exercise 2", url: "https://lichess.org/study/zWSgnN2h" }
+          ]},
+          { title: "4-The pin", links: [
+            { label: "Examples", url: "https://lichess.org/study/TwRHuPGZ/15bNAErP" },
+            { label: "Exercises 1", url: "https://lichess.org/study/Qzhw3D8K/kl8QnDY0" },
+            { label: "Exercises 2", url: "https://lichess.org/study/JjvX9r45/Ys2KRHKU" },
+            { label: "Exercises 3", url: "https://lichess.org/study/v6l4lLFw/LralQmQS" }
+          ]},
+          { title: "5-Eliminating of defence", links: [
+            { label: "Examples", url: "https://lichess.org/study/gjaexjSM/XtAJvCWZ" },
+            { label: "Exercises", url: "https://lichess.org/study/yZMV5JdY/9HFnCNVx" }
+          ]},
+          { title: "The 3 golden rules", links: [
+            { label: "Examples", url: "https://lichess.org/study/0DeojSlO/OnyeZ0QY" },
+            { label: "Exercises", url: "https://lichess.org/study/Tv5Q4AGE/JWFraj6A" }
+          ]},
+          { title: "Mate in two", links: [
+            { label: "Exercise 1", url: "https://lichess.org/study/CYeNq3NN/6M0m2KUg" },
+            { label: "Exercise 2", url: "https://lichess.org/study/THHzDa1N/C9EZ0z5O" }
+          ]},
+          { title: "Double attack: knight", links: [
+            { label: "Exercises 1", url: "https://lichess.org/study/e8U4ZMuQ/8OFL9uo8" },
+            { label: "Exercises 2", url: "https://lichess.org/study/otSMJjwH/pIwu0ivp" }
+          ]},
+          { title: "Mating with the rook", links: [
+            { label: "Exercises", url: "https://lichess.org/study/zAGZus6e/5AJW3cs7" }
+          ]},
+          { title: "Double attack: Rook , bishop , pawn , king", links: [
+            { label: "Exercises", url: "https://lichess.org/study/whl4X0Vy/BPFGoXvj" }
+          ]},
+          { title: "Double attack : cooperation of two pieces", links: [
+            { label: "Exercise", url: "https://lichess.org/study/ZOdpD9Ly/O9zAPm3h" }
+          ]},
+          { title: "Discovered attack", links: [
+            { label: "Examples", url: "https://lichess.org/study/b00xkEzU/kKJEEqWR" },
+            { label: "Exercises 1", url: "https://lichess.org/study/u8w4QQht/n5EcgyIX" },
+            { label: "Exercises 2", url: "https://lichess.org/study/a5Q2Twk2/dP4F5lD9" }
+          ]},
+          { title: "Defending against mate", links: [
+            { label: "Examples", url: "https://lichess.org/study/2UEfJLEz/EFD3xymZ" },
+            { label: "Exercises", url: "https://lichess.org/study/8YoxQqtw/3I15qJzf" }
+          ]},
+          { title: "Short notation", links: [
+            { label: "Exercises 1", url: "https://lichess.org/study/ZZTnIekD/MiN0jOS1" },
+            { label: "Exercises 2", url: "https://lichess.org/study/45BAOetX/K6P3Lz1b" },
+            { label: "Exercises 3", url: "https://lichess.org/study/9G0jITgq" }
+          ]}
+        ]
+      },
+      {
+        step: 3,
+        title: "Step 3",
+        subtitle: "Discovered Check, X-Ray, Key Squares & Advanced Pin",
+        lessons: [
+          { title: "Discovered and double check (step 3)", links: [{ label: "Study", url: "https://lichess.org/study/srYNhk2o" }] },
+          { title: "Attack on a pinned piece (step 3)", links: [
+            { label: "Examples", url: "https://lichess.org/study/aUODKeM7" },
+            { label: "Exercises", url: "https://lichess.org/study/R7MF7lb4" }
+          ]},
+          { title: "Access and mating pattern ( step 3)", links: [{ label: "Study", url: "https://lichess.org/study/LdwLPyPK" }] },
+          { title: "The square of the pawn (step 3)", links: [
+            { label: "Examples", url: "https://lichess.org/study/TGs1ej3b" },
+            { label: "Exercises", url: "https://lichess.org/study/oZ0xi9dr" }
+          ]},
+          { title: "Elimination of the defence (step 3)", links: [
+            { label: "examples", url: "https://lichess.org/study/dPGoFdbD/vGIxjsGO" },
+            { label: "exercises", url: "https://lichess.org/study/xrekdf0f/RCd5Ztfm" }
+          ]},
+          { title: "defending against the double attack (step 3)", links: [{ label: "Study", url: "https://lichess.org/study/Vh0XG74a/WmCoeGe5" }] },
+          { title: "draw (step 3)", links: [{ label: "Study", url: "https://lichess.org/study/OWsq2BB6/Us22qb9A" }] },
+          { title: "X-Ray (step 3)", links: [{ label: "Study", url: "https://lichess.org/study/2SV6ZvX7/06csTyjJ" }] },
+          { title: "defending against the pin (step 3)", links: [
+            { label: "examples", url: "https://lichess.org/study/cZTwQ7qz/s9y7sUZn" },
+            { label: "exercises", url: "https://lichess.org/study/dMXnI1aK" }
+          ]},
+          { title: "mobility (step 3)", links: [{ label: "Study", url: "https://lichess.org/study/mSAOaeqN/eYak86eR" }] },
+          { title: "key squares ( step 3)", links: [
+            { label: "examples", url: "https://lichess.org/study/tfuHXokW/zqOhzIRG" },
+            { label: "marking the key squares", url: "https://lichess.org/study/61A3DAAj/1yrdSgdh" },
+            { label: "exercises", url: "https://lichess.org/study/kP7xaVHA/irKTLPXb" }
+          ]},
+          { title: "pinned piece is not a good defender (step3)", links: [
+            { label: "mate thanks to a pin", url: "https://lichess.org/study/Nm6Air3f/pSHbbNIB" },
+            { label: "exercises 1", url: "https://lichess.org/study/zjRi4eGw/TwqdeoJ7" },
+            { label: "exercises 2", url: "https://lichess.org/study/x1vTVIn2/IKdbD71Q" }
+          ]}
+        ]
+      },
+      {
+        step: 4,
+        title: "Step 4",
+        subtitle: "Interference, Luring, Blocking, Passed Pawns & 7th Rank",
+        lessons: [
+          { title: "Elimination of the defence interference", links: [{ label: "Exercises", url: "https://lichess.org/study/t5pXfLox/34DdnZYk" }] },
+          { title: "Double attack : luring", links: [{ label: "Examples & Exercises", url: "https://lichess.org/study/6BtkIYoH/jyX4KueF" }] },
+          { title: "Elimination of the defence : blocking", links: [{ label: "Examples & Exercises", url: "https://lichess.org/study/Gwg29Hxj/Y6li8kPN" }] },
+          { title: "Pin: placing the front and back piece", links: [{ label: "Examples & Exercises", url: "https://lichess.org/study/t1PGCxRF" }] },
+          { title: "The passed pawn", links: [{ label: "Exercises", url: "https://lichess.org/study/pibm2ud9/lDYc6ebt" }] },
+          { title: "Defending against the passed pawn", links: [{ label: "Study", url: "https://lichess.org/study/wrm58f4j/ZnUsBj0n" }] },
+          { title: "Double attack : Elimination of the defence", links: [{ label: "Exercises", url: "https://lichess.org/study/uNWgETUd/XtI3rvDK" }] },
+          { title: "The magnet", links: [{ label: "Exercises", url: "https://lichess.org/study/HDoz7iiZ/jtw6t01P" }] },
+          { title: "Weak pawns", links: [{ label: "Study", url: "https://lichess.org/study/pvepHzju/NzJust3T" }] },
+          { title: "MIX", links: [{ label: "Study", url: "https://lichess.org/study/Vslcoxz5/4s1QtXma" }] },
+          { title: "Material advantage", links: [{ label: "Study", url: "https://lichess.org/study/zz7pwo79/NNBE4uIt" }] },
+          { title: "Double attack : chasing and aiming", links: [{ label: "Exercises", url: "https://lichess.org/study/eo7JyYza/ka7GUiIW" }] },
+          { title: "Attacking the castled king", links: [{ label: "Study", url: "https://lichess.org/study/C1bi0HTS/HtyfEmM3" }] },
+          { title: "The seventh rank", links: [
+            { label: "Examples", url: "https://lichess.org/study/mDeK8pb5/EySaljms" },
+            { label: "Exercises 1", url: "https://lichess.org/study/9rPWgIfk" },
+            { label: "Exercises 2", url: "https://lichess.org/study/7ojMv2O2" }
+          ]},
+          { title: "Strategy in pawn endings", links: [{ label: "Exercise", url: "https://lichess.org/study/MTh6EjHF/8TaknmFZ" }] },
+          { title: "MIX G", links: [{ label: "Study", url: "https://lichess.org/study/1Joelo2c" }] },
+          { title: "Double attack : clearing", links: [
+            { label: "1-", url: "https://lichess.org/study/zfXowIhD" },
+            { label: "Study 2", url: "https://lichess.org/study/WQZY2uhR" }
+          ]},
+          { title: "Queen against pawn", links: [
+            { label: "Examples", url: "https://lichess.org/study/MlayR9Ye/Z0O4m2k6" },
+            { label: "Exercises", url: "https://lichess.org/study/HyE8ZFrO" }
+          ]}
+        ]
+      },
+      {
+        step: 5,
+        title: "Step 5",
+        subtitle: "Advanced Tactical Mastery & Endgame Technique",
+        lessons: []
+      },
+      {
+        step: 6,
+        title: "Step 6",
+        subtitle: "Mastery Calculation & Tournament Strategy",
+        lessons: []
+      }
+    ];
+
+    /**************************************************************
+     * 2. DAILY PUZZLES & LEVEL EXAMS PER STEP
+     **************************************************************/
+    const DAILY_PUZZLES_BY_STEP = {
+      1: {
+        title: "Step 1 Daily Puzzle — Mate in 1",
+        prompt: "White to move: Black's King is on g8 behind f7-g7-h7 pawns, and White's Rook is on e1. What is the winning move?",
+        boardHint: "♔g8 | ♟f7,g7,h7 vs ♖e1, ♔g1",
+        options: ["Re8# (Back-rank Mate)", "Re7", "Kf1", "Rf1"],
+        correctIndex: 0,
+        lichessUrl: "https://lichess.org/study/DfeRg74R"
+      },
+      2: {
+        title: "Step 2 Daily Puzzle — Royal Knight Fork",
+        prompt: "White's Knight is on d5. Black's King is on e8 and Queen is on a8. Which move wins the Queen via a Double Attack?",
+        boardHint: "♘d5 vs ♚e8, ♛a8",
+        options: ["Nc7+ (Forking King & Queen)", "Nb6", "Ne7+", "Nf6+"],
+        correctIndex: 0,
+        lichessUrl: "https://lichess.org/study/e8U4ZMuQ/8OFL9uo8"
+      },
+      3: {
+        title: "Step 3 Daily Puzzle — Attacking the Pinned Piece",
+        prompt: "Black's Knight on f6 is pinned to the King on e8 by White's Bishop on g5. How should White increase pressure?",
+        boardHint: "♗g5 pinning ♞f6 to ♚e8",
+        options: ["Nd5 (Adding another attacker on f6)", "Bxf6 immediately", "Bc1", "h3"],
+        correctIndex: 0,
+        lichessUrl: "https://lichess.org/study/aUODKeM7"
+      },
+      4: {
+        title: "Step 4 Daily Puzzle — The Magnet Combination",
+        prompt: "White sacrifices on h7 (Bxh7+ Kxh7) to draw the Black King onto an open file for Qd3+ and Rh1#. What is this theme called?",
+        boardHint: "Attracting the King to a vulnerable square",
+        options: ["The Magnet / Luring", "Stalemate Defense", "Pawn Square Rule", "Castling"],
+        correctIndex: 0,
+        lichessUrl: "https://lichess.org/study/HDoz7iiZ/jtw6t01P"
+      },
+      5: {
+        title: "Step 5 Daily Puzzle — Advanced Interference",
+        prompt: "Cut the communication between two defending rooks on the d-file to force checkmate.",
+        boardHint: "Tactical Interference",
+        options: ["Nd5! (Interference)", "Kh1", "a4", "Rb1"],
+        correctIndex: 0,
+        lichessUrl: "https://lichess.org/training"
+      },
+      6: {
+        title: "Step 6 Daily Puzzle — Master Calculation",
+        prompt: "Evaluate the deep queen sacrifice leading to a forced 4-move mating net.",
+        boardHint: "Calculation & Mating Net",
+        options: ["Qxh7+! followed by Rh3#", "Qe2", "Rad1", "h4"],
+        correctIndex: 0,
+        lichessUrl: "https://lichess.org/training"
+      }
+    };
+
+    const LEVEL_EXAM_QUESTIONS = {
+      1: [
+        { q: "1. Which move delivers a back-rank checkmate when the opponent's King is trapped behind its own pawns?", options: ["Rook to the 8th rank (Re8#)", "Moving a random pawn", "King to f2"], ans: 0 },
+        { q: "2. When your King is in Check, which of the following is NOT one of the 3 legal ways out?", options: ["Capture the attacker", "Block the check", "Ignore the check and capture another piece"], ans: 2 },
+        { q: "3. If you trade a Knight (3 pts) for a Rook (5 pts), what is that called?", options: ["Profitable Exchange", "Blunder", "Draw"], ans: 0 }
+      ],
+      2: [
+        { q: "1. What are the 3 Golden Rules in the opening?", options: ["Control center, develop pieces, castle King", "Move Queen early, push flank pawns, don't castle", "Move the same knight 4 times"], ans: 0 },
+        { q: "2. When a Bishop attacks a Knight that cannot move because the King is behind it, what is this called?", options: ["Absolute Pin", "Zugzwang", "En Passant"], ans: 0 },
+        { q: "3. If a Queen guards a Rook and you capture or chase away the Queen first, what tactic did you use?", options: ["Eliminating of Defence", "Stalemate", "Short Notation"], ans: 0 }
+      ],
+      3: [
+        { q: "1. When a piece moves and uncovers a check from BOTH the moving piece and the piece behind it, what is it?", options: ["Double Check", "Pin", "Draw"], ans: 0 },
+        { q: "2. What is the only way for a King to defend against a Double Check?", options: ["The King MUST move", "Block both checks", "Capture both attackers"], ans: 0 },
+        { q: "3. How do we quickly tell if a King can catch an unopposed passed pawn?", options: ["The Rule of the Square", "Counting all 64 squares", "Asking the arbiter"], ans: 0 }
+      ],
+      4: [
+        { q: "1. Placing a piece between an enemy defender and the square it defends is called:", options: ["Interference / Blocking", "Fork", "Perpetual Check"], ans: 0 },
+        { q: "2. Forcing an enemy piece onto a bad square by sacrificing material is known as:", options: ["Luring / The Magnet", "Weak Pawns", "Castling"], ans: 0 },
+        { q: "3. Why are two Rooks on the 7th rank ('Pigs on the 7th') so strong?", options: ["They trap the enemy King and attack base pawns", "They can promote into Queens", "They cannot be captured"], ans: 0 }
+      ]
+    };
+
+    /**************************************************************
+     * 3. STATE MANAGEMENT & LOCAL DATABASE (SIMULATED CLOUD DB)
+     **************************************************************/
+    const STORAGE_KEY = "ECA_FULL_PLATFORM_DB_V1";
+    const COACH_SECRET_CODE = "ECA2026";
+    const UNIFIED_PARENT_PASS = "ECA-PARENT";
+
+    function getDefaultDB() {
+      return {
+        users: [
+          {
+            id: "u_coach_1",
+            name: "Coach Abdelrahman",
+            username: "coach_abdo",
+            email: "coach@eca.com",
+            password: "123456",
+            role: "coach"
+          },
+          {
+            id: "u_stu_1",
+            name: "Omar Khaled",
+            username: "omar_chess",
+            email: "omar@eca.com",
+            password: "123456",
+            role: "student",
+            level: 2,
+            group: "Tuesday 6 PM - Step 2",
+            attendedLessons: { "2-0": true, "2-1": true, "2-2": true, "2-3": true },
+            homeworkDone: { "2-0": true, "2-1": true, "2-2": true },
+            puzzleStats: { attempts: 10, correct: 9, lastSolvedDate: "" },
+            parentSecretNote: "عمر مستواه ممتاز جداً في التكتيك ومركز في السيشن، محتاج بس يحل الـ Daily Puzzle بانتظام قبل معاد يوم الثلاثاء."
+          },
+          {
+            id: "u_stu_2",
+            name: "Youssef Ahmed",
+            username: "youssef_eca",
+            email: "youssef@eca.com",
+            password: "123456",
+            role: "student",
+            level: 1,
+            group: "Friday 4 PM - Step 1",
+            attendedLessons: { "1-0": true, "1-1": true, "1-2": true, "1-3": true, "1-4": true, "1-5": true },
+            homeworkDone: { "1-0": true, "1-1": true, "1-2": true, "1-3": true },
+            puzzleStats: { attempts: 8, correct: 5, lastSolvedDate: "" },
+            parentSecretNote: "يوسف شاطر جداً بس بيتسرع في النقلات ومحتاج يراجع درس الـ Check قبل الواجب."
+          },
+          {
+            id: "u_stu_3",
+            name: "Salma Tarek",
+            username: "salma_queen",
+            email: "salma@eca.com",
+            password: "123456",
+            role: "student",
+            level: 3,
+            group: "Tuesday 6 PM - Step 2",
+            attendedLessons: { "3-0": true, "3-1": true },
+            homeworkDone: { "3-0": true },
+            puzzleStats: { attempts: 6, correct: 2, lastSolvedDate: "" },
+            parentSecretNote: "سلمى محتاجة تحل الواجبات في معادها عشان ترفع نسبة الدقة في المستوى التالت."
+          }
+        ],
+        groups: [
+          "Tuesday 6 PM - Step 2",
+          "Friday 4 PM - Step 1",
+          "Elite Tournament Group"
+        ],
+        currentUserId: null
+      };
+    }
+
+    let db = loadDB();
+    let activeTab = "home"; // 'home' | 'lessons' | 'coach-tracker' | 'parent-dashboard'
+    let authMode = "login"; // 'login' | 'signup'
+    let selectedRoleForSignup = "student";
+    let coachSelectedStudentId = "u_stu_1";
+    let coachSelectedGroupFilter = "ALL";
+    let coachSearchQuery = "";
+    let parentSearchQuery = "omar_chess";
+    let unlockedParentForStudentId = null;
+    let openStepAccordions = { 1: true, 2: false, 3: false, 4: false, 5: false, 6: false };
+
+    function loadDB() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          const def = getDefaultDB();
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(def));
+          return def;
+        }
+        return JSON.parse(raw);
+      } catch (e) {
+        return getDefaultDB();
+      }
+    }
+
+    function saveDB() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    }
+
+    function getCurrentUser() {
+      if (!db.currentUserId) return null;
+      return db.users.find(u => u.id === db.currentUserId) || null;
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      document.getElementById("toastMsg").textContent = msg;
+      t.classList.remove("hidden");
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => t.classList.add("hidden"), 3000);
+    }
+
+    function copyLink(url, e) {
+      if (e) e.stopPropagation();
+      navigator.clipboard.writeText(url);
+      showToast("Link copied to clipboard! 📋");
+    }
+
+    function goHomeRefresh() {
+      const user = getCurrentUser();
+      if (user) {
+        activeTab = "home";
+      }
+      renderApp();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function switchTab(tab) {
+      activeTab = tab;
+      renderApp();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    /**************************************************************
+     * 4. STUDENT PROGRESS & RATING CALCULATOR
+     **************************************************************/
+    function calculateStudentStats(student) {
+      const stepObj = STEPS_DATA.find(s => s.step === Number(student.level)) || STEPS_DATA[0];
+      const totalLessons = stepObj.lessons.length || 1;
+      let attendedCount = 0;
+      let homeworkCount = 0;
+      let nextLessonIndex = -1;
+
+      for (let i = 0; i < stepObj.lessons.length; i++) {
+        const key = `${student.level}-${i}`;
+        if (student.attendedLessons && student.attendedLessons[key]) {
+          attendedCount++;
+        } else if (nextLessonIndex === -1) {
+          nextLessonIndex = i;
+        }
+        if (student.homeworkDone && student.homeworkDone[key]) {
+          homeworkCount++;
+        }
+      }
+
+      const remainingLessons = Math.max(0, totalLessons - attendedCount);
+      const attendancePercent = Math.round((attendedCount / totalLessons) * 100);
+      const homeworkPercent = Math.round((homeworkCount / totalLessons) * 100);
+      const puzzleAccuracy = student.puzzleStats && student.puzzleStats.attempts > 0
+        ? Math.round((student.puzzleStats.correct / student.puzzleStats.attempts) * 100)
+        : 100;
+
+      // Overall weighted score
+      const overallPercent = Math.round((attendancePercent * 0.45) + (homeworkPercent * 0.35) + (puzzleAccuracy * 0.20));
+
+      let badgeArabic = "مقبول — يحتاج لمزيد من التركيز 💪";
+      let badgeEnglish = "Acceptable";
+      let badgeColor = "text-amber-300 bg-amber-500/15 border-amber-500/40";
+
+      if (overallPercent >= 80) {
+        badgeArabic = "ممتاز / عبقري 🌟👑";
+        badgeEnglish = "Genius / Excellent";
+        badgeColor = "text-emerald-300 bg-emerald-500/15 border-emerald-500/40";
+      } else if (overallPercent >= 50) {
+        badgeArabic = "رائع 👏✨";
+        badgeEnglish = "Great Progress";
+        badgeColor = "text-gold-300 bg-gold-500/20 border-gold-500/40";
+      }
+
+      const nextLesson = nextLessonIndex !== -1 ? stepObj.lessons[nextLessonIndex] : null;
+
+      return {
+        stepObj,
+        totalLessons,
+        attendedCount,
+        homeworkCount,
+        remainingLessons,
+        attendancePercent,
+        homeworkPercent,
+        puzzleAccuracy,
+        overallPercent,
+        badgeArabic,
+        badgeEnglish,
+        badgeColor,
+        nextLesson,
+        nextLessonIndex,
+        allLessonsCompleted: attendedCount >= totalLessons && totalLessons > 0
+      };
+    }
+
+    /**************************************************************
+     * 5. HEADER & AUTHENTICATION VIEWS
+     **************************************************************/
+    function renderHeader() {
+      const user = getCurrentUser();
+      const nav = document.getElementById("headerNavArea");
+      const coachSearchWrap = document.getElementById("coachHeaderSearchWrap");
+
+      if (!user) {
+        coachSearchWrap.classList.add("hidden");
+        nav.innerHTML = `
+          <button onclick="activeTab='parent-dashboard'; renderApp();" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-obsidian-800 border border-gold-500/30 text-gold-300 hover:border-gold-400 transition">
+            👨‍👩‍👦 ولي الأمر (Parent Dashboard)
+          </button>
+          <button onclick="activeTab='home'; renderApp();" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-gold-500 text-black hover:bg-gold-400 transition">
+            🔐 Login / Sign Up
+          </button>
+        `;
+        return;
+      }
+
+      if (user.role === "coach") {
+        coachSearchWrap.classList.remove("hidden");
+      } else {
+        coachSearchWrap.classList.add("hidden");
+      }
+
+      nav.innerHTML = `
+        <button onclick="switchTab('home')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition ${activeTab === 'home' ? 'bg-gold-500 text-black font-bold' : 'bg-obsidian-800 text-gray-300 hover:text-gold-300'}">
+          🏠 Home
+        </button>
+        <button onclick="switchTab('lessons')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition ${activeTab === 'lessons' ? 'bg-gold-500 text-black font-bold' : 'bg-obsidian-800 text-gray-300 hover:text-gold-300'}">
+          📚 ${user.role === 'coach' ? 'All Curriculum (Steps 1-6)' : `Step ${user.level} Lessons`}
+        </button>
+        ${user.role === 'coach' ? `
+          <button onclick="switchTab('coach-tracker')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition ${activeTab === 'coach-tracker' ? 'bg-gold-500 text-black font-bold' : 'bg-obsidian-800 text-gold-300 border border-gold-500/30 hover:border-gold-400'}">
+            📋 Follow Up & Groups
+          </button>
+        ` : ''}
+        <button onclick="switchTab('parent-dashboard')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition ${activeTab === 'parent-dashboard' ? 'bg-gold-500 text-black font-bold' : 'bg-obsidian-800 text-gray-300 hover:text-gold-300'}">
+          👨‍👩‍👦 Parent Dashboard
+        </button>
+        <div class="flex items-center gap-2 pl-2 border-l border-gold-500/20">
+          <span class="text-xs text-gold-300 font-semibold">${user.role === 'coach' ? '👑 Coach' : `♟️ Step ${user.level}`}: ${user.name.split(' ')[0]}</span>
+          <button onclick="logoutUser()" class="px-2.5 py-1 rounded-lg text-[11px] bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25">Logout</button>
+        </div>
+      `;
+    }
+
+    function renderAuthScreen() {
+      return `
+        <div class="max-w-4xl mx-auto grid md:grid-cols-5 gap-6 items-stretch mt-4">
+          
+          <!-- Left Welcome Info & Quick Demo Logins -->
+          <div class="md:col-span-2 glass-panel gold-border-glow rounded-2xl p-6 flex flex-col justify-between">
+            <div>
+              <span class="text-[11px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-gold-500/15 text-gold-300 border border-gold-500/30">ECA Official Platform</span>
+              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-3">Welcome to Egypt Chess Academy</h2>
+              <p class="text-xs text-gray-400 mt-2 leading-relaxed">
+                منصة التدريب المتكاملة للطلاب والمدربين وأولياء الأمور: ألغاز يومية، متابعة دروس كل مستوى، تقييمات ذكية، وامتحانات ترقية للمستوى التالي.
+              </p>
+
+              <div class="mt-6 space-y-2.5">
+                <p class="text-xs font-semibold text-gold-400">⚡ تجربة سريعة بضغطة واحدة (Demo Accounts):</p>
+                <button onclick="quickLogin('coach@eca.com','123456')" class="w-full text-left p-3 rounded-xl bg-obsidian-900 hover:bg-obsidian-700 border border-gold-500/30 transition flex items-center justify-between">
+                  <div>
+                    <div class="text-xs font-bold text-gold-300">👑 دخول بحساب الكوتش (Coach)</div>
+                    <div class="text-[11px] text-gray-400">يرى الـ 6 Steps + يتابع الطلاب والجروبات</div>
+                  </div>
+                  <span class="text-gold-400 text-sm">→</span>
+                </button>
+
+                <button onclick="quickLogin('omar@eca.com','123456')" class="w-full text-left p-3 rounded-xl bg-obsidian-900 hover:bg-obsidian-700 border border-gold-500/25 transition flex items-center justify-between">
+                  <div>
+                    <div class="text-xs font-bold text-white">♟️ دخول بحساب طالب (Omar - Step 2)</div>
+                    <div class="text-[11px] text-gray-400">يرى فقط Step 2 + اللغز اليومي + الدرس القادم</div>
+                  </div>
+                  <span class="text-gold-400 text-sm">→</span>
+                </button>
+
+                <button onclick="activeTab='parent-dashboard'; renderApp();" class="w-full text-left p-3 rounded-xl bg-obsidian-900 hover:bg-obsidian-700 border border-gold-500/25 transition flex items-center justify-between">
+                  <div>
+                    <div class="text-xs font-bold text-emerald-300">👨‍👩‍👦 بوابة ولي الأمر (Parent Dashboard)</div>
+                    <div class="text-[11px] text-gray-400">بحث باليوزر (`omar_chess`) + الملاحظات السرية</div>
+                  </div>
+                  <span class="text-gold-400 text-sm">→</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-gold-500/15 text-[11px] text-gray-400 space-y-1">
+              <div>🔑 كود تسجيل المدرب: <code class="text-gold-300">ECA2026</code></div>
+              <div>🔒 باسورد أولياء الأمور الموحد: <code class="text-gold-300">ECA-PARENT</code></div>
+            </div>
+          </div>
+
+          <!-- Right Login / Sign Up Form -->
+          <div class="md:col-span-3 glass-panel gold-border-glow rounded-2xl p-6">
+            <div class="flex gap-2 mb-6 bg-obsidian-950 p-1.5 rounded-xl border border-gold-500/20">
+              <button onclick="authMode='login'; renderApp();" class="flex-1 py-2 rounded-lg text-xs font-bold transition ${authMode === 'login' ? 'bg-gold-500 text-black' : 'text-gray-400'}">Login (تسجيل دخول)</button>
+              <button onclick="authMode='signup'; renderApp();" class="flex-1 py-2 rounded-lg text-xs font-bold transition ${authMode === 'signup' ? 'bg-gold-500 text-black' : 'text-gray-400'}">Sign Up (حساب جديد)</button>
+            </div>
+
+            ${authMode === 'login' ? `
+              <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                  <label class="block text-xs text-gray-300 mb-1">Email or Username</label>
+                  <input id="loginEmail" required type="text" placeholder="coach@eca.com or omar_chess" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gold-400" />
                 </div>
                 <div>
-                    <div class="flex items-center gap-2.5">
-                        <span class="font-display font-extrabold text-lg sm:text-2xl tracking-wider text-gold-gradient">
-                            Egypt Chess Academy
-                        </span>
-                        <span class="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#d4af37]/15 text-[#f3d266] border border-[#d4af37]/40">
-                            ECA
-                        </span>
-                    </div>
-                    <p class="text-xs text-neutral-400 flex items-center gap-1.5 mt-0.5">
-                        <i class="fa-solid fa-chess-king text-[10px] text-[#d4af37]"></i>
-                        <span>Coaches Training Portal • Click logo to refresh</span>
-                    </p>
+                  <label class="block text-xs text-gray-300 mb-1">Password</label>
+                  <input id="loginPassword" required type="password" placeholder="••••••" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gold-400" />
                 </div>
-            </button>
-
-            <!-- Right Controls: Total Lessons Counter + Pause/Play Background Animation -->
-            <div class="flex items-center gap-2.5">
-                <div class="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#111116] border border-[#d4af37]/25 text-xs font-medium text-neutral-300">
-                    <span class="w-2 h-2 rounded-full bg-[#d4af37] animate-pulse"></span>
-                    <span id="header-stats-text">6 Steps • 56 Lessons</span>
-                </div>
-
-                <!-- Toggle Ambient Animation Button -->
-                <button id="anim-toggle-btn" onclick="toggleBackgroundAnimation()" class="w-10 h-10 rounded-xl bg-[#111116] hover:bg-[#1b1b24] border border-[#d4af37]/25 hover:border-[#d4af37]/60 flex items-center justify-center text-[#f3d266] transition-all" title="Pause / Play Background Animation">
-                    <i id="anim-toggle-icon" class="fa-solid fa-sparkles text-sm"></i>
+                <button type="submit" class="w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-gold-400 to-gold-600 text-black hover:opacity-95 transition shadow-lg">
+                  Sign In to ECA Portal ♟️
                 </button>
-            </div>
-        </div>
-    </header>
-
-    <!-- ===================================================================== -->
-    <!-- MAIN CONTENT CONTAINER (Vertical List Layout)                         -->
-    <!-- ===================================================================== -->
-    <main class="relative z-10 flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
-
-        <!-- CONTROL PANEL: Quick Step Selector + Instant Search + Expand/Collapse All -->
-        <section class="bg-[#0d0d12]/90 backdrop-blur-md border border-[#d4af37]/25 rounded-3xl p-4 sm:p-6 shadow-2xl shadow-black/80 space-y-4">
-            
-            <!-- Quick Jump / Step Pills -->
-            <div class="flex flex-wrap items-center justify-between gap-2">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-list-ul text-[#d4af37] text-xs"></i>
-                    <span class="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                        Training Steps List (Click any Step below to view its lessons)
-                    </span>
+              </form>
+            ` : `
+              <form onsubmit="handleSignup(event)" class="space-y-3.5">
+                <div class="grid grid-cols-2 gap-2">
+                  <button type="button" onclick="selectedRoleForSignup='student'; renderApp();" class="py-2.5 rounded-xl text-xs font-bold border transition ${selectedRoleForSignup === 'student' ? 'bg-gold-500/20 border-gold-400 text-gold-300' : 'bg-obsidian-950 border-gray-800 text-gray-400'}">
+                    ♟️ I am a Student (طالب)
+                  </button>
+                  <button type="button" onclick="selectedRoleForSignup='coach'; renderApp();" class="py-2.5 rounded-xl text-xs font-bold border transition ${selectedRoleForSignup === 'coach' ? 'bg-gold-500/20 border-gold-400 text-gold-300' : 'bg-obsidian-950 border-gray-800 text-gray-400'}">
+                    👑 I am a Coach (مدرب)
+                  </button>
                 </div>
 
-                <!-- Expand All / Collapse All Buttons -->
-                <div class="flex items-center gap-2">
-                    <button onclick="expandAllSteps(true)" class="px-3 py-1 rounded-xl bg-[#16161e] hover:bg-[#d4af37]/20 border border-[#d4af37]/25 text-xs font-medium text-[#f3d266] transition-colors flex items-center gap-1.5">
-                        <i class="fa-solid fa-angles-down text-[10px]"></i>
-                        <span>Open All Steps</span>
-                    </button>
-                    <button onclick="expandAllSteps(false)" class="px-3 py-1 rounded-xl bg-[#16161e] hover:bg-[#d4af37]/20 border border-[#d4af37]/25 text-xs font-medium text-neutral-300 hover:text-[#f3d266] transition-colors flex items-center gap-1.5">
-                        <i class="fa-solid fa-angles-up text-[10px]"></i>
-                        <span>Close All</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Quick Step Filter Bar -->
-            <div id="step-quick-pills" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-                <!-- Populated dynamically by JS -->
-            </div>
-
-            <!-- Instant Search Input & Link Type Filter -->
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
-                <div class="relative flex-1">
-                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-[#d4af37]/70 text-sm pointer-events-none"></i>
-                    <input 
-                        id="search-input" 
-                        type="text" 
-                        placeholder="Search lesson name (e.g. Pin, Double attack, Mate, Draw...) [Press '/']" 
-                        class="w-full pl-10 pr-20 py-2.5 rounded-2xl bg-[#07070a] border border-[#d4af37]/25 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-[#d4af37] focus:ring-2 focus:ring-[#d4af37]/20 transition-all"
-                    >
-                    <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 px-2.5 py-0.5 rounded-lg bg-[#1c1c24] text-xs text-neutral-300 hover:bg-[#d4af37] hover:text-black font-semibold transition-colors">
-                        Clear
-                    </button>
+                <div class="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-gray-300 mb-1">Full Name (الاسم)</label>
+                    <input id="suName" required type="text" placeholder="Ahmed Ali" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-3.5 py-2 text-sm text-white" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-300 mb-1">Username (للبحث والمتابعة)</label>
+                    <input id="suUsername" required type="text" placeholder="ahmed_chess" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-3.5 py-2 text-sm text-white" />
+                  </div>
                 </div>
 
-                <!-- Content Type Filter -->
-                <div class="flex items-center gap-1.5 bg-[#07070a] p-1.5 rounded-2xl border border-[#d4af37]/20 self-start sm:self-auto">
-                    <button onclick="setLinkFilter('all')" data-filter="all" class="type-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-gold-gradient text-black shadow-sm">
-                        All
-                    </button>
-                    <button onclick="setLinkFilter('examples')" data-filter="examples" class="type-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-neutral-400 hover:text-white transition-all flex items-center gap-1.5">
-                        <span class="w-2 h-2 rounded-full bg-[#f3d266]"></span>
-                        Examples
-                    </button>
-                    <button onclick="setLinkFilter('exercises')" data-filter="exercises" class="type-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-neutral-400 hover:text-white transition-all flex items-center gap-1.5">
-                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                        Exercises
-                    </button>
+                <div class="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-gray-300 mb-1">Email</label>
+                    <input id="suEmail" required type="email" placeholder="name@eca.com" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-3.5 py-2 text-sm text-white" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-300 mb-1">Password</label>
+                    <input id="suPassword" required type="password" placeholder="••••••" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-3.5 py-2 text-sm text-white" />
+                  </div>
                 </div>
-            </div>
-        </section>
 
-        <!-- VERTICAL ACCORDION LIST OF STEPS & LESSONS -->
-        <div id="steps-vertical-list" class="space-y-3.5">
-            <!-- Populated dynamically by JS -->
-        </div>
+                ${selectedRoleForSignup === 'student' ? `
+                  <div class="grid sm:grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs text-gold-300 mb-1">Select Current Level (Step)</label>
+                      <select id="suLevel" class="w-full bg-obsidian-950 border border-gold-500/40 rounded-xl px-3.5 py-2 text-sm text-white">
+                        <option value="1">Step 1</option>
+                        <option value="2">Step 2</option>
+                        <option value="3">Step 3</option>
+                        <option value="4">Step 4</option>
+                        <option value="5">Step 5</option>
+                        <option value="6">Step 6</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-300 mb-1">Training Group (المجموعة)</label>
+                      <select id="suGroup" class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-3.5 py-2 text-sm text-white">
+                        ${db.groups.map(g => `<option value="${g}">${g}</option>`).join('')}
+                      </select>
+                    </div>
+                  </div>
+                ` : `
+                  <div>
+                    <label class="block text-xs text-gold-300 mb-1">Coach Access Secret Code (كود المدربين: ECA2026)</label>
+                    <input id="suCoachCode" required type="text" placeholder="Enter ECA2026" class="w-full bg-obsidian-950 border border-gold-500/40 rounded-xl px-3.5 py-2 text-sm text-white" />
+                  </div>
+                `}
 
-    </main>
-
-    <!-- ===================================================================== -->
-    <!-- FOOTER                                                                -->
-    <!-- ===================================================================== -->
-    <footer class="relative z-10 border-t border-[#d4af37]/15 bg-[#050507]/80 backdrop-blur-md py-6 mt-12">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-400">
-            <div class="flex items-center gap-2">
-                <i class="fa-solid fa-chess-queen text-[#d4af37]"></i>
-                <span class="font-bold text-[#f3d266]">Egypt Chess Academy (ECA)</span>
-                <span>— Official Training Curriculum Directory</span>
-            </div>
-            <button onclick="resetToHome()" class="text-[#d4af37] hover:text-[#f3d266] transition-colors flex items-center gap-1.5 font-medium">
-                <i class="fa-solid fa-arrow-up text-[10px]"></i>
-                <span>Back to Top / Refresh</span>
-            </button>
-        </div>
-    </footer>
-
-    <!-- ===================================================================== -->
-    <!-- TOAST NOTIFICATION CONTAINER                                          -->
-    <!-- ===================================================================== -->
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 pointer-events-none flex flex-col gap-2"></div>
-
-    <!-- ===================================================================== -->
-    <!-- CURRICULUM DATA & APPLICATION SCRIPT                                  -->
-    <!-- ===================================================================== -->
-    <script>
-        /***********************************************************************
-         * 📌 EGYPT CHESS ACADEMY (ECA) - STATIC CURRICULUM DATA (STEPS 1 - 6)
-         * ---------------------------------------------------------------------
-         * You can easily edit any lesson title or link below, or add Step 5 & 6
-         * lessons inside their `lessons: []` array.
-         ***********************************************************************/
-        const STEPS_DATA = [
-            // =================================================================
-            // STEP 1 LESSONS (12 Lessons)
-            // =================================================================
-            {
-                id: "step-1",
-                stepNumber: 1,
-                name: "Step 1",
-                subtitle: "step 1 lessons",
-                lessons: [
-                    {
-                        title: "Board and pieces",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/jjMNw6GF/wWxeB9BO" }
-                        ]
-                    },
-                    {
-                        title: "Moves of the pieces",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/48k26G0o/gvaJW7s5" }
-                        ]
-                    },
-                    {
-                        title: "Attacking and taking",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/C4BqIzIc/HO9ETmkV" }
-                        ]
-                    },
-                    {
-                        title: "The pawn",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/TCt9XgBc/hgBwh3xP" }
-                        ]
-                    },
-                    {
-                        title: "Defending",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/g4ch8UUJ" },
-                            { label: "Exercises", url: "https://lichess.org/study/RPFaVRku/LErAf9Dq" }
-                        ]
-                    },
-                    {
-                        title: "Check",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/nHyQinYL/Mlzci7gW" },
-                            { label: "Exercises", url: "https://lichess.org/study/LJzsX2Bb/1o4kmKsF" }
-                        ]
-                    },
-                    {
-                        title: "Mate (1)",
-                        links: [
-                            { label: "Exercises (1)", url: "https://lichess.org/study/DfeRg74R" },
-                            { label: "Exercises (2)", url: "https://lichess.org/study/2HFYM7LI/iNAIUMgw" }
-                        ]
-                    },
-                    {
-                        title: "Mate (2)",
-                        links: [
-                            { label: "Exercises (1)", url: "https://lichess.org/study/Fk6PprHt" },
-                            { label: "Exercises (2)", url: "https://lichess.org/study/4dxlu3Qy" },
-                            { label: "Exercises (3)", url: "https://lichess.org/study/WakS7KEt" }
-                        ]
-                    },
-                    {
-                        title: "Castling",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/Q0mL49LP" },
-                            { label: "Exercises", url: "https://lichess.org/study/8XJxZK1c/g0194InP" }
-                        ]
-                    },
-                    {
-                        title: "Profitable exchange",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/91xk9Lw0" },
-                            { label: "Exercises", url: "https://lichess.org/study/jDKpfwHS" }
-                        ]
-                    },
-                    {
-                        title: "twofold attack",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/klYbDwK8" },
-                            { label: "Exercises (1)", url: "https://lichess.org/study/6v9QYu2b" },
-                            { label: "Exercises (2)", url: "https://lichess.org/study/hs7q4Bey" }
-                        ]
-                    },
-                    {
-                        title: "Draw",
-                        links: [
-                            { label: "Study", url: "https://lichess.org/study/4L5NDH4W/Ufe7WXKh" }
-                        ]
-                    }
-                ]
-            },
-
-            // =================================================================
-            // STEP 2 LESSONS (14 Lessons)
-            // =================================================================
-            {
-                id: "step-2",
-                stepNumber: 2,
-                name: "Step 2",
-                subtitle: "Step 2 lessons",
-                lessons: [
-                    {
-                        title: "Targets of attack",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/3zmfaxGz/TTSEXL79" },
-                            { label: "Exercises (1)", url: "https://lichess.org/study/TGj12BIr/sWXMbVBp" },
-                            { label: "2-", url: "https://lichess.org/study/Xm0oBMLW" }
-                        ]
-                    },
-                    {
-                        title: "Double attack: queen (1)",
-                        links: [
-                            { label: "Exercise (1)", url: "https://lichess.org/study/tqJOzF9p" },
-                            { label: "Exercise (2)", url: "https://lichess.org/study/zTSQXHWV" }
-                        ]
-                    },
-                    {
-                        title: "Double attack: queen (2)",
-                        links: [
-                            { label: "Exercise (1)", url: "https://lichess.org/study/KkMcTebd" },
-                            { label: "Exercise (2)", url: "https://lichess.org/study/zWSgnN2h" }
-                        ]
-                    },
-                    {
-                        title: "4-The pin",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/TwRHuPGZ/15bNAErP" },
-                            { label: "Exercises (1)", url: "https://lichess.org/study/Qzhw3D8K/kl8QnDY0" },
-                            { label: "Exercises (2)", url: "https://lichess.org/study/JjvX9r45/Ys2KRHKU" },
-                            { label: "Exercises (3)", url: "https://lichess.org/study/v6l4lLFw/LralQmQS" }
-                        ]
-                    },
-                    {
-                        title: "5-Eliminating of defence",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/gjaexjSM/XtAJvCWZ" },
-                            { label: "Exercises", url: "https://lichess.org/study/yZMV5JdY/9HFnCNVx" }
-                        ]
-                    },
-                    {
-                        title: "The 3 golden rules",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/0DeojSlO/OnyeZ0QY" },
-                            { label: "Exercises", url: "https://lichess.org/study/Tv5Q4AGE/JWFraj6A" }
-                        ]
-                    },
-                    {
-                        title: "Mate in two",
-                        links: [
-                            { label: "Exercise (1)", url: "https://lichess.org/study/CYeNq3NN/6M0m2KUg" },
-                            { label: "Exercise (2)", url: "https://lichess.org/study/THHzDa1N/C9EZ0z5O" }
-                        ]
-                    },
-                    {
-                        title: "Double attack: knight",
-                        links: [
-                            { label: "Exercises (1)", url: "https://lichess.org/study/e8U4ZMuQ/8OFL9uo8" },
-                            { label: "Exercises (2)", url: "https://lichess.org/study/otSMJjwH/pIwu0ivp" }
-                        ]
-                    },
-                    {
-                        title: "Mating with the rook",
-                        links: [
-                            { label: "Exercises", url: "https://lichess.org/study/zAGZus6e/5AJW3cs7" }
-                        ]
-                    },
-                    {
-                        title: "Double attack: Rook , bishop , pawn , king",
-                        links: [
-                            { label: "Exercises", url: "https://lichess.org/study/whl4X0Vy/BPFGoXvj" }
-                        ]
-                    },
-                    {
-                        title: "Double attack : cooperation of two pieces",
-                        links: [
-                            { label: "Exercise", url: "https://lichess.org/study/ZOdpD9Ly/O9zAPm3h" }
-                        ]
-                    },
-                    {
-                        title: "Discovered attack",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/b00xkEzU/kKJEEqWR" },
-                            { label: "Exercises (1)", url: "https://lichess.org/study/u8w4QQht/n5EcgyIX" },
-                            { label: "Exercises (2)", url: "https://lichess.org/study/a5Q2Twk2/dP4F5lD9" }
-                        ]
-                    },
-                    {
-                        title: "Defending against mate",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/2UEfJLEz/EFD3xymZ" },
-                            { label: "Exercises", url: "https://lichess.org/study/8YoxQqtw/3I15qJzf" }
-                        ]
-                    },
-                    {
-                        title: "Short notation",
-                        links: [
-                            { label: "Exercises (1)", url: "https://lichess.org/study/ZZTnIekD/MiN0jOS1" },
-                            { label: "Exercises (2)", url: "https://lichess.org/study/45BAOetX/K6P3Lz1b" },
-                            { label: "Exercises (3)", url: "https://lichess.org/study/9G0jITgq" }
-                        ]
-                    }
-                ]
-            },
-
-            // =================================================================
-            // STEP 3 LESSONS (12 Lessons)
-            // =================================================================
-            {
-                id: "step-3",
-                stepNumber: 3,
-                name: "Step 3",
-                subtitle: "Step 3 Lessons :",
-                lessons: [
-                    {
-                        title: "Discovered and double check (step 3)",
-                        links: [
-                            { label: "Study", url: "https://lichess.org/study/srYNhk2o" }
-                        ]
-                    },
-                    {
-                        title: "Attack on a pinned piece (step 3)",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/aUODKeM7" },
-                            { label: "Exercises", url: "https://lichess.org/study/R7MF7lb4" }
-                        ]
-                    },
-                    {
-                        title: "Access and mating pattern ( step 3)",
-                        links: [
-                            { label: "Study", url: "https://lichess.org/study/LdwLPyPK" }
-                        ]
-                    },
-                    {
-                        title: "The square of the pawn (step 3)",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/TGs1ej3b" },
-                            { label: "Exercises", url: "https://lichess.org/study/oZ0xi9dr" }
-                        ]
-                    },
-                    {
-                        title: "Elimination of the defence (step 3)",
-                        links: [
-                            { label: "examples", url: "https://lichess.org/study/dPGoFdbD/vGIxjsGO" },
-                            { label: "exercises", url: "https://lichess.org/study/xrekdf0f/RCd5Ztfm" }
-                        ]
-                    },
-                    {
-                        title: "defending against the double attack (step 3)",
-                        links: [
-                            { label: "Study", url: "https://lichess.org/study/Vh0XG74a/WmCoeGe5" }
-                        ]
-                    },
-                    {
-                        title: "draw (step 3)",
-                        links: [
-                            { label: "Study", url: "https://lichess.org/study/OWsq2BB6/Us22qb9A" }
-                        ]
-                    },
-                    {
-                        title: "X-Ray (step 3)",
-                        links: [
-                            { label: "Study", url: "https://lichess.org/study/2SV6ZvX7/06csTyjJ" }
-                        ]
-                    },
-                    {
-                        title: "defending against the pin (step 3)",
-                        links: [
-                            { label: "examples", url: "https://lichess.org/study/cZTwQ7qz/s9y7sUZn" },
-                            { label: "exercises", url: "https://lichess.org/study/dMXnI1aK" }
-                        ]
-                    },
-                    {
-                        title: "mobility (step 3)",
-                        links: [
-                            { label: "Study", url: "https://lichess.org/study/mSAOaeqN/eYak86eR" }
-                        ]
-                    },
-                    {
-                        title: "key squares ( step 3)",
-                        links: [
-                            { label: "examples", url: "https://lichess.org/study/tfuHXokW/zqOhzIRG" },
-                            { label: "marking the key squares", url: "https://lichess.org/study/61A3DAAj/1yrdSgdh" },
-                            { label: "exercises", url: "https://lichess.org/study/kP7xaVHA/irKTLPXb" }
-                        ]
-                    },
-                    {
-                        title: "pinned piece is not a good defender (step3)",
-                        links: [
-                            { label: "mate thanks to a pin", url: "https://lichess.org/study/Nm6Air3f/pSHbbNIB" },
-                            { label: "exercises (1)", url: "https://lichess.org/study/zjRi4eGw/TwqdeoJ7" },
-                            { label: "exercises (2)", url: "https://lichess.org/study/x1vTVIn2/IKdbD71Q" }
-                        ]
-                    }
-                ]
-            },
-
-            // =================================================================
-            // STEP 4 LESSONS (18 Lessons)
-            // =================================================================
-            {
-                id: "step-4",
-                stepNumber: 4,
-                name: "Step 4",
-                subtitle: "Step 4 lessons",
-                lessons: [
-                    {
-                        title: "Elimination of the defence interference",
-                        links: [
-                            { label: "Exercises", url: "https://lichess.org/study/t5pXfLox/34DdnZYk" }
-                        ]
-                    },
-                    {
-                        title: "Double attack : luring",
-                        links: [
-                            { label: "Examples & Exercises", url: "https://lichess.org/study/6BtkIYoH/jyX4KueF" }
-                        ]
-                    },
-                    {
-                        title: "Elimination of the defence : blocking",
-                        links: [
-                            { label: "Examples & Exercises", url: "https://lichess.org/study/Gwg29Hxj/Y6li8kPN" }
-                        ]
-                    },
-                    {
-                        title: "Pin: placing the front and  back piece",
-                        links: [
-                            { label: "Examples & Exercises", url: "https://lichess.org/study/t1PGCxRF" }
-                        ]
-                    },
-                    {
-                        title: "The passed pawn",
-                        links: [
-                            { label: "Exercises", url: "https://lichess.org/study/pibm2ud9/lDYc6ebt" }
-                        ]
-                    },
-                    {
-                        title: "Defending against the passed pawn",
-                        links: [
-                            { label: "Study", url: "https://lichess.org/study/wrm58f4j/ZnUsBj0n" }
-                        ]
-                    },
-                    {
-                        title: "Double attack : Elimination of the defence",
-                        links: [
-                            { label: "Exercises", url: "https://lichess.org/study/uNWgETUd/XtI3rvDK" }
-                        ]
-                    },
-                    {
-                        title: "The magnet",
-                        links: [
-                            { label: "Exercises", url: "https://lichess.org/study/HDoz7iiZ/jtw6t01P" }
-                        ]
-                    },
-                    {
-                        title: "Weak pawns",
-                        links: [
-                            { label: "Study", url: "https://lichess.org/study/pvepHzju/NzJust3T" }
-                        ]
-                    },
-                    {
-                        title: "MIX",
-                        links: [
-                            { label: "Study", url: "https://lichess.org/study/Vslcoxz5/4s1QtXma" }
-                        ]
-                    },
-                    {
-                        title: "Material advantage",
-                        links: [
-                            { label: "Study", url: "https://lichess.org/study/zz7pwo79/NNBE4uIt" }
-                        ]
-                    },
-                    {
-                        title: "Double attack : chasing and aiming",
-                        links: [
-                            { label: "Exercises", url: "https://lichess.org/study/eo7JyYza/ka7GUiIW" }
-                        ]
-                    },
-                    {
-                        title: "Attacking the castled king",
-                        links: [
-                            { label: "Study", url: "https://lichess.org/study/C1bi0HTS/HtyfEmM3" }
-                        ]
-                    },
-                    {
-                        title: "The seventh rank",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/mDeK8pb5/EySaljms" },
-                            { label: "Exercises (1)", url: "https://lichess.org/study/9rPWgIfk" },
-                            { label: "Exercises (2)", url: "https://lichess.org/study/7ojMv2O2" }
-                        ]
-                    },
-                    {
-                        title: "Strategy in pawn endings",
-                        links: [
-                            { label: "Exercise", url: "https://lichess.org/study/MTh6EjHF/8TaknmFZ" }
-                        ]
-                    },
-                    {
-                        title: "MIX G",
-                        links: [
-                            { label: "Study", url: "https://lichess.org/study/1Joelo2c" }
-                        ]
-                    },
-                    {
-                        title: "Double attack : clearing",
-                        links: [
-                            { label: "1-", url: "https://lichess.org/study/zfXowIhD" },
-                            { label: "2-", url: "https://lichess.org/study/WQZY2uhR" }
-                        ]
-                    },
-                    {
-                        title: "Queen against pawn",
-                        links: [
-                            { label: "Examples", url: "https://lichess.org/study/MlayR9Ye/Z0O4m2k6" },
-                            { label: "Exercises", url: "https://lichess.org/study/HyE8ZFrO" }
-                        ]
-                    }
-                ]
-            },
-
-            // =================================================================
-            // STEP 5 LESSONS (Placeholder ready for future lessons)
-            // =================================================================
-            {
-                id: "step-5",
-                stepNumber: 5,
-                name: "Step 5",
-                subtitle: "Step 5 lessons",
-                lessons: []
-            },
-
-            // =================================================================
-            // STEP 6 LESSONS (Placeholder ready for future lessons)
-            // =================================================================
-            {
-                id: "step-6",
-                stepNumber: 6,
-                name: "Step 6",
-                subtitle: "Step 6 lessons",
-                lessons: []
-            }
-        ];
-
-        /***********************************************************************
-         * UI STATE & VERTICAL ACCORDION LIST LOGIC
-         ***********************************************************************/
-        // Track which Step lists are expanded (default: Step 1 open or user clicks any Step)
-        let openStepsSet = new Set(['step-1']);
-        let activeQuickStep = 'all';
-        let searchQuery = '';
-        let activeLinkTypeFilter = 'all';
-
-        // Style helper for Link Buttons in Black & Gold Theme
-        function getLinkButtonStyle(label) {
-            const lower = (label || '').toLowerCase();
-            if (lower.includes('example') && lower.includes('exercise')) {
-                return {
-                    classes: 'bg-[#d4af37]/20 hover:bg-[#d4af37] text-[#f3d266] hover:text-black border-[#d4af37]/50',
-                    icon: 'fa-layer-group'
-                };
-            }
-            if (lower.includes('example') || lower.includes('exmaple')) {
-                return {
-                    classes: 'bg-[#17150e] hover:bg-[#d4af37] text-[#f3d266] hover:text-black border-[#d4af37]/40',
-                    icon: 'fa-book-open'
-                };
-            }
-            if (lower.includes('exercise') || lower === '1-' || lower === '2-') {
-                return {
-                    classes: 'bg-[#d4af37]/15 hover:bg-[#f3d266] text-amber-300 hover:text-black border-amber-500/40',
-                    icon: 'fa-dumbbell'
-                };
-            }
-            return {
-                classes: 'bg-[#14141c] hover:bg-[#d4af37] text-neutral-200 hover:text-black border-[#d4af37]/30',
-                icon: 'fa-chess-board'
-            };
-        }
-
-        // Render Quick Step Pills at the top
-        function renderQuickPills() {
-            const container = document.getElementById('step-quick-pills');
-            const totalLessons = STEPS_DATA.reduce((sum, s) => sum + s.lessons.length, 0);
-            document.getElementById('header-stats-text').textContent = `6 Steps • ${totalLessons} Lessons`;
-
-            let html = `
-                <button onclick="filterByStepPill('all')" class="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
-                    activeQuickStep === 'all'
-                        ? 'bg-gold-gradient text-black border-[#f3d266] shadow-md shadow-[#d4af37]/20'
-                        : 'bg-[#09090d] hover:bg-[#15151e] text-neutral-300 border-[#d4af37]/20'
-                }">
-                    <span class="flex items-center gap-1.5">
-                        <i class="fa-solid fa-layer-group"></i>
-                        <span>All Steps</span>
-                    </span>
-                    <span class="px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
-                        activeQuickStep === 'all' ? 'bg-black/20 text-black font-bold' : 'bg-[#161620] text-[#d4af37]'
-                    }">${totalLessons}</span>
+                <button type="submit" class="w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-gold-400 to-gold-600 text-black hover:opacity-95 transition">
+                  Create Account & Enter Portal 🚀
                 </button>
-            `;
+              </form>
+            `}
+          </div>
+        </div>
+      `;
+    }
 
-            STEPS_DATA.forEach(step => {
-                const isSelected = activeQuickStep === step.id;
-                const count = step.lessons.length;
-                html += `
-                    <button onclick="filterByStepPill('${step.id}')" class="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
-                        isSelected
-                            ? 'bg-gold-gradient text-black border-[#f3d266] shadow-md shadow-[#d4af37]/20'
-                            : 'bg-[#09090d] hover:bg-[#15151e] text-neutral-300 border-[#d4af37]/20'
-                    }">
-                        <span class="flex items-center gap-1.5">
-                            <i class="fa-solid fa-chess-pawn ${isSelected ? 'text-black' : 'text-[#d4af37]'}"></i>
-                            <span>${step.name}</span>
-                        </span>
-                        <span class="px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
-                            isSelected
-                                ? 'bg-black/20 text-black font-bold'
-                                : count > 0
-                                    ? 'bg-[#161620] text-[#f3d266]'
-                                    : 'bg-[#121218] text-neutral-600'
-                        }">${count > 0 ? count : 'Soon'}</span>
-                    </button>
-                `;
-            });
+    function quickLogin(email, pass) {
+      const u = db.users.find(x => x.email.toLowerCase() === email.toLowerCase() && x.password === pass);
+      if (u) {
+        db.currentUserId = u.id;
+        activeTab = "home";
+        saveDB();
+        showToast(`Welcome back, ${u.name}!`);
+        renderApp();
+      }
+    }
 
-            container.innerHTML = html;
+    function handleLogin(e) {
+      e.preventDefault();
+      const idVal = document.getElementById("loginEmail").value.trim().toLowerCase();
+      const pass = document.getElementById("loginPassword").value;
+      const u = db.users.find(x => (x.email.toLowerCase() === idVal || x.username.toLowerCase() === idVal) && x.password === pass);
+      if (!u) {
+        showToast("❌ بيانات الدخول غير صحيحة!");
+        return;
+      }
+      db.currentUserId = u.id;
+      activeTab = "home";
+      saveDB();
+      showToast(`Welcome, ${u.name}!`);
+      renderApp();
+    }
+
+    function handleSignup(e) {
+      e.preventDefault();
+      const name = document.getElementById("suName").value.trim();
+      const username = document.getElementById("suUsername").value.trim().replace(/\s+/g, '_').toLowerCase();
+      const email = document.getElementById("suEmail").value.trim().toLowerCase();
+      const password = document.getElementById("suPassword").value;
+
+      if (db.users.some(u => u.email === email || u.username === username)) {
+        showToast("❌ الإيميل أو اليوزرنيم مسجل بالفعل!");
+        return;
+      }
+
+      if (selectedRoleForSignup === "coach") {
+        const code = document.getElementById("suCoachCode").value.trim();
+        if (code !== COACH_SECRET_CODE) {
+          showToast("❌ كود المدربين غير صحيح! (استخدم ECA2026)");
+          return;
         }
-
-        // Render Vertical Accordion List of Steps and Vertical Lesson Rows
-        function renderVerticalStepLists() {
-            const container = document.getElementById('steps-vertical-list');
-            const query = searchQuery.trim().toLowerCase();
-            const isSearching = query.length > 0 || activeLinkTypeFilter !== 'all';
-
-            const stepsToShow = activeQuickStep === 'all'
-                ? STEPS_DATA
-                : STEPS_DATA.filter(s => s.id === activeQuickStep);
-
-            let html = '';
-            let anyVisible = false;
-
-            stepsToShow.forEach(step => {
-                // Filter lessons inside step
-                const filteredLessons = step.lessons.map((lesson, idx) => ({
-                    ...lesson,
-                    indexNumber: idx + 1
-                })).filter(lesson => {
-                    const matchTitle = lesson.title.toLowerCase().includes(query);
-                    const matchLabel = lesson.links.some(l => (l.label || '').toLowerCase().includes(query));
-                    const matchesSearch = !query || matchTitle || matchLabel;
-                    if (!matchesSearch) return false;
-
-                    if (activeLinkTypeFilter === 'examples') {
-                        return lesson.links.some(l => (l.label || '').toLowerCase().includes('example'));
-                    }
-                    if (activeLinkTypeFilter === 'exercises') {
-                        return lesson.links.some(l => {
-                            const lb = (l.label || '').toLowerCase();
-                            return lb.includes('exercise') || lb === '1-' || lb === '2-';
-                        });
-                    }
-                    return true;
-                });
-
-                if (isSearching && filteredLessons.length === 0) {
-                    return;
-                }
-
-                anyVisible = true;
-                // Automatically expand step if searching or if it's in openStepsSet
-                const isOpen = isSearching ? true : openStepsSet.has(step.id);
-
-                // Build vertical lesson rows
-                let lessonsListHtml = '';
-                if (step.lessons.length === 0) {
-                    lessonsListHtml = `
-                        <div class="p-6 text-center text-xs text-neutral-400 bg-[#08080c]/90 border-t border-[#d4af37]/15">
-                            <i class="fa-solid fa-clock text-[#d4af37] mr-1.5"></i>
-                            <span>${step.name} lessons will appear here once added to <code class="text-[#f3d266] font-mono">STEPS_DATA</code>.</span>
-                        </div>
-                    `;
-                } else {
-                    lessonsListHtml = `<div class="divide-y divide-[#d4af37]/15 border-t border-[#d4af37]/20 bg-[#08080c]/95">`;
-
-                    filteredLessons.forEach(lesson => {
-                        const validLinks = lesson.links.filter(l => l.url && l.url.trim() !== '');
-                        const primaryUrl = validLinks.length > 0 ? validLinks[0].url : '#';
-
-                        // Action Buttons for each link in this lesson
-                        let linksPillsHtml = '';
-                        validLinks.forEach(linkObj => {
-                            const btnStyle = getLinkButtonStyle(linkObj.label);
-                            linksPillsHtml += `
-                                <div class="inline-flex items-center gap-1">
-                                    <a href="${linkObj.url}" target="_blank" rel="noopener noreferrer" 
-                                       class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${btnStyle.classes}">
-                                        <i class="fa-solid ${btnStyle.icon} text-[11px]"></i>
-                                        <span>${escapeHtml(linkObj.label)}</span>
-                                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-75"></i>
-                                    </a>
-                                    <button type="button" 
-                                            onclick="copyToClipboard('${linkObj.url}', '${escapeJsString(lesson.title)} - ${escapeJsString(linkObj.label)}')" 
-                                            class="w-7 h-7 rounded-xl bg-[#14141c] hover:bg-[#d4af37] text-neutral-400 hover:text-black border border-[#d4af37]/20 flex items-center justify-center transition-colors" 
-                                            title="Copy Lichess Link">
-                                        <i class="fa-regular fa-copy text-[11px]"></i>
-                                    </button>
-                                </div>
-                            `;
-                        });
-
-                        lessonsListHtml += `
-                            <div class="lesson-row px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                <!-- Left: Lesson Number + Clickable Lesson Title -->
-                                <div class="flex items-center gap-3.5 min-w-0">
-                                    <span class="w-7 h-7 rounded-lg bg-[#15151e] border border-[#d4af37]/35 text-[#f3d266] font-mono text-xs font-bold flex items-center justify-center shrink-0">
-                                        ${lesson.indexNumber}
-                                    </span>
-                                    <a href="${primaryUrl}" target="_blank" rel="noopener noreferrer" 
-                                       class="group/lesson flex items-center gap-2 text-sm sm:text-base font-semibold text-neutral-100 hover:text-[#f3d266] transition-colors truncate">
-                                        <span class="truncate">${escapeHtml(lesson.title)}</span>
-                                        <i class="fa-solid fa-external-link-alt text-xs text-[#d4af37] opacity-0 group-hover/lesson:opacity-100 transition-opacity shrink-0"></i>
-                                    </a>
-                                </div>
-
-                                <!-- Right: Links Pills + Copy Buttons -->
-                                <div class="flex flex-wrap items-center gap-2 pl-10 sm:pl-0 shrink-0">
-                                    ${linksPillsHtml}
-                                </div>
-                            </div>
-                        `;
-                    });
-
-                    lessonsListHtml += `</div>`;
-                }
-
-                // Step Accordion Bar + Expandable Vertical List
-                html += `
-                    <div id="accordion-${step.id}" class="rounded-2xl bg-[#0e0e14]/90 backdrop-blur-md border ${
-                        isOpen ? 'border-[#d4af37]/60 shadow-lg shadow-[#d4af37]/5' : 'border-[#d4af37]/25 hover:border-[#d4af37]/45'
-                    } overflow-hidden transition-all">
-                        
-                        <!-- Clickable Step Header Bar -->
-                        <button type="button" onclick="toggleStepAccordion('${step.id}')" 
-                                class="w-full px-5 sm:px-6 py-4 flex items-center justify-between gap-4 text-left hover:bg-[#d4af37]/5 transition-colors focus:outline-none">
-                            <div class="flex items-center gap-3.5">
-                                <div class="w-10 h-10 rounded-xl ${
-                                    isOpen ? 'bg-gold-gradient text-black' : 'bg-[#171721] text-[#d4af37] border border-[#d4af37]/30'
-                                } flex items-center justify-center font-display font-extrabold text-sm shadow transition-all">
-                                    S${step.stepNumber}
-                                </div>
-                                <div>
-                                    <div class="flex items-center gap-2.5">
-                                        <h2 class="font-display font-bold text-base sm:text-lg ${isOpen ? 'text-[#f3d266]' : 'text-white'}">
-                                            ${step.name}
-                                        </h2>
-                                        <span class="text-xs text-neutral-400 font-normal">
-                                            (${step.subtitle})
-                                        </span>
-                                    </div>
-                                    <p class="text-[11px] text-neutral-400 mt-0.5">
-                                        Click to ${isOpen ? 'hide' : 'show'} vertical lessons list
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="flex items-center gap-3">
-                                <span class="px-3 py-1 rounded-full bg-[#161620] border border-[#d4af37]/30 text-xs font-mono font-semibold text-[#f3d266]">
-                                    ${filteredLessons.length} ${filteredLessons.length === 1 ? 'Lesson' : 'Lessons'}
-                                </span>
-                                <div class="w-8 h-8 rounded-full bg-[#161620] border border-[#d4af37]/25 flex items-center justify-center text-[#d4af37] transition-transform duration-300 ${isOpen ? 'rotate-180 bg-[#d4af37]/15' : ''}">
-                                    <i class="fa-solid fa-chevron-down text-xs"></i>
-                                </div>
-                            </div>
-                        </button>
-
-                        <!-- Expandable Vertical List of Lessons -->
-                        <div class="accordion-content ${isOpen ? 'open' : ''}">
-                            <div class="accordion-inner">
-                                ${lessonsListHtml}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-
-            if (!anyVisible) {
-                html = `
-                    <div class="rounded-3xl bg-[#0e0e14]/90 border border-[#d4af37]/25 p-12 text-center space-y-3">
-                        <div class="w-14 h-14 rounded-2xl bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#f3d266] flex items-center justify-center mx-auto text-2xl">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                        </div>
-                        <h3 class="text-base font-bold text-white">No matching lessons found</h3>
-                        <p class="text-xs text-neutral-400 max-w-md mx-auto">
-                            No lessons matched "<span class="text-[#f3d266] font-semibold">${escapeHtml(searchQuery)}</span>".
-                        </p>
-                        <button onclick="resetToHome()" class="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gold-gradient text-black font-bold text-xs hover:opacity-95 transition-opacity">
-                            <i class="fa-solid fa-rotate-left"></i>
-                            Reset List
-                        </button>
-                    </div>
-                `;
-            }
-
-            container.innerHTML = html;
-        }
-
-        /***********************************************************************
-         * USER INTERACTION FUNCTIONS
-         ***********************************************************************/
-        // Toggle individual Step list open/closed on click
-        function toggleStepAccordion(stepId) {
-            if (openStepsSet.has(stepId)) {
-                openStepsSet.delete(stepId);
-            } else {
-                openStepsSet.add(stepId);
-            }
-            renderVerticalStepLists();
-        }
-
-        // Open or close all Step lists at once
-        function expandAllSteps(openAll) {
-            if (openAll) {
-                STEPS_DATA.forEach(s => openStepsSet.add(s.id));
-            } else {
-                openStepsSet.clear();
-            }
-            renderVerticalStepLists();
-        }
-
-        // Filter or open a specific Step via top quick pills
-        function filterByStepPill(stepId) {
-            activeQuickStep = stepId;
-            if (stepId !== 'all') {
-                openStepsSet.add(stepId);
-            }
-            renderQuickPills();
-            renderVerticalStepLists();
-        }
-
-        function setLinkFilter(filterType) {
-            activeLinkTypeFilter = filterType;
-            document.querySelectorAll('.type-filter-btn').forEach(btn => {
-                const isCurrent = btn.getAttribute('data-filter') === filterType;
-                if (isCurrent) {
-                    btn.className = 'type-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-gold-gradient text-black shadow-sm flex items-center gap-1.5';
-                } else {
-                    btn.className = 'type-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-neutral-400 hover:text-white transition-all flex items-center gap-1.5';
-                }
-            });
-            renderVerticalStepLists();
-        }
-
-        function clearSearch() {
-            const input = document.getElementById('search-input');
-            input.value = '';
-            searchQuery = '';
-            document.getElementById('clear-search-btn').classList.add('hidden');
-            renderVerticalStepLists();
-        }
-
-        // Clicking Egypt Chess Academy (ECA) Logo refreshes & resets to default state
-        function resetToHome() {
-            const icon = document.getElementById('brand-knight-icon');
-            icon.classList.remove('refresh-spin');
-            void icon.offsetWidth;
-            icon.classList.add('refresh-spin');
-
-            activeQuickStep = 'all';
-            searchQuery = '';
-            activeLinkTypeFilter = 'all';
-            openStepsSet = new Set(['step-1']);
-
-            const input = document.getElementById('search-input');
-            input.value = '';
-            document.getElementById('clear-search-btn').classList.add('hidden');
-
-            setLinkFilter('all');
-            renderQuickPills();
-            renderVerticalStepLists();
-
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            showToast('Egypt Chess Academy Portal Refreshed', 'fa-chess-knight');
-        }
-
-        // Copy Link to Clipboard
-        function copyToClipboard(url, labelText) {
-            const tempInput = document.createElement('textarea');
-            tempInput.value = url;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            try {
-                document.execCommand('copy');
-                showToast(`Copied: ${labelText}`, 'fa-check');
-            } catch (err) {
-                showToast('Could not copy link', 'fa-triangle-exclamation');
-            }
-            document.body.removeChild(tempInput);
-        }
-
-        function showToast(message, iconClass = 'fa-check') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = 'pointer-events-auto flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-gold-gradient text-black text-xs font-bold shadow-2xl border border-[#fff6d6]/50 transition-all duration-300 transform translate-y-2 opacity-0';
-            toast.innerHTML = `
-                <i class="fa-solid ${iconClass}"></i>
-                <span>${escapeHtml(message)}</span>
-            `;
-            container.appendChild(toast);
-
-            requestAnimationFrame(() => {
-                toast.classList.remove('translate-y-2', 'opacity-0');
-            });
-
-            setTimeout(() => {
-                toast.classList.add('translate-y-2', 'opacity-0');
-                setTimeout(() => toast.remove(), 300);
-            }, 2400);
-        }
-
-        function escapeHtml(str) {
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
-        function escapeJsString(str) {
-            return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        }
-
-        // Search Bar Listeners
-        document.getElementById('search-input').addEventListener('input', function (e) {
-            searchQuery = e.target.value;
-            const clearBtn = document.getElementById('clear-search-btn');
-            if (searchQuery.trim().length > 0) {
-                clearBtn.classList.remove('hidden');
-            } else {
-                clearBtn.classList.add('hidden');
-            }
-            renderVerticalStepLists();
-        });
-
-        window.addEventListener('keydown', function (e) {
-            if (e.key === '/' && document.activeElement !== document.getElementById('search-input')) {
-                e.preventDefault();
-                document.getElementById('search-input').focus();
-            }
-        });
-
-        /***********************************************************************
-         * ✨ EYE-FRIENDLY AMBIENT BLACK & GOLD BACKGROUND ANIMATION (CANVAS)
-         * Smooth floating golden dust particles + subtle constellation lines
-         * + faint geometric chess grid pulse
-         ***********************************************************************/
-        let animRunning = true;
-        const canvas = document.getElementById('ambient-bg-canvas');
-        const ctx = canvas.getContext('2d');
-        let particles = [];
-        let timeTick = 0;
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            initParticles();
-        }
-
-        function initParticles() {
-            const count = Math.min(55, Math.floor((canvas.width * canvas.height) / 24000));
-            particles = [];
-            for (let i = 0; i < count; i++) {
-                particles.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    radius: Math.random() * 1.8 + 0.6,
-                    vx: (Math.random() - 0.5) * 0.22,
-                    vy: (Math.random() - 0.5) * 0.22 - 0.08, // gentle upward drift
-                    alpha: Math.random() * 0.45 + 0.15,
-                    phase: Math.random() * Math.PI * 2
-                });
-            }
-        }
-
-        function drawAmbientBackground() {
-            if (!animRunning) return;
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            timeTick += 0.008;
-
-            // 1. Subtle Perspective Chess Grid Pulse in the background
-            const gridSize = 90;
-            ctx.strokeStyle = 'rgba(212, 175, 55, 0.028)';
-            ctx.lineWidth = 1;
-            const offsetX = (timeTick * 12) % gridSize;
-            const offsetY = (timeTick * 8) % gridSize;
-
-            for (let x = offsetX; x < canvas.width; x += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
-                ctx.stroke();
-            }
-            for (let y = offsetY; y < canvas.height; y += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width, y);
-                ctx.stroke();
-            }
-
-            // 2. Update & Draw Soft Golden Particles
-            for (let i = 0; i < particles.length; i++) {
-                const p = particles[i];
-                p.x += p.vx;
-                p.y += p.vy;
-
-                if (p.x < 0) p.x = canvas.width;
-                if (p.x > canvas.width) p.x = 0;
-                if (p.y < 0) p.y = canvas.height;
-                if (p.y > canvas.height) p.y = 0;
-
-                const twinkle = 0.65 + 0.35 * Math.sin(timeTick * 2 + p.phase);
-                const currentAlpha = p.alpha * twinkle;
-
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(243, 210, 102, ${currentAlpha})`;
-                ctx.fill();
-
-                // Subtle connecting golden threads between nearby particles
-                for (let j = i + 1; j < particles.length; j++) {
-                    const p2 = particles[j];
-                    const dx = p.x - p2.x;
-                    const dy = p.y - p2.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < 130) {
-                        const lineAlpha = (1 - dist / 130) * 0.08;
-                        ctx.beginPath();
-                        ctx.moveTo(p.x, p.y);
-                        ctx.lineTo(p2.x, p2.y);
-                        ctx.strokeStyle = `rgba(212, 175, 55, ${lineAlpha})`;
-                        ctx.stroke();
-                    }
-                }
-            }
-
-            requestAnimationFrame(drawAmbientBackground);
-        }
-
-        function toggleBackgroundAnimation() {
-            animRunning = !animRunning;
-            const icon = document.getElementById('anim-toggle-icon');
-            if (animRunning) {
-                icon.className = 'fa-solid fa-sparkles text-sm text-[#f3d266]';
-                drawAmbientBackground();
-                showToast('Background Animation Enabled', 'fa-play');
-            } else {
-                icon.className = 'fa-solid fa-pause text-sm text-neutral-500';
-                showToast('Background Animation Paused', 'fa-pause');
-            }
-        }
-
-        window.addEventListener('resize', resizeCanvas);
-
-        // Initialize Portal on Load
-        window.onload = function () {
-            resizeCanvas();
-            drawAmbientBackground();
-            renderQuickPills();
-            renderVerticalStepLists();
+        const newCoach = {
+          id: "u_" + Date.now(),
+          name,
+          username,
+          email,
+          password,
+          role: "coach"
         };
-    </script>
+        db.users.push(newCoach);
+        db.currentUserId = newCoach.id;
+      } else {
+        const level = Number(document.getElementById("suLevel").value) || 1;
+        const group = document.getElementById("suGroup").value || db.groups[0];
+        const newStu = {
+          id: "u_" + Date.now(),
+          name,
+          username,
+          email,
+          password,
+          role: "student",
+          level,
+          group,
+          attendedLessons: {},
+          homeworkDone: {},
+          puzzleStats: { attempts: 0, correct: 0, lastSolvedDate: "" },
+          parentSecretNote: "لا توجد ملاحظات مسجلة حتى الآن لهذا الطالب."
+        };
+        db.users.push(newStu);
+        db.currentUserId = newStu.id;
+      }
+
+      activeTab = "home";
+      saveDB();
+      showToast("تم إنشاء الحساب بنجاح! 🎉");
+      renderApp();
+    }
+
+    function logoutUser() {
+      db.currentUserId = null;
+      unlockedParentForStudentId = null;
+      saveDB();
+      renderApp();
+    }
+
+    /**************************************************************
+     * 6. HOME PAGE (STUDENT & COACH)
+     **************************************************************/
+    function renderHomePage(user) {
+      if (user.role === "student") {
+        return renderStudentHome(user);
+      } else {
+        return renderCoachHome(user);
+      }
+    }
+
+    function renderStudentHome(student) {
+      const stats = calculateStudentStats(student);
+      const puzzle = DAILY_PUZZLES_BY_STEP[student.level] || DAILY_PUZZLES_BY_STEP[1];
+      const isParentUnlocked = unlockedParentForStudentId === student.id;
+
+      return `
+        <div class="space-y-6">
+          <!-- Student Top Banner -->
+          <div class="glass-panel gold-border-glow rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gold-500 text-black">STEP ${student.level} STUDENT</span>
+                <span class="text-xs text-gray-400">@${student.username} • ${student.group || ''}</span>
+              </div>
+              <h1 class="font-display font-bold text-2xl gold-gradient-text mt-2">Welcome back, ${student.name}! ♟️</h1>
+              <p class="text-xs text-gray-400 mt-1">حضر ${stats.attendedCount} من ${stats.totalLessons} دروس في Step ${student.level} (متبقي ${stats.remainingLessons} دروس للامتحان)</p>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <!-- Parent Confidential Button Inside Student Account -->
+              <button onclick="openParentModal('${student.id}')" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-obsidian-900 border border-gold-500/40 text-gold-300 hover:bg-gold-500/15 transition flex items-center gap-2">
+                <span>🔒</span>
+                <span>خانة ولي الأمر السرية</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Confidential Parent Note Box (Only visible if Parent unlocked with unified password) -->
+          ${isParentUnlocked ? `
+            <div class="bg-amber-950/30 border-2 border-gold-500 rounded-2xl p-5 flex items-start justify-between gap-4">
+              <div>
+                <div class="text-xs font-bold text-gold-400 uppercase tracking-wider mb-1">🔓 ملاحظة المدرب السرية لولي الأمر فقط:</div>
+                <p class="text-sm text-white leading-relaxed">${student.parentSecretNote || "لا توجد ملاحظات حالياً."}</p>
+              </div>
+              <button onclick="unlockedParentForStudentId=null; renderApp();" class="text-xs px-3 py-1.5 rounded-lg bg-obsidian-800 text-gray-300">إغلاق القفل 🔒</button>
+            </div>
+          ` : ''}
+
+          <!-- Grid: 1) Daily Puzzle for Current Level & 2) Next Lesson Card -->
+          <div class="grid lg:grid-cols-2 gap-6">
+            
+            <!-- 1. DAILY PUZZLE FOR STUDENT'S LEVEL -->
+            <div class="glass-panel gold-border-glow rounded-2xl p-6 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs font-bold px-3 py-1 rounded-full bg-gold-500/20 text-gold-300 border border-gold-500/40">
+                    🧩 Daily Puzzle • Step ${student.level}
+                  </span>
+                  <span class="text-xs text-gray-400">Accuracy: <strong class="text-gold-300">${stats.puzzleAccuracy}%</strong> (${student.puzzleStats.correct}/${student.puzzleStats.attempts})</span>
+                </div>
+                <h3 class="font-display font-bold text-lg text-white">${puzzle.title}</h3>
+                <div class="my-3 p-3.5 rounded-xl bg-obsidian-950 border border-gold-500/25 text-xs text-gold-300 font-mono">
+                  ♟️ Position: ${puzzle.boardHint}
+                </div>
+                <p class="text-sm text-gray-300 mb-4">${puzzle.prompt}</p>
+
+                <div class="space-y-2">
+                  ${puzzle.options.map((opt, idx) => `
+                    <button onclick="submitDailyPuzzleAnswer(${idx},${puzzle.correctIndex})" class="w-full text-left px-4 py-2.5 rounded-xl text-xs font-medium bg-obsidian-900 hover:bg-gold-500/20 border border-gold-500/25 hover:border-gold-400 transition flex items-center justify-between">
+                      <span>${opt}</span>
+                      <span class="text-gold-400">Select →</span>
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+
+              <div class="mt-4 pt-3 border-t border-gold-500/15 flex items-center justify-between text-xs">
+                <span class="text-gray-400">تحب تتدرب أكتر على اللغز ده على الرقعة؟</span>
+                <a href="${puzzle.lichessUrl}" target="_blank" class="text-gold-400 hover:underline font-semibold">Open on Lichess ↗</a>
+              </div>
+            </div>
+
+            <!-- 2. NEXT LESSON IN LINE (OR LEVEL UP TEST) -->
+            <div class="glass-panel gold-border-glow rounded-2xl p-6 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    🎯 Next Lesson Up (الدرس اللي عليه الدور)
+                  </span>
+                  <span class="text-xs text-gray-400">${stats.attendancePercent}% Level Completed</span>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="w-full h-2.5 bg-obsidian-950 rounded-full overflow-hidden border border-gold-500/20 mb-5">
+                  <div class="h-full bg-gradient-to-r from-gold-500 to-emerald-400 transition-all duration-500" style="width: ${stats.attendancePercent}%"></div>
+                </div>
+
+                ${stats.nextLesson ? `
+                  <div onclick="switchTab('lessons')" class="cursor-pointer group p-5 rounded-2xl bg-obsidian-900/90 border border-gold-500/35 hover:border-gold-400 transition">
+                    <div class="text-xs text-gold-400 font-semibold mb-1">Lesson #${stats.nextLessonIndex + 1} in Step${student.level}</div>
+                    <h3 class="font-display font-bold text-xl text-white group-hover:text-gold-300 transition flex items-center justify-between">
+                      <span>${stats.nextLesson.title}</span>
+                      <span>→</span>
+                    </h3>
+                    <p class="text-xs text-gray-400 mt-2">
+                      اضغط هنا للانتقال تلقائياً لصفحة دروس Step ${student.level} الخاصة بك وفتح روابط الشرح والتمارين.
+                    </p>
+                  </div>
+                ` : `
+                  <div class="p-5 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 text-center">
+                    <div class="text-2xl mb-1">🏆</div>
+                    <h3 class="font-display font-bold text-lg text-emerald-300">أنهيت جميع دروس Step ${student.level}!</h3>
+                    <p class="text-xs text-gray-300 mt-1">أنت الآن جاهز لامتحان الترقية للانتقال إلى Step ${student.level + 1}.</p>
+                  </div>
+                `}
+              </div>
+
+              <!-- Level Up Test Trigger -->
+              <div class="mt-5 pt-4 border-t border-gold-500/15 flex flex-wrap items-center justify-between gap-3">
+                <div class="text-xs text-gray-400">
+                  ${stats.allLessonsCompleted 
+                    ? "✅ جميع الدروس مكتملة! يمكنك بدء اختبار المستوى الآن." 
+                    : `🔒 ينقصك ${stats.remainingLessons} درس لفتح اختبار الترقية (أو جربه الآن للتدريب).`}
+                </div>
+                <button onclick="openLevelTestModal(${student.level})" class="px-4 py-2 rounded-xl text-xs font-bold bg-gold-500 text-black hover:bg-gold-400 transition">
+                  📝 Start Step ${student.level} Final Test
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCoachHome(coach) {
+      const students = db.users.filter(u => u.role === "student");
+      return `
+        <div class="space-y-6">
+          <!-- Coach Welcome & Quick Follow Up Banner -->
+          <div class="glass-panel gold-border-glow rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gold-500 text-black">👑 COACH CONTROL CENTER</span>
+              <h1 class="font-display font-bold text-2xl gold-gradient-text mt-2">Welcome, ${coach.name}</h1>
+              <p class="text-xs text-gray-400 mt-1">لديك صلاحية كاملة لفتح جميع الـ 6 Steps ومتابعة حضور وواجبات ومجموعات الطلاب.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="switchTab('lessons')" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-obsidian-900 border border-gold-500/40 text-gold-300 hover:border-gold-400">
+                📚 Open All 6 Steps Curriculum
+              </button>
+              <button onclick="switchTab('coach-tracker')" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-gold-500 text-black hover:bg-gold-400">
+                📋 متابعة الطلاب والمجموعات (${students.length})
+              </button>
+            </div>
+          </div>
+
+          <!-- Daily Puzzles Preview For All Levels -->
+          <div class="glass-panel gold-border-glow rounded-2xl p-6">
+            <h2 class="font-display font-bold text-lg text-gold-400 mb-4">🧩 Daily Puzzles Overview (Steps 1 – 6)</h2>
+            <div class="grid md:grid-cols-3 gap-4">
+              ${[1,2,3,4,5,6].map(lvl => {
+                const p = DAILY_PUZZLES_BY_STEP[lvl];
+                return `
+                  <div class="p-4 rounded-xl bg-obsidian-900/90 border border-gold-500/25 flex flex-col justify-between">
+                    <div>
+                      <span class="text-[11px] font-bold text-gold-400">STEP ${lvl} DAILY PUZZLE</span>
+                      <h4 class="font-semibold text-sm text-white mt-1">${p.title}</h4>
+                      <p class="text-xs text-gray-400 mt-1 line-clamp-2">${p.prompt}</p>
+                    </div>
+                    <a href="${p.lichessUrl}" target="_blank" class="mt-3 text-xs text-gold-300 hover:underline font-semibold inline-flex items-center gap-1">
+                      Open Lichess Study ↗
+                    </a>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function submitDailyPuzzleAnswer(chosenIdx, correctIdx) {
+      const user = getCurrentUser();
+      if (!user || user.role !== "student") return;
+      user.puzzleStats = user.puzzleStats || { attempts: 0, correct: 0 };
+      user.puzzleStats.attempts += 1;
+      if (chosenIdx === correctIdx) {
+        user.puzzleStats.correct += 1;
+        showToast("✅ إجابة صحيحة! أحسنت يا بطل وتم رفع نسبة دقتك 🌟");
+      } else {
+        showToast("❌ إجابة غير دقيقة، حاول مرة أخرى وراجع الفكرة!");
+      }
+      saveDB();
+      renderApp();
+    }
+
+    /**************************************************************
+     * 7. LESSONS CURRICULUM PAGE (STRICT LEVEL LOCK FOR STUDENTS)
+     **************************************************************/
+    function renderLessonsPage(user) {
+      // Strictly filter steps: Students ONLY see their assigned step! Coaches see all 6 steps.
+      const visibleSteps = user.role === "coach"
+        ? STEPS_DATA
+        : STEPS_DATA.filter(s => s.step === Number(user.level));
+
+      return `
+        <div class="space-y-5">
+          <div class="glass-panel gold-border-glow rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 class="font-display font-bold text-xl gold-gradient-text">
+                ${user.role === 'coach' ? 'All Training Curriculum (Steps 1 – 6)' : `Step ${user.level} Exclusive Curriculum`}
+              </h2>
+              <p class="text-xs text-gray-400 mt-1">
+                ${user.role === 'coach' 
+                  ? 'حساب مدرب: يظهر لك جميع المستويات والـ Steps بالكامل.' 
+                  : `حساب طالب: يظهر لك فقط دروس ومحتوى مستواك الحالي (Step ${user.level}) وممنوع ظهور أي مستوى آخر.`}
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            ${visibleSteps.map(stepObj => {
+              const isOpen = user.role === "student" ? true : !!openStepAccordions[stepObj.step];
+              return `
+                <div class="glass-panel gold-border-glow rounded-2xl overflow-hidden">
+                  <button onclick="toggleStepAccordion(${stepObj.step})" class="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gold-500/5 transition">
+                    <div class="flex items-center gap-3">
+                      <span class="w-9 h-9 rounded-xl bg-gold-500 text-black font-display font-bold flex items-center justify-center text-sm">S${stepObj.step}</span>
+                      <div>
+                        <h3 class="font-display font-bold text-lg text-gold-300">${stepObj.title}</h3>
+                        <p class="text-xs text-gray-400">${stepObj.subtitle} (${stepObj.lessons.length} Lessons)</p>
+                      </div>
+                    </div>
+                    <span class="text-gold-400 text-sm font-bold">${isOpen ? '▲ Hide List' : '▼ Show Lessons'}</span>
+                  </button>
+
+                  ${isOpen ? `
+                    <div class="divide-y divide-gold-500/15 border-t border-gold-500/20 bg-obsidian-950/60">
+                      ${stepObj.lessons.length === 0 ? `
+                        <div class="p-6 text-center text-xs text-gray-500">Coming Soon — Ready in code for Step ${stepObj.step} links.</div>
+                      ` : stepObj.lessons.map((lesson, idx) => {
+                        const primaryUrl = lesson.links[0]?.url || "#";
+                        const key = `${stepObj.step}-${idx}`;
+                        const stuAttended = user.role === "student" && user.attendedLessons && user.attendedLessons[key];
+                        const stuHw = user.role === "student" && user.homeworkDone && user.homeworkDone[key];
+
+                        return `
+                          <div class="px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 hover:bg-gold-500/5 transition">
+                            <div class="flex items-center gap-3">
+                              <span class="w-6 h-6 rounded-full bg-obsidian-800 border border-gold-500/30 text-[11px] text-gold-300 flex items-center justify-center font-bold">${idx + 1}</span>
+                              <a href="${primaryUrl}" target="_blank" class="font-semibold text-sm text-white hover:text-gold-300 transition underline-offset-4 hover:underline">
+                                ${lesson.title} ↗
+                              </a>
+                              ${stuAttended ? `<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">✓ Attended</span>` : ''}
+                              ${stuHw ? `<span class="text-[10px] px-2 py-0.5 rounded bg-gold-500/20 text-gold-300 border border-gold-500/30">✓ HW Done</span>` : ''}
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2">
+                              ${lesson.links.map(lk => `
+                                <div class="inline-flex items-center rounded-lg overflow-hidden border border-gold-500/35 bg-obsidian-900">
+                                  <a href="${lk.url}" target="_blank" class="px-3 py-1 text-xs font-semibold text-gold-300 hover:bg-gold-500 hover:text-black transition">
+                                    ${lk.label} ↗
+                                  </a>
+                                  <button onclick="copyLink('${lk.url}', event)" title="Copy Link" class="px-2 py-1 text-[11px] text-gray-400 hover:text-white border-l border-gold-500/20">
+                                    📋
+                                  </button>
+                                </div>
+                              `).join('')}
+                            </div>
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function toggleStepAccordion(stepNum) {
+      openStepAccordions[stepNum] = !openStepAccordions[stepNum];
+      renderApp();
+    }
+
+    /**************************************************************
+     * 8. COACH STUDENT TRACKER & GROUPS MANAGEMENT
+     **************************************************************/
+    function handleCoachHeaderSearch(val) {
+      coachSearchQuery = val;
+      if (activeTab !== "coach-tracker") {
+        activeTab = "coach-tracker";
+      }
+      renderApp();
+    }
+
+    function renderCoachTrackerPage() {
+      const allStudents = db.users.filter(u => u.role === "student");
+      const filteredStudents = allStudents.filter(s => {
+        const matchesGroup = coachSelectedGroupFilter === "ALL" || s.group === coachSelectedGroupFilter;
+        const q = coachSearchQuery.trim().toLowerCase();
+        const matchesQuery = !q || s.name.toLowerCase().includes(q) || s.username.toLowerCase().includes(q);
+        return matchesGroup && matchesQuery;
+      });
+
+      const selectedStudent = allStudents.find(s => s.id === coachSelectedStudentId) || filteredStudents[0] || null;
+
+      return `
+        <div class="space-y-6">
+          <!-- Group Management & Filter Bar -->
+          <div class="glass-panel gold-border-glow rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 class="font-display font-bold text-xl gold-gradient-text">📋 Coach Student Follow-Up & Groups</h2>
+              <p class="text-xs text-gray-400">ابحث عن أي طالب، قسم مجموعاتك، وعلم (✓) على الدرس اللي حضره والواجب اللي حله.</p>
+            </div>
+
+            <!-- Add New Group Form -->
+            <form onsubmit="createNewCoachGroup(event)" class="flex items-center gap-2">
+              <input id="newGroupNameInput" type="text" placeholder="+ اسم مجموعة جديدة..." class="bg-obsidian-950 border border-gold-500/35 rounded-xl px-3 py-2 text-xs text-white" />
+              <button type="submit" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-gold-500 text-black hover:bg-gold-400">Create Group</button>
+            </form>
+          </div>
+
+          <!-- Group Pills -->
+          <div class="flex flex-wrap gap-2">
+            <button onclick="coachSelectedGroupFilter='ALL'; renderApp();" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${coachSelectedGroupFilter === 'ALL' ? 'bg-gold-500 text-black' : 'bg-obsidian-800 text-gray-300'}">
+              All Groups (${allStudents.length})
+            </button>
+            ${db.groups.map(g => {
+              const count = allStudents.filter(s => s.group === g).length;
+              return `
+                <button onclick="coachSelectedGroupFilter='${g}'; renderApp();" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${coachSelectedGroupFilter === g ? 'bg-gold-500 text-black' : 'bg-obsidian-800 text-gray-300 border border-gold-500/20'}">
+                  👥 ${g} (${count})
+                </button>
+              `;
+            }).join('')}
+          </div>
+
+          <div class="grid lg:grid-cols-3 gap-6">
+            <!-- Left Column: Students List -->
+            <div class="glass-panel gold-border-glow rounded-2xl p-4 space-y-3">
+              <input oninput="coachSearchQuery=this.value; renderApp();" value="${coachSearchQuery}" type="text" placeholder="🔍 Filter by username or name..." class="w-full bg-obsidian-950 border border-gold-500/30 rounded-xl px-3.5 py-2 text-xs text-white" />
+              
+              <div class="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                ${filteredStudents.map(stu => {
+                  const st = calculateStudentStats(stu);
+                  const active = selectedStudent && selectedStudent.id === stu.id;
+                  return `
+                    <div onclick="coachSelectedStudentId='${stu.id}'; renderApp();" class="cursor-pointer p-3.5 rounded-xl border transition ${active ? 'bg-gold-500/15 border-gold-400' : 'bg-obsidian-900 border-gold-500/15 hover:border-gold-500/40'}">
+                      <div class="flex items-center justify-between">
+                        <span class="font-bold text-sm text-white">${stu.name}</span>
+                        <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-gold-500/20 text-gold-300">Step ${stu.level}</span>
+                      </div>
+                      <div class="text-[11px] text-gray-400 mt-0.5">@${stu.username} •${stu.group || 'No Group'}</div>
+                      <div class="mt-2 flex items-center justify-between text-[11px]">
+                        <span class="text-emerald-300">حضر: ${st.attendedCount}/${st.totalLessons}</span>
+                        <span class="text-gold-300">الواجب: ${st.homeworkCount}/${st.totalLessons}</span>
+                        <span class="text-gray-300">الدقة: ${st.puzzleAccuracy}%</span>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <!-- Right 2 Columns: Selected Student Lesson Checkboxes & Controls -->
+            <div class="lg:col-span-2 glass-panel gold-border-glow rounded-2xl p-6">
+              ${!selectedStudent ? `<p class="text-sm text-gray-400">اختر طالباً من القائمة لعرض دروسه وتحديث حضوره.</p>` : (() => {
+                const st = calculateStudentStats(selectedStudent);
+                return `
+                  <div class="space-y-5">
+                    <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-gold-500/20">
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <h3 class="font-display font-bold text-xl text-white">${selectedStudent.name}</h3>
+                          <span class="text-xs px-2.5 py-0.5 rounded-full border ${st.badgeColor}">${st.badgeArabic} (${st.overallPercent}%)</span>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">Username: <strong class="text-gold-300">@${selectedStudent.username}</strong> • متبقي ${st.remainingLessons} دروس لإنهاء Step ${selectedStudent.level}</p>
+                      </div>
+
+                      <!-- Change Student Level or Group -->
+                      <div class="flex flex-wrap items-center gap-2">
+                        <select onchange="changeStudentLevel('${selectedStudent.id}', this.value)" class="bg-obsidian-950 border border-gold-500/40 rounded-xl px-3 py-1.5 text-xs text-gold-300 font-bold">
+                          ${[1,2,3,4,5,6].map(l => `<option value="${l}" ${Number(selectedStudent.level) === l ? 'selected' : ''}>Level: Step ${l}</option>`).join('')}
+                        </select>
+                        <select onchange="changeStudentGroup('${selectedStudent.id}', this.value)" class="bg-obsidian-950 border border-gold-500/30 rounded-xl px-3 py-1.5 text-xs text-white">
+                          ${db.groups.map(g => `<option value="${g}" ${selectedStudent.group === g ? 'selected' : ''}>${g}</option>`).join('')}
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Confidential Note for Parent -->
+                    <div class="p-4 rounded-xl bg-obsidian-900 border border-gold-500/30">
+                      <label class="block text-xs font-bold text-gold-400 mb-1.5">🔒 ملاحظة سرية لولي الأمر (لا يراها الطالب أبداً):</label>
+                      <div class="flex gap-2">
+                        <input id="coachNoteInput_${selectedStudent.id}" type="text" value="${selectedStudent.parentSecretNote || ''}" class="flex-1 bg-obsidian-950 border border-gold-500/30 rounded-xl px-3.5 py-2 text-xs text-white" />
+                        <button onclick="saveParentSecretNote('${selectedStudent.id}')" class="px-4 py-2 rounded-xl text-xs font-bold bg-gold-500 text-black hover:bg-gold-400">حفظ الملاحظة</button>
+                      </div>
+                    </div>
+
+                    <!-- Lesson Checkmarks Table (Attended + Homework) -->
+                    <div>
+                      <h4 class="text-xs font-bold uppercase tracking-wider text-gold-300 mb-3">
+                        Step ${selectedStudent.level} Lessons — Check (✓) Attendance & Homework
+                      </h4>
+                      <div class="divide-y divide-gold-500/15 border border-gold-500/20 rounded-xl overflow-hidden bg-obsidian-950/60 max-h-[380px] overflow-y-auto">
+                        ${st.stepObj.lessons.map((les, idx) => {
+                          const key = `${selectedStudent.level}-${idx}`;
+                          const isAttended = !!(selectedStudent.attendedLessons && selectedStudent.attendedLessons[key]);
+                          const isHw = !!(selectedStudent.homeworkDone && selectedStudent.homeworkDone[key]);
+                          return `
+                            <div class="px-4 py-3 flex items-center justify-between gap-3 hover:bg-gold-500/5">
+                              <div class="flex items-center gap-2.5">
+                                <span class="text-xs text-gray-500 font-bold w-5">${idx + 1}.</span>
+                                <a href="${les.links[0]?.url || '#'}" target="_blank" class="text-xs font-semibold text-white hover:text-gold-300">${les.title} ↗</a>
+                              </div>
+                              <div class="flex items-center gap-4">
+                                <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs ${isAttended ? 'text-emerald-300 font-bold' : 'text-gray-400'}">
+                                  <input type="checkbox" ${isAttended ? 'checked' : ''} onchange="toggleStudentLessonCheck('${selectedStudent.id}', '${key}', 'attended')" class="accent-emerald-500 w-4 h-4 rounded" />
+                                  <span>Attended (حضر)</span>
+                                </label>
+                                <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs ${isHw ? 'text-gold-300 font-bold' : 'text-gray-400'}">
+                                  <input type="checkbox" ${isHw ? 'checked' : ''} onchange="toggleStudentLessonCheck('${selectedStudent.id}', '${key}', 'hw')" class="accent-yellow-500 w-4 h-4 rounded" />
+                                  <span>Homework (الواجب)</span>
+                                </label>
+                              </div>
+                            </div>
+                          `;
+                        }).join('')}
+                      </div>
+                    </div>
+                  </div>
+                `;
+              })()}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function createNewCoachGroup(e) {
+      e.preventDefault();
+      const inp = document.getElementById("newGroupNameInput");
+      const val = inp.value.trim();
+      if (!val) return;
+      if (!db.groups.includes(val)) {
+        db.groups.push(val);
+        saveDB();
+        showToast(`تم إضافة المجموعة: ${val}`);
+      }
+      inp.value = "";
+      renderApp();
+    }
+
+    function toggleStudentLessonCheck(studentId, key, type) {
+      const stu = db.users.find(u => u.id === studentId);
+      if (!stu) return;
+      if (type === "attended") {
+        stu.attendedLessons = stu.attendedLessons || {};
+        stu.attendedLessons[key] = !stu.attendedLessons[key];
+      } else {
+        stu.homeworkDone = stu.homeworkDone || {};
+        stu.homeworkDone[key] = !stu.homeworkDone[key];
+      }
+      saveDB();
+      renderApp();
+    }
+
+    function changeStudentLevel(studentId, newLvl) {
+      const stu = db.users.find(u => u.id === studentId);
+      if (!stu) return;
+      stu.level = Number(newLvl);
+      saveDB();
+      showToast(`تم نقل ${stu.name} إلى Step ${newLvl}`);
+      renderApp();
+    }
+
+    function changeStudentGroup(studentId, newGrp) {
+      const stu = db.users.find(u => u.id === studentId);
+      if (!stu) return;
+      stu.group = newGrp;
+      saveDB();
+      showToast(`تم تحديث مجموعة ${stu.name}`);
+      renderApp();
+    }
+
+    function saveParentSecretNote(studentId) {
+      const stu = db.users.find(u => u.id === studentId);
+      if (!stu) return;
+      const val = document.getElementById(`coachNoteInput_${studentId}`).value;
+      stu.parentSecretNote = val;
+      saveDB();
+      showToast("✅ تم حفظ الملاحظة السرية لولي الأمر!");
+    }
+
+    /**************************************************************
+     * 9. PARENT DASHBOARD (SEARCH BY STUDENT USERNAME + RATINGS)
+     **************************************************************/
+    function renderParentDashboard() {
+      const q = parentSearchQuery.trim().toLowerCase();
+      const student = db.users.find(u => u.role === "student" && (u.username.toLowerCase() === q || u.name.toLowerCase().includes(q)));
+
+      return `
+        <div class="max-w-4xl mx-auto space-y-6">
+          <div class="glass-panel gold-border-glow rounded-2xl p-6">
+            <span class="text-xs font-bold px-3 py-1 rounded-full bg-gold-500/20 text-gold-300 border border-gold-500/40">👨‍👩‍👦 بوابة متابعة ولي الأمر — Parent Dashboard</span>
+            <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">البحث عن إحصائيات وتقييم الطالب</h2>
+            <p class="text-xs text-gray-400 mt-1">ابحث بالـ Username الخاص بابنك (مثال للتجربة: <code class="text-gold-300">omar_chess</code> أو <code class="text-gold-300">youssef_eca</code> أو <code class="text-gold-300">salma_queen</code>)</p>
+
+            <div class="mt-4 flex gap-2">
+              <input id="parentSearchInput" value="${parentSearchQuery}" oninput="parentSearchQuery=this.value; renderApp();" type="text" placeholder="اكتب اليوزرنيم الخاص بالطالب (مثال: omar_chess)..." class="flex-1 bg-obsidian-950 border border-gold-500/40 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-gold-400" />
+            </div>
+          </div>
+
+          ${!student ? `
+            <div class="glass-panel gold-border-glow rounded-2xl p-8 text-center text-sm text-gray-400">
+              لم يتم العثور على طالب بهذا الـ Username. جرب كتابة <code class="text-gold-300">omar_chess</code> أو <code class="text-gold-300">youssef_eca</code>.
+            </div>
+          ` : (() => {
+            const st = calculateStudentStats(student);
+            const isUnlocked = unlockedParentForStudentId === student.id;
+            return `
+              <div class="glass-panel gold-border-glow rounded-2xl p-6 space-y-6">
+                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gold-500/20 pb-5">
+                  <div>
+                    <div class="text-xs text-gold-400 font-bold">STEP ${student.level} •${student.group || ''}</div>
+                    <h3 class="font-display font-bold text-2xl text-white mt-1">${student.name} (@${student.username})</h3>
+                  </div>
+
+                  <!-- Automatic Smart Evaluation Badge (>80% Genius/Excellent, 50-80% Great, <50% Acceptable) -->
+                  <div class="px-5 py-3 rounded-2xl border text-right ${st.badgeColor}">
+                    <div class="text-[11px] uppercase opacity-80">التقييم العام لمستوى الطالب</div>
+                    <div class="text-lg font-extrabold mt-0.5">${st.badgeArabic}</div>
+                    <div class="text-xs font-bold">نسبة التقدم الكلية: ${st.overallPercent}%</div>
+                  </div>
+                </div>
+
+                <!-- 4 Key Stat Cards -->
+                <div class="grid sm:grid-cols-4 gap-4">
+                  <div class="p-4 rounded-xl bg-obsidian-900 border border-gold-500/20">
+                    <div class="text-xs text-gray-400">الدروس التي حضرها</div>
+                    <div class="text-2xl font-bold text-emerald-400 mt-1">${st.attendedCount} /${st.totalLessons}</div>
+                    <div class="text-[11px] text-gray-500 mt-1">متبقي ${st.remainingLessons} دروس لإنهاء المستوى</div>
+                  </div>
+                  <div class="p-4 rounded-xl bg-obsidian-900 border border-gold-500/20">
+                    <div class="text-xs text-gray-400">الواجبات المكتملة</div>
+                    <div class="text-2xl font-bold text-gold-400 mt-1">${st.homeworkCount} /${st.totalLessons}</div>
+                    <div class="text-[11px] text-gray-500 mt-1">نسبة التزام الواجب: ${st.homeworkPercent}%</div>
+                  </div>
+                  <div class="p-4 rounded-xl bg-obsidian-900 border border-gold-500/20">
+                    <div class="text-xs text-gray-400">دقة حل الألغاز اليومية</div>
+                    <div class="text-2xl font-bold text-sky-400 mt-1">${st.puzzleAccuracy}%</div>
+                    <div class="text-[11px] text-gray-500 mt-1">${student.puzzleStats.correct} صح من ${student.puzzleStats.attempts} محاولة</div>
+                  </div>
+                  <div class="p-4 rounded-xl bg-obsidian-900 border border-gold-500/20">
+                    <div class="text-xs text-gray-400">الدرس القادم</div>
+                    <div class="text-sm font-bold text-white mt-1 line-clamp-2">${st.nextLesson ? st.nextLesson.title : 'جاهز لاختبار المستوى 🏆'}</div>
+                  </div>
+                </div>
+
+                <!-- Secret Coach Note Box Protected by Unified Parent Password -->
+                <div class="p-5 rounded-2xl bg-obsidian-900 border border-gold-500/40 flex flex-wrap items-center justify-between gap-4">
+                  ${isUnlocked ? `
+                    <div>
+                      <div class="text-xs font-bold text-gold-400 mb-1">🔓 ملاحظات المدرب الخاصة لولي الأمر:</div>
+                      <p class="text-sm text-white">${student.parentSecretNote || 'لا توجد ملاحظات حالياً.'}</p>
+                    </div>
+                  ` : `
+                    <div>
+                      <div class="text-sm font-bold text-gold-300">🔒 ملاحظات المدرب السرية لولي الأمر</div>
+                      <p class="text-xs text-gray-400">هذه الخانة مخفية عن الطالب وتفتح فقط بالباسورد الموحد لأولياء الأمور.</p>
+                    </div>
+                    <button onclick="openParentModal('${student.id}')" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-gold-500 text-black hover:bg-gold-400">
+                      إدخال باسورد ولي الأمر 🔑
+                    </button>
+                  `}
+                </div>
+              </div>
+            `;
+          })()}
+        </div>
+      `;
+    }
+
+    /**************************************************************
+     * 10. PARENT MODAL & LEVEL UP EXAM LOGIC
+     **************************************************************/
+    let pendingParentUnlockStudentId = null;
+
+    function openParentModal(studentId) {
+      pendingParentUnlockStudentId = studentId;
+      document.getElementById("parentPassInput").value = "";
+      document.getElementById("parentPassError").classList.add("hidden");
+      document.getElementById("parentLockModal").classList.remove("hidden");
+    }
+
+    function closeParentModal() {
+      document.getElementById("parentLockModal").classList.add("hidden");
+    }
+
+    function unlockParentNotes() {
+      const val = document.getElementById("parentPassInput").value.trim();
+      if (val === UNIFIED_PARENT_PASS) {
+        unlockedParentForStudentId = pendingParentUnlockStudentId;
+        closeParentModal();
+        showToast("🔓 تم فتح ملاحظات ولي الأمر السرية!");
+        renderApp();
+      } else {
+        document.getElementById("parentPassError").classList.remove("hidden");
+      }
+    }
+
+    function openLevelTestModal(stepNum) {
+      const questions = LEVEL_EXAM_QUESTIONS[stepNum] || LEVEL_EXAM_QUESTIONS[1];
+      const modal = document.getElementById("levelTestModal");
+      const content = document.getElementById("levelTestContent");
+
+      content.innerHTML = `
+        <h3 class="font-display font-bold text-xl gold-gradient-text mb-1">🏆 Step ${stepNum} Official Promotion Test</h3>
+        <p class="text-xs text-gray-400 mb-4">أجب بنسبة 65% أو أعلى للترقية تلقائياً إلى Step ${stepNum + 1}!</p>
+        <form onsubmit="submitLevelTest(event, ${stepNum})" class="space-y-4">
+          ${questions.map((item, qIdx) => `
+            <div class="p-3.5 rounded-xl bg-obsidian-900 border border-gold-500/20">
+              <div class="text-xs font-bold text-white mb-2">${item.q}</div>
+              <div class="space-y-1.5">
+                ${item.options.map((opt, oIdx) => `
+                  <label class="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                    <input type="radio" required name="exam_q_${qIdx}" value="${oIdx}" class="accent-yellow-500" />
+                    <span>${opt}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+          <button type="submit" class="w-full py-3 rounded-xl font-bold text-xs bg-gold-500 text-black hover:bg-gold-400">
+            Submit Test & Check Promotion 🚀
+          </button>
+        </form>
+      `;
+      modal.classList.remove("hidden");
+    }
+
+    function closeLevelTestModal() {
+      document.getElementById("levelTestModal").classList.add("hidden");
+    }
+
+    function submitLevelTest(e, stepNum) {
+      e.preventDefault();
+      const questions = LEVEL_EXAM_QUESTIONS[stepNum] || LEVEL_EXAM_QUESTIONS[1];
+      let correct = 0;
+      questions.forEach((item, qIdx) => {
+        const selected = document.querySelector(`input[name="exam_q_${qIdx}"]:checked`);
+        if (selected && Number(selected.value) === item.ans) correct++;
+      });
+      const score = Math.round((correct / questions.length) * 100);
+      const user = getCurrentUser();
+
+      if (score >= 65 && user && user.role === "student") {
+        user.level = Math.min(6, Number(user.level) + 1);
+        saveDB();
+        closeLevelTestModal();
+        showToast(`🎉 مبروك! نجحت بنسبة ${score}% وتمت ترقيتك إلى Step ${user.level}!`);
+        renderApp();
+      } else {
+        closeLevelTestModal();
+        showToast(`النتيجة: ${score}% — تحتاج 65% فأكثر للترقية للمستوى التالي.`);
+      }
+    }
+
+    /**************************************************************
+     * 11. MAIN APP RENDERER & GOLD PARTICLE BACKGROUND
+     **************************************************************/
+    function renderApp() {
+      renderHeader();
+      const container = document.getElementById("appContainer");
+      const user = getCurrentUser();
+
+      if (activeTab === "parent-dashboard") {
+        container.innerHTML = renderParentDashboard();
+        return;
+      }
+
+      if (!user) {
+        container.innerHTML = renderAuthScreen();
+        return;
+      }
+
+      if (activeTab === "lessons") {
+        container.innerHTML = renderLessonsPage(user);
+      } else if (activeTab === "coach-tracker" && user.role === "coach") {
+        container.innerHTML = renderCoachTrackerPage();
+      } else {
+        container.innerHTML = renderHomePage(user);
+      }
+    }
+
+    // Subtle Black & Gold Background Animation
+    const canvas = document.getElementById("bgCanvas");
+    const ctx = canvas.getContext("2d");
+    let particles = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    for (let i = 0; i < 42; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.8 + 0.6,
+        vx: (Math.random() - 0.5) * 0.25,
+        vy: (Math.random() - 0.5) * 0.25,
+        a: Math.random() * 0.45 + 0.1
+      });
+    }
+
+    function animateBg() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(212, 175, 55, ${p.a})`;
+        ctx.fill();
+      });
+      requestAnimationFrame(animateBg);
+    }
+    animateBg();
+
+    // Initial Render
+    renderApp();
+  </script>
 </body>
 </html>
