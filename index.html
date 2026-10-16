@@ -30,11 +30,23 @@
         <h3 class="font-display font-bold text-lg text-yellow-400">🔒 خانة ولي الأمر السرية</h3>
         <button onclick="closeParentModal()" class="text-gray-400 hover:text-white">✕</button>
       </div>
-      <p class="text-xs text-gray-400 mb-3">أدخل الباسورد الموحد لأولياء الأمور (للتجربة: <code class="text-yellow-300">ECA-PARENT</code>)</p>
-      <input id="parentPassInp" type="password" placeholder="ECA-PARENT" class="w-full bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white mb-3" />
+      <p class="text-xs text-gray-400 mb-3">أدخل الباسورد الموحد لأولياء الأمور</p>
+      <input id="parentPassInp" type="password" placeholder="••••••" class="w-full bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white mb-3" />
       <div class="flex justify-end gap-2">
         <button onclick="closeParentModal()" class="px-4 py-2 rounded-xl text-xs bg-zinc-800 text-gray-300">إلغاء</button>
         <button onclick="confirmParentPass()" class="px-4 py-2 rounded-xl text-xs gold-btn">فتح الملاحظات 🔓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coach Quick Login Modal -->
+  <div id="coachQuickModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="gold-card rounded-2xl max-w-sm w-full p-6">
+      <h3 class="font-display font-bold text-lg text-yellow-400 mb-3">🔐 دخول المدرب السريع</h3>
+      <input id="coachQuickInp" type="password" placeholder="أدخل كلمة سر المدرب" onkeydown="if(event.key==='Enter')confirmCoachQuick()" class="w-full bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white mb-3" />
+      <div class="flex justify-end gap-2">
+        <button onclick="document.getElementById('coachQuickModal').classList.add('hidden')" class="px-4 py-2 rounded-xl text-xs bg-zinc-800 text-gray-300">إلغاء</button>
+        <button onclick="confirmCoachQuick()" class="px-4 py-2 rounded-xl text-xs gold-btn">فتح 🔓</button>
       </div>
     </div>
   </div>
@@ -72,6 +84,7 @@
         </div>
       </div>
 
+      <button id="langBtn" onclick="toggleLang()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-zinc-900 border border-yellow-500/40 text-yellow-300">EN</button>
       <div id="navButtons" class="flex items-center gap-2 flex-wrap"></div>
     </div>
   </header>
@@ -162,10 +175,30 @@
       6: { q: "Step 6 Master Calculation Puzzle: Find the 4-move forced mating net.", opts: ["Qxh7+! followed by Rh3#", "Qe2", "h4"], ans: 0, url: "https://lichess.org/training" }
     };
 
+    const COACH_QUICK_PASS = "ECA-COACH-2026"; // غيّرها لكلمة سر خاصة بك
+    let lang = localStorage.getItem("ECA_LANG") || "ar";
+    const DICT = [["إلغاء", "Cancel"], ["فتح الملاحظات 🔓", "Open notes 🔓"], ["خانة ولي الأمر السرية", "Parent Secret Box"], ["أدخل الباسورد الموحد لأولياء الأمور", "Enter the shared parents' password"], ["جاري تحميل منصة Egypt Chess Academy...", "Loading Egypt Chess Academy platform..."], ["بوابة ولي الأمر (Parent Dashboard)", "Parent Portal (Parent Dashboard)"], ["بوابة ولي الأمر", "Parent Portal"], ["داشبورد ولي الأمر", "Parent Dashboard"], ["الرئيسية", "Home"], ["كل المستويات (Steps 1-6)", "All Levels (Steps 1-6)"], ["دروس Step ", "Lessons: Step "], ["متابعة الطلاب والجروبات", "Students & Groups Tracker"], ["خروج", "Logout"], ["اضغط على أي حساب تجريبي للدخول فوراً أو أنشئ حساباً جديداً:", "Tap a demo account to enter instantly or create a new account:"], ["دخول سريع كـ مدرب (Coach)", "Quick login as Coach"], ["يفتح كل الـ 6 Steps + متابعة الطلاب والجروبات", "Opens all 6 Steps + student & group tracking"], ["دخول سريع كـ طالب (Omar - Step 2)", "Quick login as Student (Omar - Step 2)"], ["يرى فقط Step 2 + اللغز اليومي + الدرس القادم", "Sees only Step 2 + daily puzzle + next lesson"], ["ابحث عن omar_chess وشاهد التقييم والملاحظة السرية", "Search omar_chess to see the rating and secret note"], ["🔐 الدخول السريع للمدرب محمي بكلمة سر", "🔐 Coach quick login is password-protected"], ["Login (دخول)", "Login"], ["Sign Up (حساب جديد)", "Sign Up"], ["تسجيل الدخول ♟️", "Log in ♟️"], ["طالب (Student)", "Student"], ["مدرب (Coach)", "Coach"], ["إنشاء الحساب 🚀", "Create account 🚀"], ["كود المدرب السري", "Secret coach code"], ["حضرت", "Attended"], ["درس في", "lessons in"], ["متبقي", "remaining"], ["درس للامتحان", "lessons until the exam"], ["دروس", "lessons"], ["درس لإنهاء", "lessons to finish"], ["ملاحظة المدرب السرية لولي الأمر:", "Coach's secret note for parents:"], ["إغلاق 🔒", "Close 🔒"], ["نسبة الدقة:", "Accuracy:"], ["اختيار ←", "Select →"], ["فتح التمرين على Lichess ↗", "Open exercise on Lichess ↗"], ["الدرس اللي عليه الدور (Next Lesson)", "Your Next Lesson"], ["مكتمل", "complete"], ["اضغط هنا للانتقال تلقائياً لصفحة دروس مستواك (Step", "Tap here to open your level's lessons (Step"], ["فقط).", "only)."], ["أتممت كل دروس Step", "You completed all lessons of Step"], ["اختبار الترقية للمستوى التالي:", "Promotion test for the next level:"], ["بدء اختبار", "Start test"], ["✅ أجبت إجابة صحيحة — اللغز مقفول", "✅ Correct answer — puzzle locked"], ["❌ أجبت إجابة خاطئة — اللغز مقفول ولا يمكن إعادته", "❌ Wrong answer — puzzle locked, cannot be retried"], ["✅ إجابة صحيحة! أحسنت يا بطل", "✅ Correct! Well done, champion"], ["❌ إجابة خاطئة — تم قفل اللغز", "❌ Wrong answer — puzzle locked"], ["اللغز مقفول بالفعل", "Puzzle is already locked"], ["↺ إعادة فتح اللغز", "↺ Reopen puzzle"], ["تم إعادة فتح اللغز", "Puzzle reopened"], ["حساب المدرب", "Coach Account"], ["يمكنك استعراض جميع الـ 6 Steps ومتابعة حضور وواجبات ومجموعات الطلاب.", "You can browse all 6 Steps and track students' attendance, homework and groups."], ["كل الدروس (Steps 1-6)", "All Lessons (Steps 1-6)"], ["جميع المستويات للمدرب (Steps 1 – 6)", "All Levels for Coach (Steps 1 – 6)"], ["دروس مستواك الحالي فقط — Step", "Your current level's lessons only — Step"], ["اضغط على أي Step لعرض قائمة دروسها تحت بعضها.", "Tap any Step to show its lessons list."], ["ممنوع ظهور أي مستوى آخر غير مستواك الحالي.", "No level other than your current one is shown."], ["▲ إخفاء القائمة", "▲ Hide list"], ["▼ عرض الدروس", "▼ Show lessons"], ["متابعة الطلاب والمجموعات", "Students & Groups Tracker"], ["علم (✓) أمام الدرس الذي حضره الطالب والواجب الذي حله واكتب ملاحظة سرية لولي الأمر.", "Tick (✓) the lessons the student attended and the homework solved, and write a secret note for the parent."], ["+ اسم جروب جديد...", "+ New group name..."], ["إضافة جروب", "Add group"], ["كل الجروبات", "All Groups"], ["حضر", "Attended"], ["الواجبات المكتملة", "Completed homework"], ["الواجب", "Homework"], ["اختر طالباً", "Select a student"], ["ملاحظة سرية لولي الأمر...", "Secret note for parent..."], ["حفظ لولي الأمر 🔒", "Save for parent 🔒"], ["✅ تم حفظ الملاحظة السرية لولي الأمر", "✅ Secret note saved for parent"], ["بوابة متابعة ولي الأمر (Parent Dashboard)", "Parent Follow-Up Portal (Parent Dashboard)"], ["ابحث بالـ Username الخاص بابنك (جرب:", "Search by your child's username (try:"], [" أو ", " or "], ["اكتب يوزرنيم الطالب...", "Type the student's username..."], ["لا يوجد طالب بهذا الاسم. جرب كتابة omar_chess", "No student with this name. Try typing omar_chess"], ["التقييم التلقائي لمستوى الطالب", "Automatic student level rating"], ["الدروس التي حضرها", "Lessons attended"], ["دقة الألغاز اليومية", "Daily puzzle accuracy"], ["ملاحظة المدرب السرية:", "Coach's secret note:"], ["ملاحظات المدرب السرية لولي الأمر (محمية بباسورد موحد)", "Coach's secret notes for parents (protected by a shared password)"], ["فتح بالباسورد 🔑", "Unlock with password 🔑"], ["ممتاز / عبقري 🌟👑", "Excellent / Genius 🌟👑"], ["رائع 👏✨", "Great 👏✨"], ["مقبول 💪", "Fair 💪"], ["مرحباً بك ", "Welcome "], ["❌ بيانات الدخول غير صحيحة", "❌ Incorrect login details"], ["❌ كود المدربين غير صحيح", "❌ Invalid coach code"], ["🎉 تم إنشاء الحساب!", "🎉 Account created!"], ["🔓 تم فتح ملاحظة ولي الأمر", "🔓 Parent note unlocked"], ["❌ باسورد غير صحيح", "❌ Incorrect password"], ["🎉 مبروك! تمت ترقيتك إلى Step ", "🎉 Congrats! You've been promoted to Step "], ["اختبار نهاية Step ", "End-of-Step test "], [": هل أنت جاهز للترقية إلى Step ", ": ready to be promoted to Step "], ["؟", "?"], ["إتمام الاختبار بنجاح والترقية إلى Step ", "Pass the test and promote to Step "], ["🔐 دخول المدرب السريع", "🔐 Coach Quick Login"], ["أدخل كلمة سر المدرب", "Enter the coach password"], ["فتح 🔓", "Open 🔓"], ["❌ كلمة السر غير صحيحة", "❌ Wrong password"]].sort((a, b) => b[0].length - a[0].length);
+    function trText(s) { if (lang !== "en") return s; for (const [a, b] of DICT) s = s.split(a).join(b); return s; }
+    function applyLang() {
+      document.documentElement.lang = lang;
+      const b = document.getElementById("langBtn"); if (b) b.textContent = lang === "en" ? "عربي" : "EN";
+      const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT), ns = [];
+      while (w.nextNode()) ns.push(w.currentNode);
+      ns.forEach(n => {
+        const p = n.parentNode && n.parentNode.nodeName; if (p === "SCRIPT" || p === "STYLE") return;
+        if (n.__o === undefined) n.__o = n.nodeValue;
+        const v = lang === "en" ? trText(n.__o) : n.__o; if (n.nodeValue !== v) n.nodeValue = v;
+      });
+      document.querySelectorAll("[placeholder]").forEach(e => {
+        if (e.__p === undefined) e.__p = e.getAttribute("placeholder");
+        e.setAttribute("placeholder", lang === "en" ? trText(e.__p) : e.__p);
+      });
+    }
+    function toggleLang() { lang = lang === "en" ? "ar" : "en"; localStorage.setItem("ECA_LANG", lang); applyLang(); }
     const DB_KEY = "ECA_PLATFORM_V2";
     let db = JSON.parse(localStorage.getItem(DB_KEY) || "null") || {
       users: [
-        { id: "c1", name: "Coach Abdelrahman", username: "coach_abdo", email: "coach@eca.com", pass: "123456", role: "coach" },
+        { id: "c1", name: "Coach Abdelrahman", username: "coach_abdo", email: "coach@eca.com", pass: COACH_QUICK_PASS, role: "coach" },
         { id: "s1", name: "Omar Khaled", username: "omar_chess", email: "omar@eca.com", pass: "123456", role: "student", level: 2, group: "Tuesday 6 PM - Step 2", att: { "2-0": true, "2-1": true, "2-2": true }, hw: { "2-0": true, "2-1": true }, puz: { t: 10, c: 9 }, note: "عمر مستواه ممتاز جداً في التكتيك ومركز في السيشن، محتاج بس يواظب على اللغز اليومي." },
         { id: "s2", name: "Youssef Ahmed", username: "youssef_eca", email: "youssef@eca.com", pass: "123456", role: "student", level: 1, group: "Friday 4 PM - Step 1", att: { "1-0": true, "1-1": true, "1-2": true, "1-3": true }, hw: { "1-0": true, "1-1": true }, puz: { t: 8, c: 5 }, note: "يوسف شاطر بس محتاج يهدى قبل النقلة وميتسرعش." }
       ],
@@ -173,13 +206,16 @@
       currId: null
     };
 
+    { const c1 = db.users.find(x => x.id === "c1"); if (c1 && c1.pass === "123456") { c1.pass = COACH_QUICK_PASS; localStorage.setItem(DB_KEY, JSON.stringify(db)); } }
     let tab = "home", authMode = "login", signupRole = "student", selStuId = "s1", grpFilter = "ALL", searchQ = "", parentQ = "omar_chess", unlockedStuId = null, openSteps = { 1: true, 2: true, 3: false, 4: false, 5: false, 6: false };
 
     function save() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
     function currUser() { return db.users.find(u => u.id === db.currId) || null; }
-    function toast(m) { const el = document.getElementById("toast"); el.textContent = m; el.classList.remove("hidden"); setTimeout(() => el.classList.add("hidden"), 2800); }
-    function switchTab(t) { tab = t; render(); }
-    function goHomeRefresh() { tab = "home"; render(); }
+    function toast(m) { const el = document.getElementById("toast"); el.textContent = trText(m); el.classList.remove("hidden"); setTimeout(() => el.classList.add("hidden"), 2800); }
+    function go(t) { if (tab !== t) history.pushState({ tab: t }, "", "#" + t); tab = t; }
+    function switchTab(t) { go(t); render(); }
+    function logout() { db.currId = null; save(); go("home"); render(); }
+    function goHomeRefresh() { go("home"); render(); }
 
     function calcStats(stu) {
       const st = STEPS.find(x => x.step === Number(stu.level)) || STEPS[0];
@@ -202,6 +238,11 @@
     }
 
     function render() {
+      const a = document.activeElement, id = a && a.id, s = a && a.selectionStart, e = a && a.selectionEnd;
+      _render(); applyLang();
+      if (id) { const el = document.getElementById(id); if (el && el !== document.activeElement) { el.focus(); try { el.setSelectionRange(s, e); } catch (_) {} } }
+    }
+    function _render() {
       const u = currUser();
       const nav = document.getElementById("navButtons");
       const cSearch = document.getElementById("coachSearchBox");
@@ -224,7 +265,7 @@
         <button onclick="switchTab('lessons')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='lessons'?'gold-btn':'bg-zinc-900 text-gray-300'}">📚 ${u.role==='coach'?'كل المستويات (Steps 1-6)':'دروس Step '+u.level}</button>
         ${u.role==='coach'?`<button onclick="switchTab('tracker')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='tracker'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">📋 متابعة الطلاب والجروبات</button>`:''}
         <button onclick="switchTab('parent')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='parent'?'gold-btn':'bg-zinc-900 text-gray-300'}">👨‍👩‍👦 داشبورد ولي الأمر</button>
-        <button onclick="db.currId=null; save(); render();" class="px-2.5 py-1.5 rounded-xl text-xs bg-red-500/20 text-red-300 border border-red-500/30">خروج</button>
+        <button onclick="logout()" class="px-2.5 py-1.5 rounded-xl text-xs bg-red-500/20 text-red-300 border border-red-500/30">خروج</button>
       `;
 
       if (tab === "lessons") main.innerHTML = renderLessonsView(u);
@@ -241,7 +282,7 @@
               <h2 class="font-display font-bold text-xl gold-gradient-text">Egypt Chess Academy Portal</h2>
               <p class="text-xs text-gray-400 mt-2">اضغط على أي حساب تجريبي للدخول فوراً أو أنشئ حساباً جديداً:</p>
               <div class="mt-4 space-y-2.5">
-                <button onclick="demoLogin('coach@eca.com','123456')" class="w-full text-left p-3 rounded-xl bg-black/80 border border-yellow-500/40 hover:border-yellow-400">
+                <button onclick="openCoachQuick()" class="w-full text-left p-3 rounded-xl bg-black/80 border border-yellow-500/40 hover:border-yellow-400">
                   <div class="text-xs font-bold text-yellow-300">👑 دخول سريع كـ مدرب (Coach)</div>
                   <div class="text-[11px] text-gray-400">يفتح كل الـ 6 Steps + متابعة الطلاب والجروبات</div>
                 </button>
@@ -256,7 +297,7 @@
               </div>
             </div>
             <div class="text-[11px] text-gray-400 mt-4 pt-3 border-t border-yellow-500/20">
-              🔑 كود تسجيل المدربين: <b class="text-yellow-300">ECA2026</b> | 🔒 باسورد أولياء الأمور: <b class="text-yellow-300">ECA-PARENT</b>
+              🔐 الدخول السريع للمدرب محمي بكلمة سر
             </div>
           </div>
 
@@ -267,8 +308,8 @@
             </div>
             ${authMode === "login" ? `
               <form onsubmit="doLogin(event)" class="space-y-4">
-                <input id="lEmail" required placeholder="Email or Username (e.g. coach@eca.com or omar_chess)" class="w-full bg-black border border-yellow-500/30 rounded-xl px-4 py-2.5 text-sm text-white" />
-                <input id="lPass" type="password" required placeholder="Password (123456)" class="w-full bg-black border border-yellow-500/30 rounded-xl px-4 py-2.5 text-sm text-white" />
+                <input id="lEmail" required placeholder="Email or Username" class="w-full bg-black border border-yellow-500/30 rounded-xl px-4 py-2.5 text-sm text-white" />
+                <input id="lPass" type="password" required placeholder="Password" class="w-full bg-black border border-yellow-500/30 rounded-xl px-4 py-2.5 text-sm text-white" />
                 <button class="w-full py-3 rounded-xl text-sm gold-btn">تسجيل الدخول ♟️</button>
               </form>
             ` : `
@@ -290,7 +331,7 @@
                     <option value="1">Step 1</option><option value="2">Step 2</option><option value="3">Step 3</option><option value="4">Step 4</option><option value="5">Step 5</option><option value="6">Step 6</option>
                   </select>
                 ` : `
-                  <input id="sCode" required placeholder="كود المدرب السري (ECA2026)" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-white" />
+                  <input id="sCode" required placeholder="كود المدرب السري" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-white" />
                 `}
                 <button class="w-full py-3 rounded-xl text-sm gold-btn">إنشاء الحساب 🚀</button>
               </form>
@@ -301,7 +342,7 @@
     }
 
     function demoLogin(e, p) {
-      const u = db.users.find(x => x.email === e && x.pass === p);
+      const u = db.users.find(x => x.email === e && x.pass === p && x.role === 'student');
       if (u) { db.currId = u.id; tab = "home"; save(); render(); toast("مرحباً بك " + u.name); }
     }
     function doLogin(ev) {
@@ -319,7 +360,7 @@
       const email = document.getElementById("sEmail").value.trim().toLowerCase();
       const pass = document.getElementById("sPass").value;
       if (signupRole === "coach") {
-        if (document.getElementById("sCode").value.trim() !== "ECA2026") return toast("❌ كود المدربين غير صحيح (ECA2026)");
+        if (document.getElementById("sCode").value.trim() !== "ECA2026") return toast("❌ كود المدربين غير صحيح");
         const nc = { id: "u" + Date.now(), name, username, email, pass, role: "coach" };
         db.users.push(nc); db.currId = nc.id;
       } else {
@@ -333,13 +374,14 @@
     function renderStudentHome(stu) {
       const s = calcStats(stu);
       const puz = PUZZLES[stu.level] || PUZZLES[1];
+      const done = (stu.puzDone || {})[stu.level];
       return `
         <div class="space-y-6">
           <div class="gold-card rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <span class="px-2.5 py-1 rounded-full text-xs gold-btn">STEP ${stu.level} STUDENT</span>
               <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">Welcome, ${stu.name} (@${stu.username})</h2>
-              <p class="text-xs text-gray-400 mt-1">حضرت ${s.attC} من ${s.total} درس في Step ${stu.level} • متبقي ${s.rem} درس للامتحان</p>
+              <p class="text-xs text-gray-400 mt-1">حضرت ${s.attC}/${s.total} درس في Step ${stu.level} • متبقي ${s.rem} درس للامتحان</p>
             </div>
             <button onclick="openParentModal('${stu.id}')" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-black border border-yellow-500/40 text-yellow-300">🔒 خانة ولي الأمر السرية</button>
           </div>
@@ -363,11 +405,12 @@
               </div>
               <p class="text-sm text-white font-medium mb-4">${puz.q}</p>
               <div class="space-y-2">
-                ${puz.opts.map((o, i) => `
-                  <button onclick="solvePuzzle(${i},${puz.ans})" class="w-full text-left px-4 py-2.5 rounded-xl text-xs bg-black/80 border border-yellow-500/30 hover:border-yellow-400 flex justify-between">
-                    <span>${o}</span><span class="text-yellow-400">اختيار ←</span>
-                  </button>
-                `).join('')}
+                ${puz.opts.map((o, i) => {
+                  const c = !done ? 'border-yellow-500/30 hover:border-yellow-400' : i === puz.ans ? 'border-emerald-500 bg-emerald-500/10' : (done.i === i ? 'border-red-500 bg-red-500/10' : 'border-zinc-800 opacity-50');
+                  const m = done ? (i === puz.ans ? '✓' : (done.i === i ? '✗' : '')) : 'اختيار ←';
+                  return `<button ${done ? 'disabled' : ''} onclick="solvePuzzle(${i},${puz.ans})" class="w-full text-left px-4 py-2.5 rounded-xl text-xs bg-black/80 border ${c} flex justify-between ${done ? 'cursor-not-allowed' : ''}"><span>${o}</span><span class="text-yellow-400">${m}</span></button>`;
+                }).join('')}
+                ${done ? `<p class="text-xs mt-2 ${done.ok ? 'text-emerald-300' : 'text-red-300'}">${done.ok ? '✅ أجبت إجابة صحيحة — اللغز مقفول' : '❌ أجبت إجابة خاطئة — اللغز مقفول ولا يمكن إعادته'}</p>` : ''}
               </div>
               <div class="mt-4 pt-3 border-t border-yellow-500/20 text-right">
                 <a href="${puz.url}" target="_blank" class="text-xs text-yellow-300 hover:underline">فتح التمرين على Lichess ↗</a>
@@ -406,9 +449,12 @@
     function solvePuzzle(i, ans) {
       const u = currUser();
       u.puz = u.puz || { t: 0, c: 0 };
+      u.puzDone = u.puzDone || {};
+      if (u.puzDone[u.level]) return toast("اللغز مقفول بالفعل");
       u.puz.t++;
+      u.puzDone[u.level] = { i, ok: i === ans };
       if (i === ans) { u.puz.c++; toast("✅ إجابة صحيحة! أحسنت يا بطل"); }
-      else toast("❌ إجابة خاطئة، حاول مرة أخرى");
+      else toast("❌ إجابة خاطئة — تم قفل اللغز");
       save(); render();
     }
 
@@ -480,7 +526,7 @@
       `;
     }
 
-    function coachSearchStudent(val) { searchQ = val; tab = "tracker"; render(); }
+    function coachSearchStudent(val) { searchQ = val; go("tracker"); render(); }
 
     function renderTrackerView() {
       const students = db.users.filter(u => u.role === "student");
@@ -527,6 +573,7 @@
                         <h3 class="font-bold text-lg text-white">${sel.name} <span class="text-xs px-2 py-0.5 rounded border ${st.evalCls}">${st.evalText} (${st.overall}%)</span></h3>
                         <p class="text-xs text-gray-400">متبقي ${st.rem} درس لإنهاء Step ${sel.level}</p>
                       </div>
+                      <button onclick="resetPuz('${sel.id}')" class="px-3 py-1.5 rounded-xl text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">↺ إعادة فتح اللغز</button>
                       <select onchange="selLvl('${sel.id}', this.value)" class="bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-yellow-300">
                         ${[1,2,3,4,5,6].map(l => `<option value="${l}" ${Number(sel.level)===l?'selected':''}>Step ${l}</option>`).join('')}
                       </select>
@@ -564,6 +611,7 @@
       `;
     }
 
+    function resetPuz(id) { const s = db.users.find(u => u.id === id); if (s.puzDone) delete s.puzDone[s.level]; save(); render(); toast("تم إعادة فتح اللغز"); }
     function addGroup(e) { e.preventDefault(); const v = document.getElementById("newGrpInp").value.trim(); if (v) { db.groups.push(v); save(); render(); } }
     function togCheck(id, k, type) { const s = db.users.find(u => u.id === id); s[type] = s[type] || {}; s[type][k] = !s[type][k]; save(); render(); }
     function selLvl(id, l) { const s = db.users.find(u => u.id === id); s.level = Number(l); save(); render(); }
@@ -576,7 +624,7 @@
           <div class="gold-card rounded-2xl p-6">
             <h2 class="font-display font-bold text-xl gold-gradient-text">👨‍👩‍👦 بوابة متابعة ولي الأمر (Parent Dashboard)</h2>
             <p class="text-xs text-gray-400 mt-1">ابحث بالـ Username الخاص بابنك (جرب: <b class="text-yellow-300">omar_chess</b> أو <b class="text-yellow-300">youssef_eca</b>)</p>
-            <input value="${parentQ}" oninput="parentQ=this.value; render();" placeholder="اكتب يوزرنيم الطالب..." class="mt-3 w-full bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white" />
+            <input id="parentSearchInp" value="${parentQ}" oninput="parentQ=this.value; render();" placeholder="اكتب يوزرنيم الطالب..." class="mt-3 w-full bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white" />
           </div>
           ${!stu ? `<div class="gold-card rounded-2xl p-6 text-center text-xs text-gray-400">لا يوجد طالب بهذا الاسم. جرب كتابة omar_chess</div>` : (() => {
             const s = calcStats(stu);
@@ -620,13 +668,20 @@
       `;
     }
 
+    function openCoachQuick() { document.getElementById("coachQuickInp").value = ""; document.getElementById("coachQuickModal").classList.remove("hidden"); document.getElementById("coachQuickInp").focus(); }
+    function confirmCoachQuick() {
+      if (document.getElementById("coachQuickInp").value !== COACH_QUICK_PASS) return toast("❌ كلمة السر غير صحيحة");
+      const u = db.users.find(x => x.id === "c1" && x.role === "coach"); if (!u) return;
+      document.getElementById("coachQuickModal").classList.add("hidden");
+      db.currId = u.id; go("home"); save(); render(); toast("مرحباً بك " + u.name);
+    }
     let pendingStuId = null;
     function openParentModal(id) { pendingStuId = id; document.getElementById("parentPassInp").value = ""; document.getElementById("parentModal").classList.remove("hidden"); }
     function closeParentModal() { document.getElementById("parentModal").classList.add("hidden"); }
     function confirmParentPass() {
       if (document.getElementById("parentPassInp").value.trim() === "ECA-PARENT") {
         unlockedStuId = pendingStuId; closeParentModal(); render(); toast("🔓 تم فتح ملاحظة ولي الأمر");
-      } else toast("❌ باسورد غير صحيح (استخدم ECA-PARENT)");
+      } else toast("❌ باسورد غير صحيح");
     }
 
     function openExamModal(lvl) {
@@ -656,6 +711,11 @@
       requestAnimationFrame(anim);
     }
     anim();
+    const h0 = (location.hash || "#home").slice(1);
+    tab = ["home", "lessons", "tracker", "parent"].includes(h0) ? h0 : "home";
+    history.replaceState({ tab }, "", "#" + tab);
+    window.addEventListener("popstate", e => { tab = (e.state && e.state.tab) || "home"; render(); });
+    const _oe = openExamModal; openExamModal = function (l) { _oe(l); applyLang(); };
     render();
   </script>
 </body>
