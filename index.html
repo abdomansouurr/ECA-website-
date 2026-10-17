@@ -313,7 +313,7 @@
     db.attendance = (db.attendance && typeof db.attendance === "object") ? db.attendance : {};
     let tab = "home", authMode = "login", signupRole = "student", selStuId = "s1", grpFilter = "ALL", searchQ = "", parentQ = "omar_chess", unlockedStuId = null, openSteps = { 1: true, 2: true, 3: false, 4: false, 5: false, 6: false };
 
-    function save() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+    function save() { localStorage.setItem(DB_KEY, JSON.stringify(db)); if (window.syncToCloud) window.syncToCloud(); }
     function currUser() { return db.users.find(u => u.id === db.currId) || null; }
     function toast(m) { const el = document.getElementById("toast"); el.textContent = trText(m); el.classList.remove("hidden"); setTimeout(() => el.classList.add("hidden"), 2800); }
     function go(t) { if (tab !== t) history.pushState({ tab: t }, "", "#" + t); tab = t; }
@@ -1083,6 +1083,72 @@
     window.addEventListener("popstate", e => { tab = (e.state && e.state.tab) || "home"; render(); });
     const _oe = openExamModal; openExamModal = function (l) { _oe(l); applyLang(); };
     render();
+  </script>
+  <!-- Firebase Realtime Cloud Sync (Firestore + Anonymous Auth) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDofyiWsg2HmOQgigWeqUpOaSupoMQ1GKc",
+      authDomain: "eca-chess.firebaseapp.com",
+      projectId: "eca-chess",
+      storageBucket: "eca-chess.firebasestorage.app",
+      messagingSenderId: "978726294610",
+      appId: "1:978726294610:web:17c0ad743303b700f4fb8b"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const firestore = getFirestore(app);
+    const mainDocRef = doc(firestore, "eca_platform", "main_data");
+
+    let isApplyingRemote = false;
+
+    // دالة رفع التعديلات إلى السحابة تلقائياً عند أي تغيير
+    window.syncToCloud = async function () {
+      if (isApplyingRemote) return;
+      try {
+        const payload = {
+          users: db.users || [],
+          groups: db.groups || [],
+          attendance: db.attendance || {},
+          updatedAt: Date.now()
+        };
+        await setDoc(mainDocRef, payload, { merge: true });
+      } catch (err) {
+        console.error("Cloud Sync Error:", err);
+      }
+    };
+
+    // تسجيل الدخول الخفي وتفعيل الاستماع اللحظي للتحديثات بين كل الأجهزة
+    signInAnonymously(auth)
+      .then(() => {
+        onSnapshot(mainDocRef, (snap) => {
+          if (snap.exists()) {
+            const cloudData = snap.data();
+            isApplyingRemote = true;
+            // الاحتفاظ بالحساب المسجل دخوله حالياً على هذا الجهاز فقط
+            const myCurrentUserId = db.currId;
+            if (Array.isArray(cloudData.users)) db.users = cloudData.users;
+            if (Array.isArray(cloudData.groups)) db.groups = cloudData.groups;
+            if (cloudData.attendance && typeof cloudData.attendance === "object") {
+              db.attendance = cloudData.attendance;
+            }
+            db.currId = myCurrentUserId;
+            localStorage.setItem(DB_KEY, JSON.stringify(db));
+            render();
+            isApplyingRemote = false;
+          } else {
+            // أول مرة على الإطلاق: رفع البيانات المبدئية إلى Firestore
+            window.syncToCloud();
+          }
+        });
+      })
+      .catch((err) => {
+        console.error("Firebase Auth Error:", err);
+      });
   </script>
 </body>
 </html>
