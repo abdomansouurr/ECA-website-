@@ -2,7 +2,16 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#050507" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="ECA Chess" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <script>(function(){try{var t=localStorage.getItem("ECA_THEME")==="light"?"light":"dark";var d=document.documentElement;d.classList.remove("dark","light");d.classList.add(t);}catch(e){}})();</script>
   <title>Egypt Chess Academy (ECA) — Full Platform</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -13,6 +22,42 @@
     .gold-card { background: rgba(14, 14, 21, 0.88); backdrop-filter: blur(12px); border: 1px solid rgba(212, 175, 55, 0.3); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65); }
     .gold-btn { background: linear-gradient(135deg, #f3d266 0%, #d4af37 100%); color: #050507; font-weight: 700; }
     .gold-btn:hover { filter: brightness(1.08); }
+
+    /* ===== ECA additions: mobile, attendance, light theme ===== */
+    body { padding-bottom: env(safe-area-inset-bottom); -webkit-tap-highlight-color: transparent; }
+    header.sticky { padding-top: env(safe-area-inset-top); }
+    @media (max-width: 640px) {
+      #navButtons { width: 100%; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+      #navButtons > button { white-space: nowrap; flex: 0 0 auto; }
+      input, select, textarea { font-size: 16px !important; }
+    }
+    .att-btn { min-height: 42px; min-width: 66px; padding: 0 12px; border-radius: 12px; font-size: 12px; font-weight: 700; background: #18181b; color: #d1d5db; border: 1px solid rgba(212,175,55,.25); }
+    .att-p.on { background: #10b981 !important; color: #04170f !important; border-color: #10b981 !important; }
+    .att-l.on { background: #f59e0b !important; color: #1a1000 !important; border-color: #f59e0b !important; }
+    .att-a.on { background: #ef4444 !important; color: #ffffff !important; border-color: #ef4444 !important; }
+    .tap { min-height: 40px; }
+    html.light body { background-color: #f6f3ea; color: #1f2937; }
+    html.light #bgCanvas { opacity: .6; }
+    html.light .gold-card { background: rgba(255,255,255,.94); border-color: rgba(153,116,21,.35); box-shadow: 0 6px 22px rgba(60,45,10,.12); }
+    html.light .gold-gradient-text { background: linear-gradient(135deg,#7a5a07 0%,#b8860b 50%,#6b4f0a 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    html.light [class*="bg-black"] { background-color: #ffffff !important; }
+    html.light .fixed.inset-0[class*="bg-black"] { background-color: rgba(20,15,5,.55) !important; }
+    html.light .bg-zinc-900 { background-color: #efe9d8 !important; }
+    html.light .bg-zinc-800 { background-color: #e3dabf !important; }
+    html.light .border-zinc-800 { border-color: #d9cfae !important; }
+    html.light .text-white { color: #111827 !important; }
+    html.light .text-gray-300 { color: #374151 !important; }
+    html.light .text-gray-400 { color: #4b5563 !important; }
+    html.light .text-gray-500 { color: #6b7280 !important; }
+    html.light .text-yellow-300, html.light .text-yellow-400 { color: #7a5a07 !important; }
+    html.light .text-emerald-300, html.light .text-emerald-400 { color: #047857 !important; }
+    html.light .text-amber-300 { color: #b45309 !important; }
+    html.light .text-red-300 { color: #b91c1c !important; }
+    html.light .text-sky-400 { color: #0369a1 !important; }
+    html.light .bg-emerald-950\/30 { background-color: #ecfdf5 !important; }
+    html.light .bg-amber-950\/40 { background-color: #fffbeb !important; }
+    html.light .att-btn { background: #efe9d8; color: #374151; }
+    html.light .gold-btn, html.light .gold-btn * { color: #050507 !important; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col relative">
@@ -62,6 +107,41 @@
     </div>
   </div>
 
+
+  <!-- Add / Edit Student Modal -->
+  <div id="addStuModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <form onsubmit="saveStudent(event)" class="gold-card rounded-2xl max-w-lg w-full p-5 max-h-[92vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-display font-bold text-lg text-yellow-400">
+          <span id="asTitleNew">➕ إضافة طالب جديد</span><span id="asTitleEdit" class="hidden">✏️ تعديل بيانات الطالب</span>
+        </h3>
+        <button type="button" onclick="closeAddStu()" class="text-gray-400 hover:text-white tap px-2">✕</button>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <input id="asName" required placeholder="اسم الطالب بالكامل" class="sm:col-span-2 w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asUser" placeholder="اليوزر نيم بالإنجليزي (اختياري)" autocapitalize="none" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asPass" placeholder="الباسورد (الافتراضي 123456)" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asAge" type="number" min="3" max="99" inputmode="numeric" placeholder="السن" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asPhone" type="tel" inputmode="tel" placeholder="موبايل الطالب" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asParent" type="tel" inputmode="tel" placeholder="موبايل ولي الأمر (واتساب)" class="sm:col-span-2 w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <select id="asLevel" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-yellow-300"></select>
+        <select id="asGroup" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-yellow-300"></select>
+        <select id="asMode" class="sm:col-span-2 w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-yellow-300">
+          <option value="offline">🏫 طالب أوفلاين (حضوري)</option>
+          <option value="online">💻 طالب أونلاين</option>
+        </select>
+      </div>
+      <p id="asEditHint" class="hidden text-[11px] text-gray-400 mt-2">اترك الباسورد فارغاً لو مش عايز تغيّره.</p>
+      <div class="flex flex-wrap justify-between items-center gap-2 mt-4">
+        <button id="asDelBtn" type="button" onclick="deleteStudent()" class="hidden tap px-4 rounded-xl text-xs bg-red-500/20 text-red-300 border border-red-500/30">🗑️ حذف الطالب</button>
+        <div class="flex gap-2 mr-auto">
+          <button type="button" onclick="closeAddStu()" class="tap px-4 rounded-xl text-xs bg-zinc-800 text-gray-300">إلغاء</button>
+          <button class="tap px-5 rounded-xl text-xs gold-btn"><span id="asSubNew">إضافة الطالب ✅</span><span id="asSubEdit" class="hidden">حفظ التعديلات ✅</span></button>
+        </div>
+      </div>
+    </form>
+  </div>
+
   <!-- HEADER -->
   <header class="sticky top-0 z-30 gold-card border-b border-yellow-500/20">
     <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
@@ -84,6 +164,8 @@
         </div>
       </div>
 
+      <button id="themeBtn" onclick="toggleTheme()" aria-label="Toggle theme" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-zinc-900 border border-yellow-500/40 text-yellow-300">☀️</button>
+      <button id="installBtn" onclick="installApp()" class="hidden px-3 py-1.5 rounded-xl text-xs font-bold gold-btn">📲 تثبيت التطبيق</button>
       <button id="langBtn" onclick="toggleLang()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-zinc-900 border border-yellow-500/40 text-yellow-300">EN</button>
       <div id="navButtons" class="flex items-center gap-2 flex-wrap"></div>
     </div>
@@ -197,7 +279,8 @@
 
     const COACH_QUICK_PASS = "ECA-COACH-2026"; // غيّرها لكلمة سر خاصة بك
     let lang = localStorage.getItem("ECA_LANG") || "ar";
-    const DICT = [["إلغاء", "Cancel"], ["فتح الملاحظات 🔓", "Open notes 🔓"], ["خانة ولي الأمر السرية", "Parent Secret Box"], ["أدخل الباسورد الموحد لأولياء الأمور", "Enter the shared parents' password"], ["جاري تحميل منصة Egypt Chess Academy...", "Loading Egypt Chess Academy platform..."], ["بوابة ولي الأمر (Parent Dashboard)", "Parent Portal (Parent Dashboard)"], ["بوابة ولي الأمر", "Parent Portal"], ["داشبورد ولي الأمر", "Parent Dashboard"], ["الرئيسية", "Home"], ["كل المستويات (Steps 1-6)", "All Levels (Steps 1-6)"], ["دروس Step ", "Lessons: Step "], ["متابعة الطلاب والجروبات", "Students & Groups Tracker"], ["خروج", "Logout"], ["اضغط على أي حساب تجريبي للدخول فوراً أو أنشئ حساباً جديداً:", "Tap a demo account to enter instantly or create a new account:"], ["دخول سريع كـ مدرب (Coach)", "Quick login as Coach"], ["يفتح كل الـ 6 Steps + متابعة الطلاب والجروبات", "Opens all 6 Steps + student & group tracking"], ["دخول سريع كـ طالب (Omar - Step 2)", "Quick login as Student (Omar - Step 2)"], ["يرى فقط Step 2 + اللغز اليومي + الدرس القادم", "Sees only Step 2 + daily puzzle + next lesson"], ["ابحث عن omar_chess وشاهد التقييم والملاحظة السرية", "Search omar_chess to see the rating and secret note"], ["🔐 الدخول السريع للمدرب محمي بكلمة سر", "🔐 Coach quick login is password-protected"], ["Login (دخول)", "Login"], ["Sign Up (حساب جديد)", "Sign Up"], ["تسجيل الدخول ♟️", "Log in ♟️"], ["طالب (Student)", "Student"], ["مدرب (Coach)", "Coach"], ["إنشاء الحساب 🚀", "Create account 🚀"], ["كود المدرب السري", "Secret coach code"], ["حضرت", "Attended"], ["درس في", "lessons in"], ["متبقي", "remaining"], ["درس للامتحان", "lessons until the exam"], ["دروس", "lessons"], ["درس لإنهاء", "lessons to finish"], ["ملاحظة المدرب السرية لولي الأمر:", "Coach's secret note for parents:"], ["إغلاق 🔒", "Close 🔒"], ["نسبة الدقة:", "Accuracy:"], ["اختيار ←", "Select →"], ["فتح التمرين على Lichess ↗", "Open exercise on Lichess ↗"], ["الدرس اللي عليه الدور (Next Lesson)", "Your Next Lesson"], ["مكتمل", "complete"], ["اضغط هنا للانتقال تلقائياً لصفحة دروس مستواك (Step", "Tap here to open your level's lessons (Step"], ["فقط).", "only)."], ["أتممت كل دروس Step", "You completed all lessons of Step"], ["اختبار الترقية للمستوى التالي:", "Promotion test for the next level:"], ["بدء اختبار", "Start test"], ["✅ أجبت إجابة صحيحة — اللغز مقفول", "✅ Correct answer — puzzle locked"], ["❌ أجبت إجابة خاطئة — اللغز مقفول ولا يمكن إعادته", "❌ Wrong answer — puzzle locked, cannot be retried"], ["✅ إجابة صحيحة! أحسنت يا بطل", "✅ Correct! Well done, champion"], ["❌ إجابة خاطئة — تم قفل اللغز", "❌ Wrong answer — puzzle locked"], ["اللغز مقفول بالفعل", "Puzzle is already locked"], ["↺ إعادة فتح اللغز", "↺ Reopen puzzle"], ["تم إعادة فتح اللغز", "Puzzle reopened"], ["حساب المدرب", "Coach Account"], ["يمكنك استعراض جميع الـ 6 Steps ومتابعة حضور وواجبات ومجموعات الطلاب.", "You can browse all 6 Steps and track students' attendance, homework and groups."], ["كل الدروس (Steps 1-6)", "All Lessons (Steps 1-6)"], ["جميع المستويات للمدرب (Steps 1 – 6)", "All Levels for Coach (Steps 1 – 6)"], ["دروس مستواك الحالي فقط — Step", "Your current level's lessons only — Step"], ["اضغط على أي Step لعرض قائمة دروسها تحت بعضها.", "Tap any Step to show its lessons list."], ["ممنوع ظهور أي مستوى آخر غير مستواك الحالي.", "No level other than your current one is shown."], ["▲ إخفاء القائمة", "▲ Hide list"], ["▼ عرض الدروس", "▼ Show lessons"], ["متابعة الطلاب والمجموعات", "Students & Groups Tracker"], ["علم (✓) أمام الدرس الذي حضره الطالب والواجب الذي حله واكتب ملاحظة سرية لولي الأمر.", "Tick (✓) the lessons the student attended and the homework solved, and write a secret note for the parent."], ["+ اسم جروب جديد...", "+ New group name..."], ["إضافة جروب", "Add group"], ["كل الجروبات", "All Groups"], ["حضر", "Attended"], ["الواجبات المكتملة", "Completed homework"], ["الواجب", "Homework"], ["اختر طالباً", "Select a student"], ["ملاحظة سرية لولي الأمر...", "Secret note for parent..."], ["حفظ لولي الأمر 🔒", "Save for parent 🔒"], ["✅ تم حفظ الملاحظة السرية لولي الأمر", "✅ Secret note saved for parent"], ["بوابة متابعة ولي الأمر (Parent Dashboard)", "Parent Follow-Up Portal (Parent Dashboard)"], ["ابحث بالـ Username الخاص بابنك (جرب:", "Search by your child's username (try:"], [" أو ", " or "], ["اكتب يوزرنيم الطالب...", "Type the student's username..."], ["لا يوجد طالب بهذا الاسم. جرب كتابة omar_chess", "No student with this name. Try typing omar_chess"], ["التقييم التلقائي لمستوى الطالب", "Automatic student level rating"], ["الدروس التي حضرها", "Lessons attended"], ["دقة الألغاز اليومية", "Daily puzzle accuracy"], ["ملاحظة المدرب السرية:", "Coach's secret note:"], ["ملاحظات المدرب السرية لولي الأمر (محمية بباسورد موحد)", "Coach's secret notes for parents (protected by a shared password)"], ["فتح بالباسورد 🔑", "Unlock with password 🔑"], ["ممتاز / عبقري 🌟👑", "Excellent / Genius 🌟👑"], ["رائع 👏✨", "Great 👏✨"], ["مقبول 💪", "Fair 💪"], ["مرحباً بك ", "Welcome "], ["❌ بيانات الدخول غير صحيحة", "❌ Incorrect login details"], ["❌ كود المدربين غير صحيح", "❌ Invalid coach code"], ["🎉 تم إنشاء الحساب!", "🎉 Account created!"], ["🔓 تم فتح ملاحظة ولي الأمر", "🔓 Parent note unlocked"], ["❌ باسورد غير صحيح", "❌ Incorrect password"], ["🎉 مبروك! تمت ترقيتك إلى Step ", "🎉 Congrats! You've been promoted to Step "], ["اختبار نهاية Step ", "End-of-Step test "], [": هل أنت جاهز للترقية إلى Step ", ": ready to be promoted to Step "], ["؟", "?"], ["إتمام الاختبار بنجاح والترقية إلى Step ", "Pass the test and promote to Step "], ["🔐 دخول المدرب السريع", "🔐 Coach Quick Login"], ["أدخل كلمة سر المدرب", "Enter the coach password"], ["فتح 🔓", "Open 🔓"], ["❌ كلمة السر غير صحيحة", "❌ Wrong password"]].sort((a, b) => b[0].length - a[0].length);
+    const EXTRA_DICT = [["✅ تسجيل الحضور", "✅ Attendance"], ["تسجيل الحضور", "Attendance"], ["سجّل حضور الطلاب الأونلاين والأوفلاين كل واحد في قسمه.", "Record attendance for online and offline students, each in their own section."], ["➕ إضافة طالب جديد", "➕ Add new student"], ["إضافة طالب جديد", "Add new student"], ["✏️ تعديل بيانات الطالب", "✏️ Edit student"], ["💾 نسخة احتياطية", "💾 Backup"], ["📂 استرجاع نسخة", "📂 Restore backup"], ["🏫 طلبة الأوفلاين", "🏫 Offline students"], ["💻 طلبة الأونلاين", "💻 Online students"], ["🔍 ابحث باسم الطالب...", "🔍 Search student name..."], ["اليوم السابق", "Previous day"], ["اليوم التالي", "Next day"], ["النهاردة", "Today"], ["تحديد الكل حاضر", "Mark all present"], ["مسح تسجيل اليوم", "Clear today's records"], ["لم يُسجَّل", "Not recorded"], ["✓ حاضر", "✓ Present"], ["⏰ متأخر", "⏰ Late"], ["✗ غايب", "✗ Absent"], ["حاضر", "Present"], ["متأخر", "Late"], ["غايب", "Absent"], ["لا يوجد سجل بعد", "No records yet"], ["نسبة الحضور", "Attendance rate"], ["حصة", "sessions"], ["🏫 نقل للأوفلاين", "🏫 Move to offline"], ["💻 نقل للأونلاين", "💻 Move to online"], ["لا يوجد طلاب في هذا القسم بعد. أضف طالباً جديداً أو انقل طالباً من القسم الآخر.", "No students in this section yet. Add a new student or move one from the other section."], ["لا توجد نتائج لهذا البحث.", "No results for this search."], ["لا يوجد طلاب بعد. اضغط «إضافة طالب جديد».", "No students yet. Tap \"Add new student\"."], ["لا يوجد طلاب في هذا القسم بعد.", "No students in this section yet."], ["📊 تقرير الشهر —", "📊 Monthly report —"], ["طلبة الأونلاين", "Online students"], ["طلبة الأوفلاين", "Offline students"], ["⬇ تصدير CSV", "⬇ Export CSV"], ["اسم الطالب", "Student name"], ["اسم الطالب بالكامل", "Student full name"], ["اليوزر نيم بالإنجليزي (اختياري)", "Username in English (optional)"], ["الباسورد (الافتراضي 123456)", "Password (default 123456)"], ["السن", "Age"], ["موبايل الطالب", "Student mobile"], ["موبايل ولي الأمر (واتساب)", "Parent mobile (WhatsApp)"], ["🏫 طالب أوفلاين (حضوري)", "🏫 Offline student (in-person)"], ["💻 طالب أونلاين", "💻 Online student"], ["اترك الباسورد فارغاً لو مش عايز تغيّره.", "Leave the password empty to keep it unchanged."], ["🗑️ حذف الطالب", "🗑️ Delete student"], ["إضافة الطالب ✅", "Add student ✅"], ["حفظ التعديلات ✅", "Save changes ✅"], ["📲 تثبيت التطبيق", "📲 Install app"], ["💻 تم نقل الطالب إلى الأونلاين", "💻 Student moved to online"], ["🏫 تم نقل الطالب إلى الأوفلاين", "🏫 Student moved to offline"], ["لا توجد سجلات حضور في هذا الشهر", "No attendance records this month"], ["✅ تم تنزيل النسخة الاحتياطية", "✅ Backup downloaded"], ["✅ تم استرجاع النسخة الاحتياطية", "✅ Backup restored"], ["❌ ملف النسخة الاحتياطية غير صالح", "❌ Invalid backup file"], ["سيتم استبدال كل البيانات الحالية بالنسخة الاحتياطية. متابعة؟", "All current data will be replaced by the backup. Continue?"], ["❌ اكتب اسم الطالب", "❌ Enter the student's name"], ["❌ اليوزر نيم ده مستخدم بالفعل", "❌ This username is already taken"], ["يوجد طالب بنفس الاسم بالفعل. هل تريد المتابعة؟", "A student with the same name already exists. Continue?"], ["✅ تم حفظ بيانات الطالب", "✅ Student saved"], ["✅ تمت إضافة الطالب — اليوزر: ", "✅ Student added — username: "], [" / الباسورد: ", " / password: "], ["هل أنت متأكد من حذف الطالب نهائياً مع كل سجلات حضوره؟", "Delete this student permanently with all attendance records?"], ["🗑️ تم حذف الطالب", "🗑️ Student deleted"], ["📲 على الآيفون: اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»", "📲 On iPhone: tap Share, then \"Add to Home Screen\""], ["📴 لا يوجد إنترنت — الموقع يعمل والبيانات محفوظة على جهازك", "📴 No internet — the site still works and data is saved on your device"], ["📶 عاد الاتصال بالإنترنت", "📶 Back online"]];
+    const DICT = [["إلغاء", "Cancel"], ["فتح الملاحظات 🔓", "Open notes 🔓"], ["خانة ولي الأمر السرية", "Parent Secret Box"], ["أدخل الباسورد الموحد لأولياء الأمور", "Enter the shared parents' password"], ["جاري تحميل منصة Egypt Chess Academy...", "Loading Egypt Chess Academy platform..."], ["بوابة ولي الأمر (Parent Dashboard)", "Parent Portal (Parent Dashboard)"], ["بوابة ولي الأمر", "Parent Portal"], ["داشبورد ولي الأمر", "Parent Dashboard"], ["الرئيسية", "Home"], ["كل المستويات (Steps 1-6)", "All Levels (Steps 1-6)"], ["دروس Step ", "Lessons: Step "], ["متابعة الطلاب والجروبات", "Students & Groups Tracker"], ["خروج", "Logout"], ["اضغط على أي حساب تجريبي للدخول فوراً أو أنشئ حساباً جديداً:", "Tap a demo account to enter instantly or create a new account:"], ["دخول سريع كـ مدرب (Coach)", "Quick login as Coach"], ["يفتح كل الـ 6 Steps + متابعة الطلاب والجروبات", "Opens all 6 Steps + student & group tracking"], ["دخول سريع كـ طالب (Omar - Step 2)", "Quick login as Student (Omar - Step 2)"], ["يرى فقط Step 2 + اللغز اليومي + الدرس القادم", "Sees only Step 2 + daily puzzle + next lesson"], ["ابحث عن omar_chess وشاهد التقييم والملاحظة السرية", "Search omar_chess to see the rating and secret note"], ["🔐 الدخول السريع للمدرب محمي بكلمة سر", "🔐 Coach quick login is password-protected"], ["Login (دخول)", "Login"], ["Sign Up (حساب جديد)", "Sign Up"], ["تسجيل الدخول ♟️", "Log in ♟️"], ["طالب (Student)", "Student"], ["مدرب (Coach)", "Coach"], ["إنشاء الحساب 🚀", "Create account 🚀"], ["كود المدرب السري", "Secret coach code"], ["حضرت", "Attended"], ["درس في", "lessons in"], ["متبقي", "remaining"], ["درس للامتحان", "lessons until the exam"], ["دروس", "lessons"], ["درس لإنهاء", "lessons to finish"], ["ملاحظة المدرب السرية لولي الأمر:", "Coach's secret note for parents:"], ["إغلاق 🔒", "Close 🔒"], ["نسبة الدقة:", "Accuracy:"], ["اختيار ←", "Select →"], ["فتح التمرين على Lichess ↗", "Open exercise on Lichess ↗"], ["الدرس اللي عليه الدور (Next Lesson)", "Your Next Lesson"], ["مكتمل", "complete"], ["اضغط هنا للانتقال تلقائياً لصفحة دروس مستواك (Step", "Tap here to open your level's lessons (Step"], ["فقط).", "only)."], ["أتممت كل دروس Step", "You completed all lessons of Step"], ["اختبار الترقية للمستوى التالي:", "Promotion test for the next level:"], ["بدء اختبار", "Start test"], ["✅ أجبت إجابة صحيحة — اللغز مقفول", "✅ Correct answer — puzzle locked"], ["❌ أجبت إجابة خاطئة — اللغز مقفول ولا يمكن إعادته", "❌ Wrong answer — puzzle locked, cannot be retried"], ["✅ إجابة صحيحة! أحسنت يا بطل", "✅ Correct! Well done, champion"], ["❌ إجابة خاطئة — تم قفل اللغز", "❌ Wrong answer — puzzle locked"], ["اللغز مقفول بالفعل", "Puzzle is already locked"], ["↺ إعادة فتح اللغز", "↺ Reopen puzzle"], ["تم إعادة فتح اللغز", "Puzzle reopened"], ["حساب المدرب", "Coach Account"], ["يمكنك استعراض جميع الـ 6 Steps ومتابعة حضور وواجبات ومجموعات الطلاب.", "You can browse all 6 Steps and track students' attendance, homework and groups."], ["كل الدروس (Steps 1-6)", "All Lessons (Steps 1-6)"], ["جميع المستويات للمدرب (Steps 1 – 6)", "All Levels for Coach (Steps 1 – 6)"], ["دروس مستواك الحالي فقط — Step", "Your current level's lessons only — Step"], ["اضغط على أي Step لعرض قائمة دروسها تحت بعضها.", "Tap any Step to show its lessons list."], ["ممنوع ظهور أي مستوى آخر غير مستواك الحالي.", "No level other than your current one is shown."], ["▲ إخفاء القائمة", "▲ Hide list"], ["▼ عرض الدروس", "▼ Show lessons"], ["متابعة الطلاب والمجموعات", "Students & Groups Tracker"], ["علم (✓) أمام الدرس الذي حضره الطالب والواجب الذي حله واكتب ملاحظة سرية لولي الأمر.", "Tick (✓) the lessons the student attended and the homework solved, and write a secret note for the parent."], ["+ اسم جروب جديد...", "+ New group name..."], ["إضافة جروب", "Add group"], ["كل الجروبات", "All Groups"], ["حضر", "Attended"], ["الواجبات المكتملة", "Completed homework"], ["الواجب", "Homework"], ["اختر طالباً", "Select a student"], ["ملاحظة سرية لولي الأمر...", "Secret note for parent..."], ["حفظ لولي الأمر 🔒", "Save for parent 🔒"], ["✅ تم حفظ الملاحظة السرية لولي الأمر", "✅ Secret note saved for parent"], ["بوابة متابعة ولي الأمر (Parent Dashboard)", "Parent Follow-Up Portal (Parent Dashboard)"], ["ابحث بالـ Username الخاص بابنك (جرب:", "Search by your child's username (try:"], [" أو ", " or "], ["اكتب يوزرنيم الطالب...", "Type the student's username..."], ["لا يوجد طالب بهذا الاسم. جرب كتابة omar_chess", "No student with this name. Try typing omar_chess"], ["التقييم التلقائي لمستوى الطالب", "Automatic student level rating"], ["الدروس التي حضرها", "Lessons attended"], ["دقة الألغاز اليومية", "Daily puzzle accuracy"], ["ملاحظة المدرب السرية:", "Coach's secret note:"], ["ملاحظات المدرب السرية لولي الأمر (محمية بباسورد موحد)", "Coach's secret notes for parents (protected by a shared password)"], ["فتح بالباسورد 🔑", "Unlock with password 🔑"], ["ممتاز / عبقري 🌟👑", "Excellent / Genius 🌟👑"], ["رائع 👏✨", "Great 👏✨"], ["مقبول 💪", "Fair 💪"], ["مرحباً بك ", "Welcome "], ["❌ بيانات الدخول غير صحيحة", "❌ Incorrect login details"], ["❌ كود المدربين غير صحيح", "❌ Invalid coach code"], ["🎉 تم إنشاء الحساب!", "🎉 Account created!"], ["🔓 تم فتح ملاحظة ولي الأمر", "🔓 Parent note unlocked"], ["❌ باسورد غير صحيح", "❌ Incorrect password"], ["🎉 مبروك! تمت ترقيتك إلى Step ", "🎉 Congrats! You've been promoted to Step "], ["اختبار نهاية Step ", "End-of-Step test "], [": هل أنت جاهز للترقية إلى Step ", ": ready to be promoted to Step "], ["؟", "?"], ["إتمام الاختبار بنجاح والترقية إلى Step ", "Pass the test and promote to Step "], ["🔐 دخول المدرب السريع", "🔐 Coach Quick Login"], ["أدخل كلمة سر المدرب", "Enter the coach password"], ["فتح 🔓", "Open 🔓"], ["❌ كلمة السر غير صحيحة", "❌ Wrong password"]].concat(EXTRA_DICT).sort((a, b) => b[0].length - a[0].length);
     function trText(s) { if (lang !== "en") return s; for (const [a, b] of DICT) s = s.split(a).join(b); return s; }
     function applyLang() {
       document.documentElement.lang = lang;
@@ -227,6 +310,7 @@
     };
 
     { const c1 = db.users.find(x => x.id === "c1"); if (c1 && c1.pass === "123456") { c1.pass = COACH_QUICK_PASS; localStorage.setItem(DB_KEY, JSON.stringify(db)); } }
+    db.attendance = (db.attendance && typeof db.attendance === "object") ? db.attendance : {};
     let tab = "home", authMode = "login", signupRole = "student", selStuId = "s1", grpFilter = "ALL", searchQ = "", parentQ = "omar_chess", unlockedStuId = null, openSteps = { 1: true, 2: true, 3: false, 4: false, 5: false, 6: false };
 
     function save() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
@@ -283,13 +367,14 @@
       nav.innerHTML = `
         <button onclick="switchTab('home')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='home'?'gold-btn':'bg-zinc-900 text-gray-300'}">🏠 الرئيسية</button>
         <button onclick="switchTab('lessons')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='lessons'?'gold-btn':'bg-zinc-900 text-gray-300'}">📚 ${u.role==='coach'?'كل المستويات (Steps 1-6)':'دروس Step '+u.level}</button>
-        ${u.role==='coach'?`<button onclick="switchTab('tracker')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='tracker'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">📋 متابعة الطلاب والجروبات</button>`:''}
+        ${u.role==='coach'?`<button onclick="switchTab('tracker')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='tracker'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">📋 متابعة الطلاب والجروبات</button><button onclick="switchTab('attendance')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='attendance'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">✅ تسجيل الحضور</button>`:''}
         <button onclick="switchTab('parent')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='parent'?'gold-btn':'bg-zinc-900 text-gray-300'}">👨‍👩‍👦 داشبورد ولي الأمر</button>
         <button onclick="logout()" class="px-2.5 py-1.5 rounded-xl text-xs bg-red-500/20 text-red-300 border border-red-500/30">خروج</button>
       `;
 
       if (tab === "lessons") main.innerHTML = renderLessonsView(u);
       else if (tab === "tracker" && u.role === "coach") main.innerHTML = renderTrackerView();
+      else if (tab === "attendance" && u.role === "coach") main.innerHTML = renderAttendanceView();
       else if (tab === "parent") main.innerHTML = renderParentView();
       else main.innerHTML = u.role === "student" ? renderStudentHome(u) : renderCoachHome(u);
     }
@@ -490,6 +575,7 @@
             <div class="flex gap-2">
               <button onclick="switchTab('lessons')" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-black border border-yellow-500/40 text-yellow-300">📚 كل الدروس (Steps 1-6)</button>
               <button onclick="switchTab('tracker')" class="px-4 py-2.5 rounded-xl text-xs gold-btn">📋 متابعة الطلاب والجروبات</button>
+              <button onclick="switchTab('attendance')" class="px-4 py-2.5 rounded-xl text-xs gold-btn">✅ تسجيل الحضور</button>
             </div>
           </div>
           <div class="gold-card rounded-2xl p-6">
@@ -559,6 +645,7 @@
               <h2 class="font-display font-bold text-xl gold-gradient-text">📋 متابعة الطلاب والمجموعات</h2>
               <p class="text-xs text-gray-400">علم (✓) أمام الدرس الذي حضره الطالب والواجب الذي حله واكتب ملاحظة سرية لولي الأمر.</p>
             </div>
+            <button onclick="openAddStu()" class="px-3 py-1.5 rounded-xl text-xs gold-btn">➕ إضافة طالب جديد</button>
             <form onsubmit="addGroup(event)" class="flex gap-2">
               <input id="newGrpInp" placeholder="+ اسم جروب جديد..." class="bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white" />
               <button class="px-3 py-1.5 rounded-xl text-xs gold-btn">إضافة جروب</button>
@@ -717,6 +804,265 @@
       if (u && u.role === "student") { u.level = Math.min(6, Number(u.level) + 1); save(); closeExamModal(); render(); toast("🎉 مبروك! تمت ترقيتك إلى Step " + u.level); }
     }
 
+    // ================= ECA ADDITIONS: students, attendance, backup, theme, PWA =================
+    function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+    function todayISO() { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
+    function stuMode(s) { return s.mode === "online" ? "online" : "offline"; }
+    function isCoach() { const u = currUser(); return !!(u && u.role === "coach"); }
+    function waLink(num) { let d = String(num || "").replace(/\D/g, ""); if (!d) return ""; if (d.startsWith("00")) d = d.slice(2); else if (d.startsWith("0")) d = "20" + d.slice(1); return "https://wa.me/" + d; }
+    function dl(name, text, type) { const b = new Blob([text], { type }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
+    function keepScroll(fn) { const y = window.scrollY; fn(); window.scrollTo(0, y); }
+
+    // ---------- Attendance ----------
+    let attDate = todayISO(), attMode = "offline", attQ = "", attMonth = todayISO().slice(0, 7);
+    const ATT_LABEL = { p: "حاضر", l: "متأخر", a: "غايب" };
+    function stuAttStats(id, month) {
+      let p = 0, l = 0, a = 0;
+      for (const d in db.attendance) {
+        if (month && !d.startsWith(month)) continue;
+        const v = db.attendance[d][id];
+        if (v === "p") p++; else if (v === "l") l++; else if (v === "a") a++;
+      }
+      const t = p + l + a;
+      return { p, l, a, t, rate: t ? Math.round(((p + l) / t) * 100) : null };
+    }
+    function setAtt(id, st) {
+      if (!isCoach()) return;
+      const r = db.attendance[attDate] = db.attendance[attDate] || {};
+      if (r[id] === st) delete r[id]; else r[id] = st;
+      if (!Object.keys(r).length) delete db.attendance[attDate];
+      save(); keepScroll(render);
+    }
+    function markAll(st) {
+      if (!isCoach()) return;
+      const r = db.attendance[attDate] = db.attendance[attDate] || {};
+      db.users.filter(u => u.role === "student" && stuMode(u) === attMode).forEach(s => { if (st) r[s.id] = st; else delete r[s.id]; });
+      if (!Object.keys(r).length) delete db.attendance[attDate];
+      save(); keepScroll(render);
+    }
+    function shiftDate(n) {
+      const d = new Date(attDate + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n);
+      attDate = d.toISOString().slice(0, 10); render();
+    }
+    function setAttDate(v) { if (/^\d{4}-\d{2}-\d{2}$/.test(v)) { attDate = v; render(); } }
+    function setStuMode(id, m) {
+      if (!isCoach()) return;
+      const s = db.users.find(u => u.id === id); if (!s) return;
+      s.mode = m; save(); keepScroll(render);
+      toast(m === "online" ? "💻 تم نقل الطالب إلى الأونلاين" : "🏫 تم نقل الطالب إلى الأوفلاين");
+    }
+    function renderAttendanceView() {
+      const all = db.users.filter(u => u.role === "student");
+      const inMode = all.filter(s => stuMode(s) === attMode);
+      const q = attQ.toLowerCase();
+      const list = inMode.filter(s => !q || s.name.toLowerCase().includes(q) || s.username.toLowerCase().includes(q));
+      const rec = db.attendance[attDate] || {};
+      const cnt = { p: 0, l: 0, a: 0 };
+      inMode.forEach(s => { if (rec[s.id]) cnt[rec[s.id]]++; });
+      const un = inMode.length - cnt.p - cnt.l - cnt.a;
+      const nOff = all.filter(s => stuMode(s) === "offline").length, nOn = all.length - nOff;
+      const dateLabel = new Date(attDate + "T12:00:00Z").toLocaleDateString(lang === "en" ? "en-GB" : "ar-EG", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+      const pill = (on, extra) => `tap px-3.5 rounded-xl text-xs font-bold ${on ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/25'} ${extra || ''}`;
+      return `
+        <div class="space-y-5">
+          <div class="gold-card rounded-2xl p-5 flex flex-wrap justify-between items-center gap-3">
+            <div>
+              <h2 class="font-display font-bold text-xl gold-gradient-text">✅ تسجيل الحضور</h2>
+              <p class="text-xs text-gray-400">سجّل حضور الطلاب الأونلاين والأوفلاين كل واحد في قسمه.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="openAddStu()" class="tap px-4 rounded-xl text-xs gold-btn">➕ إضافة طالب جديد</button>
+              <button onclick="exportBackup()" class="tap px-3 rounded-xl text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">💾 نسخة احتياطية</button>
+              <button onclick="document.getElementById('bkFile').click()" class="tap px-3 rounded-xl text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">📂 استرجاع نسخة</button>
+              <input id="bkFile" type="file" accept=".json,application/json" class="hidden" onchange="importBackup(this)" />
+            </div>
+          </div>
+
+          <div class="gold-card rounded-2xl p-4 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex flex-wrap gap-2">
+                <button onclick="attMode='offline'; render();" class="${pill(attMode === 'offline')}">🏫 طلبة الأوفلاين (${nOff})</button>
+                <button onclick="attMode='online'; render();" class="${pill(attMode === 'online')}">💻 طلبة الأونلاين (${nOn})</button>
+              </div>
+              <input id="attQInp" value="${esc(attQ)}" oninput="attQ=this.value; render();" placeholder="🔍 ابحث باسم الطالب..." class="tap flex-1 min-w-[160px] max-w-xs bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white" />
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="shiftDate(-1)" class="${pill(false)}">اليوم السابق</button>
+              <input type="date" value="${attDate}" onchange="setAttDate(this.value)" class="tap bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white" />
+              <button onclick="shiftDate(1)" class="${pill(false)}">اليوم التالي</button>
+              <button onclick="attDate=todayISO(); render();" class="${pill(attDate === todayISO())}">النهاردة</button>
+              <span class="text-xs text-yellow-300 font-bold">${dateLabel}</span>
+            </div>
+            <div class="grid grid-cols-4 gap-2 text-center">
+              <div class="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/40"><div class="text-lg font-bold text-emerald-300">${cnt.p}</div><div class="text-[11px] text-gray-400">حاضر</div></div>
+              <div class="p-2 rounded-xl bg-amber-500/20 border border-amber-500/40"><div class="text-lg font-bold text-amber-300">${cnt.l}</div><div class="text-[11px] text-gray-400">متأخر</div></div>
+              <div class="p-2 rounded-xl bg-red-500/10 border border-red-500/30"><div class="text-lg font-bold text-red-300">${cnt.a}</div><div class="text-[11px] text-gray-400">غايب</div></div>
+              <div class="p-2 rounded-xl bg-black/70 border border-yellow-500/20"><div class="text-lg font-bold text-white">${un}</div><div class="text-[11px] text-gray-400">لم يُسجَّل</div></div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="markAll('p')" class="tap px-3 rounded-xl text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">تحديد الكل حاضر</button>
+              <button onclick="markAll('')" class="tap px-3 rounded-xl text-xs bg-zinc-900 text-gray-300 border border-yellow-500/20">مسح تسجيل اليوم</button>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            ${list.length ? list.map(s => {
+              const cur = rec[s.id] || "", ss = stuAttStats(s.id), wa = waLink(s.parentPhone || s.phone);
+              const b = (st, txt) => `<button onclick="setAtt('${s.id}','${st}')" class="att-btn att-${st} ${cur === st ? 'on' : ''}">${txt}</button>`;
+              return `
+                <div class="gold-card rounded-xl p-3 flex flex-wrap items-center justify-between gap-2">
+                  <div class="min-w-0 flex-1" style="min-width:150px">
+                    <div class="font-bold text-sm text-white">${esc(s.name)} <span class="text-[11px] font-normal text-gray-400">@${esc(s.username)}</span></div>
+                    <div class="text-[11px] text-gray-400">Step ${esc(s.level)} • ${esc(s.group || '')} • ${ss.rate === null ? 'لا يوجد سجل بعد' : 'نسبة الحضور ' + ss.rate + '% (' + ss.t + ' حصة)'}</div>
+                  </div>
+                  <div class="flex gap-1.5">${b('p', '✓ حاضر')}${b('l', '⏰ متأخر')}${b('a', '✗ غايب')}</div>
+                  <div class="flex gap-1.5">
+                    ${wa ? `<a href="${wa}" target="_blank" rel="noopener" class="tap inline-flex items-center px-3 rounded-xl text-xs bg-zinc-900 border border-emerald-500/40 text-emerald-300" title="WhatsApp">💬</a>` : ''}
+                    <button onclick="setStuMode('${s.id}','${attMode === 'online' ? 'offline' : 'online'}')" class="tap px-3 rounded-xl text-[11px] bg-zinc-900 border border-yellow-500/25 text-gray-300">${attMode === 'online' ? '🏫 نقل للأوفلاين' : '💻 نقل للأونلاين'}</button>
+                    <button onclick="openAddStu('${s.id}')" class="tap px-3 rounded-xl text-xs bg-zinc-900 border border-yellow-500/25 text-yellow-300" title="Edit">✏️</button>
+                  </div>
+                </div>`;
+            }).join('') : `<div class="gold-card rounded-xl p-5 text-center text-xs text-gray-400">${all.length && !inMode.length ? 'لا يوجد طلاب في هذا القسم بعد. أضف طالباً جديداً أو انقل طالباً من القسم الآخر.' : (inMode.length ? 'لا توجد نتائج لهذا البحث.' : 'لا يوجد طلاب بعد. اضغط «إضافة طالب جديد».')}</div>`}
+          </div>
+
+          <div class="gold-card rounded-2xl p-4 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="font-display font-bold text-lg text-yellow-400">📊 تقرير الشهر — ${attMode === 'online' ? 'طلبة الأونلاين' : 'طلبة الأوفلاين'}</h3>
+              <div class="flex flex-wrap gap-2 items-center">
+                <input type="month" value="${attMonth}" onchange="if(this.value){attMonth=this.value; render();}" class="tap bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white" />
+                <button onclick="exportAttCSV()" class="tap px-3 rounded-xl text-xs gold-btn">⬇ تصدير CSV</button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-white">
+                <thead><tr class="text-yellow-300 border-b border-yellow-500/25"><th class="text-left py-2 pr-2">اسم الطالب</th><th class="py-2 px-2">حاضر</th><th class="py-2 px-2">متأخر</th><th class="py-2 px-2">غايب</th><th class="py-2 px-2">نسبة الحضور</th></tr></thead>
+                <tbody>
+                  ${inMode.length ? inMode.map(s => { const m = stuAttStats(s.id, attMonth); return `<tr class="border-b border-yellow-500/10"><td class="py-2 pr-2 font-bold">${esc(s.name)}</td><td class="text-center text-emerald-300">${m.p}</td><td class="text-center text-amber-300">${m.l}</td><td class="text-center text-red-300">${m.a}</td><td class="text-center">${m.rate === null ? '—' : m.rate + '%'}</td></tr>`; }).join('') : `<tr><td colspan="5" class="py-3 text-center text-gray-400">لا يوجد طلاب في هذا القسم بعد.</td></tr>`}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>`;
+    }
+    function exportAttCSV() {
+      if (!isCoach()) return;
+      const safe = c => { c = String(c); if (/^[=+\-@]/.test(c)) c = "'" + c; return '"' + c.replace(/"/g, '""') + '"'; };
+      const byId = {}; db.users.forEach(u => byId[u.id] = u);
+      const rows = [["التاريخ", "الاسم", "اليوزر", "النوع", "الحالة"]];
+      Object.keys(db.attendance).sort().forEach(d => {
+        if (!d.startsWith(attMonth)) return;
+        Object.entries(db.attendance[d]).forEach(([id, st]) => { const s = byId[id]; if (s) rows.push([d, s.name, s.username, stuMode(s) === "online" ? "أونلاين" : "أوفلاين", ATT_LABEL[st] || st]); });
+      });
+      if (rows.length === 1) return toast("لا توجد سجلات حضور في هذا الشهر");
+      dl("ECA-attendance-" + attMonth + ".csv", "\ufeff" + rows.map(r => r.map(safe).join(",")).join("\r\n"), "text/csv;charset=utf-8");
+    }
+
+    // ---------- Backup / restore ----------
+    function exportBackup() { if (!isCoach()) return; dl("ECA-backup-" + todayISO() + ".json", JSON.stringify(db, null, 1), "application/json"); toast("✅ تم تنزيل النسخة الاحتياطية"); }
+    function importBackup(inp) {
+      if (!isCoach()) return;
+      const f = inp.files && inp.files[0]; if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        inp.value = "";
+        try {
+          const d = JSON.parse(r.result);
+          if (!d || !Array.isArray(d.users) || !Array.isArray(d.groups) || !d.users.some(u => u.id === "c1" && u.role === "coach")) throw new Error("bad");
+          if (!d.users.every(u => u && typeof u.id === "string" && typeof u.username === "string" && typeof u.name === "string")) throw new Error("bad");
+          if (!confirm(trText("سيتم استبدال كل البيانات الحالية بالنسخة الاحتياطية. متابعة؟"))) return;
+          d.users.forEach(u => { if (typeof u.email !== "string") u.email = u.username + "@eca.local"; });
+          d.attendance = d.attendance && typeof d.attendance === "object" ? d.attendance : {};
+          const cur = currUser(); d.currId = cur && d.users.some(u => u.id === cur.id) ? cur.id : null;
+          db = d; save(); render(); toast("✅ تم استرجاع النسخة الاحتياطية");
+        } catch (e) { toast("❌ ملف النسخة الاحتياطية غير صالح"); }
+      };
+      r.readAsText(f);
+    }
+
+    // ---------- Add / edit / delete student ----------
+    let editStuId = null;
+    function openAddStu(id) {
+      if (!isCoach()) return;
+      editStuId = id || null;
+      const s = id ? db.users.find(u => u.id === id) : null;
+      const $ = x => document.getElementById(x);
+      $("asTitleNew").classList.toggle("hidden", !!s); $("asTitleEdit").classList.toggle("hidden", !s);
+      $("asSubNew").classList.toggle("hidden", !!s); $("asSubEdit").classList.toggle("hidden", !s);
+      $("asDelBtn").classList.toggle("hidden", !s); $("asEditHint").classList.toggle("hidden", !s);
+      $("asLevel").innerHTML = [1, 2, 3, 4, 5, 6].map(l => `<option value="${l}">Step ${l}</option>`).join("");
+      $("asGroup").innerHTML = db.groups.map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join("");
+      $("asName").value = s ? s.name : ""; $("asUser").value = s ? s.username : ""; $("asPass").value = "";
+      $("asAge").value = s && s.age ? s.age : ""; $("asPhone").value = s && s.phone ? s.phone : ""; $("asParent").value = s && s.parentPhone ? s.parentPhone : "";
+      $("asLevel").value = s ? String(s.level) : "1";
+      $("asGroup").value = s && s.group ? s.group : (db.groups[0] || "");
+      $("asMode").value = s ? stuMode(s) : attMode;
+      $("addStuModal").classList.remove("hidden"); applyLang(); $("asName").focus();
+    }
+    function closeAddStu() { document.getElementById("addStuModal").classList.add("hidden"); editStuId = null; }
+    function saveStudent(ev) {
+      ev.preventDefault();
+      if (!isCoach()) return;
+      const g = x => document.getElementById(x).value.trim();
+      const name = g("asName"); if (!name) return toast("❌ اكتب اسم الطالب");
+      let username = g("asUser").toLowerCase().replace(/\s+/g, "_");
+      if (!username) username = "eca_" + String(Date.now()).slice(-6);
+      if (db.users.some(u => u.username.toLowerCase() === username && u.id !== editStuId)) return toast("❌ اليوزر نيم ده مستخدم بالفعل");
+      if (db.users.some(u => u.role === "student" && u.name.trim().toLowerCase() === name.toLowerCase() && u.id !== editStuId) && !confirm(trText("يوجد طالب بنفس الاسم بالفعل. هل تريد المتابعة؟"))) return;
+      const data = { name, username, level: Number(g("asLevel")) || 1, group: g("asGroup"), mode: g("asMode") === "online" ? "online" : "offline", age: g("asAge"), phone: g("asPhone"), parentPhone: g("asParent") };
+      const pass = g("asPass");
+      if (editStuId) {
+        const s = db.users.find(u => u.id === editStuId); if (!s) return;
+        const autoMail = typeof s.email === "string" && s.email.endsWith("@eca.local");
+        Object.assign(s, data);
+        if (autoMail || typeof s.email !== "string") s.email = username + "@eca.local";
+        if (pass) s.pass = pass;
+        attMode = data.mode; save(); closeAddStu(); render(); toast("✅ تم حفظ بيانات الطالب");
+      } else {
+        const ns = Object.assign({ id: "u" + Date.now(), email: username + "@eca.local", pass: pass || "123456", role: "student", att: {}, hw: {}, puz: { t: 0, c: 0 }, note: "لا توجد ملاحظات حالياً." }, data);
+        db.users.push(ns); attMode = data.mode; save(); closeAddStu(); render();
+        toast("✅ تمت إضافة الطالب — اليوزر: " + username + " / الباسورد: " + ns.pass);
+      }
+    }
+    function deleteStudent() {
+      if (!isCoach() || !editStuId) return;
+      const s = db.users.find(u => u.id === editStuId); if (!s) return;
+      if (!confirm(trText("هل أنت متأكد من حذف الطالب نهائياً مع كل سجلات حضوره؟") + "\n" + s.name)) return;
+      db.users = db.users.filter(u => u.id !== editStuId);
+      for (const d in db.attendance) { delete db.attendance[d][editStuId]; if (!Object.keys(db.attendance[d]).length) delete db.attendance[d]; }
+      if (selStuId === editStuId) selStuId = "";
+      save(); closeAddStu(); render(); toast("🗑️ تم حذف الطالب");
+    }
+
+    // ---------- Theme (dark / light) ----------
+    function applyTheme(t) {
+      const d = document.documentElement; d.classList.remove("dark", "light"); d.classList.add(t);
+      try { localStorage.setItem("ECA_THEME", t); } catch (_) {}
+      const b = document.getElementById("themeBtn"); if (b) b.textContent = t === "light" ? "🌙" : "☀️";
+      const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", t === "light" ? "#f6f3ea" : "#050507");
+    }
+    function toggleTheme() { applyTheme(document.documentElement.classList.contains("light") ? "dark" : "light"); }
+    applyTheme(document.documentElement.classList.contains("light") ? "light" : "dark");
+
+    // ---------- PWA ----------
+    let deferredInstall = null;
+    const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    function showInstallBtn(v) { const b = document.getElementById("installBtn"); if (b) b.classList.toggle("hidden", !v); }
+    window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; showInstallBtn(true); });
+    window.addEventListener("appinstalled", () => { deferredInstall = null; showInstallBtn(false); });
+    if (isIOS && !isStandalone()) showInstallBtn(true);
+    function installApp() {
+      if (deferredInstall) { deferredInstall.prompt(); deferredInstall.userChoice.finally(() => { deferredInstall = null; showInstallBtn(false); }); }
+      else toast("📲 على الآيفون: اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»");
+    }
+    window.addEventListener("offline", () => toast("📴 لا يوجد إنترنت — الموقع يعمل والبيانات محفوظة على جهازك"));
+    window.addEventListener("online", () => toast("📶 عاد الاتصال بالإنترنت"));
+    if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+    }
+    // re-render date label etc. when language flips on the attendance page
+    { const _tl = toggleLang; toggleLang = function () { _tl(); if (tab === "attendance") render(); }; }
+
     // Background Animation
     const cv = document.getElementById("bgCanvas"), ctx = cv.getContext("2d");
     function rsz() { cv.width = window.innerWidth; cv.height = window.innerHeight; }
@@ -726,13 +1072,13 @@
       ctx.clearRect(0, 0, cv.width, cv.height);
       pts.forEach(p => {
         p.x = (p.x + p.vx + cv.width) % cv.width; p.y = (p.y + p.vy + cv.height) % cv.height;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = "rgba(212,175,55,0.3)"; ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = document.documentElement.classList.contains("light") ? "rgba(153,116,21,0.28)" : "rgba(212,175,55,0.3)"; ctx.fill();
       });
       requestAnimationFrame(anim);
     }
     anim();
     const h0 = (location.hash || "#home").slice(1);
-    tab = ["home", "lessons", "tracker", "parent"].includes(h0) ? h0 : "home";
+    tab = ["home", "lessons", "tracker", "attendance", "parent"].includes(h0) ? h0 : "home";
     history.replaceState({ tab }, "", "#" + tab);
     window.addEventListener("popstate", e => { tab = (e.state && e.state.tab) || "home"; render(); });
     const _oe = openExamModal; openExamModal = function (l) { _oe(l); applyLang(); };
