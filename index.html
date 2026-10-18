@@ -1699,24 +1699,24 @@ window.selectExamAns = function(qIdx, oIdx) {
         console.error("Firebase Auth Error:", err);
       });
     // ================= ECA FINANCIAL & ANALYTICS DASHBOARD (CONVERTED FROM CODE.GS & HTML) =================
-    let finSubTab = "analytics"; // 'analytics' | 'manage' | 'today'
-    let finSearchQ = "";
-    let finSelectedStuId = "";
+   // ================= ECA FINANCIAL & ANALYTICS DASHBOARD (SELF-BINDING) =================
+    window.finSubTab = window.finSubTab || "analytics";
+    window.finSearchQ = window.finSearchQ || "";
+    window.finSelectedStuId = window.finSelectedStuId || "";
 
-    function ensureStudentFinData(s, idx) {
+    window.ensureStudentFinData = function(s, idx) {
       if (!s.stuCode) s.stuCode = "ECA-" + String(idx + 1).padStart(4, "0");
       s.courseFee = Number(s.courseFee) || 0;
       s.amountPaid = Number(s.amountPaid) || 0;
       s.remaining = Math.max(0, s.courseFee - s.amountPaid);
       if (!s.coachName) s.coachName = "Coach Abdelrahman";
       return s;
-    }
+    };
 
-    function renderFinanceDashboardView() {
-      const students = db.users.filter(u => u.role === "student").map((s, idx) => ensureStudentFinData(s, idx));
+    window.renderFinanceDashboardView = function() {
+      const students = db.users.filter(u => u.role === "student").map((s, idx) => window.ensureStudentFinData(s, idx));
       const todayKey = todayISO();
 
-      // حساب المؤشرات العامة (KPIs) المطابقة لـ createDashboard في Code.gs
       let totalFees = 0, totalPaid = 0, totalRem = 0;
       let todayCount = 0, todayPaid = 0, todayRem = 0;
       const byStep = {};
@@ -1746,11 +1746,10 @@ window.selectExamAns = function(qIdx, oIdx) {
         byCoach[cName].fee += s.courseFee;
       });
 
-      const tabBtnCls = (t) => `flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition ${finSubTab === t ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/20 hover:border-yellow-400'}`;
+      const tabBtnCls = (t) => `flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition ${window.finSubTab === t ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/20 hover:border-yellow-400'}`;
 
       return `
         <div class="space-y-6">
-          <!-- Header & Tabs -->
           <div class="gold-card rounded-2xl p-5 flex flex-wrap justify-between items-center gap-4">
             <div>
               <h2 class="font-display font-bold text-xl gold-gradient-text">📊 لوحة تحليلات وحسابات الأكاديمية (ECA ERP Dashboard)</h2>
@@ -1759,7 +1758,6 @@ window.selectExamAns = function(qIdx, oIdx) {
             <button onclick="exportFinanceCSV()" class="px-4 py-2 rounded-xl text-xs gold-btn">⬇ تصدير التقرير المالي (Excel/CSV)</button>
           </div>
 
-          <!-- 4 KPI Cards (من دالة createDashboard) -->
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="gold-card rounded-2xl p-4 text-center border-t-4 border-sky-500">
               <div class="text-[11px] text-gray-400 font-bold">إجمالي الطلاب (TOTAL STUDENTS)</div>
@@ -1779,27 +1777,25 @@ window.selectExamAns = function(qIdx, oIdx) {
             </div>
           </div>
 
-          <!-- Navigation Tabs (مطابقة للتبويبات في ملف HTML) -->
           <div class="flex flex-wrap gap-2 bg-black/60 p-2 rounded-2xl border border-yellow-500/20">
-            <button onclick="finSubTab='analytics'; render();" class="${tabBtnCls('analytics')}">📈 الداشبورد والتحليلات</button>
-            <button onclick="finSubTab='manage'; render();" class="${tabBtnCls('manage')}">💳 تسجيل وبحث وتعديل اشتراك طالب</button>
-            <button onclick="finSubTab='today'; render();" class="${tabBtnCls('today')}">💰 إحصائيات وتحصيلات اليوم (${todayKey})</button>
+            <button onclick="window.finSubTab='analytics'; render();" class="${tabBtnCls('analytics')}">📈 الداشبورد والتحليلات</button>
+            <button onclick="window.finSubTab='manage'; render();" class="${tabBtnCls('manage')}">💳 تسجيل وبحث وتعديل اشتراك طالب</button>
+            <button onclick="window.finSubTab='today'; render();" class="${tabBtnCls('today')}">💰 إحصائيات وتحصيلات اليوم (${todayKey})</button>
           </div>
 
-          ${finSubTab === "analytics" ? renderFinAnalyticsSection(students, byStep, byCoach, totalFees) : ""}
-          ${finSubTab === "manage" ? renderFinManageSection(students) : ""}
-          ${finSubTab === "today" ? renderFinTodaySection(students, todayKey, todayCount, todayPaid, todayRem) : ""}
+          ${window.finSubTab === "analytics" ? window.renderFinAnalyticsSection(students, byStep, byCoach, totalFees) : ""}
+          ${window.finSubTab === "manage" ? window.renderFinManageSection(students) : ""}
+          ${window.finSubTab === "today" ? window.renderFinTodaySection(students, todayKey, todayCount, todayPaid, todayRem) : ""}
         </div>
       `;
-    }
+    };
 
-    // 1. قسم التحليلات والرسوم البيانية التلقائية + جدول المتأخرات
-    function renderFinAnalyticsSection(students, byStep, byCoach, totalFees) {
+    window.renderFinAnalyticsSection = function(students, byStep, byCoach, totalFees) {
       const stepKeys = Object.keys(byStep).sort();
       const coachKeys = Object.keys(byCoach);
+      const q = (window.finSearchQ || "").toLowerCase();
       return `
         <div class="grid md:grid-cols-2 gap-6">
-          <!-- Chart 1: الإيراد والطلاب حسب المستوى (Step) -->
           <div class="gold-card rounded-2xl p-5 space-y-3">
             <h3 class="font-display font-bold text-sm text-yellow-400">♟️ توزيع الطلاب والإيرادات حسب المستوى (Step 1 - 6)</h3>
             <div class="space-y-3">
@@ -1820,7 +1816,6 @@ window.selectExamAns = function(qIdx, oIdx) {
             </div>
           </div>
 
-          <!-- Chart 2: الإيرادات حسب المدرب (Instructor) -->
           <div class="gold-card rounded-2xl p-5 space-y-3">
             <h3 class="font-display font-bold text-sm text-yellow-400">👨‍🏫 إجمالي الاشتراكات والتحصيل حسب المدرب</h3>
             <div class="space-y-3">
@@ -1842,11 +1837,10 @@ window.selectExamAns = function(qIdx, oIdx) {
           </div>
         </div>
 
-        <!-- جدول سريع لجميع الطلاب وحالة السداد مع زر مطالبة واتساب -->
         <div class="gold-card rounded-2xl p-5 space-y-3">
           <div class="flex flex-wrap justify-between items-center gap-2">
             <h3 class="font-display font-bold text-sm text-yellow-400">📋 سجل اشتراكات الطلاب المالي الشامل</h3>
-            <input id="finQuickFilter" value="${esc(finSearchQ)}" oninput="finSearchQ=this.value; render();" placeholder="🔍 ابحث بالكود (ECA-0001) أو الاسم أو الموبايل..." class="bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white min-w-[240px]" />
+            <input id="finQuickFilter" value="${esc(window.finSearchQ)}" oninput="window.finSearchQ=this.value; render();" placeholder="🔍 ابحث بالكود (ECA-0001) أو الاسم أو الموبايل..." class="bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white min-w-[240px]" />
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-xs text-white">
@@ -1863,7 +1857,7 @@ window.selectExamAns = function(qIdx, oIdx) {
                 </tr>
               </thead>
               <tbody class="divide-y divide-yellow-500/10">
-                ${students.filter(s => !finSearchQ || s.name.toLowerCase().includes(finSearchQ.toLowerCase()) || s.stuCode.toLowerCase().includes(finSearchQ.toLowerCase()) || String(s.phone||"").includes(finSearchQ)).map(s => {
+                ${students.filter(s => !q || s.name.toLowerCase().includes(q) || s.stuCode.toLowerCase().includes(q) || String(s.phone||"").includes(q)).map(s => {
                   const wa = waLink(s.parentPhone || s.phone);
                   const waMsg = encodeURIComponent(`أهلاً بحضرتك من Egypt Chess Academy (ECA) 👑\nتذكير ودي بخصوص اشتراك البطل (${s.name} - كود ${s.stuCode}):\n• إجمالي الاشتراك: ${s.courseFee} ج.م\n• المسدد: ${s.amountPaid} ج.م\n• المتبقي: ${s.remaining} ج.م\nشكراً لتعاونكم معنا! ♟️`);
                   return `
@@ -1886,11 +1880,10 @@ window.selectExamAns = function(qIdx, oIdx) {
           </div>
         </div>
       `;
-    }
+    };
 
-    // 2. قسم تسجيل وتعديل وبحث حسابات الطالب (نفس تصميم وحسابات الـ HTML المرفق)
-    function renderFinManageSection(students) {
-      const sel = students.find(s => s.id === finSelectedStuId) || students[0] || null;
+    window.renderFinManageSection = function(students) {
+      const sel = students.find(s => s.id === window.finSelectedStuId) || students[0] || null;
       const fee = sel ? sel.courseFee : 0;
       const paid = sel ? sel.amountPaid : 0;
       const rem = Math.max(0, fee - paid);
@@ -1904,8 +1897,8 @@ window.selectExamAns = function(qIdx, oIdx) {
 
           <div class="grid sm:grid-cols-2 gap-4">
             <div class="sm:col-span-2">
-              <label class="block text-xs text-gray-400 mb-1">🔍 اختر الطالب أو ابحث بكوده (STU / ECA):</label>
-              <select onchange="finSelectedStuId=this.value; render();" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2.5 text-xs text-yellow-300 font-bold">
+              <label class="block text-xs text-gray-400 mb-1">🔍 اختر الطالب أو ابحث بكوده (ECA):</label>
+              <select onchange="window.finSelectedStuId=this.value; render();" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2.5 text-xs text-yellow-300 font-bold">
                 ${students.map(s => `<option value="${s.id}" ${sel && sel.id === s.id ? 'selected' : ''}>${s.stuCode} —${esc(s.name)} (@${esc(s.username)}) \vert{} المتبقي: ${s.remaining} EGP</option>`).join("")}
               </select>
             </div>
@@ -1940,7 +1933,6 @@ window.selectExamAns = function(qIdx, oIdx) {
             ` : ""}
           </div>
 
-          <!-- صندوق الحساب التلقائي المباشر (Calculation Box) -->
           <div class="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-black/80 border border-yellow-500/30 text-center">
             <div>
               <div class="text-[11px] text-gray-400">قيمة الكورس</div>
@@ -1961,10 +1953,9 @@ window.selectExamAns = function(qIdx, oIdx) {
           </div>
         </div>
       `;
-    }
+    };
 
-    // 3. قسم إحصائيات وتحصيلات اليوم (مطابق للتبويب الثالث ودالة showTodaysCollections)
-    function renderFinTodaySection(students, todayKey, todayCount, todayPaid, todayRem) {
+    window.renderFinTodaySection = function(students, todayKey, todayCount, todayPaid, todayRem) {
       const todayStudents = students.filter(s => s.lastPayDate === todayKey);
       return `
         <div class="space-y-5">
@@ -2002,7 +1993,7 @@ window.selectExamAns = function(qIdx, oIdx) {
           </div>
         </div>
       `;
-    }
+    };
 
     window.updateLiveCalcBox = function() {
       const fee = parseFloat(document.getElementById("finFee").value) || 0;
@@ -2014,8 +2005,8 @@ window.selectExamAns = function(qIdx, oIdx) {
     };
 
     window.openFinEditForStudent = function(stuId) {
-      finSelectedStuId = stuId;
-      finSubTab = "manage";
+      window.finSelectedStuId = stuId;
+      window.finSubTab = "manage";
       render();
     };
 
@@ -2035,7 +2026,6 @@ window.selectExamAns = function(qIdx, oIdx) {
       s.amountPaid = newPaid;
       s.remaining = Math.max(0, newFee - newPaid);
 
-      // إذا زاد المبلغ المسدد، نسجله تلقائياً في تحصيلات اليوم
       if (newPaid > prevPaid) {
         const diff = newPaid - prevPaid;
         if (s.lastPayDate === todayISO()) {
@@ -2046,14 +2036,14 @@ window.selectExamAns = function(qIdx, oIdx) {
         }
       }
       save();
-      finSubTab = "analytics";
+      window.finSubTab = "analytics";
       render();
       toast(`✅ تم تحديث حساب الطالب (${s.stuCode}) — المتبقي: ${s.remaining} EGP`);
     };
 
     window.exportFinanceCSV = function() {
       if (!isCoach()) return;
-      const students = db.users.filter(u => u.role === "student").map((s, i) => ensureStudentFinData(s, i));
+      const students = db.users.filter(u => u.role === "student").map((s, i) => window.ensureStudentFinData(s, i));
       const rows = [["Student ID", "Student Name", "Phone", "Step Level", "Coach", "Total Fee (EGP)", "Amount Paid (EGP)", "Remaining (EGP)", "Last Payment Date"]];
       students.forEach(s => {
         rows.push([s.stuCode, s.name, s.parentPhone || s.phone || "", "Step " + s.level, s.coachName, s.courseFee, s.amountPaid, s.remaining, s.lastPayDate || "—"]);
@@ -2063,8 +2053,17 @@ window.selectExamAns = function(qIdx, oIdx) {
       toast("📥 تم تنزيل شيت الحسابات متوافق مع Excel و Google Sheets!");
     };
 
-    // تفعيل تبويب الحسابات في الرابط (Hash Routing)
-    if (location.hash === "#finance") tab = "finance";
+    // ربط تلقائي مضمون بـ _render حتى لو تم لصق الكود في أي مكان
+    {
+      const _prevRender = window._render || _render;
+      window._render = _render = function() {
+        _prevRender();
+        const u = currUser();
+        if (u && u.role === "coach" && tab === "finance") {
+          document.getElementById("mainView").innerHTML = window.renderFinanceDashboardView();
+        }
+      };
+    }
   </script>
 </body>
 </html>
