@@ -1083,6 +1083,492 @@
     window.addEventListener("popstate", e => { tab = (e.state && e.state.tab) || "home"; render(); });
     const _oe = openExamModal; openExamModal = function (l) { _oe(l); applyLang(); };
     render();
+    // ================= ECA PRO UPGRADE: 6-IN-1 SMART EXAM, CERTIFICATES & DAILY PUZZLE =================
+    
+    // 1. تحميل مكتبة jsPDF مجاناً عند الحاجة فقط لتوليد ملف الـ PDF بأعلى سرعة
+    let jsPdfLoaded = false;
+    function loadJsPDF() {
+      return new Promise((resolve) => {
+        if (jsPdfLoaded && window.jspdf) return resolve(window.jspdf.jsPDF);
+        const s = document.createElement("script");
+        s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+        s.onload = () => { jsPdfLoaded = true; resolve(window.jspdf.jsPDF); };
+        document.head.appendChild(s);
+      });
+    }
+
+    // تحميل خط Cairo لدعم اللغة العربية في الشهادة بأناقة
+    if (!document.getElementById("cairoFontLink")) {
+      const fl = document.createElement("link");
+      fl.id = "cairoFontLink";
+      fl.rel = "stylesheet";
+      fl.href = "https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;900&display=swap";
+      document.head.appendChild(fl);
+    }
+
+    // 2. بنك الأسئلة التكتيكية المرتبط بالدروس لتوليد سؤال عشوائي لكل درس + اللغز اليومي المتغير
+    const LESSON_QUESTION_PATTERNS = [
+      { match: /mate|mating/i, q: (t) => `In "${t}", what is the primary objective to finish the game immediately?`, opts: ["Deliver a forced Checkmate net", "Trade all pawns", "Move the King to the corner"], ans: 0 },
+      { match: /pin/i, q: (t) => `In "${t}", how do you maximize pressure on a pinned piece?`, opts: ["Attack it with a pawn or another piece (Pile up)", "Immediately retreat your pieces", "Offer a draw"], ans: 0 },
+      { match: /double attack|twofold|fork/i, q: (t) => `In "${t}", what makes a double attack winning?`, opts: ["Creating two simultaneous threats the opponent cannot both defend", "Moving the same piece twice", "Trading Queens early"], ans: 0 },
+      { match: /discovered|x-ray/i, q: (t) => `In "${t}", how do you make a discovered attack most devastating?`, opts: ["Move the front piece with a direct check or tempo threat", "Put the King in the center", "Pass the turn"], ans: 0 },
+      { match: /defend|defence|eliminat/i, q: (t) => `In "${t}", what is the fastest way to break a strong defense?`, opts: ["Eliminate, capture, or lure away the key defending piece", "Wait passively", "Push flank pawns randomly"], ans: 0 },
+      { match: /pawn|breakthrough|square|passed/i, q: (t) => `In "${t}", what is the key strategic goal in pawn play?`, opts: ["Create an unstoppable passed pawn and control key promotion squares", "Keep all pawns on the 2nd rank", "Give up the center"], ans: 0 },
+      { match: /rook|seventh|open file/i, q: (t) => `In "${t}", how should Rooks be activated for maximum power?`, opts: ["Seize open files and penetrate to the 7th rank", "Keep Rooks locked behind unmoved pawns", "Trade Rooks for single pawns"], ans: 0 },
+      { match: /draw|stalemate|wrong bishop/i, q: (t) => `In "${t}", when you are down material in the endgame, what resource can save the game?`, opts: ["Aim for Stalemate, perpetual check, or a theoretical draw fortress", "Resign immediately", "Expose the King to checks"], ans: 0 },
+      { match: /opening|golden rules|castl/i, q: (t) => `In "${t}", what are the 3 Golden Rules of the opening?`, opts: ["Control the center, develop pieces quickly, and castle the King safely", "Bring the Queen out on move 2 and push all edge pawns", "Move only Knights"], ans: 0 }
+    ];
+
+    function buildLessonQuestion(lessonObj, idx, seedNum) {
+      const title = lessonObj.t;
+      const url = (lessonObj.l && lessonObj.l[0] && lessonObj.l[0][1]) ? lessonObj.l[0][1] : "https://lichess.org/training";
+      let pat = LESSON_QUESTION_PATTERNS.find(p => p.match.test(title));
+      let baseQ = pat ? pat.q(title) : `Tactical Evaluation — Lesson "${title}": Choose the most accurate chess principle:`;
+      let rawOpts = pat ? [...pat.opts] : [
+        `Apply the core tactical motif of "${title}" with calculation`,
+        "Play a passive waiting move without a plan",
+        "Give up material without compensation"
+      ];
+      // تبديل أماكن الاختيارات عشوائياً بناءً على البذرة (Seed) لضمان عدم حفظ المكان
+      const shift = (seedNum + idx) % 3;
+      const rotated = [0, 1, 2].map(i => ({ text: rawOpts[(i + shift) % 3], isCorrect: ((i + shift) % 3) === 0 }));
+      return {
+        lessonTitle: title,
+        url: url,
+        q: baseQ,
+        opts: rotated.map(r => r.text),
+        ans: rotated.findIndex(r => r.isCorrect)
+      };
+    }
+
+    // 3. تحديث اللغز اليومي تلقائياً كل يوم بناءً على دروس كل Step (الشرط رقم 6)
+    function updateDailyPuzzlesByDate() {
+      const dayKey = todayISO(); // YYYY-MM-DD
+      const dayHash = dayKey.split("-").reduce((acc, v) => acc + parseInt(v, 10) * 31, 7);
+      STEPS.forEach(st => {
+        if (st.lessons && st.lessons.length > 0) {
+          const lessonIdx = dayHash % st.lessons.length;
+          const les = st.lessons[lessonIdx];
+          const generated = buildLessonQuestion(les, lessonIdx, dayHash);
+          PUZZLES[st.step] = {
+            q: `[لغز اليوم ${dayKey} — درس: ${les.t}] ${generated.q}`,
+            opts: generated.opts,
+            ans: generated.ans,
+            url: generated.url,
+            dayKey: dayKey
+          };
+        }
+      });
+    }
+
+    // فتح اللغز اليومي تلقائياً عندما يتغير اليوم
+    function ensureDailyPuzzleFreshForUser(u) {
+      updateDailyPuzzlesByDate();
+      if (!u || u.role !== "student") return;
+      const dayKey = todayISO();
+      if (u.lastPuzDate !== dayKey) {
+        u.lastPuzDate = dayKey;
+        u.puzDone = {};
+      }
+    }
+
+    // 4. تعديل عرض صفحة الطالب لفرض شروط الامتحان وإظهار الشهادات وطلب الإعادة
+    const _origRenderStudentHome = renderStudentHome;
+    renderStudentHome = function(stu) {
+      ensureDailyPuzzleFreshForUser(stu);
+      const html = _origRenderStudentHome(stu);
+      const s = calcStats(stu);
+      const stepNum = Number(stu.level);
+      const exState = (stu.examState && stu.examState[stepNum]) || null; // { status: 'failed'|'passed', score: %, reqRetry: bool }
+      const certs = stu.certificates || [];
+
+      let examActionHtml = "";
+      if (s.attP < 100) {
+        examActionHtml = `
+          <div class="mt-4 pt-3 border-t border-yellow-500/20 flex flex-wrap justify-between items-center gap-2">
+            <span class="text-xs text-amber-300">🔒 يُفتح اختبار الترقية تلقائياً عند إتمام حضور 100% من دروس Step ${stepNum} (متبقي ${s.rem} درس)</span>
+            <button disabled class="px-4 py-2 rounded-xl text-xs bg-zinc-800 text-gray-500 cursor-not-allowed">🔒 مقفول (${s.attP}%)</button>
+          </div>`;
+      } else if (exState && exState.status === "failed") {
+        examActionHtml = `
+          <div class="mt-4 pt-3 border-t border-red-500/30 flex flex-wrap justify-between items-center gap-2">
+            <span class="text-xs text-red-300">❌ لم تجتز الاختبار (${exState.score}% — المطلوب 70%). مسموح بمحاولة واحدة فقط.</span>
+            ${exState.reqRetry 
+              ? `<span class="px-3 py-1.5 rounded-xl text-xs bg-amber-500/20 text-amber-300 border border-amber-500/40">⏳ تم إرسال طلب الإعادة للكوتش وبانتظار الموافقة</span>`
+              : `<button onclick="requestExamRetry()" class="px-4 py-2 rounded-xl text-xs gold-btn">📩 إرسال طلب إعادة الاختبار للكوتش</button>`
+            }
+          </div>`;
+      } else {
+        examActionHtml = `
+          <div class="mt-4 pt-3 border-t border-yellow-500/20 flex flex-wrap justify-between items-center gap-2">
+            <span class="text-xs text-emerald-300 font-bold">✅ أتممت 100% من الحضور! اختبار الترقية متاح الآن (محاولة واحدة - النجاح من 70%):</span>
+            <button onclick="openExamModal(${stepNum})" class="px-4 py-2 rounded-xl text-xs gold-btn">📝 بدء اختبار Step ${stepNum} الشامل</button>
+          </div>`;
+      }
+
+      // استبدال جزء زر الاختبار القديم بالجزء الذكي الجديد
+      const replaced = html.replace(
+        /<div class="mt-4 pt-3 border-t border-yellow-500\/20 flex justify-between items-center">[\s\S]*?<\/div>\s*<\/div>\s*<\/div>\s*<\/div>$/,
+        examActionHtml + `</div></div>` + (certs.length ? renderStudentCertificatesBox(stu) : "") + `</div>`
+      );
+      return replaced;
+    };
+
+    function renderStudentCertificatesBox(stu) {
+      const certs = stu.certificates || [];
+      return `
+        <div class="gold-card rounded-2xl p-6 mt-6">
+          <h3 class="font-display font-bold text-lg text-yellow-400 mb-3">🎓 شهادات التقدير المعتمدة (ECA Certificates)</h3>
+          <div class="grid sm:grid-cols-2 gap-4">
+            ${certs.map((c, idx) => `
+              <div class="p-4 rounded-xl bg-black/80 border border-yellow-500/40 flex flex-wrap justify-between items-center gap-3">
+                <div>
+                  <div class="text-sm font-bold text-white">🏆 شهادة إتمام Step ${c.step}</div>
+                  <div class="text-xs text-gray-400">النتيجة: ${c.score}% • المدرب: ${esc(c.coachName)} •${c.date}</div>
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="previewAndDownloadCert('${stu.id}',${idx}, false)" class="px-3 py-1.5 rounded-xl text-xs gold-btn">📄 تحميل PDF</button>
+                  <button onclick="previewAndDownloadCert('${stu.id}',${idx}, true)" class="px-3 py-1.5 rounded-xl text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">💬 إرسال لواتساب ولي الأمر</button>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        </div>`;
+    }
+
+    // 5. طلب إعادة الاختبار وموافقة الكوتش (الشرط رقم 5)
+    window.requestExamRetry = function() {
+      const u = currUser(); if (!u) return;
+      u.examState = u.examState || {};
+      const st = Number(u.level);
+      if (u.examState[st]) {
+        u.examState[st].reqRetry = true;
+        save(); render();
+        toast("📩 تم إرسال طلب إعادة الاختبار للمدرب المسؤول");
+      }
+    };
+
+    window.approveExamRetry = function(stuId, stepNum) {
+      if (!isCoach()) return;
+      const s = db.users.find(u => u.id === stuId); if (!s) return;
+      if (s.examState && s.examState[stepNum]) {
+        delete s.examState[stepNum];
+      }
+      save(); render();
+      toast("✅ تمت الموافقة على إعادة الاختبار للطالب " + s.name);
+    };
+
+    window.assignStudentCoach = function(stuId, coachName) {
+      if (!isCoach()) return;
+      const s = db.users.find(u => u.id === stuId); if (!s) return;
+      s.coachName = coachName.trim();
+      save(); toast("✅ تم تحديث اسم المدرب المسؤول عن الطالب");
+    };
+
+    // إضافة إشعار طلبات إعادة الاختبار وخانة اسم المدرب في لوحة تحكم المدرب
+    const _origRenderTrackerView = renderTrackerView;
+    renderTrackerView = function() {
+      const baseHtml = _origRenderTrackerView();
+      const students = db.users.filter(u => u.role === "student");
+      const retryRequests = [];
+      students.forEach(s => {
+        if (s.examState) {
+          Object.keys(s.examState).forEach(stKey => {
+            const inf = s.examState[stKey];
+            if (inf && inf.status === "failed" && inf.reqRetry) {
+              retryRequests.push({ stu: s, step: stKey, score: inf.score });
+            }
+          });
+        }
+      });
+
+      const retryBanner = retryRequests.length ? `
+        <div class="gold-card rounded-2xl p-4 mb-5 border-2 border-amber-500/60 bg-amber-950/20">
+          <h3 class="font-bold text-sm text-yellow-300 mb-2">🔔 طلبات إعادة اختبار الترقية بانتظار موافقتك (${retryRequests.length}):</h3>
+          <div class="space-y-2">
+            ${retryRequests.map(r => `
+              <div class="flex flex-wrap justify-between items-center gap-2 p-2.5 rounded-xl bg-black/80 border border-yellow-500/30 text-xs">
+                <span class="text-white font-bold">${esc(r.stu.name)} (@${esc(r.stu.username)}) — Step${r.step} <span class="text-red-300">(الدرجة السابقة: ${r.score}%)</span></span>
+                <button onclick="approveExamRetry('${r.stu.id}', '${r.step}')" class="px-3 py-1.5 rounded-xl text-xs gold-btn">✓ الموافقة على إعادة الاختبار</button>
+              </div>
+            `).join("")}
+          </div>
+        </div>` : "";
+
+      const sel = students.find(s => s.id === selStuId) || students[0] || null;
+      let extraCoachControls = "";
+      if (sel) {
+        const curCoach = sel.coachName || (currUser() && currUser().name) || "الكوتش عبدالرحمن منصور";
+        const certs = sel.certificates || [];
+        extraCoachControls = `
+          <div class="gold-card rounded-2xl p-4 mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2 flex-1">
+              <span class="text-xs text-yellow-300 font-bold">👨‍🏫 اسم الكوتش في شهادة الطالب (${esc(sel.name)}):</span>
+              <input id="stuCoachInp" value="${esc(curCoach)}" onchange="assignStudentCoach('${sel.id}', this.value)" class="bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white" />
+            </div>
+            ${certs.length ? `<button onclick="previewAndDownloadCert('${sel.id}',${certs.length - 1}, true)" class="px-3 py-1.5 rounded-xl text-xs gold-btn">🎓 إرسال آخر شهادة لولي الأمر PDF</button>` : ""}
+          </div>`;
+      }
+
+      return retryBanner + baseHtml + extraCoachControls;
+    };
+
+    // 6. نظام الاختبار التفاعلي الشامل (لغز من كل درس + نجاح من 70% + محاولة واحدة)
+    let activeExam = null;
+    openExamModal = function(lvl) {
+      const u = currUser();
+      if (!u || u.role !== "student") return;
+      const stepNum = Number(lvl);
+      const stats = calcStats(u);
+
+      if (stats.attP < 100) {
+        return toast("🔒 يجب إتمام حضور 100% من دروس هذا المستوى أولاً لفتح الاختبار!");
+      }
+      u.examState = u.examState || {};
+      if (u.examState[stepNum] && u.examState[stepNum].status === "failed") {
+        return toast("❌ استنفدت محاولتك في هذا الاختبار. اطلب إعادة الاختبار من المدرب.");
+      }
+
+      const stObj = STEPS.find(x => x.step === stepNum);
+      if (!stObj || !stObj.lessons || stObj.lessons.length === 0) {
+        return toast("لا توجد دروس مسجلة في هذا المستوى حالياً");
+      }
+
+      const seed = Date.now() % 997;
+      const questions = stObj.lessons.map((les, idx) => buildLessonQuestion(les, idx, seed));
+      activeExam = { step: stepNum, questions, answers: {} };
+
+      const modal = document.getElementById("examModal");
+      modal.classList.remove("hidden");
+      renderActiveExamUI();
+    };
+
+    function renderActiveExamUI() {
+      if (!activeExam) return;
+      const total = activeExam.questions.length;
+      const answeredCount = Object.keys(activeExam.answers).length;
+      document.getElementById("examTitle").innerHTML = `🏆 اختبار ترقية Step ${activeExam.step} (${answeredCount}/${total} سؤال)`;
+      document.getElementById("examBody").innerHTML = `
+        <div class="text-xs text-gray-300 mb-3 p-2.5 rounded-xl bg-black/70 border border-yellow-500/30">
+          ⚠️ <b>تعليمات الاختبار:</b> يتكون الاختبار من <b>${total} لغز</b> (سؤال من كل درس في Step ${activeExam.step}). النجاح يتطلب <b>70% فأكثر</b> للترقية التلقائية وإصدار الشهادة. متاح لك <b>محاولة واحدة فقط</b>.
+        </div>
+        <div class="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
+          ${activeExam.questions.map((qObj, qIdx) => `
+            <div class="p-3.5 rounded-xl bg-black/80 border border-yellow-500/25 space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-xs font-bold text-yellow-400">لغز درس #${qIdx + 1}:${esc(qObj.lessonTitle)}</span>
+                <a href="${qObj.url}" target="_blank" class="text-[11px] text-sky-400 hover:underline">معاينة الرقعة ↗</a>
+              </div>
+              <p class="text-xs text-white font-medium">${esc(qObj.q)}</p>
+              <div class="space-y-1.5">
+                ${qObj.opts.map((optTxt, oIdx) => {
+                  const chosen = activeExam.answers[qIdx] === oIdx;
+                  return `
+                    <button type="button" onclick="selectExamAns(${qIdx}, ${oIdx})" class="w-full text-left px-3 py-2 rounded-lg text-xs border transition flex justify-between items-center ${chosen ? 'border-yellow-400 bg-yellow-500/20 text-yellow-200 font-bold' : 'border-zinc-800 bg-zinc-900/80 text-gray-300 hover:border-yellow-500/40'}">
+                      <span>${esc(optTxt)}</span>
+                      <span>${chosen ? '●' : '○'}</span>
+                    </button>`;
+                }).join("")}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+        <div class="mt-4 pt-3 border-t border-yellow-500/20 flex justify-between items-center">
+          <span class="text-xs text-gray-400">أجبت على ${answeredCount} من ${total}</span>
+          <button type="button" onclick="submitFullStepExam()" class="px-5 py-2.5 rounded-xl text-xs gold-btn">تسليم الاختبار والنتيجة النهائية 🚀</button>
+        </div>
+      `;
+    }
+
+    window.selectExamAns = function(qIdx, oIdx) {
+      if (!activeExam) return;
+      activeExam.answers[qIdx] = oIdx;
+      renderActiveExamUI();
+    };
+
+    window.submitFullStepExam = async function() {
+      if (!activeExam) return;
+      const total = activeExam.questions.length;
+      if (Object.keys(activeExam.answers).length < total) {
+        return toast("⚠️ يرجى الإجابة على جميع أسئلة الدروس قبل التسليم!");
+      }
+      let correct = 0;
+      activeExam.questions.forEach((qObj, idx) => {
+        if (activeExam.answers[idx] === qObj.ans) correct++;
+      });
+      const score = Math.round((correct / total) * 100);
+      const u = currUser(); if (!u) return;
+      const oldStep = activeExam.step;
+      u.examState = u.examState || {};
+
+      if (score >= 70) {
+        u.examState[oldStep] = { status: "passed", score: score, date: todayISO() };
+        const coachUser = db.users.find(x => x.role === "coach");
+        const coachName = u.coachName || (coachUser ? coachUser.name : "الكوتش عبدالرحمن منصور");
+        u.certificates = u.certificates || [];
+        u.certificates.push({
+          step: oldStep,
+          score: score,
+          studentName: u.name,
+          coachName: coachName,
+          date: todayISO()
+        });
+        const newLevel = Math.min(6, oldStep + 1);
+        u.level = newLevel;
+        save();
+        closeExamModal();
+        render();
+        toast(`🎉 مبروك! نجحت بنسبة ${score}% وتمت ترقيتك إلى Step ${newLevel}`);
+        // توليد الشهادة وعرض نافذة الإرسال لولي الأمر فوراً
+        setTimeout(() => {
+          previewAndDownloadCert(u.id, u.certificates.length - 1, true);
+        }, 400);
+      } else {
+        u.examState[oldStep] = { status: "failed", score: score, reqRetry: false, date: todayISO() };
+        save();
+        closeExamModal();
+        render();
+        toast(`❌ حصلت على ${score}% (المطلوب 70%). تم قفل الاختبار ويمكنك طلب إعادة الاختبار من المدرب.`);
+      }
+    };
+
+    // 7. رسم الشهادة المطابقة لتصميم الأكاديمية الرسمي وتحويلها إلى PDF وإرسالها لواتساب ولي الأمر (الشرط رقم 4)
+    window.previewAndDownloadCert = async function(stuId, certIdx, openWaAfter) {
+      const stu = db.users.find(u => u.id === stuId); if (!stu) return;
+      const cert = (stu.certificates || [])[certIdx]; if (!cert) return;
+
+      toast("⏳ جاري تجهيز شهادة التقدير PDF بأعلى جودة...");
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 1600;
+      canvas.height = 1130;
+      const c = canvas.getContext("2d");
+
+      // خلفية كريمي فخمة مطابقة للتصميم المرفق
+      c.fillStyle = "#faf3e3";
+      c.fillRect(0, 0, canvas.width, canvas.height);
+
+      // إطار خارجي وإطار داخلي ذهبي وأسود فخم
+      c.strokeStyle = "#1b2420";
+      c.lineWidth = 14;
+      c.strokeRect(36, 36, canvas.width - 72, canvas.height - 72);
+
+      c.strokeStyle = "#c59b27";
+      c.lineWidth = 4;
+      c.strokeRect(58, 58, canvas.width - 116, canvas.height - 116);
+
+      // علامة مائية خفيفة في المنتصف
+      c.save();
+      c.globalAlpha = 0.05;
+      c.fillStyle = "#1b2420";
+      c.font = "900 180px Cinzel, serif";
+      c.textAlign = "center";
+      c.fillText("ECA CHESS", canvas.width / 2, canvas.height / 2 + 40);
+      c.restore();
+
+      // العنوان العلوي: EGYPT CHESS ACADEMY (ECA)
+      c.fillStyle = "#9a7418";
+      c.font = "800 32px Cinzel, serif";
+      c.textAlign = "center";
+      c.fillText("EGYPT CHESS ACADEMY (ECA)", canvas.width / 2, 145);
+
+      // كلمة: شهادة تقدير
+      c.fillStyle = "#18221f";
+      c.font = "900 92px Cairo, sans-serif";
+      c.fillText("شهادة تقدير", canvas.width / 2, 275);
+
+      // زخرفة تحت العنوان
+      c.strokeStyle = "#c59b27";
+      c.lineWidth = 3;
+      c.beginPath();
+      c.moveTo(canvas.width / 2 - 220, 315);
+      c.lineTo(canvas.width / 2 + 220, 315);
+      c.stroke();
+
+      // تمنح هذه الشهادة للمتدرب
+      c.fillStyle = "#4b5563";
+      c.font = "700 34px Cairo, sans-serif";
+      c.fillText("تمنح هذه الشهادة للمتدرب", canvas.width / 2, 395);
+
+      // اسم الطالب
+      c.fillStyle = "#b07d12";
+      c.font = "900 64px Cairo, sans-serif";
+      c.fillText(cert.studentName, canvas.width / 2, 495);
+
+      // نص التقدير وإتمام المستوى
+      c.fillStyle = "#1f2937";
+      c.font = "600 31px Cairo, sans-serif";
+      c.fillText(`تقديراً لأدائه الرائع والتزامه المتميز واجتيازه بنجاح مستوى (Step ${cert.step}) بنسبة ${cert.score}%`, canvas.width / 2, 585);
+      c.fillText("في التدريبات الشطرنجية، ونتمنى له دوام التقدم والتفوق في رحلته مع الشطرنج.", canvas.width / 2, 645);
+
+      // التوقيعات السفلية: اليمين (المدرب) - المنتصف (شعار الأكاديمية) - اليسار (إدارة الأكاديمية)
+      // 1. قسم المدرب
+      c.fillStyle = "#18221f";
+      c.font = "800 34px Cairo, sans-serif";
+      c.fillText(cert.coachName, 1220, 860);
+      c.strokeStyle = "#9ca3af";
+      c.lineWidth = 2;
+      c.beginPath(); c.moveTo(1040, 885); c.lineTo(1400, 885); c.stroke();
+      c.fillStyle = "#6b7280";
+      c.font = "700 26px Cairo, sans-serif";
+      c.fillText("المدرب", 1220, 930);
+
+      // 2. شعار المنتصف الذهبي
+      c.beginPath();
+      c.arc(canvas.width / 2, 885, 78, 0, Math.PI * 2);
+      c.fillStyle = "#18221f";
+      c.fill();
+      c.lineWidth = 5;
+      c.strokeStyle = "#d4af37";
+      c.stroke();
+      c.fillStyle = "#d4af37";
+      c.font = "800 34px Cinzel, serif";
+      c.fillText("ECA", canvas.width / 2, 880);
+      c.font = "700 20px Cinzel, serif";
+      c.fillText("CHESS", canvas.width / 2, 912);
+
+      // 3. قسم إدارة الأكاديمية
+      c.fillStyle = "#18221f";
+      c.font = "800 26px Cinzel, serif";
+      c.fillText("EGYPT CHESS ACADEMY (ECA)", 380, 860);
+      c.beginPath(); c.moveTo(200, 885); c.lineTo(560, 885); c.stroke();
+      c.fillStyle = "#6b7280";
+      c.font = "700 26px Cairo, sans-serif";
+      c.fillText("إدارة الأكاديمية", 380, 930);
+
+      // التاريخ المعتمد أسفل الشهادة
+      c.fillStyle = "#9ca3af";
+      c.font = "600 20px Inter, sans-serif";
+      c.fillText(`Issued on: ${cert.date} • Official ECA Verification`, canvas.width / 2, 1035);
+
+      const JsPDF = await loadJsPDF();
+      const pdf = new JsPDF({ orientation: "landscape", unit: "px", format: [1600, 1130] });
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      pdf.addImage(imgData, "JPEG", 0, 0, 1600, 1130);
+      const fileName = `ECA-Certificate-Step${cert.step}-${stu.username}.pdf`;
+      pdf.save(fileName);
+      toast("✅ تم تنزيل شهادة التقدير PDF بنجاح!");
+
+      if (openWaAfter) {
+        const parentNum = stu.parentPhone || stu.phone || "";
+        const waUrl = waLink(parentNum);
+        const msg = encodeURIComponent(
+          `🎉 تهنئة من Egypt Chess Academy (ECA) 👑\n\n` +
+          `نبارك للبطل (${cert.studentName}) اجتيازه اختبار مستوى (Step ${cert.step}) بنجاح باهر بنسبة (${cert.score}%) وترقيته تلقائياً للمستوى التالي! 🏆♟️\n` +
+          `إشراف المدرب: ${cert.coachName}\n` +
+          `(تم تنزيل شهادة التقدير الرسمية PDF لإرفاقها لحضرتك في المحادثة 📄)`
+        );
+        if (waUrl) {
+          window.open(`${waUrl}?text=${msg}`, "_blank");
+        } else {
+          window.open(`https://wa.me/?text=${msg}`, "_blank");
+        }
+      }
+    };
+
+    // تشغيل التوليد اليومي للألغاز فور فتح الموقع
+    updateDailyPuzzlesByDate();
   </script>
   <!-- Firebase Realtime Cloud Sync (Firestore + Anonymous Auth) -->
   <script type="module">
