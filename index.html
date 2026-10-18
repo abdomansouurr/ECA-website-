@@ -1432,24 +1432,21 @@
       }
     };
 
-    // 7. رسم الشهادة المطابقة لتصميم الأكاديمية الرسمي وتحويلها إلى PDF وإرسالها لواتساب ولي الأمر (الشرط رقم 4)
-    window.previewAndDownloadCert = async function(stuId, certIdx, openWaAfter) {
-      const stu = db.users.find(u => u.id === stuId); if (!stu) return;
-      const cert = (stu.certificates || [])[certIdx]; if (!cert) return;
-
-      toast("⏳ جاري تجهيز شهادة التقدير PDF بأعلى جودة...");
-      if (document.fonts && document.fonts.ready) await document.fonts.ready;
-
+// 7. رسم الشهادة وعرضها في نافذة معاينة مع طباعة PDF وتنزيل مباشر مضمون 100%
+    window.buildCertificateDataURL = async function(cert) {
+      if (document.fonts && document.fonts.ready) {
+        try { await document.fonts.ready; } catch (_) {}
+      }
       const canvas = document.createElement("canvas");
       canvas.width = 1600;
       canvas.height = 1130;
       const c = canvas.getContext("2d");
 
-      // خلفية كريمي فخمة مطابقة للتصميم المرفق
+      // خلفية كريمي مطابقة للشهادة الرسمية
       c.fillStyle = "#faf3e3";
       c.fillRect(0, 0, canvas.width, canvas.height);
 
-      // إطار خارجي وإطار داخلي ذهبي وأسود فخم
+      // الإطار الخارجي والداخلي
       c.strokeStyle = "#1b2420";
       c.lineWidth = 14;
       c.strokeRect(36, 36, canvas.width - 72, canvas.height - 72);
@@ -1458,11 +1455,11 @@
       c.lineWidth = 4;
       c.strokeRect(58, 58, canvas.width - 116, canvas.height - 116);
 
-      // علامة مائية خفيفة في المنتصف
+      // علامة مائية خفيفة
       c.save();
       c.globalAlpha = 0.05;
       c.fillStyle = "#1b2420";
-      c.font = "900 180px Cinzel, serif";
+      c.font = "900 160px Cinzel, serif";
       c.textAlign = "center";
       c.fillText("ECA CHESS", canvas.width / 2, canvas.height / 2 + 40);
       c.restore();
@@ -1473,50 +1470,49 @@
       c.textAlign = "center";
       c.fillText("EGYPT CHESS ACADEMY (ECA)", canvas.width / 2, 145);
 
-      // كلمة: شهادة تقدير
+      // شهادة تقدير
       c.fillStyle = "#18221f";
-      c.font = "900 92px Cairo, sans-serif";
-      c.fillText("شهادة تقدير", canvas.width / 2, 275);
+      c.font = "900 90px Cairo, sans-serif";
+      c.fillText("شهادة تقدير", canvas.width / 2, 270);
 
-      // زخرفة تحت العنوان
+      // خط زخرفي
       c.strokeStyle = "#c59b27";
       c.lineWidth = 3;
       c.beginPath();
-      c.moveTo(canvas.width / 2 - 220, 315);
-      c.lineTo(canvas.width / 2 + 220, 315);
+      c.moveTo(canvas.width / 2 - 220, 310);
+      c.lineTo(canvas.width / 2 + 220, 310);
       c.stroke();
 
       // تمنح هذه الشهادة للمتدرب
       c.fillStyle = "#4b5563";
       c.font = "700 34px Cairo, sans-serif";
-      c.fillText("تمنح هذه الشهادة للمتدرب", canvas.width / 2, 395);
+      c.fillText("تمنح هذه الشهادة للمتدرب", canvas.width / 2, 390);
 
       // اسم الطالب
       c.fillStyle = "#b07d12";
       c.font = "900 64px Cairo, sans-serif";
-      c.fillText(cert.studentName, canvas.width / 2, 495);
+      c.fillText(cert.studentName, canvas.width / 2, 490);
 
-      // نص التقدير وإتمام المستوى
+      // نص التقدير
       c.fillStyle = "#1f2937";
-      c.font = "600 31px Cairo, sans-serif";
-      c.fillText(`تقديراً لأدائه الرائع والتزامه المتميز واجتيازه بنجاح مستوى (Step ${cert.step}) بنسبة ${cert.score}%`, canvas.width / 2, 585);
-      c.fillText("في التدريبات الشطرنجية، ونتمنى له دوام التقدم والتفوق في رحلته مع الشطرنج.", canvas.width / 2, 645);
+      c.font = "600 30px Cairo, sans-serif";
+      c.fillText(`تقديراً لأدائه الرائع والتزامه المتميز في التدريبات الشطرنجية، واجتيازه مستوى (Step ${cert.step}) بنسبة ${cert.score}%،`, canvas.width / 2, 580);
+      c.fillText("ونتمنى له دوام التقدم والتفوق في رحلته مع الشطرنج.", canvas.width / 2, 640);
 
-      // التوقيعات السفلية: اليمين (المدرب) - المنتصف (شعار الأكاديمية) - اليسار (إدارة الأكاديمية)
-      // 1. قسم المدرب
+      // التوقيعات السفلية: المدرب (يمين) - الشعار (منتصف) - إدارة الأكاديمية (يسار)
       c.fillStyle = "#18221f";
       c.font = "800 34px Cairo, sans-serif";
-      c.fillText(cert.coachName, 1220, 860);
+      c.fillText(cert.coachName, 1220, 855);
       c.strokeStyle = "#9ca3af";
       c.lineWidth = 2;
-      c.beginPath(); c.moveTo(1040, 885); c.lineTo(1400, 885); c.stroke();
+      c.beginPath(); c.moveTo(1040, 880); c.lineTo(1400, 880); c.stroke();
       c.fillStyle = "#6b7280";
       c.font = "700 26px Cairo, sans-serif";
-      c.fillText("المدرب", 1220, 930);
+      c.fillText("المدرب", 1220, 925);
 
-      // 2. شعار المنتصف الذهبي
+      // الشعار في المنتصف
       c.beginPath();
-      c.arc(canvas.width / 2, 885, 78, 0, Math.PI * 2);
+      c.arc(canvas.width / 2, 880, 78, 0, Math.PI * 2);
       c.fillStyle = "#18221f";
       c.fill();
       c.lineWidth = 5;
@@ -1524,47 +1520,107 @@
       c.stroke();
       c.fillStyle = "#d4af37";
       c.font = "800 34px Cinzel, serif";
-      c.fillText("ECA", canvas.width / 2, 880);
+      c.fillText("ECA", canvas.width / 2, 875);
       c.font = "700 20px Cinzel, serif";
-      c.fillText("CHESS", canvas.width / 2, 912);
+      c.fillText("CHESS", canvas.width / 2, 907);
 
-      // 3. قسم إدارة الأكاديمية
+      // إدارة الأكاديمية
       c.fillStyle = "#18221f";
-      c.font = "800 26px Cinzel, serif";
-      c.fillText("EGYPT CHESS ACADEMY (ECA)", 380, 860);
-      c.beginPath(); c.moveTo(200, 885); c.lineTo(560, 885); c.stroke();
+      c.font = "800 24px Cinzel, serif";
+      c.fillText("EGYPT CHESS ACADEMY (ECA)", 380, 855);
+      c.beginPath(); c.moveTo(200, 880); c.lineTo(560, 880); c.stroke();
       c.fillStyle = "#6b7280";
       c.font = "700 26px Cairo, sans-serif";
-      c.fillText("إدارة الأكاديمية", 380, 930);
+      c.fillText("إدارة الأكاديمية", 380, 925);
 
-      // التاريخ المعتمد أسفل الشهادة
+      // التاريخ
       c.fillStyle = "#9ca3af";
       c.font = "600 20px Inter, sans-serif";
-      c.fillText(`Issued on: ${cert.date} • Official ECA Verification`, canvas.width / 2, 1035);
+      c.fillText(`Issued on: ${cert.date} • Official ECA Certificate`, canvas.width / 2, 1035);
 
-      const JsPDF = await loadJsPDF();
-      const pdf = new JsPDF({ orientation: "landscape", unit: "px", format: [1600, 1130] });
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
-      pdf.addImage(imgData, "JPEG", 0, 0, 1600, 1130);
-      const fileName = `ECA-Certificate-Step${cert.step}-${stu.username}.pdf`;
-      pdf.save(fileName);
-      toast("✅ تم تنزيل شهادة التقدير PDF بنجاح!");
+      return canvas.toDataURL("image/png");
+    };
 
-      if (openWaAfter) {
-        const parentNum = stu.parentPhone || stu.phone || "";
-        const waUrl = waLink(parentNum);
-        const msg = encodeURIComponent(
-          `🎉 تهنئة من Egypt Chess Academy (ECA) 👑\n\n` +
-          `نبارك للبطل (${cert.studentName}) اجتيازه اختبار مستوى (Step ${cert.step}) بنجاح باهر بنسبة (${cert.score}%) وترقيته تلقائياً للمستوى التالي! 🏆♟️\n` +
-          `إشراف المدرب: ${cert.coachName}\n` +
-          `(تم تنزيل شهادة التقدير الرسمية PDF لإرفاقها لحضرتك في المحادثة 📄)`
-        );
-        if (waUrl) {
-          window.open(`${waUrl}?text=${msg}`, "_blank");
-        } else {
-          window.open(`https://wa.me/?text=${msg}`, "_blank");
-        }
+    window.previewAndDownloadCert = async function(stuId, certIdx, openWaAfter) {
+      const stu = db.users.find(u => u.id === stuId); if (!stu) return;
+      const cert = (stu.certificates || [])[certIdx]; if (!cert) return;
+
+      const dataUrl = await window.buildCertificateDataURL(cert);
+
+      // إنشاء أو فتح نافذة معاينة الشهادة داخل الموقع
+      let certModal = document.getElementById("certPreviewModal");
+      if (!certModal) {
+        certModal = document.createElement("div");
+        certModal.id = "certPreviewModal";
+        certModal.className = "fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4";
+        document.body.appendChild(certModal);
       }
+      certModal.classList.remove("hidden");
+
+      const parentNum = stu.parentPhone || stu.phone || "";
+      const waBase = waLink(parentNum) || "https://wa.me/";
+      const waMsg = encodeURIComponent(
+        `🎉 تهنئة من Egypt Chess Academy (ECA) 👑\n\n` +
+        `نبارك للبطل (${cert.studentName}) اجتيازه اختبار مستوى (Step ${cert.step}) بنجاح باهر بنسبة (${cert.score}%) وترقيته تلقائياً للمستوى التالي! 🏆♟️\n` +
+        `إشراف المدرب: ${cert.coachName}\n` +
+        `(مرفق لحضرتك شهادة التقدير الرسمية المعتمدة من الأكاديمية 📄)`
+      );
+
+      certModal.innerHTML = `
+        <div class="gold-card rounded-2xl max-w-3xl w-full p-5 max-h-[92vh] overflow-y-auto space-y-4">
+          <div class="flex justify-between items-center">
+            <h3 class="font-display font-bold text-lg text-yellow-400">🎓 شهادة تقدير — ${esc(cert.studentName)} (Step ${cert.step})</h3>
+            <button onclick="document.getElementById('certPreviewModal').classList.add('hidden')" class="text-gray-400 hover:text-white px-2 text-lg">✕</button>
+          </div>
+          <div class="rounded-xl overflow-hidden border-2 border-yellow-500/50 bg-black">
+            <img id="certPreviewImg" src="${dataUrl}" alt="ECA Certificate" class="w-full h-auto block" />
+          </div>
+          <div class="flex flex-wrap justify-end gap-2 pt-2">
+            <button onclick="printCertAsPDF()" class="px-4 py-2.5 rounded-xl text-xs gold-btn">🖨️ طباعة / حفظ كملف PDF</button>
+            <a href="${dataUrl}" download="ECA-Certificate-Step${cert.step}-${stu.username}.png" class="px-4 py-2.5 rounded-xl text-xs bg-zinc-800 border border-yellow-500/40 text-yellow-300 font-bold">📥 تنزيل كصورة جاهزة</a>
+            <a href="${waBase}?text=${waMsg}" target="_blank" rel="noopener" class="px-4 py-2.5 rounded-xl text-xs bg-emerald-500 text-black font-bold">💬 إرسال لواتساب ولي الأمر</a>
+          </div>
+        </div>
+      `;
+
+      // إذا ضغط المستخدم على زر التحميل المباشر، نقوم بتنزيل ملف PDF أو الصورة فوراً
+      if (!openWaAfter) {
+        printCertAsPDF();
+      }
+    };
+
+    window.printCertAsPDF = function() {
+      const img = document.getElementById("certPreviewImg");
+      if (!img) return;
+      const src = img.src;
+      const w = window.open("", "_blank");
+      if (!w) {
+        // في حال كان المتصفح يمنع النوافذ المنبثقة، نقوم بتنزيلها مباشرة
+        const a = document.createElement("a");
+        a.href = src;
+        a.download = "ECA-Certificate.png";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return toast("📥 تم تنزيل الشهادة مباشرة على جهازك!");
+      }
+      w.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>ECA Official Certificate — Print / Save PDF</title>
+          <style>
+            @page { size: landscape; margin: 0; }
+            html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #faf3e3; display: flex; align-items: center; justify-content: center; }
+            img { width: 100vw; height: 100vh; object-fit: contain; }
+          </style>
+        </head>
+        <body>
+          <img src="${src}" onload="setTimeout(() => { window.print(); }, 250);" />
+        </body>
+        </html>
+      `);
+      w.document.close();
     };
 
     // تشغيل التوليد اليومي للألغاز فور فتح الموقع
