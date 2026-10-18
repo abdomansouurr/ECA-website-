@@ -68,34 +68,6 @@
   <!-- Toast -->
   <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-zinc-900 border border-yellow-500 text-yellow-300 px-5 py-3 rounded-xl shadow-2xl text-sm font-semibold"></div>
 
-  <!-- Parent Password Modal -->
-  <div id="parentModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="gold-card rounded-2xl max-w-md w-full p-6">
-      <div class="flex justify-between items-center mb-3">
-        <h3 class="font-display font-bold text-lg text-yellow-400">🔒 خانة ولي الأمر السرية</h3>
-        <button onclick="closeParentModal()" class="text-gray-400 hover:text-white">✕</button>
-      </div>
-      <p class="text-xs text-gray-400 mb-3">أدخل الباسورد الموحد لأولياء الأمور</p>
-      <input id="parentPassInp" type="password" placeholder="••••••" class="w-full bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white mb-3" />
-      <div class="flex justify-end gap-2">
-        <button onclick="closeParentModal()" class="px-4 py-2 rounded-xl text-xs bg-zinc-800 text-gray-300">إلغاء</button>
-        <button onclick="confirmParentPass()" class="px-4 py-2 rounded-xl text-xs gold-btn">فتح الملاحظات 🔓</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Coach Quick Login Modal -->
-  <div id="coachQuickModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="gold-card rounded-2xl max-w-sm w-full p-6">
-      <h3 class="font-display font-bold text-lg text-yellow-400 mb-3">🔐 دخول المدرب السريع</h3>
-      <input id="coachQuickInp" type="password" placeholder="أدخل كلمة سر المدرب" onkeydown="if(event.key==='Enter')confirmCoachQuick()" class="w-full bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white mb-3" />
-      <div class="flex justify-end gap-2">
-        <button onclick="document.getElementById('coachQuickModal').classList.add('hidden')" class="px-4 py-2 rounded-xl text-xs bg-zinc-800 text-gray-300">إلغاء</button>
-        <button onclick="confirmCoachQuick()" class="px-4 py-2 rounded-xl text-xs gold-btn">فتح 🔓</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Level Up Test Modal -->
   <div id="examModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
     <div class="gold-card rounded-2xl max-w-lg w-full p-6">
@@ -120,7 +92,7 @@
       <div class="grid sm:grid-cols-2 gap-3">
         <input id="asName" required placeholder="اسم الطالب بالكامل" class="sm:col-span-2 w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
         <input id="asUser" placeholder="اليوزر نيم بالإنجليزي (اختياري)" autocapitalize="none" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
-        <input id="asPass" placeholder="الباسورد (الافتراضي 123456)" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asPass" placeholder="كلمة السر (6+ حروف) — سيبها فاضية لتوليد تلقائي" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
         <input id="asAge" type="number" min="3" max="99" inputmode="numeric" placeholder="السن" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
         <input id="asPhone" type="tel" inputmode="tel" placeholder="موبايل الطالب" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
         <input id="asParent" type="tel" inputmode="tel" placeholder="موبايل ولي الأمر (واتساب)" class="sm:col-span-2 w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
@@ -277,7 +249,7 @@
       6: { q: "Step 6 Master Calculation Puzzle: Find the 4-move forced mating net.", opts: ["Qxh7+! followed by Rh3#", "Qe2", "h4"], ans: 0, url: "https://lichess.org/training" }
     };
 
-    const COACH_QUICK_PASS = "ECA-COACH-2026"; // غيّرها لكلمة سر خاصة بك
+    const ALLOW_SELF_SIGNUP = true; // false = اقفل التسجيل الذاتي (الكوتش بس يضيف الطلاب)
     let lang = localStorage.getItem("ECA_LANG") || "ar";
     const EXTRA_DICT = [["✅ تسجيل الحضور", "✅ Attendance"], ["تسجيل الحضور", "Attendance"], ["سجّل حضور الطلاب الأونلاين والأوفلاين كل واحد في قسمه.", "Record attendance for online and offline students, each in their own section."], ["➕ إضافة طالب جديد", "➕ Add new student"], ["إضافة طالب جديد", "Add new student"], ["✏️ تعديل بيانات الطالب", "✏️ Edit student"], ["💾 نسخة احتياطية", "💾 Backup"], ["📂 استرجاع نسخة", "📂 Restore backup"], ["🏫 طلبة الأوفلاين", "🏫 Offline students"], ["💻 طلبة الأونلاين", "💻 Online students"], ["🔍 ابحث باسم الطالب...", "🔍 Search student name..."], ["اليوم السابق", "Previous day"], ["اليوم التالي", "Next day"], ["النهاردة", "Today"], ["تحديد الكل حاضر", "Mark all present"], ["مسح تسجيل اليوم", "Clear today's records"], ["لم يُسجَّل", "Not recorded"], ["✓ حاضر", "✓ Present"], ["⏰ متأخر", "⏰ Late"], ["✗ غايب", "✗ Absent"], ["حاضر", "Present"], ["متأخر", "Late"], ["غايب", "Absent"], ["لا يوجد سجل بعد", "No records yet"], ["نسبة الحضور", "Attendance rate"], ["حصة", "sessions"], ["🏫 نقل للأوفلاين", "🏫 Move to offline"], ["💻 نقل للأونلاين", "💻 Move to online"], ["لا يوجد طلاب في هذا القسم بعد. أضف طالباً جديداً أو انقل طالباً من القسم الآخر.", "No students in this section yet. Add a new student or move one from the other section."], ["لا توجد نتائج لهذا البحث.", "No results for this search."], ["لا يوجد طلاب بعد. اضغط «إضافة طالب جديد».", "No students yet. Tap \"Add new student\"."], ["لا يوجد طلاب في هذا القسم بعد.", "No students in this section yet."], ["📊 تقرير الشهر —", "📊 Monthly report —"], ["طلبة الأونلاين", "Online students"], ["طلبة الأوفلاين", "Offline students"], ["⬇ تصدير CSV", "⬇ Export CSV"], ["اسم الطالب", "Student name"], ["اسم الطالب بالكامل", "Student full name"], ["اليوزر نيم بالإنجليزي (اختياري)", "Username in English (optional)"], ["الباسورد (الافتراضي 123456)", "Password (default 123456)"], ["السن", "Age"], ["موبايل الطالب", "Student mobile"], ["موبايل ولي الأمر (واتساب)", "Parent mobile (WhatsApp)"], ["🏫 طالب أوفلاين (حضوري)", "🏫 Offline student (in-person)"], ["💻 طالب أونلاين", "💻 Online student"], ["اترك الباسورد فارغاً لو مش عايز تغيّره.", "Leave the password empty to keep it unchanged."], ["🗑️ حذف الطالب", "🗑️ Delete student"], ["إضافة الطالب ✅", "Add student ✅"], ["حفظ التعديلات ✅", "Save changes ✅"], ["📲 تثبيت التطبيق", "📲 Install app"], ["💻 تم نقل الطالب إلى الأونلاين", "💻 Student moved to online"], ["🏫 تم نقل الطالب إلى الأوفلاين", "🏫 Student moved to offline"], ["لا توجد سجلات حضور في هذا الشهر", "No attendance records this month"], ["✅ تم تنزيل النسخة الاحتياطية", "✅ Backup downloaded"], ["✅ تم استرجاع النسخة الاحتياطية", "✅ Backup restored"], ["❌ ملف النسخة الاحتياطية غير صالح", "❌ Invalid backup file"], ["سيتم استبدال كل البيانات الحالية بالنسخة الاحتياطية. متابعة؟", "All current data will be replaced by the backup. Continue?"], ["❌ اكتب اسم الطالب", "❌ Enter the student's name"], ["❌ اليوزر نيم ده مستخدم بالفعل", "❌ This username is already taken"], ["يوجد طالب بنفس الاسم بالفعل. هل تريد المتابعة؟", "A student with the same name already exists. Continue?"], ["✅ تم حفظ بيانات الطالب", "✅ Student saved"], ["✅ تمت إضافة الطالب — اليوزر: ", "✅ Student added — username: "], [" / الباسورد: ", " / password: "], ["هل أنت متأكد من حذف الطالب نهائياً مع كل سجلات حضوره؟", "Delete this student permanently with all attendance records?"], ["🗑️ تم حذف الطالب", "🗑️ Student deleted"], ["📲 على الآيفون: اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»", "📲 On iPhone: tap Share, then \"Add to Home Screen\""], ["📴 لا يوجد إنترنت — الموقع يعمل والبيانات محفوظة على جهازك", "📴 No internet — the site still works and data is saved on your device"], ["📶 عاد الاتصال بالإنترنت", "📶 Back online"]];
     const DICT = [["إلغاء", "Cancel"], ["فتح الملاحظات 🔓", "Open notes 🔓"], ["خانة ولي الأمر السرية", "Parent Secret Box"], ["أدخل الباسورد الموحد لأولياء الأمور", "Enter the shared parents' password"], ["جاري تحميل منصة Egypt Chess Academy...", "Loading Egypt Chess Academy platform..."], ["بوابة ولي الأمر (Parent Dashboard)", "Parent Portal (Parent Dashboard)"], ["بوابة ولي الأمر", "Parent Portal"], ["داشبورد ولي الأمر", "Parent Dashboard"], ["الرئيسية", "Home"], ["كل المستويات (Steps 1-6)", "All Levels (Steps 1-6)"], ["دروس Step ", "Lessons: Step "], ["متابعة الطلاب والجروبات", "Students & Groups Tracker"], ["خروج", "Logout"], ["اضغط على أي حساب تجريبي للدخول فوراً أو أنشئ حساباً جديداً:", "Tap a demo account to enter instantly or create a new account:"], ["دخول سريع كـ مدرب (Coach)", "Quick login as Coach"], ["يفتح كل الـ 6 Steps + متابعة الطلاب والجروبات", "Opens all 6 Steps + student & group tracking"], ["دخول سريع كـ طالب (Omar - Step 2)", "Quick login as Student (Omar - Step 2)"], ["يرى فقط Step 2 + اللغز اليومي + الدرس القادم", "Sees only Step 2 + daily puzzle + next lesson"], ["ابحث عن omar_chess وشاهد التقييم والملاحظة السرية", "Search omar_chess to see the rating and secret note"], ["🔐 الدخول السريع للمدرب محمي بكلمة سر", "🔐 Coach quick login is password-protected"], ["Login (دخول)", "Login"], ["Sign Up (حساب جديد)", "Sign Up"], ["تسجيل الدخول ♟️", "Log in ♟️"], ["طالب (Student)", "Student"], ["مدرب (Coach)", "Coach"], ["إنشاء الحساب 🚀", "Create account 🚀"], ["كود المدرب السري", "Secret coach code"], ["حضرت", "Attended"], ["درس في", "lessons in"], ["متبقي", "remaining"], ["درس للامتحان", "lessons until the exam"], ["دروس", "lessons"], ["درس لإنهاء", "lessons to finish"], ["ملاحظة المدرب السرية لولي الأمر:", "Coach's secret note for parents:"], ["إغلاق 🔒", "Close 🔒"], ["نسبة الدقة:", "Accuracy:"], ["اختيار ←", "Select →"], ["فتح التمرين على Lichess ↗", "Open exercise on Lichess ↗"], ["الدرس اللي عليه الدور (Next Lesson)", "Your Next Lesson"], ["مكتمل", "complete"], ["اضغط هنا للانتقال تلقائياً لصفحة دروس مستواك (Step", "Tap here to open your level's lessons (Step"], ["فقط).", "only)."], ["أتممت كل دروس Step", "You completed all lessons of Step"], ["اختبار الترقية للمستوى التالي:", "Promotion test for the next level:"], ["بدء اختبار", "Start test"], ["✅ أجبت إجابة صحيحة — اللغز مقفول", "✅ Correct answer — puzzle locked"], ["❌ أجبت إجابة خاطئة — اللغز مقفول ولا يمكن إعادته", "❌ Wrong answer — puzzle locked, cannot be retried"], ["✅ إجابة صحيحة! أحسنت يا بطل", "✅ Correct! Well done, champion"], ["❌ إجابة خاطئة — تم قفل اللغز", "❌ Wrong answer — puzzle locked"], ["اللغز مقفول بالفعل", "Puzzle is already locked"], ["↺ إعادة فتح اللغز", "↺ Reopen puzzle"], ["تم إعادة فتح اللغز", "Puzzle reopened"], ["حساب المدرب", "Coach Account"], ["يمكنك استعراض جميع الـ 6 Steps ومتابعة حضور وواجبات ومجموعات الطلاب.", "You can browse all 6 Steps and track students' attendance, homework and groups."], ["كل الدروس (Steps 1-6)", "All Lessons (Steps 1-6)"], ["جميع المستويات للمدرب (Steps 1 – 6)", "All Levels for Coach (Steps 1 – 6)"], ["دروس مستواك الحالي فقط — Step", "Your current level's lessons only — Step"], ["اضغط على أي Step لعرض قائمة دروسها تحت بعضها.", "Tap any Step to show its lessons list."], ["ممنوع ظهور أي مستوى آخر غير مستواك الحالي.", "No level other than your current one is shown."], ["▲ إخفاء القائمة", "▲ Hide list"], ["▼ عرض الدروس", "▼ Show lessons"], ["متابعة الطلاب والمجموعات", "Students & Groups Tracker"], ["علم (✓) أمام الدرس الذي حضره الطالب والواجب الذي حله واكتب ملاحظة سرية لولي الأمر.", "Tick (✓) the lessons the student attended and the homework solved, and write a secret note for the parent."], ["+ اسم جروب جديد...", "+ New group name..."], ["إضافة جروب", "Add group"], ["كل الجروبات", "All Groups"], ["حضر", "Attended"], ["الواجبات المكتملة", "Completed homework"], ["الواجب", "Homework"], ["اختر طالباً", "Select a student"], ["ملاحظة سرية لولي الأمر...", "Secret note for parent..."], ["حفظ لولي الأمر 🔒", "Save for parent 🔒"], ["✅ تم حفظ الملاحظة السرية لولي الأمر", "✅ Secret note saved for parent"], ["بوابة متابعة ولي الأمر (Parent Dashboard)", "Parent Follow-Up Portal (Parent Dashboard)"], ["ابحث بالـ Username الخاص بابنك (جرب:", "Search by your child's username (try:"], [" أو ", " or "], ["اكتب يوزرنيم الطالب...", "Type the student's username..."], ["لا يوجد طالب بهذا الاسم. جرب كتابة omar_chess", "No student with this name. Try typing omar_chess"], ["التقييم التلقائي لمستوى الطالب", "Automatic student level rating"], ["الدروس التي حضرها", "Lessons attended"], ["دقة الألغاز اليومية", "Daily puzzle accuracy"], ["ملاحظة المدرب السرية:", "Coach's secret note:"], ["ملاحظات المدرب السرية لولي الأمر (محمية بباسورد موحد)", "Coach's secret notes for parents (protected by a shared password)"], ["فتح بالباسورد 🔑", "Unlock with password 🔑"], ["ممتاز / عبقري 🌟👑", "Excellent / Genius 🌟👑"], ["رائع 👏✨", "Great 👏✨"], ["مقبول 💪", "Fair 💪"], ["مرحباً بك ", "Welcome "], ["❌ بيانات الدخول غير صحيحة", "❌ Incorrect login details"], ["❌ كود المدربين غير صحيح", "❌ Invalid coach code"], ["🎉 تم إنشاء الحساب!", "🎉 Account created!"], ["🔓 تم فتح ملاحظة ولي الأمر", "🔓 Parent note unlocked"], ["❌ باسورد غير صحيح", "❌ Incorrect password"], ["🎉 مبروك! تمت ترقيتك إلى Step ", "🎉 Congrats! You've been promoted to Step "], ["اختبار نهاية Step ", "End-of-Step test "], [": هل أنت جاهز للترقية إلى Step ", ": ready to be promoted to Step "], ["؟", "?"], ["إتمام الاختبار بنجاح والترقية إلى Step ", "Pass the test and promote to Step "], ["🔐 دخول المدرب السريع", "🔐 Coach Quick Login"], ["أدخل كلمة سر المدرب", "Enter the coach password"], ["فتح 🔓", "Open 🔓"], ["❌ كلمة السر غير صحيحة", "❌ Wrong password"]].concat(EXTRA_DICT).sort((a, b) => b[0].length - a[0].length);
@@ -299,26 +271,19 @@
     }
     function toggleLang() { lang = lang === "en" ? "ar" : "en"; localStorage.setItem("ECA_LANG", lang); applyLang(); }
     const DB_KEY = "ECA_PLATFORM_V2";
-    let db = JSON.parse(localStorage.getItem(DB_KEY) || "null") || {
-      users: [
-        { id: "c1", name: "Coach Abdelrahman", username: "coach_abdo", email: "coach@eca.com", pass: COACH_QUICK_PASS, role: "coach" },
-        { id: "s1", name: "Omar Khaled", username: "omar_chess", email: "omar@eca.com", pass: "123456", role: "student", level: 2, group: "Tuesday 6 PM - Step 2", att: { "2-0": true, "2-1": true, "2-2": true }, hw: { "2-0": true, "2-1": true }, puz: { t: 10, c: 9 }, note: "عمر مستواه ممتاز جداً في التكتيك ومركز في السيشن، محتاج بس يواظب على اللغز اليومي." },
-        { id: "s2", name: "Youssef Ahmed", username: "youssef_eca", email: "youssef@eca.com", pass: "123456", role: "student", level: 1, group: "Friday 4 PM - Step 1", att: { "1-0": true, "1-1": true, "1-2": true, "1-3": true }, hw: { "1-0": true, "1-1": true }, puz: { t: 8, c: 5 }, note: "يوسف شاطر بس محتاج يهدى قبل النقلة وميتسرعش." }
-      ],
-      groups: ["Tuesday 6 PM - Step 2", "Friday 4 PM - Step 1", "Tournament Team"],
-      currId: null
-    };
+    try { localStorage.removeItem(DB_KEY); } catch (_) {}   // مسح النسخة القديمة المخزنة في المتصفح (كانت فيها كلمات سر)
+    let db = { users: [], groups: [], currId: null, attendance: {} };   // البيانات الحقيقية بتيجي من Firebase بعد تسجيل الدخول
+    let parentStu = null, parentBusy = false;
+    window.__authLoading = true;
+    setTimeout(() => { if (window.__authLoading) { window.__authLoading = false; render(); } }, 8000);
+    let tab = "home", authMode = "login", signupRole = "student", selStuId = "", grpFilter = "ALL", searchQ = "", parentQ = "", unlockedStuId = null, openSteps = { 1: true, 2: true, 3: false, 4: false, 5: false, 6: false };
 
-    { const c1 = db.users.find(x => x.id === "c1"); if (c1 && c1.pass === "123456") { c1.pass = COACH_QUICK_PASS; localStorage.setItem(DB_KEY, JSON.stringify(db)); } }
-    db.attendance = (db.attendance && typeof db.attendance === "object") ? db.attendance : {};
-    let tab = "home", authMode = "login", signupRole = "student", selStuId = "s1", grpFilter = "ALL", searchQ = "", parentQ = "omar_chess", unlockedStuId = null, openSteps = { 1: true, 2: true, 3: false, 4: false, 5: false, 6: false };
-
-    function save() { localStorage.setItem(DB_KEY, JSON.stringify(db)); if (window.syncToCloud) window.syncToCloud(); }
+    function save() { if (window.syncToCloud) window.syncToCloud(); }
     function currUser() { return db.users.find(u => u.id === db.currId) || null; }
     function toast(m) { const el = document.getElementById("toast"); el.textContent = trText(m); el.classList.remove("hidden"); setTimeout(() => el.classList.add("hidden"), 2800); }
     function go(t) { if (tab !== t) history.pushState({ tab: t }, "", "#" + t); tab = t; }
     function switchTab(t) { go(t); render(); }
-    function logout() { db.currId = null; save(); go("home"); render(); }
+    function logout() { parentStu = null; parentQ = ""; if (window.fbLogout) window.fbLogout(); go("home"); render(); }
     function goHomeRefresh() { go("home"); render(); }
 
     function calcStats(stu) {
@@ -355,6 +320,7 @@
       const nav = document.getElementById("navButtons");
       const cSearch = document.getElementById("coachSearchBox");
       const main = document.getElementById("mainView");
+      if (!u && window.__authLoading) { cSearch.classList.add("hidden"); nav.innerHTML = ""; main.innerHTML = '<div class="text-center text-sm text-gray-400 mt-24">⏳ جاري التحميل...</div>'; return; }
 
       if (!u) {
         cSearch.classList.add("hidden");
@@ -373,6 +339,7 @@
         <button onclick="switchTab('lessons')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='lessons'?'gold-btn':'bg-zinc-900 text-gray-300'}">📚 ${u.role==='coach'?'كل المستويات (Steps 1-6)':'دروس Step '+u.level}</button>
         ${u.role==='coach'?`<button onclick="switchTab('tracker')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='tracker'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">📋 متابعة الطلاب والجروبات</button><button onclick="switchTab('attendance')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='attendance'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">✅ تسجيل الحضور</button><button onclick="switchTab('finance')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='finance'?'gold-btn':'bg-zinc-900 text-emerald-300 border border-emerald-500/40'}">💰 الحسابات والداشبورد</button>`:''}
         <button onclick="switchTab('parent')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='parent'?'gold-btn':'bg-zinc-900 text-gray-300'}">👨‍👩‍👦 داشبورد ولي الأمر</button>
+        <button onclick="changeMyPassword()" title="تغيير كلمة السر" class="px-2.5 py-1.5 rounded-xl text-xs bg-zinc-900 text-yellow-300 border border-yellow-500/30">🔑</button>
         <button onclick="logout()" class="px-2.5 py-1.5 rounded-xl text-xs bg-red-500/20 text-red-300 border border-red-500/30">خروج</button>
       `;
 
@@ -389,31 +356,27 @@
           <div class="md:col-span-2 gold-card rounded-2xl p-6 flex flex-col justify-between">
             <div>
               <h2 class="font-display font-bold text-xl gold-gradient-text">Egypt Chess Academy Portal</h2>
-              <p class="text-xs text-gray-400 mt-2">اضغط على أي حساب تجريبي للدخول فوراً أو أنشئ حساباً جديداً:</p>
+              <p class="text-xs text-gray-400 mt-2">سجّل دخولك بحسابك، أو ادخل كود المتابعة لو انت ولي أمر:</p>
               <div class="mt-4 space-y-2.5">
-                <button onclick="openCoachQuick()" class="w-full text-left p-3 rounded-xl bg-black/80 border border-yellow-500/40 hover:border-yellow-400">
+                <button onclick="focusLogin()" class="w-full text-left p-3 rounded-xl bg-black/80 border border-yellow-500/40 hover:border-yellow-400">
                   <div class="text-xs font-bold text-yellow-300">👑 دخول سريع كـ مدرب (Coach)</div>
                   <div class="text-[11px] text-gray-400">يفتح كل الـ 6 Steps + متابعة الطلاب والجروبات</div>
                 </button>
-                <button onclick="demoLogin('omar@eca.com','123456')" class="w-full text-left p-3 rounded-xl bg-black/80 border border-yellow-500/30 hover:border-yellow-400">
-                  <div class="text-xs font-bold text-white">♟️ دخول سريع كـ طالب (Omar - Step 2)</div>
-                  <div class="text-[11px] text-gray-400">يرى فقط Step 2 + اللغز اليومي + الدرس القادم</div>
-                </button>
                 <button onclick="switchTab('parent')" class="w-full text-left p-3 rounded-xl bg-black/80 border border-emerald-500/40 hover:border-emerald-400">
                   <div class="text-xs font-bold text-emerald-300">👨‍👩‍👦 بوابة ولي الأمر (Parent Dashboard)</div>
-                  <div class="text-[11px] text-gray-400">ابحث عن omar_chess وشاهد التقييم والملاحظة السرية</div>
+                  <div class="text-[11px] text-gray-400">ادخل كود المتابعة لمعرفة تقدّم ابنك</div>
                 </button>
               </div>
             </div>
             <div class="text-[11px] text-gray-400 mt-4 pt-3 border-t border-yellow-500/20">
-              🔐 الدخول السريع للمدرب محمي بكلمة سر
+              🔐 الدخول بحساب شخصي لكل مستخدم — مفيش كلمات سر مشتركة
             </div>
           </div>
 
           <div class="md:col-span-3 gold-card rounded-2xl p-6">
             <div class="flex gap-2 mb-5 bg-black p-1 rounded-xl border border-yellow-500/20">
               <button onclick="authMode='login'; render();" class="flex-1 py-2 rounded-lg text-xs font-bold ${authMode==='login'?'gold-btn':'text-gray-400'}">Login (دخول)</button>
-              <button onclick="authMode='signup'; render();" class="flex-1 py-2 rounded-lg text-xs font-bold ${authMode==='signup'?'gold-btn':'text-gray-400'}">Sign Up (حساب جديد)</button>
+              ${ALLOW_SELF_SIGNUP ? `<button onclick="authMode='signup'; render();" class="flex-1 py-2 rounded-lg text-xs font-bold ${authMode==='signup'?'gold-btn':'text-gray-400'}">Sign Up (حساب جديد)</button>` : ''}
             </div>
             ${authMode === "login" ? `
               <form onsubmit="doLogin(event)" class="space-y-4">
@@ -424,15 +387,11 @@
             ` : `
               <form onsubmit="doSignup(event)" class="space-y-3">
                 <div class="grid grid-cols-2 gap-2">
-                  <button type="button" onclick="signupRole='student'; render();" class="py-2 rounded-xl text-xs font-bold border ${signupRole==='student'?'border-yellow-400 text-yellow-300 bg-yellow-500/10':'border-zinc-800 text-gray-400'}">♟️ طالب (Student)</button>
-                  <button type="button" onclick="signupRole='coach'; render();" class="py-2 rounded-xl text-xs font-bold border ${signupRole==='coach'?'border-yellow-400 text-yellow-300 bg-yellow-500/10':'border-zinc-800 text-gray-400'}">👑 مدرب (Coach)</button>
-                </div>
-                <div class="grid grid-cols-2 gap-2">
                   <input id="sName" required placeholder="Full Name" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
                   <input id="sUser" required placeholder="Username (e.g. ali_chess)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
                 </div>
                 <div class="grid grid-cols-2 gap-2">
-                  <input id="sEmail" type="email" required placeholder="Email" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+                  <input id="sEmail" type="email" placeholder="Email" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
                   <input id="sPass" type="password" required placeholder="Password" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
                 </div>
                 ${signupRole === "student" ? `
@@ -450,36 +409,42 @@
       `;
     }
 
-    function demoLogin(e, p) {
-      const u = db.users.find(x => x.email === e && x.pass === p && x.role === 'student');
-      if (u) { db.currId = u.id; tab = "home"; save(); render(); toast("مرحباً بك " + u.name); }
+    function focusLogin() { authMode = "login"; render(); setTimeout(() => { const el = document.getElementById("lEmail"); if (el) el.focus(); }, 0); }
+    function randomPass() {
+      const al = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const r = crypto.getRandomValues(new Uint8Array(8)); let s = "";
+      for (const b of r) s += al[b % al.length];
+      return s;
     }
-    function doLogin(ev) {
+    async function doLogin(ev) {
       ev.preventDefault();
-      const q = document.getElementById("lEmail").value.trim().toLowerCase();
+      if (!window.fbLogin) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش، جرّب بعد ثواني");
+      const q = document.getElementById("lEmail").value.trim();
       const p = document.getElementById("lPass").value;
-      const u = db.users.find(x => (x.email.toLowerCase() === q || x.username.toLowerCase() === q) && x.pass === p);
-      if (!u) return toast("❌ بيانات الدخول غير صحيحة");
-      db.currId = u.id; tab = "home"; save(); render();
+      const btn = ev.submitter; if (btn) btn.disabled = true;
+      const r = await window.fbLogin(q, p);
+      if (btn) btn.disabled = false;
+      if (!r.ok) return toast(r.code === "auth/too-many-requests" ? "⏳ محاولات كتير، استنى شوية وجرّب تاني" : (r.code === "auth/network-request-failed" ? "📡 مفيش اتصال بالإنترنت" : "❌ اسم المستخدم أو كلمة السر غير صحيحة"));
+      parentStu = null; tab = "home";
     }
-    function doSignup(ev) {
+    async function doSignup(ev) {
       ev.preventDefault();
-      const name = document.getElementById("sName").value.trim();
-      const username = document.getElementById("sUser").value.trim().toLowerCase().replace(/\s+/g, "_");
-      const email = document.getElementById("sEmail").value.trim().toLowerCase();
+      if (!ALLOW_SELF_SIGNUP) return;
+      if (!window.fbSignup) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش، جرّب بعد ثواني");
+      const clean = s => String(s || "").trim().replace(/[<>"'`]/g, "");
+      const name = clean(document.getElementById("sName").value);
+      const username = clean(document.getElementById("sUser").value).toLowerCase().replace(/\s+/g, "_");
+      const email = clean(document.getElementById("sEmail").value).toLowerCase();
       const pass = document.getElementById("sPass").value;
-      if (signupRole === "coach") {
-        if (document.getElementById("sCode").value.trim() !== "ECA2026") return toast("❌ كود المدربين غير صحيح");
-        const nc = { id: "u" + Date.now(), name, username, email, pass, role: "coach" };
-        db.users.push(nc); db.currId = nc.id;
-      } else {
-        const level = Number(document.getElementById("sLvl").value) || 1;
-        const ns = { id: "u" + Date.now(), name, username, email, pass, role: "student", level, group: db.groups[0], att: {}, hw: {}, puz: { t: 0, c: 0 }, note: "لا توجد ملاحظات حالياً." };
-        db.users.push(ns); db.currId = ns.id;
-      }
-      tab = "home"; save(); render(); toast("🎉 تم إنشاء الحساب!");
+      const level = Number(document.getElementById("sLvl").value) || 1;
+      if (!name || !username) return toast("❌ اكتب الاسم واسم المستخدم");
+      if (pass.length < 6) return toast("❌ كلمة السر لازم تكون 6 حروف على الأقل");
+      const btn = ev.submitter; if (btn) btn.disabled = true;
+      const r = await window.fbSignup({ name, username, email, pass, level });
+      if (btn) btn.disabled = false;
+      if (!r.ok) return toast(r.code === "auth/email-already-in-use" ? "❌ اسم المستخدم ده مستخدم قبل كده" : (r.code === "auth/weak-password" ? "❌ كلمة السر ضعيفة" : "❌ تعذّر إنشاء الحساب"));
+      tab = "home"; toast("✅ تم إنشاء حسابك!");
     }
-
     function renderStudentHome(stu) {
       const s = calcStats(stu);
       const puz = PUZZLES[stu.level] || PUZZLES[1];
@@ -492,18 +457,7 @@
               <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">Welcome, ${stu.name} (@${stu.username})</h2>
               <p class="text-xs text-gray-400 mt-1">حضرت ${s.attC}/${s.total} درس في Step ${stu.level} • متبقي ${s.rem} درس للامتحان</p>
             </div>
-            <button onclick="openParentModal('${stu.id}')" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-black border border-yellow-500/40 text-yellow-300">🔒 خانة ولي الأمر السرية</button>
           </div>
-
-          ${unlockedStuId === stu.id ? `
-            <div class="p-4 rounded-2xl bg-amber-950/40 border-2 border-yellow-500 flex justify-between items-center">
-              <div>
-                <div class="text-xs font-bold text-yellow-400">🔓 ملاحظة المدرب السرية لولي الأمر:</div>
-                <p class="text-sm text-white mt-1">${stu.note}</p>
-              </div>
-              <button onclick="unlockedStuId=null; render();" class="text-xs px-3 py-1 rounded bg-zinc-800">إغلاق 🔒</button>
-            </div>
-          ` : ''}
 
           <div class="grid md:grid-cols-2 gap-6">
             <!-- 1. Daily Puzzle -->
@@ -570,6 +524,7 @@
     function renderCoachHome(c) {
       return `
         <div class="space-y-6">
+          ${c.isAdmin ? adminToolsBox() : ''}
           <div class="gold-card rounded-2xl p-6 flex flex-wrap justify-between items-center gap-4">
             <div>
               <span class="px-2.5 py-1 rounded-full text-xs gold-btn">👑 حساب المدرب</span>
@@ -690,8 +645,14 @@
                       </select>
                     </div>
                     <div class="flex gap-2">
-                      <input id="noteInp" value="${sel.note||''}" class="flex-1 bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" placeholder="ملاحظة سرية لولي الأمر..." />
+                      <input id="noteInp" value="${esc(sel.note||'')}" class="flex-1 bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" placeholder="ملاحظة سرية لولي الأمر..." />
                       <button onclick="saveNote('${sel.id}')" class="px-4 py-2 rounded-xl text-xs gold-btn">حفظ لولي الأمر 🔒</button>
+                    </div>
+                    <div class="flex flex-wrap gap-2 items-center text-xs">
+                      <span class="text-gray-400">🔑 كود ولي الأمر:</span>
+                      <b class="text-yellow-300 tracking-widest">${esc(sel.parentCode || '—')}</b>
+                      <button onclick="genParentCode('${sel.id}')" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-yellow-500/30 text-yellow-300">${sel.parentCode ? 'تجديد الكود' : 'إنشاء كود'}</button>
+                      ${sel.parentCode && sel.parentPhone ? `<a target="_blank" rel="noopener" href="${waLink(sel.parentPhone)}?text=${encodeURIComponent('كود متابعة ' + sel.name + ' على منصة ECA: ' + sel.parentCode + '\nادخل من هنا واكتب الكود: ' + location.origin + location.pathname + '#parent')}" class="px-3 py-1.5 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-300">إرسال واتساب</a>` : ''}
                     </div>
                     <div class="divide-y divide-yellow-500/15 border border-yellow-500/20 rounded-xl max-h-80 overflow-y-auto bg-black/60">
                       ${st.st.lessons.map((les, i) => {
@@ -729,15 +690,16 @@
     function saveNote(id) { const s = db.users.find(u => u.id === id); s.note = document.getElementById("noteInp").value; save(); toast("✅ تم حفظ الملاحظة السرية لولي الأمر"); }
 
     function renderParentView() {
-      const stu = db.users.find(u => u.role === "student" && (u.username.toLowerCase() === parentQ.trim().toLowerCase() || u.name.toLowerCase().includes(parentQ.trim().toLowerCase())));
+      const stu = !isCoach() ? parentStu : db.users.find(u => u.role === "student" && (u.username.toLowerCase() === parentQ.trim().toLowerCase() || u.name.toLowerCase().includes(parentQ.trim().toLowerCase())));
       return `
         <div class="max-w-4xl mx-auto space-y-5">
           <div class="gold-card rounded-2xl p-6">
             <h2 class="font-display font-bold text-xl gold-gradient-text">👨‍👩‍👦 بوابة متابعة ولي الأمر (Parent Dashboard)</h2>
-            <p class="text-xs text-gray-400 mt-1">ابحث بالـ Username الخاص بابنك (جرب: <b class="text-yellow-300">omar_chess</b> أو <b class="text-yellow-300">youssef_eca</b>)</p>
-            <input id="parentSearchInp" value="${parentQ}" oninput="parentQ=this.value; render();" placeholder="اكتب يوزرنيم الطالب..." class="mt-3 w-full bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white" />
+            ${isCoach() ? `<p class="text-xs text-gray-400 mt-1">اكتب Username الطالب أو اسمه لمعاينة لوحة ولي الأمر</p>
+            <input id="parentSearchInp" value="${esc(parentQ)}" oninput="parentQ=this.value; render();" placeholder="ابحث باسم الطالب..." class="mt-3 w-full bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white" />` : `<p class="text-xs text-gray-400 mt-1">اكتب كود المتابعة اللي استلمته من الأكاديمية</p>
+            <div class="mt-3 flex gap-2"><input id="parentCodeInp" value="${esc(parentQ)}" oninput="parentQ=this.value" onkeydown="if(event.key==='Enter')parentLookup()" placeholder="كود ولي الأمر" autocapitalize="characters" autocomplete="off" class="flex-1 bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white text-center tracking-widest" /><button onclick="parentLookup()" class="px-5 py-2.5 rounded-xl text-xs gold-btn">عرض</button></div>`}
           </div>
-          ${!stu ? `<div class="gold-card rounded-2xl p-6 text-center text-xs text-gray-400">لا يوجد طالب بهذا الاسم. جرب كتابة omar_chess</div>` : (() => {
+          ${!stu ? `<div class="gold-card rounded-2xl p-6 text-center text-xs text-gray-400">${isCoach() ? 'لا يوجد طالب بهذا الاسم.' : 'اكتب كود المتابعة لعرض تقدّم الطالب.'}</div>` : (() => {
             const s = calcStats(stu);
             return `
               <div class="gold-card rounded-2xl p-6 space-y-5">
@@ -767,10 +729,7 @@
                   </div>
                 </div>
                 <div class="p-4 rounded-xl bg-black/90 border border-yellow-500/40 flex justify-between items-center">
-                  ${unlockedStuId === stu.id ? `<div><b class="text-xs text-yellow-400">🔓 ملاحظة المدرب السرية:</b><p class="text-sm text-white mt-1">${stu.note}</p></div>` : `
-                    <span class="text-xs text-yellow-300">🔒 ملاحظات المدرب السرية لولي الأمر (محمية بباسورد موحد)</span>
-                    <button onclick="openParentModal('${stu.id}')" class="px-4 py-2 rounded-xl text-xs gold-btn">فتح بالباسورد 🔑</button>
-                  `}
+                  <div><b class="text-xs text-yellow-400">🔒 ملاحظة المدرب لولي الأمر:</b><p class="text-sm text-white mt-1">${esc(stu.note || 'لا توجد ملاحظات حالياً.')}</p></div>
                 </div>
               </div>
             `;
@@ -779,22 +738,48 @@
       `;
     }
 
-    function openCoachQuick() { document.getElementById("coachQuickInp").value = ""; document.getElementById("coachQuickModal").classList.remove("hidden"); document.getElementById("coachQuickInp").focus(); }
-    function confirmCoachQuick() {
-      if (document.getElementById("coachQuickInp").value !== COACH_QUICK_PASS) return toast("❌ كلمة السر غير صحيحة");
-      const u = db.users.find(x => x.id === "c1" && x.role === "coach"); if (!u) return;
-      document.getElementById("coachQuickModal").classList.add("hidden");
-      db.currId = u.id; go("home"); save(); render(); toast("مرحباً بك " + u.name);
+    async function parentLookup() {
+      if (parentBusy) return;
+      const code = String(parentQ || "").trim();
+      if (!code) return toast("❌ اكتب كود المتابعة الأول");
+      if (!window.fbParentLookup) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش، جرّب بعد ثواني");
+      parentBusy = true;
+      const r = await window.fbParentLookup(code);
+      parentBusy = false;
+      if (!r.ok) { parentStu = null; render(); return toast("❌ الكود غير صحيح أو انتهت صلاحيته"); }
+      parentStu = r.stu; render();
     }
-    let pendingStuId = null;
-    function openParentModal(id) { pendingStuId = id; document.getElementById("parentPassInp").value = ""; document.getElementById("parentModal").classList.remove("hidden"); }
-    function closeParentModal() { document.getElementById("parentModal").classList.add("hidden"); }
-    function confirmParentPass() {
-      if (document.getElementById("parentPassInp").value.trim() === "ECA-PARENT") {
-        unlockedStuId = pendingStuId; closeParentModal(); render(); toast("🔓 تم فتح ملاحظة ولي الأمر");
-      } else toast("❌ باسورد غير صحيح");
+    async function genParentCode(id) {
+      if (!window.fbGenParentCode) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش");
+      const s = db.users.find(u => u.id === id);
+      if (s && s.parentCode && !confirm(trText("تجديد الكود هيلغي الكود القديم وأي جهاز مربوط بيه. متأكد؟"))) return;
+      const c = await window.fbGenParentCode(id);
+      render(); toast(c ? "✅ تم إنشاء كود ولي الأمر" : "❌ تعذّر إنشاء الكود");
     }
-
+    async function changeMyPassword() {
+      if (!window.fbChangePassword) return;
+      const o = prompt(trText("كلمة السر الحالية")); if (o == null) return;
+      const n = prompt(trText("كلمة السر الجديدة (6 حروف على الأقل)")); if (n == null) return;
+      if (n.length < 6) return toast("❌ كلمة السر لازم تكون 6 حروف على الأقل");
+      const r = await window.fbChangePassword(o, n);
+      toast(r.ok ? "✅ تم تغيير كلمة السر" : "❌ كلمة السر الحالية غير صحيحة");
+    }
+    function adminToolsBox() {
+      return `<div class="gold-card rounded-2xl p-4 flex flex-wrap items-center gap-3 text-xs">
+        <span class="text-yellow-300 font-bold">🛠️ أدوات الإدارة</span>
+        <button onclick="migrateLegacy()" class="px-3 py-2 rounded-xl bg-zinc-900 border border-yellow-500/40 text-yellow-300">ترحيل الطلاب من النظام القديم</button>
+        <span class="text-gray-400">مرة واحدة: بينشئ حساب دخول لكل طالب وينزّل ملف فيه كلمات السر المؤقتة.</span>
+      </div>`;
+    }
+    async function migrateLegacy() {
+      if (!window.fbMigrateLegacy) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش");
+      if (!confirm(trText("هيتم إنشاء حساب دخول لكل طالب قديم وتنزيل ملف كلمات السر المؤقتة. كمّل؟"))) return;
+      toast("⏳ جاري الترحيل... ماتقفلش الصفحة");
+      let r; try { r = await window.fbMigrateLegacy(); } catch (e) { console.error(e); r = { ok: false, msg: "حصل خطأ، راجع الـ Console" }; }
+      render();
+      if (!r.ok) return toast("❌ " + (r.msg || "فشل الترحيل"));
+      alert(trText("تم ترحيل") + " " + r.done + " " + trText("طالب") + (r.failed.length ? "\n" + trText("فشل") + ": " + r.failed.map(f => f[0]).join(", ") + "\n" + trText("شغّل الترحيل تاني لإعادة المحاولة للي فشلوا.") : ""));
+    }
     function openExamModal(lvl) {
       document.getElementById("examModal").classList.remove("hidden");
       document.getElementById("examBody").innerHTML = `
@@ -963,25 +948,7 @@
 
     // ---------- Backup / restore ----------
     function exportBackup() { if (!isCoach()) return; dl("ECA-backup-" + todayISO() + ".json", JSON.stringify(db, null, 1), "application/json"); toast("✅ تم تنزيل النسخة الاحتياطية"); }
-    function importBackup(inp) {
-      if (!isCoach()) return;
-      const f = inp.files && inp.files[0]; if (!f) return;
-      const r = new FileReader();
-      r.onload = () => {
-        inp.value = "";
-        try {
-          const d = JSON.parse(r.result);
-          if (!d || !Array.isArray(d.users) || !Array.isArray(d.groups) || !d.users.some(u => u.id === "c1" && u.role === "coach")) throw new Error("bad");
-          if (!d.users.every(u => u && typeof u.id === "string" && typeof u.username === "string" && typeof u.name === "string")) throw new Error("bad");
-          if (!confirm(trText("سيتم استبدال كل البيانات الحالية بالنسخة الاحتياطية. متابعة؟"))) return;
-          d.users.forEach(u => { if (typeof u.email !== "string") u.email = u.username + "@eca.local"; });
-          d.attendance = d.attendance && typeof d.attendance === "object" ? d.attendance : {};
-          const cur = currUser(); d.currId = cur && d.users.some(u => u.id === cur.id) ? cur.id : null;
-          db = d; save(); render(); toast("✅ تم استرجاع النسخة الاحتياطية");
-        } catch (e) { toast("❌ ملف النسخة الاحتياطية غير صالح"); }
-      };
-      r.readAsText(f);
-    }
+    function importBackup(inp) { try { inp.value = ""; } catch (_) {} toast("⚠️ استعادة النسخة الاحتياطية متوقفة (البيانات على Firebase). تصدير النسخة شغال."); }
 
     // ---------- Add / edit / delete student ----------
     let editStuId = null;
@@ -995,7 +962,7 @@
       $("asDelBtn").classList.toggle("hidden", !s); $("asEditHint").classList.toggle("hidden", !s);
       $("asLevel").innerHTML = [1, 2, 3, 4, 5, 6].map(l => `<option value="${l}">Step ${l}</option>`).join("");
       $("asGroup").innerHTML = db.groups.map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join("");
-      $("asName").value = s ? s.name : ""; $("asUser").value = s ? s.username : ""; $("asPass").value = "";
+      $("asName").value = s ? s.name : ""; $("asUser").value = s ? s.username : ""; $("asPass").value = ""; $("asUser").readOnly = !!s; $("asPass").disabled = !!s;
       $("asAge").value = s && s.age ? s.age : ""; $("asPhone").value = s && s.phone ? s.phone : ""; $("asParent").value = s && s.parentPhone ? s.parentPhone : "";
       $("asLevel").value = s ? String(s.level) : "1";
       $("asGroup").value = s && s.group ? s.group : (db.groups[0] || "");
@@ -1003,35 +970,43 @@
       $("addStuModal").classList.remove("hidden"); applyLang(); $("asName").focus();
     }
     function closeAddStu() { document.getElementById("addStuModal").classList.add("hidden"); editStuId = null; }
-    function saveStudent(ev) {
+    async function saveStudent(ev) {
       ev.preventDefault();
       if (!isCoach()) return;
-      const g = x => document.getElementById(x).value.trim();
+      const g = x => document.getElementById(x).value.trim().replace(/[<>"'`]/g, "");
       const name = g("asName"); if (!name) return toast("❌ اكتب اسم الطالب");
       let username = g("asUser").toLowerCase().replace(/\s+/g, "_");
       if (!username) username = "eca_" + String(Date.now()).slice(-6);
-      if (db.users.some(u => u.username.toLowerCase() === username && u.id !== editStuId)) return toast("❌ اليوزر نيم ده مستخدم بالفعل");
-      if (db.users.some(u => u.role === "student" && u.name.trim().toLowerCase() === name.toLowerCase() && u.id !== editStuId) && !confirm(trText("يوجد طالب بنفس الاسم بالفعل. هل تريد المتابعة؟"))) return;
+      if (db.users.some(u => u.username.toLowerCase() === username && u.id !== editStuId)) return toast("❌ اسم المستخدم ده مستخدم قبل كده");
+      if (db.users.some(u => u.role === "student" && u.name.trim().toLowerCase() === name.toLowerCase() && u.id !== editStuId) && !confirm(trText("فيه طالب بنفس الاسم. هل تريد المتابعة؟"))) return;
       const data = { name, username, level: Number(g("asLevel")) || 1, group: g("asGroup"), mode: g("asMode") === "online" ? "online" : "offline", age: g("asAge"), phone: g("asPhone"), parentPhone: g("asParent") };
-      const pass = g("asPass");
+      const pass = document.getElementById("asPass").value.trim();
       if (editStuId) {
         const s = db.users.find(u => u.id === editStuId); if (!s) return;
-        const autoMail = typeof s.email === "string" && s.email.endsWith("@eca.local");
+        delete data.username;                       // اسم المستخدم مربوط بحساب الدخول ومينفعش يتغير
         Object.assign(s, data);
-        if (autoMail || typeof s.email !== "string") s.email = username + "@eca.local";
-        if (pass) s.pass = pass;
-        attMode = data.mode; save(); closeAddStu(); render(); toast("✅ تم حفظ بيانات الطالب");
+        attMode = data.mode; save(); closeAddStu(); render();
+        toast(pass ? "ℹ️ تم الحفظ — كلمة السر ما اتغيرتش (الطالب يغيرها من زر 🔑)" : "✅ تم حفظ بيانات الطالب");
       } else {
-        const ns = Object.assign({ id: "u" + Date.now(), email: username + "@eca.local", pass: pass || "123456", role: "student", att: {}, hw: {}, puz: { t: 0, c: 0 }, note: "لا توجد ملاحظات حالياً." }, data);
-        db.users.push(ns); attMode = data.mode; save(); closeAddStu(); render();
-        toast("✅ تمت إضافة الطالب — اليوزر: " + username + " / الباسورد: " + ns.pass);
+        if (!window.fbCreateStudentAccount) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش، جرّب بعد ثواني");
+        const initPass = pass || randomPass();
+        if (initPass.length < 6) return toast("❌ كلمة السر لازم تكون 6 حروف على الأقل");
+        const btn = ev.submitter; if (btn) btn.disabled = true;
+        try {
+          const uid = await window.fbCreateStudentAccount(username, initPass);
+          const ns = Object.assign({ id: uid, email: username + "@eca.local", role: "student", att: {}, hw: {}, puz: { t: 0, c: 0 }, note: "لم تُضف ملاحظات بعد." }, data);
+          db.users.push(ns); attMode = data.mode; save(); closeAddStu(); render();
+          alert(trText("تم إنشاء حساب الطالب") + "\n" + trText("اسم المستخدم") + ": " + username + "\n" + trText("كلمة السر") + ": " + initPass + "\n\n" + trText("سجّل البيانات دي وسلّمها للطالب."));
+        } catch (e) {
+          toast(e && e.code === "auth/email-already-in-use" ? "❌ اسم المستخدم ده موجود فعلاً في نظام الدخول" : "❌ تعذّر إنشاء الحساب");
+        } finally { if (btn) btn.disabled = false; }
       }
     }
     function deleteStudent() {
       if (!isCoach() || !editStuId) return;
       const s = db.users.find(u => u.id === editStuId); if (!s) return;
       if (!confirm(trText("هل أنت متأكد من حذف الطالب نهائياً مع كل سجلات حضوره؟") + "\n" + s.name)) return;
-      db.users = db.users.filter(u => u.id !== editStuId);
+      const _delId = editStuId; db.users = db.users.filter(u => u.id !== editStuId); if (window.fbOnStudentDeleted) window.fbOnStudentDeleted(_delId);
       for (const d in db.attendance) { delete db.attendance[d][editStuId]; if (!Object.keys(db.attendance[d]).length) delete db.attendance[d]; }
       if (selStuId === editStuId) selStuId = "";
       save(); closeAddStu(); render(); toast("🗑️ تم حذف الطالب");
@@ -1633,11 +1608,11 @@ window.selectExamAns = function(qIdx, oIdx) {
     // تشغيل التوليد اليومي للألغاز فور فتح الموقع
     updateDailyPuzzlesByDate();
   </script>
-  <!-- Firebase Realtime Cloud Sync (Firestore + Anonymous Auth) -->
+  <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDofyiWsg2HmOQgigWeqUpOaSupoMQ1GKc",
@@ -1650,54 +1625,314 @@ window.selectExamAns = function(qIdx, oIdx) {
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const firestore = getFirestore(app);
-    const mainDocRef = doc(firestore, "eca_platform", "main_data");
+    // كاش أوفلاين على الجهاز: القراءات المتكررة ما بتتحسبش تاني (بيوفر تكلفة) والموقع بيشتغل لو النت قطع
+    const firestore = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 
-    let isApplyingRemote = false;
+    // ===================== أدوات مساعدة =====================
+    const MAIL_SUFFIX = "@eca.local";                  // الطلاب بيدخلوا بـ username؛ بنحوله لإيميل داخلي
+    const BAD = /[<>"'`]/g;                            // حروف ممنوعة (حماية من حقن HTML)
+    const FIN_KEYS = ["courseFee", "amountPaid", "remaining", "lastPayDate", "lastPayAmount"];   // مالية: للأدمن فقط
+    const PRIV_KEYS = ["note", "parentCode"];                                                     // ملاحظة سرية: للكوتش وولي الأمر فقط
+    const plain = o => JSON.parse(JSON.stringify(o));
+    function cleanDeep(v) {
+      if (typeof v === "string") return v.replace(BAD, "");
+      if (Array.isArray(v)) return v.map(cleanDeep);
+      if (v && typeof v === "object") { const o = {}; for (const k in v) o[String(k).replace(BAD, "")] = cleanDeep(v[k]); return o; }
+      return v;
+    }
+    function toAuthEmail(idf) {
+      idf = String(idf || "").trim().toLowerCase();
+      if (idf.includes("@")) return idf;               // الكوتش/الأدمن بإيميلهم الحقيقي
+      const local = idf.replace(/\s+/g, "_").replace(/[^a-z0-9._-]/g, c => "_x" + c.charCodeAt(0).toString(16) + "_");
+      return (local || "user") + MAIL_SUFFIX;
+    }
+    const isStaffRole = r => r === "coach" || r === "admin";
 
-    // دالة رفع التعديلات إلى السحابة تلقائياً عند أي تغيير
-    window.syncToCloud = async function () {
-      if (isApplyingRemote) return;
-      try {
-        const payload = {
-          users: db.users || [],
-          groups: db.groups || [],
-          attendance: db.attendance || {},
-          updatedAt: Date.now()
-        };
-        await setDoc(mainDocRef, payload, { merge: true });
-      } catch (err) {
-        console.error("Cloud Sync Error:", err);
+    // ===================== الحالة =====================
+    let me = null;                       // { uid, role: coach|admin|student|parent, name, username, email }
+    let unsubs = [];
+    let maps = { core: {}, priv: {}, fin: {}, att: {} };
+    let synced = {};                     // مفتاح -> آخر JSON اتكتب/اتقرا (عشان نكتب اللي اتغير بس)
+    let loaded = { core: false, att: false, groups: false };
+    let applyingRemote = false, signingUp = false;
+
+    function resetState() {
+      unsubs.forEach(u => { try { u(); } catch (_) {} }); unsubs = [];
+      maps = { core: {}, priv: {}, fin: {}, att: {} }; synced = {};
+      loaded = { core: false, att: false, groups: false };
+    }
+
+    function split(u) {
+      const core = {}, priv = {}, fin = {};
+      for (const k of Object.keys(u)) {
+        if (k === "id" || k === "pass" || k === "isAdmin") continue;
+        if (PRIV_KEYS.includes(k)) priv[k] = u[k];
+        else if (FIN_KEYS.includes(k)) fin[k] = u[k];
+        else core[k] = u[k];
       }
+      core.role = "student";
+      return { core: plain(core), priv: plain(priv), fin: plain(fin) };
+    }
+
+    // يبني db.users من الخرائط المحلية ويعيد الرسم
+    function rebuild() {
+      applyingRemote = true;
+      try {
+        const keepId = db.currId;
+        const users = [];
+        if (me && isStaffRole(me.role)) users.push({ id: me.uid, name: me.name, username: me.username, email: me.email, role: "coach", isAdmin: me.role === "admin" });
+        Object.keys(maps.core).forEach(id => {
+          const u = Object.assign({}, maps.core[id], { id, role: "student" }, maps.priv[id] || {}, maps.fin[id] || {});
+          users.push(u);
+          const p = split(u);
+          synced["c:" + id] = JSON.stringify(p.core);
+          if (Object.keys(p.priv).length) synced["p:" + id] = JSON.stringify(p.priv);
+          if (Object.keys(p.fin).length) synced["f:" + id] = JSON.stringify(p.fin);
+        });
+        db.users = users; db.currId = keepId;
+        window.isFinanceAdminUnlocked = !!(me && me.role === "admin");
+      } finally { applyingRemote = false; }
+      render();
+    }
+
+    // ===================== المزامنة (بنكتب الوثائق اللي اتغيرت بس) =====================
+    window.syncToCloud = async function () {
+      if (applyingRemote || !me) return;
+      const staff = isStaffRole(me.role), admin = me.role === "admin";
+      const jobs = [];
+      const push = (key, json, run) => {
+        if (synced[key] === json) return;
+        const prev = synced[key]; synced[key] = json;
+        jobs.push(async () => { try { await run(); } catch (err) { synced[key] = prev; console.error("Cloud Sync Error:", key, err); } });
+      };
+      try {
+        const present = new Set();
+        for (const u of db.users) {
+          if (u.role !== "student") continue;
+          if (!staff && u.id !== me.uid) continue;
+          present.add(u.id);
+          const p = split(u);
+          if (!staff && !loaded.core) continue;
+          push("c:" + u.id, JSON.stringify(p.core), () => staff ? setDoc(doc(firestore, "users", u.id), p.core) : updateDoc(doc(firestore, "users", u.id), p.core));
+          if (staff && Object.keys(p.priv).length) push("p:" + u.id, JSON.stringify(p.priv), () => setDoc(doc(firestore, "private", u.id), p.priv));
+          if (admin && Object.keys(p.fin).length) push("f:" + u.id, JSON.stringify(p.fin), () => setDoc(doc(firestore, "finance", u.id), p.fin));
+        }
+        if (staff) {
+          if (loaded.core) {
+            Object.keys(synced).forEach(key => {
+              const kind = key.slice(0, 2), id = key.slice(2);
+              if ((kind === "c:" || kind === "p:" || kind === "f:") && !present.has(id)) {
+                const coll = kind === "c:" ? "users" : kind === "p:" ? "private" : "finance";
+                if (coll === "finance" && !admin) return;
+                delete synced[key];
+                jobs.push(async () => { try { await deleteDoc(doc(firestore, coll, id)); } catch (err) { console.error("Cloud Delete Error:", key, err); } });
+              }
+            });
+          }
+          if (loaded.att) {
+            const dates = Object.keys(db.attendance || {});
+            dates.forEach(d => push("a:" + d, JSON.stringify(db.attendance[d]), () => setDoc(doc(firestore, "attendance", d), { r: plain(db.attendance[d]) })));
+            Object.keys(synced).forEach(key => {
+              if (key.startsWith("a:") && !(key.slice(2) in (db.attendance || {}))) {
+                const d = key.slice(2); delete synced[key];
+                jobs.push(async () => { try { await deleteDoc(doc(firestore, "attendance", d)); } catch (err) { console.error(err); } });
+              }
+            });
+          }
+          if (loaded.groups) push("g", JSON.stringify(db.groups || []), () => setDoc(doc(firestore, "meta", "groups"), { list: plain(db.groups || []) }));
+        }
+        for (const j of jobs) await j();
+      } catch (err) { console.error("Cloud Sync Error:", err); }
     };
 
-    // تسجيل الدخول الخفي وتفعيل الاستماع اللحظي للتحديثات بين كل الأجهزة
-    signInAnonymously(auth)
-      .then(() => {
-        onSnapshot(mainDocRef, (snap) => {
+    // ===================== الاستماع للتغييرات =====================
+    function applyColl(kind, snap) {
+      const next = {};
+      snap.forEach(d => { next[d.id] = cleanDeep(d.data()); });
+      Object.keys(maps[kind]).forEach(id => { if (!(id in next)) delete maps[kind][id]; });
+      Object.keys(next).forEach(id => { maps[kind][id] = next[id]; });
+      if (kind === "core") { loaded.core = true; window.__authLoading = false; }
+      rebuild();
+    }
+    function applyAtt(snap) {
+      const att = {};
+      snap.forEach(d => { const r = (d.data() || {}).r; if (r && typeof r === "object" && Object.keys(r).length) att[d.id] = cleanDeep(r); });
+      db.attendance = att; loaded.att = true;
+      Object.keys(synced).forEach(k => { if (k.startsWith("a:")) delete synced[k]; });
+      Object.keys(att).forEach(d => { synced["a:" + d] = JSON.stringify(att[d]); });
+      render();
+    }
+    function applyGroups(snap) {
+      const list = snap.exists() && Array.isArray(snap.data().list) ? cleanDeep(snap.data().list) : [];
+      db.groups = list; loaded.groups = true; synced["g"] = JSON.stringify(list);
+      render();
+    }
+    function onErr(label) { return err => { console.error("Firestore listener error (" + label + "):", err); window.__authLoading = false; if (window.toast) toast("⚠️ مفيش صلاحية لقراءة: " + label); }; }
+
+    function startListeners() {
+      if (!me) return;
+      if (isStaffRole(me.role)) {
+        unsubs.push(onSnapshot(collection(firestore, "users"), s => applyColl("core", s), onErr("users")));
+        unsubs.push(onSnapshot(collection(firestore, "private"), s => applyColl("priv", s), onErr("private")));
+        if (me.role === "admin") unsubs.push(onSnapshot(collection(firestore, "finance"), s => applyColl("fin", s), onErr("finance")));
+        unsubs.push(onSnapshot(collection(firestore, "attendance"), applyAtt, onErr("attendance")));
+      } else if (me.role === "student") {
+        unsubs.push(onSnapshot(doc(firestore, "users", me.uid), snap => {
           if (snap.exists()) {
-            const cloudData = snap.data();
-            isApplyingRemote = true;
-            // الاحتفاظ بالحساب المسجل دخوله حالياً على هذا الجهاز فقط
-            const myCurrentUserId = db.currId;
-            if (Array.isArray(cloudData.users)) db.users = cloudData.users;
-            if (Array.isArray(cloudData.groups)) db.groups = cloudData.groups;
-            if (cloudData.attendance && typeof cloudData.attendance === "object") {
-              db.attendance = cloudData.attendance;
-            }
-            db.currId = myCurrentUserId;
-            localStorage.setItem(DB_KEY, JSON.stringify(db));
-            render();
-            isApplyingRemote = false;
-          } else {
-            // أول مرة على الإطلاق: رفع البيانات المبدئية إلى Firestore
-            window.syncToCloud();
+            maps.core = {}; maps.core[me.uid] = cleanDeep(snap.data());
+            loaded.core = true; window.__authLoading = false; rebuild();
+          } else if (!signingUp) {
+            window.__authLoading = false;
+            if (window.toast) toast("❌ الحساب ده مش مربوط ببيانات طالب. كلّم الكوتش.");
+            signOut(auth);
           }
-        });
-      })
-      .catch((err) => {
-        console.error("Firebase Auth Error:", err);
-      });
+        }, onErr("users")));
+      }
+      unsubs.push(onSnapshot(doc(firestore, "meta", "groups"), applyGroups, onErr("groups")));
+    }
+
+    // ===================== حالة الدخول =====================
+    onAuthStateChanged(auth, async (user) => {
+      resetState();
+      if (!user) {
+        me = null; db.users = []; db.currId = null; db.attendance = {}; db.groups = [];
+        window.isFinanceAdminUnlocked = false; window.__authLoading = false; render(); return;
+      }
+      if (user.isAnonymous) {
+        me = { uid: user.uid, role: "parent" }; db.users = []; db.currId = null;
+        window.__authLoading = false; render(); return;
+      }
+      let staffData = null;
+      try { const s = await getDoc(doc(firestore, "staff", user.uid)); if (s.exists()) staffData = s.data(); } catch (_) {}
+      if (staffData) {
+        me = { uid: user.uid, role: staffData.role === "admin" ? "admin" : "coach", name: String(staffData.name || "Coach").replace(BAD, ""), username: String(staffData.username || "coach").replace(BAD, ""), email: user.email || "" };
+      } else {
+        me = { uid: user.uid, role: "student", email: user.email || "" };
+      }
+      db.currId = user.uid;
+      window.isFinanceAdminUnlocked = me.role === "admin";
+      startListeners();
+    });
+
+    // ===================== واجهات تستدعيها الصفحة =====================
+    window.fbLogin = async (idf, pass) => {
+      try { await signInWithEmailAndPassword(auth, toAuthEmail(idf), pass); return { ok: true }; }
+      catch (e) { return { ok: false, code: e && e.code }; }
+    };
+    window.fbLogout = async () => { try { await signOut(auth); } catch (_) {} };
+
+    window.fbSignup = async ({ name, username, email, pass, level }) => {
+      signingUp = true;
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, toAuthEmail(username), pass);
+        let group = "";
+        try { const g = await getDoc(doc(firestore, "meta", "groups")); if (g.exists() && Array.isArray(g.data().list)) group = String(g.data().list[0] || ""); } catch (_) {}
+        const profile = { name, username, email: email || "", role: "student", level: Number(level) || 1, group, mode: "offline", att: {}, hw: {}, puz: { t: 0, c: 0 } };
+        await setDoc(doc(firestore, "users", cred.user.uid), profile);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, code: e && e.code };
+      } finally { signingUp = false; }
+    };
+
+    // الكوتش بينشئ حساب طالب بدون ما يتسجّل خروج (بنستخدم نسخة ثانية من التطبيق)
+    let secApp = null;
+    window.fbCreateStudentAccount = async (username, pass) => {
+      if (!secApp) secApp = initializeApp(firebaseConfig, "secondary");
+      const a = getAuth(secApp);
+      const cred = await createUserWithEmailAndPassword(a, toAuthEmail(username), pass);
+      const uid = cred.user.uid;
+      try { await signOut(a); } catch (_) {}
+      return uid;
+    };
+
+    window.fbOnStudentDeleted = async (id) => {
+      try { await setDoc(doc(firestore, "deleted", id), { at: Date.now() }); } catch (e) { console.error(e); }
+      try {
+        const q = await getDocs(query(collection(firestore, "parentLinks"), where("sid", "==", id)));
+        for (const d of q.docs) await deleteDoc(d.ref);
+      } catch (e) { console.error(e); }
+    };
+
+    window.fbChangePassword = async (oldP, newP) => {
+      try {
+        const u = auth.currentUser; if (!u || !u.email) return { ok: false };
+        await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, oldP));
+        await updatePassword(u, newP);
+        return { ok: true };
+      } catch (e) { return { ok: false, code: e && e.code }; }
+    };
+
+    // ===================== ولي الأمر (كود متابعة) =====================
+    window.fbParentLookup = async (codeRaw) => {
+      const code = String(codeRaw || "").trim().toUpperCase();
+      if (!/^[A-Z0-9]{8,16}$/.test(code)) return { ok: false, code: "bad" };
+      try {
+        if (!auth.currentUser) await signInAnonymously(auth);
+        const uid = auth.currentUser.uid;
+        const c = await getDoc(doc(firestore, "parentCodes", code));
+        if (!c.exists()) return { ok: false, code: "notfound" };
+        const sid = c.data().sid;
+        await setDoc(doc(firestore, "parentLinks", uid + "_" + sid), { code, sid });
+        const u = await getDoc(doc(firestore, "users", sid));
+        let p = {}; try { const ps = await getDoc(doc(firestore, "private", sid)); if (ps.exists()) p = ps.data(); } catch (_) {}
+        if (!u.exists()) return { ok: false, code: "notfound" };
+        return { ok: true, stu: Object.assign({}, cleanDeep(u.data()), { id: sid, role: "student" }, cleanDeep(p)) };
+      } catch (e) { return { ok: false, code: e && e.code }; }
+    };
+
+    window.fbGenParentCode = async (sid) => {
+      if (!me || !isStaffRole(me.role)) return null;
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const r = crypto.getRandomValues(new Uint8Array(12));
+      let code = ""; for (const b of r) code += alphabet[b % alphabet.length];
+      const u = db.users.find(x => x.id === sid); if (!u) return null;
+      const old = u.parentCode;
+      await setDoc(doc(firestore, "parentCodes", code), { sid });
+      if (old) { try { await deleteDoc(doc(firestore, "parentCodes", old)); } catch (_) {} }
+      // تجديد الكود = سحب صلاحية أي جهاز كان مربوط بالكود القديم
+      try {
+        const q = await getDocs(query(collection(firestore, "parentLinks"), where("sid", "==", sid)));
+        for (const d of q.docs) await deleteDoc(d.ref);
+      } catch (_) {}
+      u.parentCode = code; save();
+      return code;
+    };
+
+    // ===================== ترحيل الطلاب من النظام القديم (للأدمن، مرة واحدة) =====================
+    window.fbMigrateLegacy = async () => {
+      if (!me || me.role !== "admin") return { ok: false, msg: "للأدمن فقط" };
+      const snap = await getDoc(doc(firestore, "eca_platform", "main_data"));
+      if (!snap.exists()) return { ok: false, msg: "مفيش بيانات قديمة" };
+      const L = snap.data();
+      const legacy = (L.users || []).filter(u => u && u.role === "student");
+      const have = new Set(db.users.filter(u => u.role === "student").map(u => String(u.username || "").toLowerCase()));
+      const idMap = {}, creds = [], failed = [];
+      for (const lu of legacy) {
+        const uname = String(lu.username || "").toLowerCase().replace(/\s+/g, "_").replace(BAD, "");
+        if (!uname || have.has(uname)) continue;
+        const temp = window.randomPass();
+        try {
+          const uid = await window.fbCreateStudentAccount(uname, temp);
+          idMap[lu.id] = uid;
+          const nu = cleanDeep(Object.assign({}, lu)); delete nu.pass; nu.id = uid; nu.username = uname; nu.role = "student";
+          db.users.push(nu); have.add(uname);
+          creds.push([lu.name || "", uname, temp]);
+        } catch (e) { failed.push([uname, (e && e.code) || String(e)]); }
+      }
+      const att = L.attendance || {};
+      for (const d in att) {
+        for (const oldId in att[d]) if (idMap[oldId]) { db.attendance[d] = db.attendance[d] || {}; db.attendance[d][idMap[oldId]] = att[d][oldId]; }
+      }
+      (L.groups || []).forEach(g => { g = String(g).replace(BAD, ""); if (g && !db.groups.includes(g)) db.groups.push(g); });
+      save();
+      if (creds.length) {
+        const rows = [["Name", "Username", "Temporary Password"]].concat(creds);
+        const csv = "\ufeff" + rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(",")).join("\r\n");
+        dl("ECA-new-logins-" + todayISO() + ".csv", csv, "text/csv;charset=utf-8");
+      }
+      return { ok: true, done: creds.length, failed };
+    };
     // ================= ECA FINANCIAL & ANALYTICS DASHBOARD (CONVERTED FROM CODE.GS & HTML) =================
    // ================= ECA FINANCIAL & ANALYTICS DASHBOARD (SELF-BINDING) =================
     window.finSubTab = window.finSubTab || "analytics";
@@ -2115,40 +2350,35 @@ window.selectExamAns = function(qIdx, oIdx) {
     FIN_DICT.forEach(pair => {
       if (!DICT.some(d => d[0] === pair[0])) DICT.push(pair);
     });
+    [
+      ["سجّل دخولك بحسابك، أو ادخل كود المتابعة لو انت ولي أمر:", "Log in with your account, or enter the follow-up code if you are a parent:"],
+      ["🔐 الدخول بحساب شخصي لكل مستخدم — مفيش كلمات سر مشتركة", "🔐 Every user has a personal account — no shared passwords"],
+      ["ادخل كود المتابعة لمعرفة تقدّم ابنك", "Enter the follow-up code to see your child's progress"],
+      ["اكتب كود المتابعة اللي استلمته من الأكاديمية", "Enter the follow-up code you received from the academy"],
+      ["اكتب كود المتابعة لعرض تقدّم الطالب.", "Enter the follow-up code to view the student's progress."],
+      ["كود ولي الأمر", "Parent code"], ["عرض", "View"],
+      ["🔒 ملاحظة المدرب لولي الأمر:", "🔒 Coach's note for the parent:"],
+      ["❌ الكود غير صحيح أو انتهت صلاحيته", "❌ Invalid or expired code"],
+      ["❌ اسم المستخدم أو كلمة السر غير صحيحة", "❌ Wrong username or password"],
+      ["✅ تم إنشاء حسابك!", "✅ Your account has been created!"],
+      ["❌ كلمة السر لازم تكون 6 حروف على الأقل", "❌ Password must be at least 6 characters"],
+      ["✅ تم تغيير كلمة السر", "✅ Password changed"],
+      ["⏳ جاري التحميل...", "⏳ Loading..."],
+      ["القسم المالي (للإدارة فقط)", "Financial Management (Admins Only)"]
+    ].forEach(p => { if (!DICT.some(d => d[0] === p[0])) DICT.push(p); });
     DICT.sort((a, b) => b[0].length - a[0].length);
 
     // ================= 2. حماية قسم الحسابات بباسورد خاص للمديرين فقط =================
-    const ADMIN_FINANCE_PASS = "ECA-ADMIN-2026"; // يمكنك تغيير باسورد المديرين من هنا
+    // الصلاحية بتتحدد من Firebase: staff/{uid}.role == "admin" — مفيش كلمة سر في الكود
     window.isFinanceAdminUnlocked = false;
-
-    window.unlockFinanceAdmin = function(ev) {
-      if (ev) ev.preventDefault();
-      const inp = document.getElementById("finAdminPassInp");
-      if (inp && inp.value.trim() === ADMIN_FINANCE_PASS) {
-        window.isFinanceAdminUnlocked = true;
-        render();
-        toast("🔓 تم فتح لوحة الحسابات الإدارية");
-      } else {
-        toast("❌ باسورد الإدارة غير صحيح");
-      }
-    };
-
-    window.lockFinanceAdmin = function() {
-      window.isFinanceAdminUnlocked = false;
-      render();
-      toast("🔒 تم قفل لوحة الحسابات");
-    };
-
-    window.renderFinanceLockScreen = function() {
+    window.unlockFinanceAdmin = function (ev) { if (ev) ev.preventDefault(); };
+    window.lockFinanceAdmin = function () {};
+    window.renderFinanceLockScreen = function () {
       return `
         <div class="max-w-md mx-auto mt-10 gold-card rounded-2xl p-6 text-center space-y-4 border-2 border-yellow-500/40">
           <div class="w-14 h-14 mx-auto rounded-2xl bg-black border-2 border-yellow-500 flex items-center justify-center text-2xl shadow-lg">🔒</div>
-          <h2 class="font-display font-bold text-xl gold-gradient-text">🔒 قسم الإدارة المالية (للمديرين فقط)</h2>
-          <p class="text-xs text-gray-400">هذا القسم خاص بإدارة الأكاديمية. يرجى إدخال الباسورد الإداري للمتابعة:</p>
-          <form onsubmit="window.unlockFinanceAdmin(event)" class="space-y-3">
-            <input id="finAdminPassInp" type="password" required placeholder="أدخل باسورد الإدارة..." class="w-full bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white text-center" />
-            <button type="submit" class="w-full py-2.5 rounded-xl text-xs gold-btn">فتح لوحة الحسابات 🔓</button>
-          </form>
+          <h2 class="font-display font-bold text-xl gold-gradient-text">القسم المالي (للإدارة فقط)</h2>
+          <p class="text-xs text-gray-400">الحساب ده مش عنده صلاحية الأدمن. الصلاحية بتتفعّل من لوحة Firebase.</p>
         </div>
       `;
     };
@@ -2162,7 +2392,7 @@ window.selectExamAns = function(qIdx, oIdx) {
       const html = _origRenderFinanceDashboardView();
       return html.replace(
         `<button onclick="exportFinanceCSV()" class="px-4 py-2 rounded-xl text-xs gold-btn">⬇ تصدير التقرير المالي (Excel/CSV)</button>`,
-        `<div class="flex gap-2"><button onclick="exportFinanceCSV()" class="px-4 py-2 rounded-xl text-xs gold-btn">⬇ تصدير التقرير المالي (Excel/CSV)</button><button onclick="window.lockFinanceAdmin()" class="px-3 py-2 rounded-xl text-xs bg-red-500/20 text-red-300 border border-red-500/40 font-bold">🔒 قفل الحسابات</button></div>`
+        `<div class="flex gap-2"><button onclick="exportFinanceCSV()" class="px-4 py-2 rounded-xl text-xs gold-btn">⬇ تصدير التقرير المالي (Excel/CSV)</button></div>`
       );
     };
 

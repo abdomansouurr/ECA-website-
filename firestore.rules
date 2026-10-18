@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- دوال مساعدة ----------
+    function signedIn()  { return request.auth != null; }
+    function notAnon()   { return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous'; }
+    function isStaff()   { return notAnon() && exists(/databases/$(database)/documents/staff/$(request.auth.uid)); }
+    function isAdmin()   { return isStaff() && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role == 'admin'; }
+    function hasParentLink(sid) {
+      return signedIn() && exists(/databases/$(database)/documents/parentLinks/$(request.auth.uid + '_' + sid));
+    }
+    // نص آمن: بدون < > " ' ` (حماية من حقن HTML)
+    function safeText(v, max) { return v is string && v.size() <= max && v.matches('[^<>"\'`]*'); }
+
+    function validNewStudent(d) {
+      return d.keys().hasOnly(['name','username','email','role','level','group','mode','att','hw','puz'])
+        && d.role == 'student'
+        && safeText(d.name, 80) && safeText(d.username, 40)
+        && safeText(d.get('email', ''), 120) && safeText(d.get('group', ''), 80)
+        && d.level is number && d.level >= 1 && d.level <= 6;
+    }
+    // الطالب ممنوع يعدّل الحقول دي في ملفه (الكوتش بس)
+    function studentUpdateOk() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'role','username','group','mode','coachName','stuCode','parentPhone','parentCode','note',
+          'courseFee','amountPaid','remaining','lastPayDate','lastPayAmount'])
+        && safeText(request.resource.data.name, 80)
+        && safeText(request.resource.data.get('email', ''), 120);
+    }
+
+    // ---------- الكوتش والأدمن (بتتضاف يدوي من لوحة Firebase، مفيش كتابة من الموقع) ----------
+    match /staff/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // ---------- ملف الطالب ----------
+    match /users/{uid} {
+      allow read:   if isStaff() || (notAnon() && request.auth.uid == uid) || hasParentLink(uid);
+      allow create: if isStaff()
+                    || (notAnon() && request.auth.uid == uid
+                        && !exists(/databases/$(database)/documents/deleted/$(uid))
+                        && validNewStudent(request.resource.data));
+      allow update: if isStaff() || (notAnon() && request.auth.uid == uid && studentUpdateOk());
+      allow delete: if isStaff();
+    }
+
+    // ---------- الملاحظة السرية + كود ولي الأمر (الطالب ما يقراهاش) ----------
+    match /private/{sid} {
+      allow read:  if isStaff() || hasParentLink(sid);
+      allow write: if isStaff();
+    }
+
+    // ---------- المالية (الأدمن فقط) ----------
+    match /finance/{sid} {
+      allow read, write: if isAdmin();
+    }
+
+    // ---------- الحضور (يوم = وثيقة) ----------
+    match /attendance/{day} {
+      allow read, write: if isStaff();
+    }
+
+    // ---------- المجموعات ----------
+    match /meta/{id} {
+      allow read:  if notAnon();
+      allow write: if isStaff();
+    }
+
+    // ---------- أكواد ولي الأمر: القراءة بالـ get فقط (ممنوع تعمل list فتعرف الأكواد) ----------
+    match /parentCodes/{code} {
+      allow get:   if signedIn();
+      allow list:  if false;
+      allow write: if isStaff();
+    }
+    match /parentLinks/{linkId} {
+      allow read:   if isStaff() || (signedIn() && linkId.matches(request.auth.uid + '_.*'));
+      allow create, update: if signedIn()
+        && linkId == request.auth.uid + '_' + request.resource.data.sid
+        && exists(/databases/$(database)/documents/parentCodes/$(request.resource.data.code))
+        && get(/databases/$(database)/documents/parentCodes/$(request.resource.data.code)).data.sid == request.resource.data.sid;
+      allow delete: if isStaff();
+    }
+
+    // ---------- الطلاب المحذوفين (عشان ما يرجعوش ينشئوا ملف) ----------
+    match /deleted/{uid} {
+      allow read, write: if isStaff();
+    }
+
+    // ---------- بيانات النظام القديم: قراءة للكوتش بس لحد ما تتحوّل، وبعدها امسحها ----------
+    match /eca_platform/{docId} {
+      allow read: if isStaff();
+      allow write: if false;
+    }
+  }
+}
