@@ -341,16 +341,16 @@
       return { st, total, attC, hwC, rem, attP, hwP, puzP, overall, evalText, evalCls, nextLesson: nextIdx !== -1 ? st.lessons[nextIdx] : null, nextIdx };
     }
 
-   function render() {
-   const winY = window.scrollY;
-   const innerScrolls = Array.from(document.querySelectorAll("#mainView .overflow-y-auto")).map(el => el.scrollTop);
-   const a = document.activeElement, id = a && a.id, s = a && a.selectionStart, e = a && a.selectionEnd;
-   _render(); applyLang();
-   if (id) { const el = document.getElementById(id); if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); try { el.setSelectionRange(s, e); } catch (_) {} } }
-   document.querySelectorAll("#mainView .overflow-y-auto").forEach((el, i) => { if (innerScrolls[i] !== undefined) el.scrollTop = innerScrolls[i]; });
-   window.scrollTo(0, winY);
- }
-    function _render() {
+ function render() {
+      const winY = window.scrollY;
+      const innerScrolls = Array.from(document.querySelectorAll("#mainView .overflow-y-auto")).map(el => el.scrollTop);
+      const a = document.activeElement, id = a && a.id, s = a && a.selectionStart, e = a && a.selectionEnd;
+      _render(); applyLang();
+      if (id) { const el = document.getElementById(id); if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); try { el.setSelectionRange(s, e); } catch (_) {} } }
+      document.querySelectorAll("#mainView .overflow-y-auto").forEach((el, i) => { if (innerScrolls[i] !== undefined) el.scrollTop = innerScrolls[i]; });
+      window.scrollTo(0, winY);
+    }
+   function _render() {
       const u = currUser();
       const nav = document.getElementById("navButtons");
       const cSearch = document.getElementById("coachSearchBox");
@@ -371,7 +371,7 @@
       nav.innerHTML = `
         <button onclick="switchTab('home')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='home'?'gold-btn':'bg-zinc-900 text-gray-300'}">🏠 الرئيسية</button>
         <button onclick="switchTab('lessons')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='lessons'?'gold-btn':'bg-zinc-900 text-gray-300'}">📚 ${u.role==='coach'?'كل المستويات (Steps 1-6)':'دروس Step '+u.level}</button>
-        ${u.role==='coach'?`<button onclick="switchTab('tracker')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='tracker'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">📋 متابعة الطلاب والجروبات</button><button onclick="switchTab('attendance')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='attendance'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">✅ تسجيل الحضور</button><button onclick="switchTab('finance')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='finance'?'gold-btn':'bg-zinc-900 text-emerald-300 border border-emerald-500/40'}">💰 الحسابات والداشبورد</button>:''}
+        ${u.role==='coach'?`<button onclick="switchTab('tracker')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='tracker'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">📋 متابعة الطلاب والجروبات</button><button onclick="switchTab('attendance')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='attendance'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">✅ تسجيل الحضور</button><button onclick="switchTab('finance')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='finance'?'gold-btn':'bg-zinc-900 text-emerald-300 border border-emerald-500/40'}">💰 الحسابات والداشبورد</button>`:''}
         <button onclick="switchTab('parent')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='parent'?'gold-btn':'bg-zinc-900 text-gray-300'}">👨‍👩‍👦 داشبورد ولي الأمر</button>
         <button onclick="logout()" class="px-2.5 py-1.5 rounded-xl text-xs bg-red-500/20 text-red-300 border border-red-500/30">خروج</button>
       `;
@@ -379,11 +379,10 @@
       if (tab === "lessons") main.innerHTML = renderLessonsView(u);
       else if (tab === "tracker" && u.role === "coach") main.innerHTML = renderTrackerView();
       else if (tab === "attendance" && u.role === "coach") main.innerHTML = renderAttendanceView();
-      else if (tab === "finance" && u.role === "coach") main.innerHTML = renderFinanceDashboardView();    
+      else if (tab === "finance" && u.role === "coach") main.innerHTML = renderFinanceDashboardView();
       else if (tab === "parent") main.innerHTML = renderParentView();
       else main.innerHTML = u.role === "student" ? renderStudentHome(u) : renderCoachHome(u);
     }
-
     function renderAuthView() {
       return `
         <div class="max-w-4xl mx-auto grid md:grid-cols-5 gap-6 mt-4">
