@@ -146,7 +146,7 @@
   <header class="sticky top-0 z-30 gold-card border-b border-yellow-500/20">
     <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
       <div onclick="goHomeRefresh()" class="flex items-center gap-3 cursor-pointer select-none">
-        <div class="w-11 h-11 rounded-xl gold-btn flex items-center justify-center text-2xl shadow-lg">👑</div>
+        <div class="w-11 h-11 rounded-xl bg-black border-2 border-yellow-500 flex flex-col items-center justify-center shadow-lg leading-none"><span class="font-display font-extrabold text-xs text-yellow-400 tracking-wider">ECA</span><span class="font-display text-[8px] text-yellow-200/80">CHESS</span></div>
         <div>
           <div class="flex items-center gap-2">
             <span class="font-display font-extrabold text-lg md:text-xl gold-gradient-text">EGYPT CHESS ACADEMY</span>
@@ -341,11 +341,15 @@
       return { st, total, attC, hwC, rem, attP, hwP, puzP, overall, evalText, evalCls, nextLesson: nextIdx !== -1 ? st.lessons[nextIdx] : null, nextIdx };
     }
 
-    function render() {
-      const a = document.activeElement, id = a && a.id, s = a && a.selectionStart, e = a && a.selectionEnd;
-      _render(); applyLang();
-      if (id) { const el = document.getElementById(id); if (el && el !== document.activeElement) { el.focus(); try { el.setSelectionRange(s, e); } catch (_) {} } }
-    }
+   function render() {
+   const winY = window.scrollY;
+   const innerScrolls = Array.from(document.querySelectorAll("#mainView .overflow-y-auto")).map(el => el.scrollTop);
+   const a = document.activeElement, id = a && a.id, s = a && a.selectionStart, e = a && a.selectionEnd;
+   _render(); applyLang();
+   if (id) { const el = document.getElementById(id); if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); try { el.setSelectionRange(s, e); } catch (_) {} } }
+   document.querySelectorAll("#mainView .overflow-y-auto").forEach((el, i) => { if (innerScrolls[i] !== undefined) el.scrollTop = innerScrolls[i]; });
+   window.scrollTo(0, winY);
+ }
     function _render() {
       const u = currUser();
       const nav = document.getElementById("navButtons");
@@ -603,7 +607,7 @@
             <p class="text-xs text-gray-400 mt-1">${u.role==='coach'?'اضغط على أي Step لعرض قائمة دروسها تحت بعضها.':'ممنوع ظهور أي مستوى آخر غير مستواك الحالي.'}</p>
           </div>
           ${list.map(st => {
-            const isOpen = u.role === "student" ? true : !!openSteps[st.step];
+            const isOpen = openSteps[st.step] !== false;
             return `
               <div class="gold-card rounded-2xl overflow-hidden">
                 <button onclick="openSteps[${st.step}]=!openSteps[${st.step}]; render();" class="w-full px-6 py-4 flex justify-between items-center text-left hover:bg-yellow-500/5">
@@ -1379,12 +1383,15 @@
         </div>
       `;
     }
-
-    window.selectExamAns = function(qIdx, oIdx) {
-      if (!activeExam) return;
-      activeExam.answers[qIdx] = oIdx;
-      renderActiveExamUI();
-    };
+window.selectExamAns = function(qIdx, oIdx) {
+   if (!activeExam) return;
+   const box = document.querySelector("#examBody .overflow-y-auto");
+   const prevTop = box ? box.scrollTop : 0;
+   activeExam.answers[qIdx] = oIdx;
+   renderActiveExamUI();
+   const newBox = document.querySelector("#examBody .overflow-y-auto");
+   if (newBox) newBox.scrollTop = prevTop;
+ };
 
     window.submitFullStepExam = async function() {
       if (!activeExam) return;
