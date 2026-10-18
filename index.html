@@ -2052,8 +2052,121 @@ window.selectExamAns = function(qIdx, oIdx) {
       dl("ECA-Financial-Dashboard-" + todayISO() + ".csv", csv, "text/csv;charset=utf-8");
       toast("📥 تم تنزيل شيت الحسابات متوافق مع Excel و Google Sheets!");
     };
+// ================= 1. ترجمة صفحة الحسابات والداشبورد للإنجليزية (AR / EN) =================
+    const FIN_DICT = [
+      ["💰 الحسابات والداشبورد", "💰 Finance & ERP"],
+      ["📊 لوحة تحليلات وحسابات الأكاديمية (ECA ERP Dashboard)", "📊 ECA Financial & Analytics ERP Dashboard"],
+      ["إدارة الاشتراكات، المسدد، المتبقي، إحصائيات اليوم، وتحليل الإيرادات حسب المستوى والمدرب.", "Manage subscriptions, paid & remaining balances, daily collections, and revenue by level & coach."],
+      ["⬇ تصدير التقرير المالي (Excel/CSV)", "⬇ Export Financial Report (Excel/CSV)"],
+      ["🔒 قفل الحسابات", "🔒 Lock Finance"],
+      ["إجمالي الطلاب (TOTAL STUDENTS)", "TOTAL STUDENTS"],
+      ["إجمالي قيمة الاشتراكات (TOTAL FEES)", "TOTAL SUBSCRIPTION FEES"],
+      ["إجمالي المسدد (TOTAL PAID)", "TOTAL PAID"],
+      ["إجمالي المتبقي (REMAINING)", "TOTAL REMAINING"],
+      ["📈 الداشبورد والتحليلات", "📈 Analytics Dashboard"],
+      ["💳 تسجيل وبحث وتعديل اشتراك طالب", "💳 Student Billing & Search"],
+      ["💰 إحصائيات وتحصيلات اليوم", "💰 Today's Collections"],
+      ["♟️ توزيع الطلاب والإيرادات حسب المستوى (Step 1 - 6)", "♟️ Students & Revenue by Level (Step 1 - 6)"],
+      ["👨‍🏫 إجمالي الاشتراكات والتحصيل حسب المدرب", "👨‍🏫 Subscriptions & Collection by Coach"],
+      ["📋 سجل اشتراكات الطلاب المالي الشامل", "📋 Complete Student Financial Registry"],
+      ["🔍 ابحث بالكود (ECA-0001) أو الاسم أو الموبايل...", "🔍 Search by code (ECA-0001), name, or phone..."],
+      ["كود الطالب", "Student ID"],
+      ["الاسم", "Name"],
+      ["المستوى / الجروب", "Level / Group"],
+      ["المدرب", "Coach"],
+      ["قيمة الاشتراك", "Course Fee"],
+      ["المسدد", "Paid"],
+      ["المتبقي:", "Remaining:"],
+      ["المتبقي", "Remaining"],
+      ["إجراءات سريعة", "Quick Actions"],
+      ["✏️ تحصيل / تعديل", "✏️ Collect / Edit"],
+      ["💬 تذكير واتساب", "💬 WhatsApp Reminder"],
+      ["💳 استمارة تسجيل وتحديث رسوم الطالب", "💳 Student Fee Registration & Update Form"],
+      ["➕ طالب جديد بالكامل", "➕ Add New Student"],
+      ["🔍 اختر الطالب أو ابحث بكوده (ECA):", "🔍 Select Student or Search by ID (ECA):"],
+      ["👤 اسم الطالب", "👤 Student Name"],
+      ["📞 رقم هاتف ولي الأمر (واتساب)", "📞 Parent Phone (WhatsApp)"],
+      ["📚 المستوى / الدورة التدريبية", "📚 Level / Course"],
+      ["👨‍🏫 اسم المدرب المحاضر", "👨‍🏫 Assigned Coach"],
+      ["💵 قيمة الكورس الإجمالية (EGP)", "💵 Total Course Fee (EGP)"],
+      ["💳 إجمالي المبلغ المسدد (EGP)", "💳 Total Amount Paid (EGP)"],
+      ["قيمة الكورس", "Course Fee"],
+      ["المبلغ المسدد", "Amount Paid"],
+      ["المبلغ المتبقي", "Remaining Balance"],
+      ["💾 حفظ البيانات المالية وتحديث الداشبورد", "💾 Save Financial Record & Update Dashboard"],
+      ["عمليات تحصيل اليوم", "Today's Transactions"],
+      ["إجمالي المحصل اليوم", "Total Collected Today"],
+      ["متبقيات طلاب اليوم", "Today's Students Remaining"],
+      ["تاريخ اليوم", "Today's Date"],
+      ["🧾 قائمة الطلاب المسددين اليوم", "🧾 Students Who Paid Today"],
+      ["لا توجد تحصيلات مسجلة بتاريخ اليوم حتى الآن.", "No collections recorded for today yet."],
+      ["سدد اليوم:", "Paid today:"],
+      ["طلاب)", "students)"],
+      ["مسدد:", "Paid:"],
+      ["تحصيل:", "Collected:"],
+      ["🔒 قسم الإدارة المالية (للمديرين فقط)", "🔒 Financial Management (Admins Only)"],
+      ["هذا القسم خاص بإدارة الأكاديمية. يرجى إدخال الباسورد الإداري للمتابعة:", "This section is restricted to Academy Management. Enter Admin Password:"],
+      ["أدخل باسورد الإدارة...", "Enter Admin Password..."],
+      ["فتح لوحة الحسابات 🔓", "Unlock Finance Dashboard 🔓"],
+      ["🔓 تم فتح لوحة الحسابات الإدارية", "🔓 Admin Finance Dashboard Unlocked"],
+      ["🔒 تم قفل لوحة الحسابات", "🔒 Finance Dashboard Locked"],
+      ["❌ باسورد الإدارة غير صحيح", "❌ Incorrect Admin Password"]
+    ];
+    FIN_DICT.forEach(pair => {
+      if (!DICT.some(d => d[0] === pair[0])) DICT.push(pair);
+    });
+    DICT.sort((a, b) => b[0].length - a[0].length);
 
-    // ربط تلقائي مضمون بـ _render حتى لو تم لصق الكود في أي مكان
+    // ================= 2. حماية قسم الحسابات بباسورد خاص للمديرين فقط =================
+    const ADMIN_FINANCE_PASS = "ECA-ADMIN-2026"; // يمكنك تغيير باسورد المديرين من هنا
+    window.isFinanceAdminUnlocked = false;
+
+    window.unlockFinanceAdmin = function(ev) {
+      if (ev) ev.preventDefault();
+      const inp = document.getElementById("finAdminPassInp");
+      if (inp && inp.value.trim() === ADMIN_FINANCE_PASS) {
+        window.isFinanceAdminUnlocked = true;
+        render();
+        toast("🔓 تم فتح لوحة الحسابات الإدارية");
+      } else {
+        toast("❌ باسورد الإدارة غير صحيح");
+      }
+    };
+
+    window.lockFinanceAdmin = function() {
+      window.isFinanceAdminUnlocked = false;
+      render();
+      toast("🔒 تم قفل لوحة الحسابات");
+    };
+
+    window.renderFinanceLockScreen = function() {
+      return `
+        <div class="max-w-md mx-auto mt-10 gold-card rounded-2xl p-6 text-center space-y-4 border-2 border-yellow-500/40">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-black border-2 border-yellow-500 flex items-center justify-center text-2xl shadow-lg">🔒</div>
+          <h2 class="font-display font-bold text-xl gold-gradient-text">🔒 قسم الإدارة المالية (للمديرين فقط)</h2>
+          <p class="text-xs text-gray-400">هذا القسم خاص بإدارة الأكاديمية. يرجى إدخال الباسورد الإداري للمتابعة:</p>
+          <form onsubmit="window.unlockFinanceAdmin(event)" class="space-y-3">
+            <input id="finAdminPassInp" type="password" required placeholder="أدخل باسورد الإدارة..." class="w-full bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white text-center" />
+            <button type="submit" class="w-full py-2.5 rounded-xl text-xs gold-btn">فتح لوحة الحسابات 🔓</button>
+          </form>
+        </div>
+      `;
+    };
+
+    // إضافة زر "🔒 قفل الحسابات" داخل الداشبورد بعد فتحها
+    const _origRenderFinanceDashboardView = window.renderFinanceDashboardView;
+    window.renderFinanceDashboardView = function() {
+      if (!window.isFinanceAdminUnlocked) {
+        return window.renderFinanceLockScreen();
+      }
+      const html = _origRenderFinanceDashboardView();
+      return html.replace(
+        `<button onclick="exportFinanceCSV()" class="px-4 py-2 rounded-xl text-xs gold-btn">⬇ تصدير التقرير المالي (Excel/CSV)</button>`,
+        `<div class="flex gap-2"><button onclick="exportFinanceCSV()" class="px-4 py-2 rounded-xl text-xs gold-btn">⬇ تصدير التقرير المالي (Excel/CSV)</button><button onclick="window.lockFinanceAdmin()" class="px-3 py-2 rounded-xl text-xs bg-red-500/20 text-red-300 border border-red-500/40 font-bold">🔒 قفل الحسابات</button></div>`
+      );
+    };
+
+    // ربط تلقائي بـ _render مع ضمان تشغيل applyLang() لترجمة صفحة الحسابات فوراً
     {
       const _prevRender = window._render || _render;
       window._render = _render = function() {
@@ -2061,9 +2174,11 @@ window.selectExamAns = function(qIdx, oIdx) {
         const u = currUser();
         if (u && u.role === "coach" && tab === "finance") {
           document.getElementById("mainView").innerHTML = window.renderFinanceDashboardView();
+          applyLang();
         }
       };
     }
+    
   </script>
 </body>
 </html>
