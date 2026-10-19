@@ -1851,7 +1851,12 @@ window.selectExamAns = function(qIdx, oIdx) {
         window.__authLoading = false; render(); return;
       }
       let staffData = null;
-      try { const s = await getDoc(doc(firestore, "staff", user.uid)); if (s.exists()) staffData = s.data(); } catch (_) {}
+      let staffErr = null;
+      try { const s = await getDoc(doc(firestore, "staff", user.uid)); if (s.exists()) staffData = s.data(); }
+      catch (e) { staffErr = e; console.error("staff read failed for uid " + user.uid, e); }
+      console.info("[ECA] uid:", user.uid, "| staff doc:", staffData);
+      if (staffErr) toast("⚠️ Firebase منع قراءة بيانات الأدمن (" + ((staffErr && staffErr.code) || "error") + ") — راجع قواعد Firestore لـ staff");
+      if (staffData) staffData.role = String(staffData.role || "").trim().toLowerCase();   // يقبل "Admin" أو " admin"
       if (!staffData && isGoogleUser(user)) {
         // أول دخول بجوجل: لو مفيش بيانات طالب، نطلب منه يختار (طالب / كوتش) مرة واحدة بس
         let hasProfile = false;
@@ -1939,6 +1944,10 @@ window.selectExamAns = function(qIdx, oIdx) {
             <input id="gCode" required autocomplete="off" autocapitalize="characters" placeholder="كود دعوة الكوتش (من الأدمن)" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white text-center tracking-widest uppercase" />
             <p class="text-[11px] text-gray-400">الكود بيستخدم مرة واحدة، وبيطلعه الأدمن من زر «🎟️ كود دعوة كوتش جديد».</p>`}
           <button class="w-full py-3 rounded-xl text-sm gold-btn">دخول المنصة 🚀</button>
+          <div class="pt-3 border-t border-yellow-500/20 text-[11px] text-gray-400 space-y-1">
+            <div>🛠️ لو انت الأدمن: انسخ الـ UID ده واعمل بيه مستند في <b>staff</b> فيه <b dir="ltr">role = admin</b>، وبعدين اعمل Refresh.</div>
+            <div class="flex gap-2 items-center"><code dir="ltr" class="flex-1 px-2 py-1.5 rounded-lg bg-black border border-yellow-500/30 text-yellow-300 select-all break-all">${esc(pendingGoogle.uid)}</code><button type="button" onclick="navigator.clipboard.writeText('${esc(pendingGoogle.uid)}').then(()=>toast('✅ اتنسخ'))" class="px-3 py-1.5 rounded-lg bg-zinc-900 border border-yellow-500/30 text-yellow-300">نسخ</button></div>
+          </div>
         </form>`;
       applyLang();
       const f = document.getElementById(r === "coach" ? "gCode" : "gName"); if (f) f.focus();
