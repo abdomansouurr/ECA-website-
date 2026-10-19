@@ -36,6 +36,9 @@
     .att-l.on { background: #f59e0b !important; color: #1a1000 !important; border-color: #f59e0b !important; }
     .att-a.on { background: #ef4444 !important; color: #ffffff !important; border-color: #ef4444 !important; }
     .tap { min-height: 40px; }
+    .g-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 46px; padding: 0 14px; border-radius: 12px; background: #fff; color: #1f1f1f; font-size: 13px; font-weight: 700; border: 1px solid #dadce0; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: background .15s; }
+    .g-btn:hover { background: #f1f3f4; }
+    html.light .g-btn, html.light .g-btn * { color: #1f1f1f !important; }
     html.light body { background-color: #f6f3ea; color: #1f2937; }
     html.light #bgCanvas { opacity: .6; }
     html.light .gold-card { background: rgba(255,255,255,.94); border-color: rgba(153,116,21,.35); box-shadow: 0 6px 22px rgba(60,45,10,.12); }
@@ -339,7 +342,8 @@
         <button onclick="switchTab('lessons')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='lessons'?'gold-btn':'bg-zinc-900 text-gray-300'}">📚 ${u.role==='coach'?'كل المستويات (Steps 1-6)':'دروس Step '+u.level}</button>
         ${u.role==='coach'?`<button onclick="switchTab('tracker')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='tracker'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">📋 متابعة الطلاب والجروبات</button><button onclick="switchTab('attendance')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='attendance'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">✅ تسجيل الحضور</button><button onclick="switchTab('finance')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='finance'?'gold-btn':'bg-zinc-900 text-emerald-300 border border-emerald-500/40'}">💰 الحسابات والداشبورد</button>`:''}
         <button onclick="switchTab('parent')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='parent'?'gold-btn':'bg-zinc-900 text-gray-300'}">👨‍👩‍👦 داشبورد ولي الأمر</button>
-        <button onclick="changeMyPassword()" title="تغيير كلمة السر" class="px-2.5 py-1.5 rounded-xl text-xs bg-zinc-900 text-yellow-300 border border-yellow-500/30">🔑</button>
+        ${window.fbAuthInfo && !window.fbAuthInfo().google ? `<button onclick="linkGoogle()" title="ربط حسابك بجوجل للدخول بضغطة واحدة" class="px-2.5 py-1.5 rounded-xl text-xs bg-zinc-900 text-sky-300 border border-sky-500/30">🔗 Google</button>` : ''}
+        ${!window.fbAuthInfo || window.fbAuthInfo().password ? `<button onclick="changeMyPassword()" title="تغيير كلمة السر" class="px-2.5 py-1.5 rounded-xl text-xs bg-zinc-900 text-yellow-300 border border-yellow-500/30">🔑</button>` : ''}
         <button onclick="logout()" class="px-2.5 py-1.5 rounded-xl text-xs bg-red-500/20 text-red-300 border border-red-500/30">خروج</button>
       `;
 
@@ -358,10 +362,10 @@
               <h2 class="font-display font-bold text-xl gold-gradient-text">Egypt Chess Academy Portal</h2>
               <p class="text-xs text-gray-400 mt-2">سجّل دخولك بحسابك، أو ادخل كود المتابعة لو انت ولي أمر:</p>
               <div class="mt-4 space-y-2.5">
-                <button onclick="focusLogin()" class="w-full text-left p-3 rounded-xl bg-black/80 border border-yellow-500/40 hover:border-yellow-400">
-                  <div class="text-xs font-bold text-yellow-300">👑 دخول سريع كـ مدرب (Coach)</div>
-                  <div class="text-[11px] text-gray-400">يفتح كل الـ 6 Steps + متابعة الطلاب والجروبات</div>
-                </button>
+                <div class="w-full text-start p-3 rounded-xl bg-black/80 border border-yellow-500/40">
+                  <div class="text-xs font-bold text-yellow-300">⚡ دخول بضغطة واحدة بحساب Google</div>
+                  <div class="text-[11px] text-gray-400">أول مرة بتختار طالب أو كوتش، وبعد كده بتدخل بضغطة واحدة من غير باسورد.</div>
+                </div>
                 <button onclick="switchTab('parent')" class="w-full text-left p-3 rounded-xl bg-black/80 border border-emerald-500/40 hover:border-emerald-400">
                   <div class="text-xs font-bold text-emerald-300">👨‍👩‍👦 بوابة ولي الأمر (Parent Dashboard)</div>
                   <div class="text-[11px] text-gray-400">ادخل كود المتابعة لمعرفة تقدّم ابنك</div>
@@ -373,11 +377,16 @@
             </div>
           </div>
 
-          <div class="md:col-span-3 gold-card rounded-2xl p-6">
+          <div class="md:col-span-3 gold-card rounded-2xl p-6 order-first md:order-none">
             <div class="flex gap-2 mb-5 bg-black p-1 rounded-xl border border-yellow-500/20">
               <button onclick="authMode='login'; render();" class="flex-1 py-2 rounded-lg text-xs font-bold ${authMode==='login'?'gold-btn':'text-gray-400'}">Login (دخول)</button>
               ${ALLOW_SELF_SIGNUP ? `<button onclick="authMode='signup'; render();" class="flex-1 py-2 rounded-lg text-xs font-bold ${authMode==='signup'?'gold-btn':'text-gray-400'}">Sign Up (حساب جديد)</button>` : ''}
             </div>
+            <div class="grid sm:grid-cols-2 gap-2">
+              <button type="button" onclick="googleLogin('student')" class="g-btn">${G_ICON}<span>🎓 دخول الطالب بجوجل</span></button>
+              <button type="button" onclick="googleLogin('coach')" class="g-btn">${G_ICON}<span>👑 دخول الكوتش بجوجل</span></button>
+            </div>
+            <div class="flex items-center gap-3 my-4 text-[11px] text-gray-500"><span class="flex-1 h-px bg-yellow-500/20"></span><span>أو باليوزر نيم / الإيميل</span><span class="flex-1 h-px bg-yellow-500/20"></span></div>
             ${authMode === "login" ? `
               <form onsubmit="doLogin(event)" class="space-y-4">
                 <input id="lEmail" required placeholder="Email or Username" class="w-full bg-black border border-yellow-500/30 rounded-xl px-4 py-2.5 text-sm text-white" />
@@ -413,6 +422,14 @@
       `;
     }
 
+    const G_ICON = `<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>`;
+    let gBusy = false;
+    async function googleLogin(role) {
+      if (gBusy) return;
+      if (!window.fbGoogleLogin) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش، جرّب بعد ثواني");
+      gBusy = true; try { await window.fbGoogleLogin(role); } finally { gBusy = false; }
+    }
+    function linkGoogle() { if (window.fbLinkGoogle) window.fbLinkGoogle(); }
     function focusLogin() { authMode = "login"; render(); setTimeout(() => { const el = document.getElementById("lEmail"); if (el) el.focus(); }, 0); }
     function randomPass() {
       const al = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -610,7 +627,8 @@
 
     function renderTrackerView() {
       const students = db.users.filter(u => u.role === "student");
-      const filtered = students.filter(s => (grpFilter === "ALL" || s.group === grpFilter) && (!searchQ || s.name.toLowerCase().includes(searchQ.toLowerCase()) || s.username.toLowerCase().includes(searchQ.toLowerCase())));
+      const q = searchQ.toLowerCase();
+      const filtered = students.filter(s => (grpFilter === "ALL" || s.group === grpFilter) && (!q || String(s.name || "").toLowerCase().includes(q) || String(s.username || "").toLowerCase().includes(q)));
       const sel = students.find(s => s.id === selStuId) || filtered[0] || null;
       return `
         <div class="space-y-5">
@@ -705,7 +723,8 @@
     function saveNote(id) { const s = db.users.find(u => u.id === id); s.note = document.getElementById("noteInp").value; save(); toast("✅ تم حفظ الملاحظة السرية لولي الأمر"); }
 
     function renderParentView() {
-      const stu = !isCoach() ? parentStu : db.users.find(u => u.role === "student" && (u.username.toLowerCase() === parentQ.trim().toLowerCase() || u.name.toLowerCase().includes(parentQ.trim().toLowerCase())));
+      const pq = parentQ.trim().toLowerCase();
+      const stu = !isCoach() ? parentStu : (pq ? db.users.find(u => u.role === "student" && (String(u.username || "").toLowerCase() === pq || String(u.name || "").toLowerCase().includes(pq))) : null);
       return `
         <div class="max-w-4xl mx-auto space-y-5">
           <div class="gold-card rounded-2xl p-6">
@@ -720,7 +739,7 @@
               <div class="gold-card rounded-2xl p-6 space-y-5">
                 <div class="flex flex-wrap justify-between items-center gap-4 border-b border-yellow-500/20 pb-4">
                   <div>
-                    <span class="text-xs text-yellow-400 font-bold">STEP ${stu.level} •${stu.group}</span>
+                    <span class="text-xs text-yellow-400 font-bold">STEP ${stu.level}${stu.group ? ' • ' + esc(stu.group) : ''}</span>
                     <h3 class="font-display font-bold text-2xl text-white">${stu.name} (@${stu.username})</h3>
                   </div>
                   <div class="px-5 py-3 rounded-2xl border ${s.evalCls}">
@@ -773,6 +792,7 @@
     }
     async function changeMyPassword() {
       if (!window.fbChangePassword) return;
+      if (window.fbAuthInfo && !window.fbAuthInfo().password) return toast("ℹ️ حسابك بيدخل بجوجل — مفيش كلمة سر تتغير");
       const o = prompt(trText("كلمة السر الحالية")); if (o == null) return;
       const n = prompt(trText("كلمة السر الجديدة (6 حروف على الأقل)")); if (n == null) return;
       if (n.length < 6) return toast("❌ كلمة السر لازم تكون 6 حروف على الأقل");
@@ -867,7 +887,7 @@
       const all = db.users.filter(u => u.role === "student");
       const inMode = all.filter(s => stuMode(s) === attMode);
       const q = attQ.toLowerCase();
-      const list = inMode.filter(s => !q || s.name.toLowerCase().includes(q) || s.username.toLowerCase().includes(q));
+      const list = inMode.filter(s => !q || String(s.name || "").toLowerCase().includes(q) || String(s.username || "").toLowerCase().includes(q));
       const rec = db.attendance[attDate] || {};
       const cnt = { p: 0, l: 0, a: 0 };
       inMode.forEach(s => { if (rec[s.id]) cnt[rec[s.id]]++; });
@@ -1000,8 +1020,8 @@
       const name = g("asName"); if (!name) return toast("❌ اكتب اسم الطالب");
       let username = g("asUser").toLowerCase().replace(/\s+/g, "_");
       if (!username) username = "eca_" + String(Date.now()).slice(-6);
-      if (db.users.some(u => u.username.toLowerCase() === username && u.id !== editStuId)) return toast("❌ اسم المستخدم ده مستخدم قبل كده");
-      if (db.users.some(u => u.role === "student" && u.name.trim().toLowerCase() === name.toLowerCase() && u.id !== editStuId) && !confirm(trText("فيه طالب بنفس الاسم. هل تريد المتابعة؟"))) return;
+      if (db.users.some(u => String(u.username || "").toLowerCase() === username && u.id !== editStuId)) return toast("❌ اسم المستخدم ده مستخدم قبل كده");
+      if (db.users.some(u => u.role === "student" && String(u.name || "").trim().toLowerCase() === name.toLowerCase() && u.id !== editStuId) && !confirm(trText("فيه طالب بنفس الاسم. هل تريد المتابعة؟"))) return;
       const data = { name, username, level: Number(g("asLevel")) || 1, group: g("asGroup"), mode: g("asMode") === "online" ? "online" : "offline", age: g("asAge"), phone: g("asPhone"), parentPhone: g("asParent") };
       const pass = document.getElementById("asPass").value.trim();
       if (editStuId) {
@@ -1080,7 +1100,7 @@
     }
     anim();
     const h0 = (location.hash || "#home").slice(1);
-    tab = ["home", "lessons", "tracker", "attendance", "parent"].includes(h0) ? h0 : "home";
+    tab = ["home", "lessons", "tracker", "attendance", "finance", "parent"].includes(h0) ? h0 : "home";
     history.replaceState({ tab }, "", "#" + tab);
     window.addEventListener("popstate", e => { tab = (e.state && e.state.tab) || "home"; render(); });
     const _oe = openExamModal; openExamModal = function (l) { _oe(l); applyLang(); };
@@ -1297,7 +1317,10 @@
           </div>
         </div>` : "";
 
-      const sel = students.find(s => s.id === selStuId) || students[0] || null;
+      // نفس الطالب المختار في الجدول الأساسي (مع مراعاة الفلتر والبحث)
+      const q = searchQ.toLowerCase();
+      const filtered = students.filter(s => (grpFilter === "ALL" || s.group === grpFilter) && (!q || String(s.name || "").toLowerCase().includes(q) || String(s.username || "").toLowerCase().includes(q)));
+      const sel = students.find(s => s.id === selStuId) || filtered[0] || null;
       let extraCoachControls = "";
       if (sel) {
         const curCoach = sel.coachName || (currUser() && currUser().name) || "الكوتش عبدالرحمن منصور";
@@ -1634,7 +1657,7 @@ window.selectExamAns = function(qIdx, oIdx) {
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup , deleteUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/window.triggerFirebaseGooglePopup";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, linkWithPopup, deleteUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { initializeFirestore, writeBatch, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -1649,10 +1672,7 @@ window.selectExamAns = function(qIdx, oIdx) {
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const googleProvider = new GoogleAuthProvider();
- window.triggerFirebaseGooglePopup = async function() {
-   const result = await signInWithPopup(auth, googleProvider);
-   return result.user;
- };
+    googleProvider.setCustomParameters({ prompt: "select_account" });
     // كاش أوفلاين على الجهاز: القراءات المتكررة ما بتتحسبش تاني (بيوفر تكلفة) والموقع بيشتغل لو النت قطع
     const firestore = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 
@@ -1832,6 +1852,15 @@ window.selectExamAns = function(qIdx, oIdx) {
       }
       let staffData = null;
       try { const s = await getDoc(doc(firestore, "staff", user.uid)); if (s.exists()) staffData = s.data(); } catch (_) {}
+      if (!staffData && isGoogleUser(user)) {
+        // أول دخول بجوجل: لو مفيش بيانات طالب، نطلب منه يختار (طالب / كوتش) مرة واحدة بس
+        let hasProfile = false;
+        try { hasProfile = (await getDoc(doc(firestore, "users", user.uid))).exists(); } catch (_) {}
+        if (!hasProfile) {
+          me = null; db.users = []; db.currId = null; pendingGoogle = user;
+          window.__authLoading = false; render(); openGoogleOnboarding(); return;
+        }
+      }
       if (staffData) {
         me = { uid: user.uid, role: staffData.role === "admin" ? "admin" : "coach", name: String(staffData.name || "Coach").replace(BAD, ""), username: String(staffData.username || "coach").replace(BAD, ""), email: user.email || "" };
       } else {
@@ -1841,7 +1870,117 @@ window.selectExamAns = function(qIdx, oIdx) {
       window.isFinanceAdminUnlocked = me.role === "admin";
       startListeners();
     }
-    onAuthStateChanged(auth, (user) => { if (signingUp) return; initUser(user); });
+    onAuthStateChanged(auth, (user) => { if (signingUp) return; closeGoogleOnboarding(); initUser(user); });
+
+    // ===================== الدخول بضغطة واحدة عن طريق Google =====================
+    let pendingGoogle = null;            // مستخدم جوجل جديد مستني يختار نوع حسابه
+    let googleRole = "student";
+    try { googleRole = sessionStorage.getItem("ECA_G_ROLE") || "student"; } catch (_) {}
+    const isGoogleUser = u => !!(u && (u.providerData || []).some(p => p.providerId === "google.com"));
+    const G_ERR = {
+      "auth/popup-closed-by-user": "", "auth/cancelled-popup-request": "",
+      "auth/unauthorized-domain": "❌ الدومين ده مش مضاف في Firebase (Authorized domains)",
+      "auth/operation-not-allowed": "❌ الدخول بجوجل مش متفعّل في Firebase Authentication",
+      "auth/network-request-failed": "📡 مفيش اتصال بالإنترنت",
+      "auth/account-exists-with-different-credential": "❌ الإيميل ده مسجّل بطريقة دخول تانية — ادخل بالباسورد واربط جوجل من زر 🔗",
+      "auth/credential-already-in-use": "❌ حساب جوجل ده مربوط بحساب تاني على المنصة",
+      "auth/provider-already-linked": "✅ حسابك مربوط بجوجل بالفعل"
+    };
+    const gToast = e => { const c = e && e.code; const m = c in G_ERR ? G_ERR[c] : "❌ تعذّر الدخول بجوجل"; if (m) toast(m); console.error(e); };
+
+    window.fbGoogleLogin = async (role) => {
+      googleRole = role === "coach" ? "coach" : "student";
+      try { sessionStorage.setItem("ECA_G_ROLE", googleRole); } catch (_) {}
+      try { await signInWithPopup(auth, googleProvider); }
+      catch (e) {
+        // الموبايل أو متصفح بيمنع النوافذ المنبثقة → نحوّل لصفحة جوجل ونرجع تلقائياً
+        if (e && (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment")) {
+          try { await signInWithRedirect(auth, googleProvider); } catch (e2) { gToast(e2); }
+        } else gToast(e);
+      }
+    };
+    getRedirectResult(auth).catch(gToast);
+
+    // ربط جوجل بحساب موجود (طالب باليوزر نيم أو كوتش بالإيميل) عشان الدخول بعد كده يبقى بضغطة واحدة
+    window.fbLinkGoogle = async () => {
+      if (!auth.currentUser || auth.currentUser.isAnonymous) return;
+      try { await linkWithPopup(auth.currentUser, googleProvider); render(); toast("✅ تم ربط حسابك بجوجل — المرة الجاية ادخل بضغطة واحدة"); }
+      catch (e) { gToast(e); }
+    };
+    window.fbAuthInfo = () => {
+      const u = auth.currentUser, ps = (u && u.providerData || []).map(p => p.providerId);
+      return { google: ps.includes("google.com"), password: ps.includes("password") };
+    };
+
+    function closeGoogleOnboarding() { const m = document.getElementById("googleOnboardModal"); if (m) m.remove(); }
+    function openGoogleOnboarding(role) {
+      if (!pendingGoogle) return;
+      if (role) googleRole = role;
+      let m = document.getElementById("googleOnboardModal");
+      if (!m) { m = document.createElement("div"); m.id = "googleOnboardModal"; m.className = "fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4"; document.body.appendChild(m); }
+      const r = googleRole, gName = String(pendingGoogle.displayName || "").replace(BAD, "");
+      const tabCls = on => `py-2.5 rounded-xl text-xs font-bold border ${on ? 'border-yellow-400 text-yellow-300 bg-yellow-500/10' : 'border-zinc-800 text-gray-400'}`;
+      m.innerHTML = `
+        <form onsubmit="completeGoogleOnboarding(event)" class="gold-card rounded-2xl max-w-md w-full p-6 space-y-4">
+          <div class="flex justify-between items-center">
+            <h3 class="font-display font-bold text-lg text-yellow-400">👋 أهلاً بيك في ECA</h3>
+            <button type="button" onclick="cancelGoogleOnboarding()" class="text-gray-400 hover:text-white tap px-2">✕</button>
+          </div>
+          <p class="text-xs text-gray-300">دخلت بحساب <b dir="ltr">${esc(pendingGoogle.email || "")}</b>. اختار نوع حسابك مرة واحدة بس — بعد كده الدخول بضغطة واحدة.</p>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="openGoogleOnboarding('student')" class="${tabCls(r === 'student')}">🎓 طالب</button>
+            <button type="button" onclick="openGoogleOnboarding('coach')" class="${tabCls(r === 'coach')}">👑 كوتش</button>
+          </div>
+          <input id="gName" required value="${esc(gName)}" placeholder="الاسم بالكامل" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+          ${r === "student" ? `
+            <select id="gStep" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-yellow-300">
+              ${[1, 2, 3, 4, 5, 6].map(l => `<option value="${l}">Step ${l}</option>`).join("")}
+            </select>` : `
+            <input id="gCode" required autocomplete="off" autocapitalize="characters" placeholder="كود دعوة الكوتش (من الأدمن)" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white text-center tracking-widest uppercase" />
+            <p class="text-[11px] text-gray-400">الكود بيستخدم مرة واحدة، وبيطلعه الأدمن من زر «🎟️ كود دعوة كوتش جديد».</p>`}
+          <button class="w-full py-3 rounded-xl text-sm gold-btn">دخول المنصة 🚀</button>
+        </form>`;
+      applyLang();
+      const f = document.getElementById(r === "coach" ? "gCode" : "gName"); if (f) f.focus();
+    }
+    window.openGoogleOnboarding = openGoogleOnboarding;
+    window.cancelGoogleOnboarding = async () => { pendingGoogle = null; closeGoogleOnboarding(); try { await signOut(auth); } catch (_) {} };
+
+    window.completeGoogleOnboarding = async (ev) => {
+      ev.preventDefault();
+      const user = pendingGoogle; if (!user) return closeGoogleOnboarding();
+      const btn = ev.submitter; if (btn) btn.disabled = true;
+      const name = document.getElementById("gName").value.trim().replace(BAD, "");
+      const email = String(user.email || "").toLowerCase();
+      const base = (email.split("@")[0] || "user").replace(/[^a-z0-9_]/g, "_").slice(0, 20);
+      const username = base + "_" + user.uid.slice(0, 4).toLowerCase();   // مميز لكل حساب
+      signingUp = true;
+      try {
+        if (!name) throw { code: "no-name" };
+        if (googleRole === "coach") {
+          const code = document.getElementById("gCode").value.trim().toUpperCase();
+          if (!/^[A-Z0-9]{8,16}$/.test(code)) throw { code: "bad-invite" };
+          const batch = writeBatch(firestore);
+          batch.update(doc(firestore, "invites", code), { used: true, usedBy: user.uid });
+          batch.set(doc(firestore, "staff", user.uid), { role: "coach", name, username: base, invite: code });
+          await batch.commit();
+        } else {
+          let group = "";
+          try { const g = await getDoc(doc(firestore, "meta", "groups")); if (g.exists() && Array.isArray(g.data().list)) group = String(g.data().list[0] || ""); } catch (_) {}
+          const level = Number(document.getElementById("gStep").value) || 1;
+          await setDoc(doc(firestore, "users", user.uid), { name, username, email, role: "student", level, group, mode: "offline", att: {}, hw: {}, puz: { t: 0, c: 0 } });
+        }
+        pendingGoogle = null; closeGoogleOnboarding();
+        await initUser(user);
+        tab = "home"; render();
+        toast(googleRole === "coach" ? "✅ تم إنشاء حساب الكوتش!" : "✅ تم إنشاء حسابك!");
+      } catch (e) {
+        if (btn) btn.disabled = false;
+        const c = e && e.code;
+        toast(c === "no-name" ? "❌ اكتب الاسم" : (c === "bad-invite" || c === "permission-denied" || c === "not-found") ? "❌ كود الدعوة غير صحيح أو مستخدم قبل كده" : "❌ تعذّر إنشاء الحساب");
+        console.error(e);
+      } finally { signingUp = false; }
+    };
 
     // ===================== واجهات تستدعيها الصفحة =====================
     window.fbLogin = async (idf, pass) => {
@@ -2421,7 +2560,31 @@ window.selectExamAns = function(qIdx, oIdx) {
       ["❌ كلمة السر لازم تكون 6 حروف على الأقل", "❌ Password must be at least 6 characters"],
       ["✅ تم تغيير كلمة السر", "✅ Password changed"],
       ["⏳ جاري التحميل...", "⏳ Loading..."],
-      ["القسم المالي (للإدارة فقط)", "Financial Management (Admins Only)"]
+      ["القسم المالي (للإدارة فقط)", "Financial Management (Admins Only)"],
+      ["⚡ دخول بضغطة واحدة بحساب Google", "⚡ One-tap login with Google"],
+      ["أول مرة بتختار طالب أو كوتش، وبعد كده بتدخل بضغطة واحدة من غير باسورد.", "Pick student or coach the first time, then log in with one tap — no password."],
+      ["🎓 دخول الطالب بجوجل", "🎓 Student — Google"],
+      ["👑 دخول الكوتش بجوجل", "👑 Coach — Google"],
+      ["أو باليوزر نيم / الإيميل", "or with username / email"],
+      ["👋 أهلاً بيك في ECA", "👋 Welcome to ECA"],
+      ["اختار نوع حسابك مرة واحدة بس — بعد كده الدخول بضغطة واحدة.", "Choose your account type once — after that it's one-tap login."],
+      ["دخلت بحساب", "Signed in as"],
+      ["🎓 طالب", "🎓 Student"],
+      ["👑 كوتش", "👑 Coach"],
+      ["الاسم بالكامل", "Full name"],
+      ["كود دعوة الكوتش (من الأدمن)", "Coach invite code (from admin)"],
+      ["الكود بيستخدم مرة واحدة، وبيطلعه الأدمن من زر «🎟️ كود دعوة كوتش جديد».", "The code is single-use; the admin generates it with \"🎟️ New coach invite code\"."],
+      ["دخول المنصة 🚀", "Enter platform 🚀"],
+      ["✅ تم ربط حسابك بجوجل — المرة الجاية ادخل بضغطة واحدة", "✅ Google linked — next time log in with one tap"],
+      ["ℹ️ حسابك بيدخل بجوجل — مفيش كلمة سر تتغير", "ℹ️ Your account uses Google — no password to change"],
+      ["❌ تعذّر الدخول بجوجل", "❌ Google sign-in failed"],
+      ["❌ الدومين ده مش مضاف في Firebase (Authorized domains)", "❌ This domain isn't in Firebase Authorized domains"],
+      ["❌ الدخول بجوجل مش متفعّل في Firebase Authentication", "❌ Google sign-in isn't enabled in Firebase Authentication"],
+      ["❌ حساب جوجل ده مربوط بحساب تاني على المنصة", "❌ This Google account is linked to another platform account"],
+      ["❌ كود الدعوة غير صحيح أو مستخدم قبل كده", "❌ Invite code is invalid or already used"],
+      ["❌ اكتب الاسم", "❌ Enter your name"],
+      ["❌ تعذّر إنشاء الحساب", "❌ Could not create the account"],
+      ["✅ تم إنشاء حساب الكوتش!", "✅ Coach account created!"]
     ].forEach(p => { if (!DICT.some(d => d[0] === p[0])) DICT.push(p); });
     DICT.sort((a, b) => b[0].length - a[0].length);
 
@@ -2465,217 +2628,6 @@ window.selectExamAns = function(qIdx, oIdx) {
         }
       };
     }
-    // ================= ECA GOOGLE QUICK LOGIN & DYNAMIC COACH OTP SECURITY =================
-
-    // 1. خوارزمية توليد الرقم السري المتغير للكوتش/المدير (يتغير تلقائياً كل ساعة + يقبل الكود المخصص)
-    // المعادلة مبنية على مفتاح سري خاص بك + التاريخ والساعة الحالية، فلا يمكن لأي طالب تخمينه أو استخدامه في وقت آخر
-    const COACH_MASTER_SECRET = "ECA-9920"; // المفتاح الجذري لتوليد الأكواد المتغيرة
-
-    window.getDynamicCoachPIN = function() {
-      const now = new Date();
-      const timeSlot = `${now.getUTCFullYear()}-${now.getUTCMonth()+1}-${now.getUTCDate()}-${now.getUTCHours()}`;
-      const customSeed = (db && db.coachSecretSeed) ? db.coachSecretSeed : COACH_MASTER_SECRET;
-      const raw = customSeed + "|" + timeSlot;
-      let hash = 2166136261;
-      for (let i = 0; i < raw.length; i++) {
-        hash ^= raw.charCodeAt(i);
-        hash = Math.imul(hash, 16777619);
-      }
-      const sixDigits = String(Math.abs(hash) % 900000 + 100000);
-      return "ECA-" + sixDigits;
-    };
-
-    window.verifyCoachDynamicPIN = function(inputCode) {
-      if (!inputCode) return false;
-      const clean = inputCode.trim().toUpperCase();
-      return clean === window.getDynamicCoachPIN();
-    };
-
-    // زر للمدير لتوليد كود جديد فوراً في أي لحظة وإبطال الكود السابق
-    window.regenerateCoachPINNow = function() {
-      if (!isCoach()) return;
-      db.coachSecretSeed = "ECA-" + Math.random().toString(36).slice(2, 8).toUpperCase();
-      save();
-      render();
-      toast("🔄 تم تغيير الرقم السري المتغير للكوتش فوراً!");
-    };
-
-    // 2. نافذة تسجيل الدخول السريع بـ Gmail (تتعرف على الحساب القديم أو تنشئ حساب طالب/كوتش بأمان)
-    let pendingGoogleUser = null;
-
-    window.loginWithGoogleQuick = async function(preferredRole) {
-      if (!window.triggerFirebaseGooglePopup) {
-        return toast("⚠️ يرجى التأكد من تفعيل Google Sign-In في إعدادات Firebase");
-      }
-      try {
-        toast("⏳ جاري الاتصال بحساب Google...");
-        const gUser = await window.triggerFirebaseGooglePopup();
-        if (!gUser || !gUser.email) return;
-
-        const email = gUser.email.toLowerCase();
-        // إذا كان الحساب مسجلاً من قبل في قاعدة البيانات، يدخل فوراً بضغطة واحدة!
-        let existing = db.users.find(u => u.email && u.email.toLowerCase() === email);
-        if (existing) {
-          db.currId = existing.id;
-          tab = "home";
-          save();
-          render();
-          return toast("🎉 مرحباً بعودتك " + existing.name + " (دخول سريع عبر Gmail)");
-        }
-
-        // إذا كان يدخل لأول مرة عبر Gmail، نفتح له نافذة سريعة لاختيار (طالب أو كوتش بالرقم المتغير)
-        pendingGoogleUser = {
-          name: gUser.displayName || email.split("@")[0],
-          email: email,
-          username: email.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "_")
-        };
-        openGoogleOnboardingModal(preferredRole || "student");
-      } catch (err) {
-        console.error(err);
-        toast("❌ تعذر إتمام الدخول عبر Google — تأكد من إضافة الدومين في Firebase Authorized Domains");
-      }
-    };
-
-    window.openGoogleOnboardingModal = function(roleChoice) {
-      let modal = document.getElementById("googleOnboardModal");
-      if (!modal) {
-        modal = document.createElement("div");
-        modal.id = "googleOnboardModal";
-        modal.className = "fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4";
-        document.body.appendChild(modal);
-      }
-      modal.classList.remove("hidden");
-      const r = roleChoice || "student";
-      modal.innerHTML = `
-        <div class="gold-card rounded-2xl max-w-md w-full p-6 space-y-4 border-2 border-yellow-500/40">
-          <div class="flex justify-between items-center">
-            <h3 class="font-display font-bold text-lg text-yellow-400">🌐 إكمال الدخول السريع بـ Gmail</h3>
-            <button onclick="document.getElementById('googleOnboardModal').classList.add('hidden')" class="text-gray-400 hover:text-white">✕</button>
-          </div>
-          <p class="text-xs text-gray-300">مرحباً <b>${esc(pendingGoogleUser.name)}</b> (${esc(pendingGoogleUser.email)})، اختر نوع حسابك لإكمال التسجيل:</p>
-          <div class="grid grid-cols-2 gap-2">
-            <button type="button" onclick="openGoogleOnboardingModal('student')" class="py-2 rounded-xl text-xs font-bold border ${r==='student'?'border-yellow-400 text-yellow-300 bg-yellow-500/10':'border-zinc-800 text-gray-400'}">♟️ طالب (Student)</button>
-            <button type="button" onclick="openGoogleOnboardingModal('coach')" class="py-2 rounded-xl text-xs font-bold border ${r==='coach'?'border-yellow-400 text-yellow-300 bg-yellow-500/10':'border-zinc-800 text-gray-400'}">👑 كوتش / مدير (Coach)</button>
-          </div>
-          ${r === "student" ? `
-            <div>
-              <label class="block text-xs text-gray-400 mb-1">اختر مستواك الحالي (Step):</label>
-              <select id="gOnboardStep" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-yellow-300">
-                <option value="1">Step 1</option><option value="2">Step 2</option><option value="3">Step 3</option><option value="4">Step 4</option><option value="5">Step 5</option><option value="6">Step 6</option>
-              </select>
-            </div>
-          ` : `
-            <div>
-              <label class="block text-xs text-yellow-300 mb-1">🔐 أدخل الرقم السري المتغير للكوتش (Dynamic Coach PIN):</label>
-              <input id="gOnboardCoachPin" required placeholder="مثال: ECA-123456" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-white text-center font-mono tracking-widest uppercase" />
-              <p class="text-[11px] text-gray-400 mt-1">احصل على الكود المتغير للساعة الحالية من لوحة تحكم المدير.</p>
-            </div>
-          `}
-          <button onclick="completeGoogleOnboarding('${r}')" class="w-full py-2.5 rounded-xl text-xs gold-btn">تأكيد والدخول للمنصة 🚀</button>
-        </div>
-      `;
-    };
-
-    window.completeGoogleOnboarding = function(roleChoice) {
-      if (!pendingGoogleUser) return;
-      let uname = pendingGoogleUser.username;
-      if (db.users.some(u => u.username.toLowerCase() === uname)) {
-        uname = uname + "_" + String(Date.now()).slice(-3);
-      }
-
-      if (roleChoice === "coach") {
-        const pinInp = document.getElementById("gOnboardCoachPin");
-        if (!pinInp || !window.verifyCoachDynamicPIN(pinInp.value)) {
-          return toast("❌ الرقم السري المتغير للكوتش غير صحيح أو انتهت صلاحيته!");
-        }
-        const nc = { id: "u" + Date.now(), name: pendingGoogleUser.name, username: uname, email: pendingGoogleUser.email, pass: "GOOGLE_AUTH", role: "coach" };
-        db.users.push(nc);
-        db.currId = nc.id;
-      } else {
-        const lvl = Number(document.getElementById("gOnboardStep").value) || 1;
-        const ns = { id: "u" + Date.now(), name: pendingGoogleUser.name, username: uname, email: pendingGoogleUser.email, pass: "GOOGLE_AUTH", role: "student", level: lvl, group: db.groups[0] || "", att: {}, hw: {}, puz: { t: 0, c: 0 }, note: "لا توجد ملاحظات حالياً." };
-        db.users.push(ns);
-        db.currId = ns.id;
-      }
-
-      document.getElementById("googleOnboardModal").classList.add("hidden");
-      pendingGoogleUser = null;
-      tab = "home";
-      save();
-      render();
-      toast("🎉 تم تسجيل الدخول بنجاح عبر Gmail!");
-    };
-
-    // 3. تحديث استمارة التسجيل العادية (doSignup) والدخول السريع للمدرب ليطلبا الرقم السري المتغير
-    doSignup = function(ev) {
-      ev.preventDefault();
-      const name = document.getElementById("sName").value.trim();
-      const username = document.getElementById("sUser").value.trim().toLowerCase().replace(/\s+/g, "_");
-      const email = document.getElementById("sEmail").value.trim().toLowerCase();
-      const pass = document.getElementById("sPass").value;
-      if (db.users.some(u => u.username.toLowerCase() === username || u.email.toLowerCase() === email)) {
-        return toast("❌ اسم المستخدم أو الإيميل مسجل بالفعل!");
-      }
-      if (signupRole === "coach") {
-        const enteredPin = document.getElementById("sCode").value.trim();
-        if (!window.verifyCoachDynamicPIN(enteredPin)) {
-          return toast("❌ الرقم السري المتغير للكوتش غير صحيح أو انتهت صلاحيته!");
-        }
-        const nc = { id: "u" + Date.now(), name, username, email, pass, role: "coach" };
-        db.users.push(nc); db.currId = nc.id;
-      } else {
-        const level = Number(document.getElementById("sLvl").value) || 1;
-        const ns = { id: "u" + Date.now(), name, username, email, pass, role: "student", level, group: db.groups[0], att: {}, hw: {}, puz: { t: 0, c: 0 }, note: "لا توجد ملاحظات حالياً." };
-        db.users.push(ns); db.currId = ns.id;
-      }
-      tab = "home"; save(); render(); toast("🎉 تم إنشاء الحساب بنجاح!");
-    };
-
-    // السماح بالدخول السريع للمدرب إما بالباسورد الإداري أو بالرقم السري المتغير
-    confirmCoachQuick = function() {
-      const val = document.getElementById("coachQuickInp").value.trim();
-      if (val !== COACH_QUICK_PASS && !window.verifyCoachDynamicPIN(val)) {
-        return toast("❌ كلمة السر أو الكود المتغير غير صحيح");
-      }
-      const u = db.users.find(x => x.id === "c1" && x.role === "coach"); if (!u) return;
-      document.getElementById("coachQuickModal").classList.add("hidden");
-      db.currId = u.id; go("home"); save(); render(); toast("مرحباً بك " + u.name);
-    };
-
-    // 4. إضافة أزرار الدخول السريع بـ Gmail في شاشة الدخول + عرض الكود المتغير داخل لوحة المدير
-    const _origRenderAuthView = renderAuthView;
-    renderAuthView = function() {
-      const base = _origRenderAuthView();
-      const googleBtnHtml = `
-        <div class="mt-4 pt-4 border-t border-yellow-500/20 space-y-2">
-          <button type="button" onclick="loginWithGoogleQuick('student')" class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-white text-gray-900 hover:bg-gray-100 flex items-center justify-center gap-2 shadow-md transition">
-            <span>🌐</span> <span>تسجيل دخول سريع باستخدام حساب Google (Gmail)</span>
-          </button>
-        </div>
-      `;
-      return base
-        .replace('placeholder="كود المدرب السري"', 'placeholder="الرقم السري المتغير للكوتش (مثال: ECA-123456)"')
-        .replace('</form>', '</form>' + googleBtnHtml);
-    };
-
-    // عرض الكود السري المتغير للساعة الحالية داخل الصفحة الرئيسية للمدرب (لتعطيه لأي كوتش جديد تريد إضافته)
-    const _origRenderCoachHome = renderCoachHome;
-    renderCoachHome = function(c) {
-      const base = _origRenderCoachHome(c);
-      const pinCard = `
-        <div class="gold-card rounded-2xl p-4 border border-emerald-500/40 flex flex-wrap justify-between items-center gap-3">
-          <div>
-            <div class="text-xs font-bold text-emerald-300">🔐 الرقم السري المتغير لتسجيل المدربين (Dynamic Coach OTP — يتغير كل ساعة تلقائياً):</div>
-            <p class="text-[11px] text-gray-400 mt-0.5">أعطِ هذا الكود المؤقت فقط للكوتش أو الإداري الجديد ليتمكن من إنشاء حساب مدرب الآن:</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="px-4 py-2 rounded-xl bg-black border border-yellow-500 font-mono font-extrabold text-sm text-yellow-300 tracking-widest select-all">${window.getDynamicCoachPIN()}</span>
-            <button onclick="regenerateCoachPINNow()" class="px-3 py-2 rounded-xl text-xs bg-zinc-900 border border-yellow-500/40 text-yellow-300 hover:bg-yellow-500 hover:text-black font-bold">🔄 تغيير الكود فوراً</button>
-          </div>
-        </div>
-      `;
-      return base.replace('<div class="space-y-6">', '<div class="space-y-6">' + pinCard);
-    };
     // تشغيل المنصة فوراً بعد تحميل كل الإضافات
     setTimeout(() => { if (typeof render === "function") render(); }, 100);
   </script>
