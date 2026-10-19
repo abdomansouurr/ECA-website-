@@ -1862,6 +1862,7 @@ window.selectExamAns = function(qIdx, oIdx) {
         let hasProfile = false;
         try { hasProfile = (await getDoc(doc(firestore, "users", user.uid))).exists(); } catch (_) {}
         if (!hasProfile) {
+          takeGoogleClick();
           me = null; db.users = []; db.currId = null; pendingGoogle = user;
           window.__authLoading = false; render(); openGoogleOnboarding(); return;
         }
@@ -1870,7 +1871,10 @@ window.selectExamAns = function(qIdx, oIdx) {
         me = { uid: user.uid, role: staffData.role === "admin" ? "admin" : "coach", name: String(staffData.name || "Coach").replace(BAD, ""), username: String(staffData.username || "coach").replace(BAD, ""), email: user.email || "" };
       } else {
         me = { uid: user.uid, role: "student", email: user.email || "" };
+        // داس "دخول الكوتش" بس الإيميل ده متسجّل كطالب → نوضّحله بدل ما يدخل طالب من غير سبب
+        if (takeGoogleClick() === "coach") setTimeout(() => alert(trText("الإيميل ده متسجّل على المنصة كـ «طالب»، فدخلت على حساب الطالب.") + "\n\n" + trText("عشان يبقى كوتش أو أدمن: الأدمن يضيف مستند في staff بالـ UID ده:") + "\n" + user.uid + "\n\n" + trText("أو ادخل بإيميل جوجل تاني واختار «كوتش» بكود دعوة.")), 300);
       }
+      if (staffData) takeGoogleClick();
       db.currId = user.uid;
       window.isFinanceAdminUnlocked = me.role === "admin";
       startListeners();
@@ -1881,6 +1885,8 @@ window.selectExamAns = function(qIdx, oIdx) {
     let pendingGoogle = null;            // مستخدم جوجل جديد مستني يختار نوع حسابه
     let googleRole = "student";
     try { googleRole = sessionStorage.getItem("ECA_G_ROLE") || "student"; } catch (_) {}
+    // الزر اللي اتداس في آخر محاولة دخول بجوجل (بيتقرا مرة واحدة بس)
+    function takeGoogleClick() { let r = null; try { r = sessionStorage.getItem("ECA_G_CLICK"); sessionStorage.removeItem("ECA_G_CLICK"); } catch (_) {} return r; }
     const isGoogleUser = u => !!(u && (u.providerData || []).some(p => p.providerId === "google.com"));
     const G_ERR = {
       "auth/popup-closed-by-user": "", "auth/cancelled-popup-request": "",
@@ -1895,13 +1901,13 @@ window.selectExamAns = function(qIdx, oIdx) {
 
     window.fbGoogleLogin = async (role) => {
       googleRole = role === "coach" ? "coach" : "student";
-      try { sessionStorage.setItem("ECA_G_ROLE", googleRole); } catch (_) {}
+      try { sessionStorage.setItem("ECA_G_ROLE", googleRole); sessionStorage.setItem("ECA_G_CLICK", googleRole); } catch (_) {}
       try { await signInWithPopup(auth, googleProvider); }
       catch (e) {
         // الموبايل أو متصفح بيمنع النوافذ المنبثقة → نحوّل لصفحة جوجل ونرجع تلقائياً
         if (e && (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment")) {
           try { await signInWithRedirect(auth, googleProvider); } catch (e2) { gToast(e2); }
-        } else gToast(e);
+        } else { takeGoogleClick(); gToast(e); }
       }
     };
     getRedirectResult(auth).catch(gToast);
