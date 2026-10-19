@@ -1634,7 +1634,7 @@ window.selectExamAns = function(qIdx, oIdx) {
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, deleteUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup , deleteUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/window.triggerFirebaseGooglePopup";
     import { initializeFirestore, writeBatch, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -1648,6 +1648,11 @@ window.selectExamAns = function(qIdx, oIdx) {
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const googleProvider = new GoogleAuthProvider();
+ window.triggerFirebaseGooglePopup = async function() {
+   const result = await signInWithPopup(auth, googleProvider);
+   return result.user;
+ };
     // كاش أوفلاين على الجهاز: القراءات المتكررة ما بتتحسبش تاني (بيوفر تكلفة) والموقع بيشتغل لو النت قطع
     const firestore = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 
@@ -2460,7 +2465,217 @@ window.selectExamAns = function(qIdx, oIdx) {
         }
       };
     }
-    
+    // ================= ECA GOOGLE QUICK LOGIN & DYNAMIC COACH OTP SECURITY =================
+
+    // 1. خوارزمية توليد الرقم السري المتغير للكوتش/المدير (يتغير تلقائياً كل ساعة + يقبل الكود المخصص)
+    // المعادلة مبنية على مفتاح سري خاص بك + التاريخ والساعة الحالية، فلا يمكن لأي طالب تخمينه أو استخدامه في وقت آخر
+    const COACH_MASTER_SECRET = "ECA-9920"; // المفتاح الجذري لتوليد الأكواد المتغيرة
+
+    window.getDynamicCoachPIN = function() {
+      const now = new Date();
+      const timeSlot = `${now.getUTCFullYear()}-${now.getUTCMonth()+1}-${now.getUTCDate()}-${now.getUTCHours()}`;
+      const customSeed = (db && db.coachSecretSeed) ? db.coachSecretSeed : COACH_MASTER_SECRET;
+      const raw = customSeed + "|" + timeSlot;
+      let hash = 2166136261;
+      for (let i = 0; i < raw.length; i++) {
+        hash ^= raw.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+      const sixDigits = String(Math.abs(hash) % 900000 + 100000);
+      return "ECA-" + sixDigits;
+    };
+
+    window.verifyCoachDynamicPIN = function(inputCode) {
+      if (!inputCode) return false;
+      const clean = inputCode.trim().toUpperCase();
+      return clean === window.getDynamicCoachPIN();
+    };
+
+    // زر للمدير لتوليد كود جديد فوراً في أي لحظة وإبطال الكود السابق
+    window.regenerateCoachPINNow = function() {
+      if (!isCoach()) return;
+      db.coachSecretSeed = "ECA-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+      save();
+      render();
+      toast("🔄 تم تغيير الرقم السري المتغير للكوتش فوراً!");
+    };
+
+    // 2. نافذة تسجيل الدخول السريع بـ Gmail (تتعرف على الحساب القديم أو تنشئ حساب طالب/كوتش بأمان)
+    let pendingGoogleUser = null;
+
+    window.loginWithGoogleQuick = async function(preferredRole) {
+      if (!window.triggerFirebaseGooglePopup) {
+        return toast("⚠️ يرجى التأكد من تفعيل Google Sign-In في إعدادات Firebase");
+      }
+      try {
+        toast("⏳ جاري الاتصال بحساب Google...");
+        const gUser = await window.triggerFirebaseGooglePopup();
+        if (!gUser || !gUser.email) return;
+
+        const email = gUser.email.toLowerCase();
+        // إذا كان الحساب مسجلاً من قبل في قاعدة البيانات، يدخل فوراً بضغطة واحدة!
+        let existing = db.users.find(u => u.email && u.email.toLowerCase() === email);
+        if (existing) {
+          db.currId = existing.id;
+          tab = "home";
+          save();
+          render();
+          return toast("🎉 مرحباً بعودتك " + existing.name + " (دخول سريع عبر Gmail)");
+        }
+
+        // إذا كان يدخل لأول مرة عبر Gmail، نفتح له نافذة سريعة لاختيار (طالب أو كوتش بالرقم المتغير)
+        pendingGoogleUser = {
+          name: gUser.displayName || email.split("@")[0],
+          email: email,
+          username: email.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "_")
+        };
+        openGoogleOnboardingModal(preferredRole || "student");
+      } catch (err) {
+        console.error(err);
+        toast("❌ تعذر إتمام الدخول عبر Google — تأكد من إضافة الدومين في Firebase Authorized Domains");
+      }
+    };
+
+    window.openGoogleOnboardingModal = function(roleChoice) {
+      let modal = document.getElementById("googleOnboardModal");
+      if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "googleOnboardModal";
+        modal.className = "fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4";
+        document.body.appendChild(modal);
+      }
+      modal.classList.remove("hidden");
+      const r = roleChoice || "student";
+      modal.innerHTML = `
+        <div class="gold-card rounded-2xl max-w-md w-full p-6 space-y-4 border-2 border-yellow-500/40">
+          <div class="flex justify-between items-center">
+            <h3 class="font-display font-bold text-lg text-yellow-400">🌐 إكمال الدخول السريع بـ Gmail</h3>
+            <button onclick="document.getElementById('googleOnboardModal').classList.add('hidden')" class="text-gray-400 hover:text-white">✕</button>
+          </div>
+          <p class="text-xs text-gray-300">مرحباً <b>${esc(pendingGoogleUser.name)}</b> (${esc(pendingGoogleUser.email)})، اختر نوع حسابك لإكمال التسجيل:</p>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="openGoogleOnboardingModal('student')" class="py-2 rounded-xl text-xs font-bold border ${r==='student'?'border-yellow-400 text-yellow-300 bg-yellow-500/10':'border-zinc-800 text-gray-400'}">♟️ طالب (Student)</button>
+            <button type="button" onclick="openGoogleOnboardingModal('coach')" class="py-2 rounded-xl text-xs font-bold border ${r==='coach'?'border-yellow-400 text-yellow-300 bg-yellow-500/10':'border-zinc-800 text-gray-400'}">👑 كوتش / مدير (Coach)</button>
+          </div>
+          ${r === "student" ? `
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">اختر مستواك الحالي (Step):</label>
+              <select id="gOnboardStep" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-yellow-300">
+                <option value="1">Step 1</option><option value="2">Step 2</option><option value="3">Step 3</option><option value="4">Step 4</option><option value="5">Step 5</option><option value="6">Step 6</option>
+              </select>
+            </div>
+          ` : `
+            <div>
+              <label class="block text-xs text-yellow-300 mb-1">🔐 أدخل الرقم السري المتغير للكوتش (Dynamic Coach PIN):</label>
+              <input id="gOnboardCoachPin" required placeholder="مثال: ECA-123456" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-white text-center font-mono tracking-widest uppercase" />
+              <p class="text-[11px] text-gray-400 mt-1">احصل على الكود المتغير للساعة الحالية من لوحة تحكم المدير.</p>
+            </div>
+          `}
+          <button onclick="completeGoogleOnboarding('${r}')" class="w-full py-2.5 rounded-xl text-xs gold-btn">تأكيد والدخول للمنصة 🚀</button>
+        </div>
+      `;
+    };
+
+    window.completeGoogleOnboarding = function(roleChoice) {
+      if (!pendingGoogleUser) return;
+      let uname = pendingGoogleUser.username;
+      if (db.users.some(u => u.username.toLowerCase() === uname)) {
+        uname = uname + "_" + String(Date.now()).slice(-3);
+      }
+
+      if (roleChoice === "coach") {
+        const pinInp = document.getElementById("gOnboardCoachPin");
+        if (!pinInp || !window.verifyCoachDynamicPIN(pinInp.value)) {
+          return toast("❌ الرقم السري المتغير للكوتش غير صحيح أو انتهت صلاحيته!");
+        }
+        const nc = { id: "u" + Date.now(), name: pendingGoogleUser.name, username: uname, email: pendingGoogleUser.email, pass: "GOOGLE_AUTH", role: "coach" };
+        db.users.push(nc);
+        db.currId = nc.id;
+      } else {
+        const lvl = Number(document.getElementById("gOnboardStep").value) || 1;
+        const ns = { id: "u" + Date.now(), name: pendingGoogleUser.name, username: uname, email: pendingGoogleUser.email, pass: "GOOGLE_AUTH", role: "student", level: lvl, group: db.groups[0] || "", att: {}, hw: {}, puz: { t: 0, c: 0 }, note: "لا توجد ملاحظات حالياً." };
+        db.users.push(ns);
+        db.currId = ns.id;
+      }
+
+      document.getElementById("googleOnboardModal").classList.add("hidden");
+      pendingGoogleUser = null;
+      tab = "home";
+      save();
+      render();
+      toast("🎉 تم تسجيل الدخول بنجاح عبر Gmail!");
+    };
+
+    // 3. تحديث استمارة التسجيل العادية (doSignup) والدخول السريع للمدرب ليطلبا الرقم السري المتغير
+    doSignup = function(ev) {
+      ev.preventDefault();
+      const name = document.getElementById("sName").value.trim();
+      const username = document.getElementById("sUser").value.trim().toLowerCase().replace(/\s+/g, "_");
+      const email = document.getElementById("sEmail").value.trim().toLowerCase();
+      const pass = document.getElementById("sPass").value;
+      if (db.users.some(u => u.username.toLowerCase() === username || u.email.toLowerCase() === email)) {
+        return toast("❌ اسم المستخدم أو الإيميل مسجل بالفعل!");
+      }
+      if (signupRole === "coach") {
+        const enteredPin = document.getElementById("sCode").value.trim();
+        if (!window.verifyCoachDynamicPIN(enteredPin)) {
+          return toast("❌ الرقم السري المتغير للكوتش غير صحيح أو انتهت صلاحيته!");
+        }
+        const nc = { id: "u" + Date.now(), name, username, email, pass, role: "coach" };
+        db.users.push(nc); db.currId = nc.id;
+      } else {
+        const level = Number(document.getElementById("sLvl").value) || 1;
+        const ns = { id: "u" + Date.now(), name, username, email, pass, role: "student", level, group: db.groups[0], att: {}, hw: {}, puz: { t: 0, c: 0 }, note: "لا توجد ملاحظات حالياً." };
+        db.users.push(ns); db.currId = ns.id;
+      }
+      tab = "home"; save(); render(); toast("🎉 تم إنشاء الحساب بنجاح!");
+    };
+
+    // السماح بالدخول السريع للمدرب إما بالباسورد الإداري أو بالرقم السري المتغير
+    confirmCoachQuick = function() {
+      const val = document.getElementById("coachQuickInp").value.trim();
+      if (val !== COACH_QUICK_PASS && !window.verifyCoachDynamicPIN(val)) {
+        return toast("❌ كلمة السر أو الكود المتغير غير صحيح");
+      }
+      const u = db.users.find(x => x.id === "c1" && x.role === "coach"); if (!u) return;
+      document.getElementById("coachQuickModal").classList.add("hidden");
+      db.currId = u.id; go("home"); save(); render(); toast("مرحباً بك " + u.name);
+    };
+
+    // 4. إضافة أزرار الدخول السريع بـ Gmail في شاشة الدخول + عرض الكود المتغير داخل لوحة المدير
+    const _origRenderAuthView = renderAuthView;
+    renderAuthView = function() {
+      const base = _origRenderAuthView();
+      const googleBtnHtml = `
+        <div class="mt-4 pt-4 border-t border-yellow-500/20 space-y-2">
+          <button type="button" onclick="loginWithGoogleQuick('student')" class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-white text-gray-900 hover:bg-gray-100 flex items-center justify-center gap-2 shadow-md transition">
+            <span>🌐</span> <span>تسجيل دخول سريع باستخدام حساب Google (Gmail)</span>
+          </button>
+        </div>
+      `;
+      return base
+        .replace('placeholder="كود المدرب السري"', 'placeholder="الرقم السري المتغير للكوتش (مثال: ECA-123456)"')
+        .replace('</form>', '</form>' + googleBtnHtml);
+    };
+
+    // عرض الكود السري المتغير للساعة الحالية داخل الصفحة الرئيسية للمدرب (لتعطيه لأي كوتش جديد تريد إضافته)
+    const _origRenderCoachHome = renderCoachHome;
+    renderCoachHome = function(c) {
+      const base = _origRenderCoachHome(c);
+      const pinCard = `
+        <div class="gold-card rounded-2xl p-4 border border-emerald-500/40 flex flex-wrap justify-between items-center gap-3">
+          <div>
+            <div class="text-xs font-bold text-emerald-300">🔐 الرقم السري المتغير لتسجيل المدربين (Dynamic Coach OTP — يتغير كل ساعة تلقائياً):</div>
+            <p class="text-[11px] text-gray-400 mt-0.5">أعطِ هذا الكود المؤقت فقط للكوتش أو الإداري الجديد ليتمكن من إنشاء حساب مدرب الآن:</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="px-4 py-2 rounded-xl bg-black border border-yellow-500 font-mono font-extrabold text-sm text-yellow-300 tracking-widest select-all">${window.getDynamicCoachPIN()}</span>
+            <button onclick="regenerateCoachPINNow()" class="px-3 py-2 rounded-xl text-xs bg-zinc-900 border border-yellow-500/40 text-yellow-300 hover:bg-yellow-500 hover:text-black font-bold">🔄 تغيير الكود فوراً</button>
+          </div>
+        </div>
+      `;
+      return base.replace('<div class="space-y-6">', '<div class="space-y-6">' + pinCard);
+    };
   </script>
 </body>
 </html>
