@@ -387,11 +387,15 @@
             ` : `
               <form onsubmit="doSignup(event)" class="space-y-3">
                 <div class="grid grid-cols-2 gap-2">
-                  <input id="sName" required placeholder="Full Name" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
-                  <input id="sUser" required placeholder="Username (e.g. ali_chess)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+                  <button type="button" onclick="signupRole='student'; render();" class="py-2 rounded-xl text-xs font-bold border ${signupRole==='student'?'border-yellow-400 text-yellow-300 bg-yellow-500/10':'border-zinc-800 text-gray-400'}">🎓 طالب</button>
+                  <button type="button" onclick="signupRole='coach'; render();" class="py-2 rounded-xl text-xs font-bold border ${signupRole==='coach'?'border-yellow-400 text-yellow-300 bg-yellow-500/10':'border-zinc-800 text-gray-400'}">👑 كوتش</button>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
-                  <input id="sEmail" type="email" placeholder="Email" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+                  <input id="sName" required placeholder="Full Name" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+                  ${signupRole === "student" ? `<input id="sUser" required placeholder="Username (e.g. ali_chess)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />` : `<input id="sUser" placeholder="Username (optional)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />`}
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <input id="sEmail" type="email" ${signupRole === "coach" ? "required" : ""} placeholder="${signupRole === "coach" ? "Email (required)" : "Email"}" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
                   <input id="sPass" type="password" required placeholder="Password" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
                 </div>
                 ${signupRole === "student" ? `
@@ -399,7 +403,7 @@
                     <option value="1">Step 1</option><option value="2">Step 2</option><option value="3">Step 3</option><option value="4">Step 4</option><option value="5">Step 5</option><option value="6">Step 6</option>
                   </select>
                 ` : `
-                  <input id="sCode" required placeholder="كود المدرب السري" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-white" />
+                  <input id="sCode" required autocomplete="off" autocapitalize="characters" placeholder="كود دعوة الكوتش (من الأدمن)" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-white" />
                 `}
                 <button class="w-full py-3 rounded-xl text-sm gold-btn">إنشاء الحساب 🚀</button>
               </form>
@@ -436,6 +440,17 @@
       const username = clean(document.getElementById("sUser").value).toLowerCase().replace(/\s+/g, "_");
       const email = clean(document.getElementById("sEmail").value).toLowerCase();
       const pass = document.getElementById("sPass").value;
+      if (signupRole === "coach") {
+        if (!window.fbCoachSignup) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش، جرّب بعد ثواني");
+        const code = document.getElementById("sCode").value.trim();
+        if (!name || !email) return toast("❌ اكتب الاسم والإيميل");
+        if (pass.length < 6) return toast("❌ كلمة السر لازم تكون 6 حروف على الأقل");
+        const b2 = ev.submitter; if (b2) b2.disabled = true;
+        const rc = await window.fbCoachSignup({ name, username: username || email.split("@")[0].replace(/[^a-z0-9_]/g, ""), email, pass, code });
+        if (b2) b2.disabled = false;
+        if (!rc.ok) return toast(rc.code === "auth/email-already-in-use" ? "❌ الإيميل ده مسجّل قبل كده" : (rc.code === "auth/weak-password" ? "❌ كلمة السر ضعيفة" : (rc.code === "bad-invite" || rc.code === "permission-denied" || rc.code === "not-found" ? "❌ كود الدعوة غير صحيح أو مستخدم قبل كده" : "❌ تعذّر إنشاء حساب الكوتش")));
+        signupRole = "student"; tab = "home"; return toast("✅ تم إنشاء حساب الكوتش!");
+      }
       const level = Number(document.getElementById("sLvl").value) || 1;
       if (!name || !username) return toast("❌ اكتب الاسم واسم المستخدم");
       if (pass.length < 6) return toast("❌ كلمة السر لازم تكون 6 حروف على الأقل");
@@ -769,7 +784,15 @@
         <span class="text-yellow-300 font-bold">🛠️ أدوات الإدارة</span>
         <button onclick="migrateLegacy()" class="px-3 py-2 rounded-xl bg-zinc-900 border border-yellow-500/40 text-yellow-300">ترحيل الطلاب من النظام القديم</button>
         <span class="text-gray-400">مرة واحدة: بينشئ حساب دخول لكل طالب وينزّل ملف فيه كلمات السر المؤقتة.</span>
+        <button onclick="createInvite()" class="px-3 py-2 rounded-xl bg-zinc-900 border border-yellow-500/40 text-yellow-300">🎟️ كود دعوة كوتش جديد</button>
       </div>`;
+    }
+    async function createInvite() {
+      if (!window.fbCreateInvite) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش");
+      const c = await window.fbCreateInvite();
+      if (!c) return toast("❌ تعذّر إنشاء الكود");
+      try { await navigator.clipboard.writeText(c); } catch (_) {}
+      alert(trText("كود دعوة الكوتش (يُستخدم مرة واحدة):") + "\n\n" + c + "\n\n" + trText("اتنسخ تلقائياً. ابعته للكوتش ليسجّل من تبويب «كوتش» في صفحة التسجيل."));
     }
     async function migrateLegacy() {
       if (!window.fbMigrateLegacy) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش");
@@ -1611,8 +1634,8 @@ window.selectExamAns = function(qIdx, oIdx) {
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, deleteUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { initializeFirestore, writeBatch, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDofyiWsg2HmOQgigWeqUpOaSupoMQ1GKc",
@@ -1792,7 +1815,7 @@ window.selectExamAns = function(qIdx, oIdx) {
     }
 
     // ===================== حالة الدخول =====================
-    onAuthStateChanged(auth, async (user) => {
+    async function initUser(user) {
       resetState();
       if (!user) {
         me = null; db.users = []; db.currId = null; db.attendance = {}; db.groups = [];
@@ -1812,7 +1835,8 @@ window.selectExamAns = function(qIdx, oIdx) {
       db.currId = user.uid;
       window.isFinanceAdminUnlocked = me.role === "admin";
       startListeners();
-    });
+    }
+    onAuthStateChanged(auth, (user) => { if (signingUp) return; initUser(user); });
 
     // ===================== واجهات تستدعيها الصفحة =====================
     window.fbLogin = async (idf, pass) => {
@@ -1829,10 +1853,38 @@ window.selectExamAns = function(qIdx, oIdx) {
         try { const g = await getDoc(doc(firestore, "meta", "groups")); if (g.exists() && Array.isArray(g.data().list)) group = String(g.data().list[0] || ""); } catch (_) {}
         const profile = { name, username, email: email || "", role: "student", level: Number(level) || 1, group, mode: "offline", att: {}, hw: {}, puz: { t: 0, c: 0 } };
         await setDoc(doc(firestore, "users", cred.user.uid), profile);
+        await initUser(cred.user);
         return { ok: true };
       } catch (e) {
         return { ok: false, code: e && e.code };
       } finally { signingUp = false; }
+    };
+
+    // تسجيل كوتش جديد بكود دعوة (الكود بيتراجع في Firestore Rules مش في الصفحة، ومرة واحدة)
+    window.fbCoachSignup = async ({ name, username, email, pass, code }) => {
+      code = String(code || "").trim().toUpperCase();
+      if (!/^[A-Z0-9]{8,16}$/.test(code)) return { ok: false, code: "bad-invite" };
+      signingUp = true; let cred = null;
+      try {
+        cred = await createUserWithEmailAndPassword(auth, String(email).trim().toLowerCase(), pass);
+        const batch = writeBatch(firestore);
+        batch.update(doc(firestore, "invites", code), { used: true, usedBy: cred.user.uid });
+        batch.set(doc(firestore, "staff", cred.user.uid), { role: "coach", name, username, invite: code });
+        await batch.commit();
+        await initUser(cred.user);
+        return { ok: true };
+      } catch (e) {
+        if (cred) { try { await deleteUser(cred.user); } catch (_) {} await initUser(null); }
+        return { ok: false, code: e && e.code };
+      } finally { signingUp = false; }
+    };
+    window.fbCreateInvite = async () => {
+      if (!me || me.role !== "admin") return null;
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const r = crypto.getRandomValues(new Uint8Array(10));
+      let code = ""; for (const b of r) code += alphabet[b % alphabet.length];
+      try { await setDoc(doc(firestore, "invites", code), { used: false, createdBy: me.uid, createdAt: Date.now() }); return code; }
+      catch (e) { console.error(e); return null; }
     };
 
     // الكوتش بينشئ حساب طالب بدون ما يتسجّل خروج (بنستخدم نسخة ثانية من التطبيق)
