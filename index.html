@@ -2676,6 +2676,8 @@ window.selectExamAns = function(qIdx, oIdx) {
       `;
       return base.replace('<div class="space-y-6">', '<div class="space-y-6">' + pinCard);
     };
+    // تشغيل المنصة فوراً بعد تحميل كل الإضافات
+    setTimeout(() => { if (typeof render === "function") render(); }, 100);
   </script>
 </body>
 </html>
