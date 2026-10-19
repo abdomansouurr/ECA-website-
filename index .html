@@ -1,0 +1,2635 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#050507" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="ECA Chess" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <script>(function(){try{var t=localStorage.getItem("ECA_THEME")==="light"?"light":"dark";var d=document.documentElement;d.classList.remove("dark","light");d.classList.add(t);}catch(e){}})();</script>
+  <title>Egypt Chess Academy (ECA) — Full Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { background-color: #050507; color: #f3f4f6; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+    .font-display { font-family: 'Cinzel', serif; }
+    .gold-gradient-text { background: linear-gradient(135deg, #fff3c4 0%, #d4af37 50%, #997415 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .gold-card { background: rgba(14, 14, 21, 0.88); backdrop-filter: blur(12px); border: 1px solid rgba(212, 175, 55, 0.3); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65); }
+    .gold-btn { background: linear-gradient(135deg, #f3d266 0%, #d4af37 100%); color: #050507; font-weight: 700; }
+    .gold-btn:hover { filter: brightness(1.08); }
+
+    /* ===== ECA additions: mobile, attendance, light theme ===== */
+    body { padding-bottom: env(safe-area-inset-bottom); -webkit-tap-highlight-color: transparent; }
+    header.sticky { padding-top: env(safe-area-inset-top); }
+    @media (max-width: 640px) {
+      #navButtons { width: 100%; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+      #navButtons > button { white-space: nowrap; flex: 0 0 auto; }
+      input, select, textarea { font-size: 16px !important; }
+    }
+    .att-btn { min-height: 42px; min-width: 66px; padding: 0 12px; border-radius: 12px; font-size: 12px; font-weight: 700; background: #18181b; color: #d1d5db; border: 1px solid rgba(212,175,55,.25); }
+    .att-p.on { background: #10b981 !important; color: #04170f !important; border-color: #10b981 !important; }
+    .att-l.on { background: #f59e0b !important; color: #1a1000 !important; border-color: #f59e0b !important; }
+    .att-a.on { background: #ef4444 !important; color: #ffffff !important; border-color: #ef4444 !important; }
+    .tap { min-height: 40px; }
+    .g-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 46px; padding: 0 14px; border-radius: 12px; background: #fff; color: #1f1f1f; font-size: 13px; font-weight: 700; border: 1px solid #dadce0; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: background .15s; }
+    .g-btn:hover { background: #f1f3f4; }
+    html.light .g-btn, html.light .g-btn * { color: #1f1f1f !important; }
+    html.light body { background-color: #f6f3ea; color: #1f2937; }
+    html.light #bgCanvas { opacity: .6; }
+    html.light .gold-card { background: rgba(255,255,255,.94); border-color: rgba(153,116,21,.35); box-shadow: 0 6px 22px rgba(60,45,10,.12); }
+    html.light .gold-gradient-text { background: linear-gradient(135deg,#7a5a07 0%,#b8860b 50%,#6b4f0a 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    html.light [class*="bg-black"] { background-color: #ffffff !important; }
+    html.light .fixed.inset-0[class*="bg-black"] { background-color: rgba(20,15,5,.55) !important; }
+    html.light .bg-zinc-900 { background-color: #efe9d8 !important; }
+    html.light .bg-zinc-800 { background-color: #e3dabf !important; }
+    html.light .border-zinc-800 { border-color: #d9cfae !important; }
+    html.light .text-white { color: #111827 !important; }
+    html.light .text-gray-300 { color: #374151 !important; }
+    html.light .text-gray-400 { color: #4b5563 !important; }
+    html.light .text-gray-500 { color: #6b7280 !important; }
+    html.light .text-yellow-300, html.light .text-yellow-400 { color: #7a5a07 !important; }
+    html.light .text-emerald-300, html.light .text-emerald-400 { color: #047857 !important; }
+    html.light .text-amber-300 { color: #b45309 !important; }
+    html.light .text-red-300 { color: #b91c1c !important; }
+    html.light .text-sky-400 { color: #0369a1 !important; }
+    html.light .bg-emerald-950\/30 { background-color: #ecfdf5 !important; }
+    html.light .bg-amber-950\/40 { background-color: #fffbeb !important; }
+    html.light .att-btn { background: #efe9d8; color: #374151; }
+    html.light .gold-btn, html.light .gold-btn * { color: #050507 !important; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col relative">
+
+  <!-- Animated Gold Particles Background -->
+  <canvas id="bgCanvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-zinc-900 border border-yellow-500 text-yellow-300 px-5 py-3 rounded-xl shadow-2xl text-sm font-semibold"></div>
+
+  <!-- Level Up Test Modal -->
+  <div id="examModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="gold-card rounded-2xl max-w-lg w-full p-6">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-display font-bold text-lg text-yellow-400" id="examTitle">🏆 Level Promotion Test</h3>
+        <button onclick="closeExamModal()" class="text-gray-400 hover:text-white">✕</button>
+      </div>
+      <div id="examBody"></div>
+    </div>
+  </div>
+
+
+  <!-- Add / Edit Student Modal -->
+  <div id="addStuModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <form onsubmit="saveStudent(event)" class="gold-card rounded-2xl max-w-lg w-full p-5 max-h-[92vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-display font-bold text-lg text-yellow-400">
+          <span id="asTitleNew">➕ إضافة طالب جديد</span><span id="asTitleEdit" class="hidden">✏️ تعديل بيانات الطالب</span>
+        </h3>
+        <button type="button" onclick="closeAddStu()" class="text-gray-400 hover:text-white tap px-2">✕</button>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <input id="asName" required placeholder="اسم الطالب بالكامل" class="sm:col-span-2 w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asUser" placeholder="اليوزر نيم بالإنجليزي (اختياري)" autocapitalize="none" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asPass" placeholder="كلمة السر (6+ حروف) — سيبها فاضية لتوليد تلقائي" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asAge" type="number" min="3" max="99" inputmode="numeric" placeholder="السن" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asPhone" type="tel" inputmode="tel" placeholder="موبايل الطالب" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asParent" type="tel" inputmode="tel" placeholder="موبايل ولي الأمر (واتساب)" class="sm:col-span-2 w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <select id="asLevel" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-yellow-300"></select>
+        <select id="asGroup" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-yellow-300"></select>
+        <select id="asMode" class="sm:col-span-2 w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-yellow-300">
+          <option value="offline">🏫 طالب أوفلاين (حضوري)</option>
+          <option value="online">💻 طالب أونلاين</option>
+        </select>
+      </div>
+      <p id="asEditHint" class="hidden text-[11px] text-gray-400 mt-2">اترك الباسورد فارغاً لو مش عايز تغيّره.</p>
+      <div class="flex flex-wrap justify-between items-center gap-2 mt-4">
+        <button id="asDelBtn" type="button" onclick="deleteStudent()" class="hidden tap px-4 rounded-xl text-xs bg-red-500/20 text-red-300 border border-red-500/30">🗑️ حذف الطالب</button>
+        <div class="flex gap-2 mr-auto">
+          <button type="button" onclick="closeAddStu()" class="tap px-4 rounded-xl text-xs bg-zinc-800 text-gray-300">إلغاء</button>
+          <button class="tap px-5 rounded-xl text-xs gold-btn"><span id="asSubNew">إضافة الطالب ✅</span><span id="asSubEdit" class="hidden">حفظ التعديلات ✅</span></button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-30 gold-card border-b border-yellow-500/20">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div onclick="goHomeRefresh()" class="flex items-center gap-3 cursor-pointer select-none">
+        <div class="w-11 h-11 rounded-xl bg-black border-2 border-yellow-500 flex flex-col items-center justify-center shadow-lg leading-none"><span class="font-display font-extrabold text-xs text-yellow-400 tracking-wider">ECA</span><span class="font-display text-[8px] text-yellow-200/80">CHESS</span></div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-display font-extrabold text-lg md:text-xl gold-gradient-text">EGYPT CHESS ACADEMY</span>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/40">ECA</span>
+          </div>
+          <p class="text-[11px] text-gray-400">Training, Daily Puzzles & Student Follow-Up</p>
+        </div>
+      </div>
+
+      <!-- Coach Search Bar in Header -->
+      <div id="coachSearchBox" class="hidden flex-1 max-w-md mx-2">
+        <div class="relative flex items-center">
+          <input id="coachTopSearch" oninput="coachSearchStudent(this.value)" type="text" placeholder="🔍 Search student username..." class="w-full bg-black/90 border border-yellow-500/40 rounded-xl pl-3 pr-24 py-2 text-xs text-white" />
+          <button onclick="switchTab('tracker')" class="absolute right-1.5 gold-btn text-[11px] px-2.5 py-1 rounded-lg">Follow Up</button>
+        </div>
+      </div>
+
+      <button id="themeBtn" onclick="toggleTheme()" aria-label="Toggle theme" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-zinc-900 border border-yellow-500/40 text-yellow-300">☀️</button>
+      <button id="installBtn" onclick="installApp()" class="hidden px-3 py-1.5 rounded-xl text-xs font-bold gold-btn">📲 تثبيت التطبيق</button>
+      <button id="langBtn" onclick="toggleLang()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-zinc-900 border border-yellow-500/40 text-yellow-300">EN</button>
+      <div id="navButtons" class="flex items-center gap-2 flex-wrap"></div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main id="mainView" class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+    <!-- Fallback visible immediately -->
+    <div class="gold-card rounded-2xl p-6 text-center text-yellow-300">جاري تحميل منصة Egypt Chess Academy...</div>
+  </main>
+
+  <script>
+    // 1. ALL STEPS CURRICULUM[cite: 1, 2, 3, 4, 5]
+    const STEPS = [
+      { step: 1, title: "Step 1", sub: "Fundamentals, Piece Moves, Check & Mate", lessons: [
+        { t: "Board and pieces", l: [["Examples", "https://lichess.org/study/jjMNw6GF/wWxeB9BO"]] },
+        { t: "Moves of the pieces", l: [["Examples", "https://lichess.org/study/48k26G0o/gvaJW7s5"]] },
+        { t: "Attacking and taking", l: [["Examples", "https://lichess.org/study/C4BqIzIc/HO9ETmkV"]] },
+        { t: "The pawn", l: [["Examples", "https://lichess.org/study/TCt9XgBc/hgBwh3xP"]] },
+        { t: "Defending", l: [["Examples", "https://lichess.org/study/g4ch8UUJ"], ["Exercises", "https://lichess.org/study/RPFaVRku/LErAf9Dq"]] },
+        { t: "Check", l: [["Examples", "https://lichess.org/study/nHyQinYL/Mlzci7gW"], ["Exercises", "http://lichess.org/study/LJzsX2Bb/1o4kmKsF"]] },
+        { t: "Mate (1)", l: [["Exercises 1", "https://lichess.org/study/DfeRg74R"], ["Exercises 2", "https://lichess.org/study/2HFYM7LI/iNAIUMgw"]] },
+        { t: "Mate (2)", l: [["Exercises 1", "https://lichess.org/study/Fk6PprHt"], ["Exercises 2", "https://lichess.org/study/4dxlu3Qy"], ["Exercises 3", "https://lichess.org/study/WakS7KEt"]] },
+        { t: "Castling", l: [["Examples", "https://lichess.org/study/Q0mL49LP"], ["Exercises", "https://lichess.org/study/8XJxZK1c/g0194InP"]] },
+        { t: "Profitable exchange", l: [["Examples", "https://lichess.org/study/91xk9Lw0"], ["Exercises", "https://lichess.org/study/jDKpfwHS"]] },
+        { t: "twofold attack", l: [["Examples", "https://lichess.org/study/klYbDwK8"], ["Exercises 1", "https://lichess.org/study/6v9QYu2b"], ["Exercises 2", "https://lichess.org/study/hs7q4Bey"]] },
+        { t: "Draw", l: [["Examples", "https://lichess.org/study/4L5NDH4W/Ufe7WXKh"]] }
+      ]},
+      { step: 2, title: "Step 2", sub: "Double Attack, The Pin, Eliminating Defence & Golden Rules", lessons: [
+        { t: "Targets of attack", l: [["Examples", "https://lichess.org/study/3zmfaxGz/TTSEXL79"], ["Exercises 1", "https://lichess.org/study/TGj12BIr/sWXMbVBp"], ["2-", "https://lichess.org/study/Xm0oBMLW"]] },
+        { t: "Double attack: queen (1)", l: [["Exercise 1", "https://lichess.org/study/tqJOzF9p"], ["Exercise 2", "https://lichess.org/study/zTSQXHWV"]] },
+        { t: "Double attack: queen (2)", l: [["Exercise 1", "https://lichess.org/study/KkMcTebd"], ["Exercise 2", "https://lichess.org/study/zWSgnN2h"]] },
+        { t: "4-The pin", l: [["Examples", "https://lichess.org/study/TwRHuPGZ/15bNAErP"], ["Exercises 1", "https://lichess.org/study/Qzhw3D8K/kl8QnDY0"], ["Exercises 2", "https://lichess.org/study/JjvX9r45/Ys2KRHKU"], ["Exercises 3", "https://lichess.org/study/v6l4lLFw/LralQmQS"]] },
+        { t: "5-Eliminating of defence", l: [["Examples", "https://lichess.org/study/gjaexjSM/XtAJvCWZ"], ["Exercises", "https://lichess.org/study/yZMV5JdY/9HFnCNVx"]] },
+        { t: "The 3 golden rules", l: [["Examples", "https://lichess.org/study/0DeojSlO/OnyeZ0QY"], ["Exercises", "https://lichess.org/study/Tv5Q4AGE/JWFraj6A"]] },
+        { t: "Mate in two", l: [["Exercise 1", "https://lichess.org/study/CYeNq3NN/6M0m2KUg"], ["Exercise 2", "https://lichess.org/study/THHzDa1N/C9EZ0z5O"]] },
+        { t: "Double attack: knight", l: [["Exercises 1", "https://lichess.org/study/e8U4ZMuQ/8OFL9uo8"], ["Exercises 2", "https://lichess.org/study/otSMJjwH/pIwu0ivp"]] },
+        { t: "Mating with the rook", l: [["Exercises", "https://lichess.org/study/zAGZus6e/5AJW3cs7"]] },
+        { t: "Double attack: Rook , bishop , pawn , king", l: [["Exercises", "https://lichess.org/study/whl4X0Vy/BPFGoXvj"]] },
+        { t: "Double attack : cooperation of two pieces", l: [["Exercise", "https://lichess.org/study/ZOdpD9Ly/O9zAPm3h"]] },
+        { t: "Discovered attack", l: [["Examples", "https://lichess.org/study/b00xkEzU/kKJEEqWR"], ["Exercises 1", "https://lichess.org/study/u8w4QQht/n5EcgyIX"], ["Exercises 2", "https://lichess.org/study/a5Q2Twk2/dP4F5lD9"]] },
+        { t: "Defending against mate", l: [["Examples", "https://lichess.org/study/2UEfJLEz/EFD3xymZ"], ["Exercises", "https://lichess.org/study/8YoxQqtw/3I15qJzf"]] },
+        { t: "Short notation", l: [["Exercises 1", "https://lichess.org/study/ZZTnIekD/MiN0jOS1"], ["Exercises 2", "https://lichess.org/study/45BAOetX/K6P3Lz1b"], ["Exercises 3", "https://lichess.org/study/9G0jITgq"]] }
+      ]},
+      { step: 3, title: "Step 3", sub: "Discovered Check, X-Ray, Key Squares & Pin", lessons: [
+        { t: "Discovered and double check (step 3)", l: [["Study", "https://lichess.org/study/srYNhk2o"]] },
+        { t: "Attack on a pinned piece (step 3)", l: [["Examples", "https://lichess.org/study/aUODKeM7"], ["Exercises", "https://lichess.org/study/R7MF7lb4"]] },
+        { t: "Access and mating pattern ( step 3)", l: [["Study", "https://lichess.org/study/LdwLPyPK"]] },
+        { t: "The square of the pawn (step 3)", l: [["Examples", "https://lichess.org/study/TGs1ej3b"], ["Exercises", "https://lichess.org/study/oZ0xi9dr"]] },
+        { t: "Elimination of the defence (step 3)", l: [["examples", "https://lichess.org/study/dPGoFdbD/vGIxjsGO"], ["exercises", "https://lichess.org/study/xrekdf0f/RCd5Ztfm"]] },
+        { t: "defending against the double attack (step 3)", l: [["Study", "https://lichess.org/study/Vh0XG74a/WmCoeGe5"]] },
+        { t: "draw (step 3)", l: [["Study", "https://lichess.org/study/OWsq2BB6/Us22qb9A"]] },
+        { t: "X-Ray (step 3)", l: [["Study", "https://lichess.org/study/2SV6ZvX7/06csTyjJ"]] },
+        { t: "defending against the pin (step 3)", l: [["examples", "https://lichess.org/study/cZTwQ7qz/s9y7sUZn"], ["exercises", "https://lichess.org/study/dMXnI1aK"]] },
+        { t: "mobility (step 3)", l: [["Study", "https://lichess.org/study/mSAOaeqN/eYak86eR"]] },
+        { t: "key squares ( step 3)", l: [["examples", "https://lichess.org/study/tfuHXokW/zqOhzIRG"], ["marking the key squares", "https://lichess.org/study/61A3DAAj/1yrdSgdh"], ["exercises", "https://lichess.org/study/kP7xaVHA/irKTLPXb"]] },
+        { t: "pinned piece is not a good defender (step3)", l: [["mate thanks to a pin", "https://lichess.org/study/Nm6Air3f/pSHbbNIB"], ["exercises 1", "https://lichess.org/study/zjRi4eGw/TwqdeoJ7"], ["exercises 2", "https://lichess.org/study/x1vTVIn2/IKdbD71Q"]] }
+      ]},
+      { step: 4, title: "Step 4", sub: "Interference, Luring, Blocking, Passed Pawns & 7th Rank", lessons: [
+        { t: "Elimination of the defence interference", l: [["Exercises", "https://lichess.org/study/t5pXfLox/34DdnZYk"]] },
+        { t: "Double attack : luring", l: [["Examples & Exercises", "https://lichess.org/study/6BtkIYoH/jyX4KueF"]] },
+        { t: "Elimination of the defence : blocking", l: [["Examples & Exercises", "https://lichess.org/study/Gwg29Hxj/Y6li8kPN"]] },
+        { t: "Pin: placing the front and back piece", l: [["Examples & Exercises", "https://lichess.org/study/t1PGCxRF"]] },
+        { t: "The passed pawn", l: [["Exercises", "https://lichess.org/study/pibm2ud9/lDYc6ebt"]] },
+        { t: "Defending against the passed pawn", l: [["Study", "https://lichess.org/study/wrm58f4j/ZnUsBj0n"]] },
+        { t: "Double attack : Elimination of the defence", l: [["Exercises", "https://lichess.org/study/uNWgETUd/XtI3rvDK"]] },
+        { t: "The magnet", l: [["Exercises", "https://lichess.org/study/HDoz7iiZ/jtw6t01P"]] },
+        { t: "Weak pawns", l: [["Study", "https://lichess.org/study/pvepHzju/NzJust3T"]] },
+        { t: "MIX", l: [["Study", "https://lichess.org/study/Vslcoxz5/4s1QtXma"]] },
+        { t: "Material advantage", l: [["Study", "https://lichess.org/study/zz7pwo79/NNBE4uIt"]] },
+        { t: "Double attack : chasing and aiming", l: [["Exercises", "https://lichess.org/study/eo7JyYza/ka7GUiIW"]] },
+        { t: "Attacking the castled king", l: [["Study", "https://lichess.org/study/C1bi0HTS/HtyfEmM3"]] },
+        { t: "The seventh rank", l: [["Examples", "https://lichess.org/study/mDeK8pb5/EySaljms"], ["Exercises 1", "https://lichess.org/study/9rPWgIfk"], ["Exercises 2", "https://lichess.org/study/7ojMv2O2"]] },
+        { t: "Strategy in pawn endings", l: [["Exercise", "https://lichess.org/study/MTh6EjHF/8TaknmFZ"]] },
+        { t: "MIX G", l: [["Study", "https://lichess.org/study/1Joelo2c"]] },
+        { t: "Double attack : clearing", l: [["1-", "https://lichess.org/study/zfXowIhD"], ["Study 2", "https://lichess.org/study/WQZY2uhR"]] },
+        { t: "Queen against pawn", l: [["Examples", "https://lichess.org/study/MlayR9Ye/Z0O4m2k6"], ["Exercises", "https://lichess.org/study/HyE8ZFrO"]] }
+      ]},
+      { step: 5, title: "Step 5", sub: "Material & Time, Breakthrough, Pawn Race, Rook Endings & Strong Squares", lessons: [
+        { t: "Material and time", l: [["Examples", "https://lichess.org/study/4emClcQa/lwLckQoi"], ["Exercises: MIX A&B", "https://lichess.org/study/ZSiXyT40/qo6SXDlt"]] },
+        { t: "Mate", l: [["Mate in two : getting the guard", "https://lichess.org/study/bxlI3yFy/Y6FyYPXW"], ["Mate in three", "https://lichess.org/study/4kbUV3tO/3LguClAn"]] },
+        { t: "Breakthrough", l: [["Exercises", "https://lichess.org/study/yCKqwlXK/RiNVgrf6"]] },
+        { t: "pawn ending : key squares", l: [["Study", "https://lichess.org/study/PQ7JcSOS/dNkZ0QBc"]] },
+        { t: "Use of pawns", l: [["Study", "https://lichess.org/study/8wlJJFgR/y1kgDU5P"]] },
+        { t: "Pawn race", l: [["Examples", "https://lichess.org/study/rLpkojaa"], ["Exercises", "https://lichess.org/study/mE6rkIxV/33oS3dA7"]] },
+        { t: "Seventh rank", l: [["Exercises", "https://lichess.org/study/mE6rkIxV/8dRywK39"]] },
+        { t: "Discovered attack", l: [["Examples", "https://lichess.org/study/OgxlzYQD/rJiCKuon"], ["Exercises", "https://lichess.org/study/57XhbPB3/afi99YM8"]] },
+        { t: "Pin (preparatory move)", l: [["Exercises", "https://lichess.org/study/57XhbPB3/MvLHjVgH"]] },
+        { t: "The opening", l: [["Examples", "https://lichess.org/study/cFA1o1Fm/2AMXSa9u"], ["Exercises 1", "https://lichess.org/study/jcpzJAzW"], ["Exercises 2", "https://lichess.org/study/VLebVUHz"]] },
+        { t: "Rook against pawn", l: [["Examples", "https://lichess.org/study/XEZIKdM3/sCcE8TgD"], ["Exercises 1", "https://lichess.org/study/Gm6BPfN2/aFB4syxa"], ["Exercises 2", "https://lichess.org/study/ixNQgC8m"]] },
+        { t: "Strong square", l: [["Examples", "https://lichess.org/study/xBc75QKq/BvOSQ0qP"], ["Exercises", "https://lichess.org/study/NZtUAixb"]] },
+        { t: "Eliminating the defence : luring away + mate", l: [["Study", "https://lichess.org/study/tqz28nOS/lAclawnI"]] },
+        { t: "Defending", l: [["Examples", "https://lichess.org/study/mmOEd1yJ"], ["Exercises", "https://lichess.org/study/ILOZM4m9"]] },
+        { t: "Rook endings", l: [["Examples", "https://lichess.org/study/CNd9QBiq"], ["Exercises", "https://lichess.org/study/G5ILgPOq"]] },
+        { t: "Attacking on the king", l: [["Study", "https://lichess.org/study/G5ILgPOq/WUnq8bNf"]] },
+        { t: "Open file", l: [["Examples", "https://lichess.org/study/qNv9BNOX/tB0DjXda"], ["Exercises", "https://lichess.org/study/kFBNSeRd"]] },
+        { t: "Draw", l: [["Study", "https://lichess.org/study/4QvAxjvr"]] },
+        { t: "The wrong bishop", l: [["Study", "https://lichess.org/study/6bKfsHPR"]] }
+      ]},
+      { step: 6, title: "Step 6", sub: "Coming Soon", lessons: [] }
+    ];
+
+    const PUZZLES = {
+      1: { q: "White to move: Black King on g8 trapped behind f7,g7,h7 pawns. White Rook on e1. Winning move?", opts: ["Re8# (Checkmate)", "Rf1", "Kf1"], ans: 0, url: "https://lichess.org/study/DfeRg74R" },
+      2: { q: "White Knight on d5, Black King on e8 and Queen on a8. Best Double Attack?", opts: ["Nc7+ (Forking King & Queen)", "Nb6", "Ne3"], ans: 0, url: "https://lichess.org/study/e8U4ZMuQ/8OFL9uo8" },
+      3: { q: "Black Knight on f6 is pinned to King on e8 by White Bishop on g5. Best plan?", opts: ["Nd5 (Attack the pinned piece)", "Retreat Bishop", "Push a3"], ans: 0, url: "https://lichess.org/study/aUODKeM7" },
+      4: { q: "Sacrificing on h7 (Bxh7+ Kxh7) to pull the King to an open line is called:", opts: ["The Magnet / Luring", "Stalemate", "Castling"], ans: 0, url: "https://lichess.org/study/HDoz7iiZ/jtw6t01P" },
+      5: { q: "Step 5 Daily Tactical Puzzle: Cut communication between defending Rooks.", opts: ["Nd5! (Interference)", "Kh1", "Rb1"], ans: 0, url: "https://lichess.org/training" },
+      6: { q: "Step 6 Master Calculation Puzzle: Find the 4-move forced mating net.", opts: ["Qxh7+! followed by Rh3#", "Qe2", "h4"], ans: 0, url: "https://lichess.org/training" }
+    };
+
+    const ALLOW_SELF_SIGNUP = true; // false = اقفل التسجيل الذاتي (الكوتش بس يضيف الطلاب)
+    let lang = localStorage.getItem("ECA_LANG") || "ar";
+    const EXTRA_DICT = [["✅ تسجيل الحضور", "✅ Attendance"], ["تسجيل الحضور", "Attendance"], ["سجّل حضور الطلاب الأونلاين والأوفلاين كل واحد في قسمه.", "Record attendance for online and offline students, each in their own section."], ["➕ إضافة طالب جديد", "➕ Add new student"], ["إضافة طالب جديد", "Add new student"], ["✏️ تعديل بيانات الطالب", "✏️ Edit student"], ["💾 نسخة احتياطية", "💾 Backup"], ["📂 استرجاع نسخة", "📂 Restore backup"], ["🏫 طلبة الأوفلاين", "🏫 Offline students"], ["💻 طلبة الأونلاين", "💻 Online students"], ["🔍 ابحث باسم الطالب...", "🔍 Search student name..."], ["اليوم السابق", "Previous day"], ["اليوم التالي", "Next day"], ["النهاردة", "Today"], ["تحديد الكل حاضر", "Mark all present"], ["مسح تسجيل اليوم", "Clear today's records"], ["لم يُسجَّل", "Not recorded"], ["✓ حاضر", "✓ Present"], ["⏰ متأخر", "⏰ Late"], ["✗ غايب", "✗ Absent"], ["حاضر", "Present"], ["متأخر", "Late"], ["غايب", "Absent"], ["لا يوجد سجل بعد", "No records yet"], ["نسبة الحضور", "Attendance rate"], ["حصة", "sessions"], ["🏫 نقل للأوفلاين", "🏫 Move to offline"], ["💻 نقل للأونلاين", "💻 Move to online"], ["لا يوجد طلاب في هذا القسم بعد. أضف طالباً جديداً أو انقل طالباً من القسم الآخر.", "No students in this section yet. Add a new student or move one from the other section."], ["لا توجد نتائج لهذا البحث.", "No results for this search."], ["لا يوجد طلاب بعد. اضغط «إضافة طالب جديد».", "No students yet. Tap \"Add new student\"."], ["لا يوجد طلاب في هذا القسم بعد.", "No students in this section yet."], ["📊 تقرير الشهر —", "📊 Monthly report —"], ["طلبة الأونلاين", "Online students"], ["طلبة الأوفلاين", "Offline students"], ["⬇ تصدير CSV", "⬇ Export CSV"], ["اسم الطالب", "Student name"], ["اسم الطالب بالكامل", "Student full name"], ["اليوزر نيم بالإنجليزي (اختياري)", "Username in English (optional)"], ["الباسورد (الافتراضي 123456)", "Password (default 123456)"], ["السن", "Age"], ["موبايل الطالب", "Student mobile"], ["موبايل ولي الأمر (واتساب)", "Parent mobile (WhatsApp)"], ["🏫 طالب أوفلاين (حضوري)", "🏫 Offline student (in-person)"], ["💻 طالب أونلاين", "💻 Online student"], ["اترك الباسورد فارغاً لو مش عايز تغيّره.", "Leave the password empty to keep it unchanged."], ["🗑️ حذف الطالب", "🗑️ Delete student"], ["إضافة الطالب ✅", "Add student ✅"], ["حفظ التعديلات ✅", "Save changes ✅"], ["📲 تثبيت التطبيق", "📲 Install app"], ["💻 تم نقل الطالب إلى الأونلاين", "💻 Student moved to online"], ["🏫 تم نقل الطالب إلى الأوفلاين", "🏫 Student moved to offline"], ["لا توجد سجلات حضور في هذا الشهر", "No attendance records this month"], ["✅ تم تنزيل النسخة الاحتياطية", "✅ Backup downloaded"], ["✅ تم استرجاع النسخة الاحتياطية", "✅ Backup restored"], ["❌ ملف النسخة الاحتياطية غير صالح", "❌ Invalid backup file"], ["سيتم استبدال كل البيانات الحالية بالنسخة الاحتياطية. متابعة؟", "All current data will be replaced by the backup. Continue?"], ["❌ اكتب اسم الطالب", "❌ Enter the student's name"], ["❌ اليوزر نيم ده مستخدم بالفعل", "❌ This username is already taken"], ["يوجد طالب بنفس الاسم بالفعل. هل تريد المتابعة؟", "A student with the same name already exists. Continue?"], ["✅ تم حفظ بيانات الطالب", "✅ Student saved"], ["✅ تمت إضافة الطالب — اليوزر: ", "✅ Student added — username: "], [" / الباسورد: ", " / password: "], ["هل أنت متأكد من حذف الطالب نهائياً مع كل سجلات حضوره؟", "Delete this student permanently with all attendance records?"], ["🗑️ تم حذف الطالب", "🗑️ Student deleted"], ["📲 على الآيفون: اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»", "📲 On iPhone: tap Share, then \"Add to Home Screen\""], ["📴 لا يوجد إنترنت — الموقع يعمل والبيانات محفوظة على جهازك", "📴 No internet — the site still works and data is saved on your device"], ["📶 عاد الاتصال بالإنترنت", "📶 Back online"]];
+    const DICT = [["إلغاء", "Cancel"], ["فتح الملاحظات 🔓", "Open notes 🔓"], ["خانة ولي الأمر السرية", "Parent Secret Box"], ["أدخل الباسورد الموحد لأولياء الأمور", "Enter the shared parents' password"], ["جاري تحميل منصة Egypt Chess Academy...", "Loading Egypt Chess Academy platform..."], ["بوابة ولي الأمر (Parent Dashboard)", "Parent Portal (Parent Dashboard)"], ["بوابة ولي الأمر", "Parent Portal"], ["داشبورد ولي الأمر", "Parent Dashboard"], ["الرئيسية", "Home"], ["كل المستويات (Steps 1-6)", "All Levels (Steps 1-6)"], ["دروس Step ", "Lessons: Step "], ["متابعة الطلاب والجروبات", "Students & Groups Tracker"], ["خروج", "Logout"], ["اضغط على أي حساب تجريبي للدخول فوراً أو أنشئ حساباً جديداً:", "Tap a demo account to enter instantly or create a new account:"], ["دخول سريع كـ مدرب (Coach)", "Quick login as Coach"], ["يفتح كل الـ 6 Steps + متابعة الطلاب والجروبات", "Opens all 6 Steps + student & group tracking"], ["دخول سريع كـ طالب (Omar - Step 2)", "Quick login as Student (Omar - Step 2)"], ["يرى فقط Step 2 + اللغز اليومي + الدرس القادم", "Sees only Step 2 + daily puzzle + next lesson"], ["ابحث عن omar_chess وشاهد التقييم والملاحظة السرية", "Search omar_chess to see the rating and secret note"], ["🔐 الدخول السريع للمدرب محمي بكلمة سر", "🔐 Coach quick login is password-protected"], ["Login (دخول)", "Login"], ["Sign Up (حساب جديد)", "Sign Up"], ["تسجيل الدخول ♟️", "Log in ♟️"], ["طالب (Student)", "Student"], ["مدرب (Coach)", "Coach"], ["إنشاء الحساب 🚀", "Create account 🚀"], ["كود المدرب السري", "Secret coach code"], ["حضرت", "Attended"], ["درس في", "lessons in"], ["متبقي", "remaining"], ["درس للامتحان", "lessons until the exam"], ["دروس", "lessons"], ["درس لإنهاء", "lessons to finish"], ["ملاحظة المدرب السرية لولي الأمر:", "Coach's secret note for parents:"], ["إغلاق 🔒", "Close 🔒"], ["نسبة الدقة:", "Accuracy:"], ["اختيار ←", "Select →"], ["فتح التمرين على Lichess ↗", "Open exercise on Lichess ↗"], ["الدرس اللي عليه الدور (Next Lesson)", "Your Next Lesson"], ["مكتمل", "complete"], ["اضغط هنا للانتقال تلقائياً لصفحة دروس مستواك (Step", "Tap here to open your level's lessons (Step"], ["فقط).", "only)."], ["أتممت كل دروس Step", "You completed all lessons of Step"], ["اختبار الترقية للمستوى التالي:", "Promotion test for the next level:"], ["بدء اختبار", "Start test"], ["✅ أجبت إجابة صحيحة — اللغز مقفول", "✅ Correct answer — puzzle locked"], ["❌ أجبت إجابة خاطئة — اللغز مقفول ولا يمكن إعادته", "❌ Wrong answer — puzzle locked, cannot be retried"], ["✅ إجابة صحيحة! أحسنت يا بطل", "✅ Correct! Well done, champion"], ["❌ إجابة خاطئة — تم قفل اللغز", "❌ Wrong answer — puzzle locked"], ["اللغز مقفول بالفعل", "Puzzle is already locked"], ["↺ إعادة فتح اللغز", "↺ Reopen puzzle"], ["تم إعادة فتح اللغز", "Puzzle reopened"], ["حساب المدرب", "Coach Account"], ["يمكنك استعراض جميع الـ 6 Steps ومتابعة حضور وواجبات ومجموعات الطلاب.", "You can browse all 6 Steps and track students' attendance, homework and groups."], ["كل الدروس (Steps 1-6)", "All Lessons (Steps 1-6)"], ["جميع المستويات للمدرب (Steps 1 – 6)", "All Levels for Coach (Steps 1 – 6)"], ["دروس مستواك الحالي فقط — Step", "Your current level's lessons only — Step"], ["اضغط على أي Step لعرض قائمة دروسها تحت بعضها.", "Tap any Step to show its lessons list."], ["ممنوع ظهور أي مستوى آخر غير مستواك الحالي.", "No level other than your current one is shown."], ["▲ إخفاء القائمة", "▲ Hide list"], ["▼ عرض الدروس", "▼ Show lessons"], ["متابعة الطلاب والمجموعات", "Students & Groups Tracker"], ["علم (✓) أمام الدرس الذي حضره الطالب والواجب الذي حله واكتب ملاحظة سرية لولي الأمر.", "Tick (✓) the lessons the student attended and the homework solved, and write a secret note for the parent."], ["+ اسم جروب جديد...", "+ New group name..."], ["إضافة جروب", "Add group"], ["كل الجروبات", "All Groups"], ["حضر", "Attended"], ["الواجبات المكتملة", "Completed homework"], ["الواجب", "Homework"], ["اختر طالباً", "Select a student"], ["ملاحظة سرية لولي الأمر...", "Secret note for parent..."], ["حفظ لولي الأمر 🔒", "Save for parent 🔒"], ["✅ تم حفظ الملاحظة السرية لولي الأمر", "✅ Secret note saved for parent"], ["بوابة متابعة ولي الأمر (Parent Dashboard)", "Parent Follow-Up Portal (Parent Dashboard)"], ["ابحث بالـ Username الخاص بابنك (جرب:", "Search by your child's username (try:"], [" أو ", " or "], ["اكتب يوزرنيم الطالب...", "Type the student's username..."], ["لا يوجد طالب بهذا الاسم. جرب كتابة omar_chess", "No student with this name. Try typing omar_chess"], ["التقييم التلقائي لمستوى الطالب", "Automatic student level rating"], ["الدروس التي حضرها", "Lessons attended"], ["دقة الألغاز اليومية", "Daily puzzle accuracy"], ["ملاحظة المدرب السرية:", "Coach's secret note:"], ["ملاحظات المدرب السرية لولي الأمر (محمية بباسورد موحد)", "Coach's secret notes for parents (protected by a shared password)"], ["فتح بالباسورد 🔑", "Unlock with password 🔑"], ["ممتاز / عبقري 🌟👑", "Excellent / Genius 🌟👑"], ["رائع 👏✨", "Great 👏✨"], ["مقبول 💪", "Fair 💪"], ["مرحباً بك ", "Welcome "], ["❌ بيانات الدخول غير صحيحة", "❌ Incorrect login details"], ["❌ كود المدربين غير صحيح", "❌ Invalid coach code"], ["🎉 تم إنشاء الحساب!", "🎉 Account created!"], ["🔓 تم فتح ملاحظة ولي الأمر", "🔓 Parent note unlocked"], ["❌ باسورد غير صحيح", "❌ Incorrect password"], ["🎉 مبروك! تمت ترقيتك إلى Step ", "🎉 Congrats! You've been promoted to Step "], ["اختبار نهاية Step ", "End-of-Step test "], [": هل أنت جاهز للترقية إلى Step ", ": ready to be promoted to Step "], ["؟", "?"], ["إتمام الاختبار بنجاح والترقية إلى Step ", "Pass the test and promote to Step "], ["🔐 دخول المدرب السريع", "🔐 Coach Quick Login"], ["أدخل كلمة سر المدرب", "Enter the coach password"], ["فتح 🔓", "Open 🔓"], ["❌ كلمة السر غير صحيحة", "❌ Wrong password"]].concat(EXTRA_DICT).sort((a, b) => b[0].length - a[0].length);
+    function trText(s) { if (lang !== "en") return s; for (const [a, b] of DICT) s = s.split(a).join(b); return s; }
+    function applyLang() {
+      document.documentElement.lang = lang;
+      const b = document.getElementById("langBtn"); if (b) b.textContent = lang === "en" ? "عربي" : "EN";
+      const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT), ns = [];
+      while (w.nextNode()) ns.push(w.currentNode);
+      ns.forEach(n => {
+        const p = n.parentNode && n.parentNode.nodeName; if (p === "SCRIPT" || p === "STYLE") return;
+        if (n.__o === undefined) n.__o = n.nodeValue;
+        const v = lang === "en" ? trText(n.__o) : n.__o; if (n.nodeValue !== v) n.nodeValue = v;
+      });
+      document.querySelectorAll("[placeholder]").forEach(e => {
+        if (e.__p === undefined) e.__p = e.getAttribute("placeholder");
+        e.setAttribute("placeholder", lang === "en" ? trText(e.__p) : e.__p);
+      });
+    }
+    function toggleLang() { lang = lang === "en" ? "ar" : "en"; localStorage.setItem("ECA_LANG", lang); applyLang(); }
+    const DB_KEY = "ECA_PLATFORM_V2";
+    try { localStorage.removeItem(DB_KEY); } catch (_) {}   // مسح النسخة القديمة المخزنة في المتصفح (كانت فيها كلمات سر)
+    let db = { users: [], groups: [], currId: null, attendance: {} };   // البيانات الحقيقية بتيجي من Firebase بعد تسجيل الدخول
+    let parentStu = null, parentBusy = false;
+    window.__authLoading = true;
+    setTimeout(() => { if (window.__authLoading) { window.__authLoading = false; render(); } }, 8000);
+    let tab = "home", authMode = "login", signupRole = "student", selStuId = "", grpFilter = "ALL", searchQ = "", parentQ = "", unlockedStuId = null, openSteps = { 1: true, 2: true, 3: false, 4: false, 5: false, 6: false };
+
+    function save() { if (window.syncToCloud) window.syncToCloud(); }
+    function currUser() { return db.users.find(u => u.id === db.currId) || null; }
+    function toast(m) { const el = document.getElementById("toast"); el.textContent = trText(m); el.classList.remove("hidden"); setTimeout(() => el.classList.add("hidden"), 2800); }
+    function go(t) { if (tab !== t) history.pushState({ tab: t }, "", "#" + t); tab = t; }
+    function switchTab(t) { go(t); render(); }
+    function logout() { parentStu = null; parentQ = ""; if (window.fbLogout) window.fbLogout(); go("home"); render(); }
+    function goHomeRefresh() { go("home"); render(); }
+
+    function calcStats(stu) {
+      const st = STEPS.find(x => x.step === Number(stu.level)) || STEPS[0];
+      const total = st.lessons.length || 1;
+      let attC = 0, hwC = 0, nextIdx = -1;
+      st.lessons.forEach((_, i) => {
+        const k = stu.level + "-" + i;
+        if (stu.att && stu.att[k]) attC++; else if (nextIdx === -1) nextIdx = i;
+        if (stu.hw && stu.hw[k]) hwC++;
+      });
+      const rem = Math.max(0, total - attC);
+      const attP = Math.round((attC / total) * 100);
+      const hwP = Math.round((hwC / total) * 100);
+      const puzP = stu.puz && stu.puz.t > 0 ? Math.round((stu.puz.c / stu.puz.t) * 100) : 100;
+      const overall = Math.round(attP * 0.45 + hwP * 0.35 + puzP * 0.2);
+      let evalText = "مقبول 💪", evalCls = "bg-amber-500/20 text-amber-300 border-amber-500/40";
+      if (overall >= 80) { evalText = "ممتاز / عبقري 🌟👑"; evalCls = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"; }
+      else if (overall >= 50) { evalText = "رائع 👏✨"; evalCls = "bg-yellow-500/20 text-yellow-300 border-yellow-500/40"; }
+      return { st, total, attC, hwC, rem, attP, hwP, puzP, overall, evalText, evalCls, nextLesson: nextIdx !== -1 ? st.lessons[nextIdx] : null, nextIdx };
+    }
+
+ function render() {
+      const winY = window.scrollY;
+      const innerScrolls = Array.from(document.querySelectorAll("#mainView .overflow-y-auto")).map(el => el.scrollTop);
+      const a = document.activeElement, id = a && a.id, s = a && a.selectionStart, e = a && a.selectionEnd;
+      _render(); applyLang();
+      if (id) { const el = document.getElementById(id); if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); try { el.setSelectionRange(s, e); } catch (_) {} } }
+      document.querySelectorAll("#mainView .overflow-y-auto").forEach((el, i) => { if (innerScrolls[i] !== undefined) el.scrollTop = innerScrolls[i]; });
+      window.scrollTo(0, winY);
+    }
+   function _render() {
+      const u = currUser();
+      const nav = document.getElementById("navButtons");
+      const cSearch = document.getElementById("coachSearchBox");
+      const main = document.getElementById("mainView");
+      if (!u && window.__authLoading) { cSearch.classList.add("hidden"); nav.innerHTML = ""; main.innerHTML = '<div class="text-center text-sm text-gray-400 mt-24">⏳ جاري التحميل...</div>'; return; }
+
+      if (!u) {
+        cSearch.classList.add("hidden");
+        nav.innerHTML = `
+          <button onclick="switchTab('parent')" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-zinc-900 border border-yellow-500/40 text-yellow-300">👨‍👩‍👦 بوابة ولي الأمر</button>
+          <button onclick="switchTab('home')" class="px-3.5 py-2 rounded-xl text-xs gold-btn">🔐 Login / Sign Up</button>
+        `;
+        main.innerHTML = tab === "parent" ? renderParentView() : renderAuthView();
+        return;
+      }
+
+      if (u.role === "coach") cSearch.classList.remove("hidden"); else cSearch.classList.add("hidden");
+
+      nav.innerHTML = `
+        <button onclick="switchTab('home')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='home'?'gold-btn':'bg-zinc-900 text-gray-300'}">🏠 الرئيسية</button>
+        <button onclick="switchTab('lessons')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='lessons'?'gold-btn':'bg-zinc-900 text-gray-300'}">📚 ${u.role==='coach'?'كل المستويات (Steps 1-6)':'دروس Step '+u.level}</button>
+        ${u.role==='coach'?`<button onclick="switchTab('tracker')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='tracker'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">📋 متابعة الطلاب والجروبات</button><button onclick="switchTab('attendance')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='attendance'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">✅ تسجيل الحضور</button><button onclick="switchTab('finance')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='finance'?'gold-btn':'bg-zinc-900 text-emerald-300 border border-emerald-500/40'}">💰 الحسابات والداشبورد</button>`:''}
+        <button onclick="switchTab('parent')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='parent'?'gold-btn':'bg-zinc-900 text-gray-300'}">👨‍👩‍👦 داشبورد ولي الأمر</button>
+        ${window.fbAuthInfo && !window.fbAuthInfo().google ? `<button onclick="linkGoogle()" title="ربط حسابك بجوجل للدخول بضغطة واحدة" class="px-2.5 py-1.5 rounded-xl text-xs bg-zinc-900 text-sky-300 border border-sky-500/30">🔗 Google</button>` : ''}
+        ${!window.fbAuthInfo || window.fbAuthInfo().password ? `<button onclick="changeMyPassword()" title="تغيير كلمة السر" class="px-2.5 py-1.5 rounded-xl text-xs bg-zinc-900 text-yellow-300 border border-yellow-500/30">🔑</button>` : ''}
+        <button onclick="logout()" class="px-2.5 py-1.5 rounded-xl text-xs bg-red-500/20 text-red-300 border border-red-500/30">خروج</button>
+      `;
+
+      if (tab === "lessons") main.innerHTML = renderLessonsView(u);
+      else if (tab === "tracker" && u.role === "coach") main.innerHTML = renderTrackerView();
+      else if (tab === "attendance" && u.role === "coach") main.innerHTML = renderAttendanceView();
+      else if (tab === "finance" && u.role === "coach") main.innerHTML = renderFinanceDashboardView();
+      else if (tab === "parent") main.innerHTML = renderParentView();
+      else main.innerHTML = u.role === "student" ? renderStudentHome(u) : renderCoachHome(u);
+    }
+    function renderAuthView() {
+      return `
+        <div class="max-w-4xl mx-auto grid md:grid-cols-5 gap-6 mt-4">
+          <div class="md:col-span-2 gold-card rounded-2xl p-6 flex flex-col justify-between">
+            <div>
+              <h2 class="font-display font-bold text-xl gold-gradient-text">Egypt Chess Academy Portal</h2>
+              <p class="text-xs text-gray-400 mt-2">سجّل دخولك بحسابك، أو ادخل كود المتابعة لو انت ولي أمر:</p>
+              <div class="mt-4 space-y-2.5">
+                <div class="w-full text-start p-3 rounded-xl bg-black/80 border border-yellow-500/40">
+                  <div class="text-xs font-bold text-yellow-300">⚡ دخول بضغطة واحدة بحساب Google</div>
+                  <div class="text-[11px] text-gray-400">أول مرة بتختار طالب أو كوتش، وبعد كده بتدخل بضغطة واحدة من غير باسورد.</div>
+                </div>
+                <button onclick="switchTab('parent')" class="w-full text-left p-3 rounded-xl bg-black/80 border border-emerald-500/40 hover:border-emerald-400">
+                  <div class="text-xs font-bold text-emerald-300">👨‍👩‍👦 بوابة ولي الأمر (Parent Dashboard)</div>
+                  <div class="text-[11px] text-gray-400">ادخل كود المتابعة لمعرفة تقدّم ابنك</div>
+                </button>
+              </div>
+            </div>
+            <div class="text-[11px] text-gray-400 mt-4 pt-3 border-t border-yellow-500/20">
+              🔐 الدخول بحساب شخصي لكل مستخدم — مفيش كلمات سر مشتركة
+            </div>
+          </div>
+
+          <div class="md:col-span-3 gold-card rounded-2xl p-6 order-first md:order-none">
+            <div class="flex gap-2 mb-5 bg-black p-1 rounded-xl border border-yellow-500/20">
+              <button onclick="authMode='login'; render();" class="flex-1 py-2 rounded-lg text-xs font-bold ${authMode==='login'?'gold-btn':'text-gray-400'}">Login (دخول)</button>
+              ${ALLOW_SELF_SIGNUP ? `<button onclick="authMode='signup'; render();" class="flex-1 py-2 rounded-lg text-xs font-bold ${authMode==='signup'?'gold-btn':'text-gray-400'}">Sign Up (حساب جديد)</button>` : ''}
+            </div>
+            <div class="grid sm:grid-cols-2 gap-2">
+              <button type="button" onclick="googleLogin('student')" class="g-btn">${G_ICON}<span>🎓 دخول الطالب بجوجل</span></button>
+              <button type="button" onclick="googleLogin('coach')" class="g-btn">${G_ICON}<span>👑 دخول الكوتش بجوجل</span></button>
+            </div>
+            <div class="flex items-center gap-3 my-4 text-[11px] text-gray-500"><span class="flex-1 h-px bg-yellow-500/20"></span><span>أو باليوزر نيم / الإيميل</span><span class="flex-1 h-px bg-yellow-500/20"></span></div>
+            ${authMode === "login" ? `
+              <form onsubmit="doLogin(event)" class="space-y-4">
+                <input id="lEmail" required placeholder="Email or Username" class="w-full bg-black border border-yellow-500/30 rounded-xl px-4 py-2.5 text-sm text-white" />
+                <input id="lPass" type="password" required placeholder="Password" class="w-full bg-black border border-yellow-500/30 rounded-xl px-4 py-2.5 text-sm text-white" />
+                <button class="w-full py-3 rounded-xl text-sm gold-btn">تسجيل الدخول ♟️</button>
+              </form>
+            ` : `
+              <form onsubmit="doSignup(event)" class="space-y-3">
+                <div class="grid grid-cols-2 gap-2">
+                  <button type="button" onclick="signupRole='student'; render();" class="py-2 rounded-xl text-xs font-bold border ${signupRole==='student'?'border-yellow-400 text-yellow-300 bg-yellow-500/10':'border-zinc-800 text-gray-400'}">🎓 طالب</button>
+                  <button type="button" onclick="signupRole='coach'; render();" class="py-2 rounded-xl text-xs font-bold border ${signupRole==='coach'?'border-yellow-400 text-yellow-300 bg-yellow-500/10':'border-zinc-800 text-gray-400'}">👑 كوتش</button>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <input id="sName" required placeholder="Full Name" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+                  ${signupRole === "student" ? `<input id="sUser" required placeholder="Username (e.g. ali_chess)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />` : `<input id="sUser" placeholder="Username (optional)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />`}
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <input id="sEmail" type="email" ${signupRole === "coach" ? "required" : ""} placeholder="${signupRole === "coach" ? "Email (required)" : "Email"}" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+                  <input id="sPass" type="password" required placeholder="Password" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+                </div>
+                ${signupRole === "student" ? `
+                  <select id="sLvl" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-yellow-300">
+                    <option value="1">Step 1</option><option value="2">Step 2</option><option value="3">Step 3</option><option value="4">Step 4</option><option value="5">Step 5</option><option value="6">Step 6</option>
+                  </select>
+                ` : `
+                  <input id="sCode" required autocomplete="off" autocapitalize="characters" placeholder="كود دعوة الكوتش (من الأدمن)" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-white" />
+                `}
+                <button class="w-full py-3 rounded-xl text-sm gold-btn">إنشاء الحساب 🚀</button>
+              </form>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    const G_ICON = `<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>`;
+    let gBusy = false;
+    async function googleLogin(role) {
+      if (gBusy) return;
+      if (!window.fbGoogleLogin) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش، جرّب بعد ثواني");
+      gBusy = true; try { await window.fbGoogleLogin(role); } finally { gBusy = false; }
+    }
+    function linkGoogle() { if (window.fbLinkGoogle) window.fbLinkGoogle(); }
+    function focusLogin() { authMode = "login"; render(); setTimeout(() => { const el = document.getElementById("lEmail"); if (el) el.focus(); }, 0); }
+    function randomPass() {
+      const al = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const r = crypto.getRandomValues(new Uint8Array(8)); let s = "";
+      for (const b of r) s += al[b % al.length];
+      return s;
+    }
+    async function doLogin(ev) {
+      ev.preventDefault();
+      if (!window.fbLogin) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش، جرّب بعد ثواني");
+      const q = document.getElementById("lEmail").value.trim();
+      const p = document.getElementById("lPass").value;
+      const btn = ev.submitter; if (btn) btn.disabled = true;
+      const r = await window.fbLogin(q, p);
+      if (btn) btn.disabled = false;
+      if (!r.ok) return toast(r.code === "auth/too-many-requests" ? "⏳ محاولات كتير، استنى شوية وجرّب تاني" : (r.code === "auth/network-request-failed" ? "📡 مفيش اتصال بالإنترنت" : "❌ اسم المستخدم أو كلمة السر غير صحيحة"));
+      parentStu = null; tab = "home";
+    }
+    async function doSignup(ev) {
+      ev.preventDefault();
+      if (!ALLOW_SELF_SIGNUP) return;
+      if (!window.fbSignup) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش، جرّب بعد ثواني");
+      const clean = s => String(s || "").trim().replace(/[<>"'`]/g, "");
+      const name = clean(document.getElementById("sName").value);
+      const username = clean(document.getElementById("sUser").value).toLowerCase().replace(/\s+/g, "_");
+      const email = clean(document.getElementById("sEmail").value).toLowerCase();
+      const pass = document.getElementById("sPass").value;
+      if (signupRole === "coach") {
+        if (!window.fbCoachSignup) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش، جرّب بعد ثواني");
+        const code = document.getElementById("sCode").value.trim();
+        if (!name || !email) return toast("❌ اكتب الاسم والإيميل");
+        if (pass.length < 6) return toast("❌ كلمة السر لازم تكون 6 حروف على الأقل");
+        const b2 = ev.submitter; if (b2) b2.disabled = true;
+        const rc = await window.fbCoachSignup({ name, username: username || email.split("@")[0].replace(/[^a-z0-9_]/g, ""), email, pass, code });
+        if (b2) b2.disabled = false;
+        if (!rc.ok) return toast(rc.code === "auth/email-already-in-use" ? "❌ الإيميل ده مسجّل قبل كده" : (rc.code === "auth/weak-password" ? "❌ كلمة السر ضعيفة" : (rc.code === "bad-invite" || rc.code === "permission-denied" || rc.code === "not-found" ? "❌ كود الدعوة غير صحيح أو مستخدم قبل كده" : "❌ تعذّر إنشاء حساب الكوتش")));
+        signupRole = "student"; tab = "home"; return toast("✅ تم إنشاء حساب الكوتش!");
+      }
+      const level = Number(document.getElementById("sLvl").value) || 1;
+      if (!name || !username) return toast("❌ اكتب الاسم واسم المستخدم");
+      if (pass.length < 6) return toast("❌ كلمة السر لازم تكون 6 حروف على الأقل");
+      const btn = ev.submitter; if (btn) btn.disabled = true;
+      const r = await window.fbSignup({ name, username, email, pass, level });
+      if (btn) btn.disabled = false;
+      if (!r.ok) return toast(r.code === "auth/email-already-in-use" ? "❌ اسم المستخدم ده مستخدم قبل كده" : (r.code === "auth/weak-password" ? "❌ كلمة السر ضعيفة" : "❌ تعذّر إنشاء الحساب"));
+      tab = "home"; toast("✅ تم إنشاء حسابك!");
+    }
+    function renderStudentHome(stu) {
+      const s = calcStats(stu);
+      const puz = PUZZLES[stu.level] || PUZZLES[1];
+      const done = (stu.puzDone || {})[stu.level];
+      return `
+        <div class="space-y-6">
+          <div class="gold-card rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <span class="px-2.5 py-1 rounded-full text-xs gold-btn">STEP ${stu.level} STUDENT</span>
+              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">Welcome, ${stu.name} (@${stu.username})</h2>
+              <p class="text-xs text-gray-400 mt-1">حضرت ${s.attC}/${s.total} درس في Step ${stu.level} • متبقي ${s.rem} درس للامتحان</p>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-6">
+            <!-- 1. Daily Puzzle -->
+            <div class="gold-card rounded-2xl p-6">
+              <div class="flex justify-between items-center mb-3">
+                <span class="text-xs font-bold text-yellow-300">🧩 Daily Puzzle — Step ${stu.level}</span>
+                <span class="text-xs text-gray-400">نسبة الدقة: <b class="text-yellow-300">${s.puzP}%</b></span>
+              </div>
+              <p class="text-sm text-white font-medium mb-4">${puz.q}</p>
+              <div class="space-y-2">
+                ${puz.opts.map((o, i) => {
+                  const c = !done ? 'border-yellow-500/30 hover:border-yellow-400' : i === puz.ans ? 'border-emerald-500 bg-emerald-500/10' : (done.i === i ? 'border-red-500 bg-red-500/10' : 'border-zinc-800 opacity-50');
+                  const m = done ? (i === puz.ans ? '✓' : (done.i === i ? '✗' : '')) : 'اختيار ←';
+                  return `<button ${done ? 'disabled' : ''} onclick="solvePuzzle(${i},${puz.ans})" class="w-full text-left px-4 py-2.5 rounded-xl text-xs bg-black/80 border ${c} flex justify-between ${done ? 'cursor-not-allowed' : ''}"><span>${o}</span><span class="text-yellow-400">${m}</span></button>`;
+                }).join('')}
+                ${done ? `<p class="text-xs mt-2 ${done.ok ? 'text-emerald-300' : 'text-red-300'}">${done.ok ? '✅ أجبت إجابة صحيحة — اللغز مقفول' : '❌ أجبت إجابة خاطئة — اللغز مقفول ولا يمكن إعادته'}</p>` : ''}
+              </div>
+              <div class="mt-4 pt-3 border-t border-yellow-500/20 text-right">
+                <a href="${puz.url}" target="_blank" class="text-xs text-yellow-300 hover:underline">فتح التمرين على Lichess ↗</a>
+              </div>
+            </div>
+
+            <!-- 2. Next Lesson Up -->
+            <div class="gold-card rounded-2xl p-6 flex flex-col justify-between">
+              <div>
+                <div class="flex justify-between items-center mb-3">
+                  <span class="text-xs font-bold text-emerald-300">🎯 الدرس اللي عليه الدور (Next Lesson)</span>
+                  <span class="text-xs text-gray-400">${s.attP}% مكتمل</span>
+                </div>
+                ${s.nextLesson ? `
+                  <div onclick="switchTab('lessons')" class="cursor-pointer p-5 rounded-2xl bg-black/80 border border-yellow-500/40 hover:border-yellow-400 transition">
+                    <div class="text-xs text-yellow-400">Lesson #${s.nextIdx + 1} • Step ${stu.level}</div>
+                    <h3 class="font-display font-bold text-xl text-white mt-1 flex justify-between"><span>${s.nextLesson.t}</span><span>→</span></h3>
+                    <p class="text-xs text-gray-400 mt-2">اضغط هنا للانتقال تلقائياً لصفحة دروس مستواك (Step ${stu.level} فقط).</p>
+                  </div>
+                ` : `
+                  <div class="p-5 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 text-center">
+                    <h3 class="font-bold text-emerald-300">🏆 أتممت كل دروس Step ${stu.level}!</h3>
+                  </div>
+                `}
+              </div>
+              <div class="mt-4 pt-3 border-t border-yellow-500/20 flex justify-between items-center">
+                <span class="text-xs text-gray-400">اختبار الترقية للمستوى التالي:</span>
+                <button onclick="openExamModal(${stu.level})" class="px-4 py-2 rounded-xl text-xs gold-btn">📝 بدء اختبار Step ${stu.level}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function solvePuzzle(i, ans) {
+      const u = currUser();
+      u.puz = u.puz || { t: 0, c: 0 };
+      u.puzDone = u.puzDone || {};
+      if (u.puzDone[u.level]) return toast("اللغز مقفول بالفعل");
+      u.puz.t++;
+      u.puzDone[u.level] = { i, ok: i === ans };
+      if (i === ans) { u.puz.c++; toast("✅ إجابة صحيحة! أحسنت يا بطل"); }
+      else toast("❌ إجابة خاطئة — تم قفل اللغز");
+      save(); render();
+    }
+
+    function renderCoachHome(c) {
+      return `
+        <div class="space-y-6">
+          ${c.isAdmin ? adminToolsBox() : ''}
+          <div class="gold-card rounded-2xl p-6 flex flex-wrap justify-between items-center gap-4">
+            <div>
+              <span class="px-2.5 py-1 rounded-full text-xs gold-btn">👑 حساب المدرب</span>
+              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">Welcome, ${c.name}</h2>
+              <p class="text-xs text-gray-400">يمكنك استعراض جميع الـ 6 Steps ومتابعة حضور وواجبات ومجموعات الطلاب.</p>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="switchTab('lessons')" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-black border border-yellow-500/40 text-yellow-300">📚 كل الدروس (Steps 1-6)</button>
+              <button onclick="switchTab('tracker')" class="px-4 py-2.5 rounded-xl text-xs gold-btn">📋 متابعة الطلاب والجروبات</button>
+              <button onclick="switchTab('attendance')" class="px-4 py-2.5 rounded-xl text-xs gold-btn">✅ تسجيل الحضور</button>
+            </div>
+          </div>
+          <div class="gold-card rounded-2xl p-6">
+            <h3 class="font-display font-bold text-lg text-yellow-400 mb-4">🧩 Daily Puzzles for All Levels (Steps 1 – 6)</h3>
+            <div class="grid md:grid-cols-3 gap-4">
+              ${[1,2,3,4,5,6].map(l => `
+                <div class="p-4 rounded-xl bg-black/80 border border-yellow-500/25">
+                  <div class="text-xs font-bold text-yellow-400">STEP ${l} PUZZLE</div>
+                  <p class="text-xs text-gray-300 mt-1">${PUZZLES[l].q}</p>
+                  <a href="${PUZZLES[l].url}" target="_blank" class="inline-block mt-2 text-xs text-yellow-300 hover:underline">Open Study ↗</a>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderLessonsView(u) {
+      const list = u.role === "coach" ? STEPS : STEPS.filter(s => s.step === Number(u.level));
+      return `
+        <div class="space-y-4">
+          <div class="gold-card rounded-2xl p-5">
+            <h2 class="font-display font-bold text-xl gold-gradient-text">${u.role==='coach'?'جميع المستويات للمدرب (Steps 1 – 6)':'دروس مستواك الحالي فقط — Step '+u.level}</h2>
+            <p class="text-xs text-gray-400 mt-1">${u.role==='coach'?'اضغط على أي Step لعرض قائمة دروسها تحت بعضها.':'ممنوع ظهور أي مستوى آخر غير مستواك الحالي.'}</p>
+          </div>
+          ${list.map(st => {
+            const isOpen = openSteps[st.step] !== false;
+            return `
+              <div class="gold-card rounded-2xl overflow-hidden">
+                <button onclick="openSteps[${st.step}]=!openSteps[${st.step}]; render();" class="w-full px-6 py-4 flex justify-between items-center text-left hover:bg-yellow-500/5">
+                  <div>
+                    <h3 class="font-display font-bold text-lg text-yellow-300">${st.title} <span class="text-xs text-gray-400 font-sans">(${st.lessons.length} Lessons)</span></h3>
+                    <p class="text-xs text-gray-400">${st.sub}</p>
+                  </div>
+                  <span class="text-yellow-400 text-xs font-bold">${isOpen ? '▲ إخفاء القائمة' : '▼ عرض الدروس'}</span>
+                </button>
+                ${isOpen ? `
+                  <div class="divide-y divide-yellow-500/15 border-t border-yellow-500/20 bg-black/60">
+                    ${st.lessons.length === 0 ? `<div class="p-5 text-xs text-gray-500 text-center">Coming Soon</div>` : st.lessons.map((les, idx) => `
+                      <div class="px-6 py-3 flex flex-wrap justify-between items-center gap-2 hover:bg-yellow-500/5">
+                        <a href="${les.l[0][1]}" target="_blank" class="text-sm font-semibold text-white hover:text-yellow-300">${idx + 1}.${les.t} ↗</a>
+                        <div class="flex flex-wrap gap-2">
+                          ${les.l.map(lk => `<a href="${lk[1]}" target="_blank" class="px-3 py-1 rounded-lg text-xs bg-zinc-900 border border-yellow-500/35 text-yellow-300 hover:bg-yellow-500 hover:text-black">${lk[0]} ↗</a>`).join('')}
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function coachSearchStudent(val) { searchQ = val; go("tracker"); render(); }
+
+    function renderTrackerView() {
+      const students = db.users.filter(u => u.role === "student");
+      const q = searchQ.toLowerCase();
+      const filtered = students.filter(s => (grpFilter === "ALL" || s.group === grpFilter) && (!q || String(s.name || "").toLowerCase().includes(q) || String(s.username || "").toLowerCase().includes(q)));
+      const sel = students.find(s => s.id === selStuId) || filtered[0] || null;
+      return `
+        <div class="space-y-5">
+          <div class="gold-card rounded-2xl p-5 flex flex-wrap justify-between items-center gap-3">
+            <div>
+              <h2 class="font-display font-bold text-xl gold-gradient-text">📋 متابعة الطلاب والمجموعات</h2>
+              <p class="text-xs text-gray-400">علم (✓) أمام الدرس الذي حضره الطالب والواجب الذي حله واكتب ملاحظة سرية لولي الأمر.</p>
+            </div>
+            <button onclick="openAddStu()" class="px-3 py-1.5 rounded-xl text-xs gold-btn">➕ إضافة طالب جديد</button>
+            <form onsubmit="addGroup(event)" class="flex gap-2">
+              <input id="newGrpInp" placeholder="+ اسم جروب جديد..." class="bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white" />
+              <button class="px-3 py-1.5 rounded-xl text-xs gold-btn">إضافة جروب</button>
+            </form>
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            <button onclick="grpFilter='ALL'; render();" class="px-3 py-1.5 rounded-xl text-xs font-bold ${grpFilter==='ALL'?'gold-btn':'bg-zinc-900 text-gray-300'}">كل الجروبات (${students.length})</button>
+            ${db.groups.map(g => `<button onclick="grpFilter='${g}'; render();" class="px-3 py-1.5 rounded-xl text-xs font-bold ${grpFilter===g?'gold-btn':'bg-zinc-900 text-gray-300 border border-yellow-500/20'}">👥 ${g}</button>`).join('')}
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-6">
+            <div class="gold-card rounded-2xl p-4 space-y-2">
+              ${filtered.map(s => {
+                const st = calcStats(s);
+                return `
+                  <div onclick="selStuId='${s.id}'; render();" class="cursor-pointer p-3 rounded-xl border ${sel && sel.id===s.id ? 'border-yellow-400 bg-yellow-500/15' : 'border-yellow-500/15 bg-black/70'}">
+                    <div class="flex justify-between font-bold text-xs text-white"><span>${s.name} (@${s.username})</span><span class="text-yellow-300">Step ${s.level}</span></div>
+                    <div class="text-[11px] text-gray-400 mt-1">حضر: ${st.attC}/${st.total} | الواجب: ${st.hwC}/${st.total}</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <div class="md:col-span-2 gold-card rounded-2xl p-5">
+              ${!sel ? `<p class="text-xs text-gray-400">اختر طالباً</p>` : (() => {
+                const st = calcStats(sel);
+                return `
+                  <div class="space-y-4">
+                    <div class="flex flex-wrap justify-between items-center gap-2 border-b border-yellow-500/20 pb-3">
+                      <div>
+                        <h3 class="font-bold text-lg text-white">${sel.name} <span class="text-xs px-2 py-0.5 rounded border ${st.evalCls}">${st.evalText} (${st.overall}%)</span></h3>
+                        <p class="text-xs text-gray-400">متبقي ${st.rem} درس لإنهاء Step ${sel.level}</p>
+                      </div>
+                      <button onclick="resetPuz('${sel.id}')" class="px-3 py-1.5 rounded-xl text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">↺ إعادة فتح اللغز</button>
+                      <select onchange="selLvl('${sel.id}', this.value)" class="bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-yellow-300">
+                        ${[1,2,3,4,5,6].map(l => `<option value="${l}" ${Number(sel.level)===l?'selected':''}>Step ${l}</option>`).join('')}
+                      </select>
+                    </div>
+                    <div class="flex gap-2">
+                      <input id="noteInp" value="${esc(sel.note||'')}" class="flex-1 bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" placeholder="ملاحظة سرية لولي الأمر..." />
+                      <button onclick="saveNote('${sel.id}')" class="px-4 py-2 rounded-xl text-xs gold-btn">حفظ لولي الأمر 🔒</button>
+                    </div>
+                    <div class="flex flex-wrap gap-2 items-center text-xs">
+                      <span class="text-gray-400">🔑 كود ولي الأمر:</span>
+                      <b class="text-yellow-300 tracking-widest">${esc(sel.parentCode || '—')}</b>
+                      <button onclick="genParentCode('${sel.id}')" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-yellow-500/30 text-yellow-300">${sel.parentCode ? 'تجديد الكود' : 'إنشاء كود'}</button>
+                      ${sel.parentCode && sel.parentPhone ? `<a target="_blank" rel="noopener" href="${waLink(sel.parentPhone)}?text=${encodeURIComponent('كود متابعة ' + sel.name + ' على منصة ECA: ' + sel.parentCode + '\nادخل من هنا واكتب الكود: ' + location.origin + location.pathname + '#parent')}" class="px-3 py-1.5 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-300">إرسال واتساب</a>` : ''}
+                    </div>
+                    <div class="divide-y divide-yellow-500/15 border border-yellow-500/20 rounded-xl max-h-80 overflow-y-auto bg-black/60">
+                      ${st.st.lessons.map((les, i) => {
+                        const k = sel.level + "-" + i;
+                        const a = !!(sel.att && sel.att[k]);
+                        const h = !!(sel.hw && sel.hw[k]);
+                        return `
+                          <div class="px-4 py-2.5 flex justify-between items-center text-xs">
+                            <span class="text-white font-medium">${i+1}. ${les.t}</span>
+                            <div class="flex gap-4">
+                              <label class="flex items-center gap-1 cursor-pointer ${a?'text-emerald-300 font-bold':'text-gray-400'}">
+                                <input type="checkbox" ${a?'checked':''} onchange="togCheck('${sel.id}','${k}','att')" /> حضر
+                              </label>
+                              <label class="flex items-center gap-1 cursor-pointer ${h?'text-yellow-300 font-bold':'text-gray-400'}">
+                                <input type="checkbox" ${h?'checked':''} onchange="togCheck('${sel.id}','${k}','hw')" /> الواجب
+                              </label>
+                            </div>
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>
+                  </div>
+                `;
+              })()}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function resetPuz(id) { const s = db.users.find(u => u.id === id); if (s.puzDone) delete s.puzDone[s.level]; save(); render(); toast("تم إعادة فتح اللغز"); }
+    function addGroup(e) { e.preventDefault(); const v = document.getElementById("newGrpInp").value.trim(); if (v) { db.groups.push(v); save(); render(); } }
+    function togCheck(id, k, type) { const s = db.users.find(u => u.id === id); s[type] = s[type] || {}; s[type][k] = !s[type][k]; save(); render(); }
+    function selLvl(id, l) { const s = db.users.find(u => u.id === id); s.level = Number(l); save(); render(); }
+    function saveNote(id) { const s = db.users.find(u => u.id === id); s.note = document.getElementById("noteInp").value; save(); toast("✅ تم حفظ الملاحظة السرية لولي الأمر"); }
+
+    function renderParentView() {
+      const pq = parentQ.trim().toLowerCase();
+      const stu = !isCoach() ? parentStu : (pq ? db.users.find(u => u.role === "student" && (String(u.username || "").toLowerCase() === pq || String(u.name || "").toLowerCase().includes(pq))) : null);
+      return `
+        <div class="max-w-4xl mx-auto space-y-5">
+          <div class="gold-card rounded-2xl p-6">
+            <h2 class="font-display font-bold text-xl gold-gradient-text">👨‍👩‍👦 بوابة متابعة ولي الأمر (Parent Dashboard)</h2>
+            ${isCoach() ? `<p class="text-xs text-gray-400 mt-1">اكتب Username الطالب أو اسمه لمعاينة لوحة ولي الأمر</p>
+            <input id="parentSearchInp" value="${esc(parentQ)}" oninput="parentQ=this.value; render();" placeholder="ابحث باسم الطالب..." class="mt-3 w-full bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white" />` : `<p class="text-xs text-gray-400 mt-1">اكتب كود المتابعة اللي استلمته من الأكاديمية</p>
+            <div class="mt-3 flex gap-2"><input id="parentCodeInp" value="${esc(parentQ)}" oninput="parentQ=this.value" onkeydown="if(event.key==='Enter')parentLookup()" placeholder="كود ولي الأمر" autocapitalize="characters" autocomplete="off" class="flex-1 bg-black border border-yellow-500/40 rounded-xl px-4 py-2.5 text-sm text-white text-center tracking-widest" /><button onclick="parentLookup()" class="px-5 py-2.5 rounded-xl text-xs gold-btn">عرض</button></div>`}
+          </div>
+          ${!stu ? `<div class="gold-card rounded-2xl p-6 text-center text-xs text-gray-400">${isCoach() ? 'لا يوجد طالب بهذا الاسم.' : 'اكتب كود المتابعة لعرض تقدّم الطالب.'}</div>` : (() => {
+            const s = calcStats(stu);
+            return `
+              <div class="gold-card rounded-2xl p-6 space-y-5">
+                <div class="flex flex-wrap justify-between items-center gap-4 border-b border-yellow-500/20 pb-4">
+                  <div>
+                    <span class="text-xs text-yellow-400 font-bold">STEP ${stu.level}${stu.group ? ' • ' + esc(stu.group) : ''}</span>
+                    <h3 class="font-display font-bold text-2xl text-white">${stu.name} (@${stu.username})</h3>
+                  </div>
+                  <div class="px-5 py-3 rounded-2xl border ${s.evalCls}">
+                    <div class="text-[11px]">التقييم التلقائي لمستوى الطالب</div>
+                    <div class="text-lg font-extrabold">${s.evalText} (${s.overall}%)</div>
+                  </div>
+                </div>
+                <div class="grid sm:grid-cols-3 gap-4 text-center">
+                  <div class="p-4 rounded-xl bg-black/80 border border-yellow-500/20">
+                    <div class="text-xs text-gray-400">الدروس التي حضرها</div>
+                    <div class="text-xl font-bold text-emerald-400 mt-1">${s.attC} /${s.total}</div>
+                    <div class="text-[11px] text-gray-500">متبقي ${s.rem} دروس</div>
+                  </div>
+                  <div class="p-4 rounded-xl bg-black/80 border border-yellow-500/20">
+                    <div class="text-xs text-gray-400">الواجبات المكتملة</div>
+                    <div class="text-xl font-bold text-yellow-400 mt-1">${s.hwC} / ${s.total} (${s.hwP}%)</div>
+                  </div>
+                  <div class="p-4 rounded-xl bg-black/80 border border-yellow-500/20">
+                    <div class="text-xs text-gray-400">دقة الألغاز اليومية</div>
+                    <div class="text-xl font-bold text-sky-400 mt-1">${s.puzP}%</div>
+                  </div>
+                </div>
+                <div class="p-4 rounded-xl bg-black/90 border border-yellow-500/40 flex justify-between items-center">
+                  <div><b class="text-xs text-yellow-400">🔒 ملاحظة المدرب لولي الأمر:</b><p class="text-sm text-white mt-1">${esc(stu.note || 'لا توجد ملاحظات حالياً.')}</p></div>
+                </div>
+              </div>
+            `;
+          })()}
+        </div>
+      `;
+    }
+
+    async function parentLookup() {
+      if (parentBusy) return;
+      const code = String(parentQ || "").trim();
+      if (!code) return toast("❌ اكتب كود المتابعة الأول");
+      if (!window.fbParentLookup) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش، جرّب بعد ثواني");
+      parentBusy = true;
+      const r = await window.fbParentLookup(code);
+      parentBusy = false;
+      if (!r.ok) { parentStu = null; render(); return toast("❌ الكود غير صحيح أو انتهت صلاحيته"); }
+      parentStu = r.stu; render();
+    }
+    async function genParentCode(id) {
+      if (!window.fbGenParentCode) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش");
+      const s = db.users.find(u => u.id === id);
+      if (s && s.parentCode && !confirm(trText("تجديد الكود هيلغي الكود القديم وأي جهاز مربوط بيه. متأكد؟"))) return;
+      const c = await window.fbGenParentCode(id);
+      render(); toast(c ? "✅ تم إنشاء كود ولي الأمر" : "❌ تعذّر إنشاء الكود");
+    }
+    async function changeMyPassword() {
+      if (!window.fbChangePassword) return;
+      if (window.fbAuthInfo && !window.fbAuthInfo().password) return toast("ℹ️ حسابك بيدخل بجوجل — مفيش كلمة سر تتغير");
+      const o = prompt(trText("كلمة السر الحالية")); if (o == null) return;
+      const n = prompt(trText("كلمة السر الجديدة (6 حروف على الأقل)")); if (n == null) return;
+      if (n.length < 6) return toast("❌ كلمة السر لازم تكون 6 حروف على الأقل");
+      const r = await window.fbChangePassword(o, n);
+      toast(r.ok ? "✅ تم تغيير كلمة السر" : "❌ كلمة السر الحالية غير صحيحة");
+    }
+    function adminToolsBox() {
+      return `<div class="gold-card rounded-2xl p-4 flex flex-wrap items-center gap-3 text-xs">
+        <span class="text-yellow-300 font-bold">🛠️ أدوات الإدارة</span>
+        <button onclick="migrateLegacy()" class="px-3 py-2 rounded-xl bg-zinc-900 border border-yellow-500/40 text-yellow-300">ترحيل الطلاب من النظام القديم</button>
+        <span class="text-gray-400">مرة واحدة: بينشئ حساب دخول لكل طالب وينزّل ملف فيه كلمات السر المؤقتة.</span>
+        <button onclick="createInvite()" class="px-3 py-2 rounded-xl bg-zinc-900 border border-yellow-500/40 text-yellow-300">🎟️ كود دعوة كوتش جديد</button>
+      </div>`;
+    }
+    async function createInvite() {
+      if (!window.fbCreateInvite) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش");
+      const c = await window.fbCreateInvite();
+      if (!c) return toast("❌ تعذّر إنشاء الكود");
+      try { await navigator.clipboard.writeText(c); } catch (_) {}
+      alert(trText("كود دعوة الكوتش (يُستخدم مرة واحدة):") + "\n\n" + c + "\n\n" + trText("اتنسخ تلقائياً. ابعته للكوتش ليسجّل من تبويب «كوتش» في صفحة التسجيل."));
+    }
+    async function migrateLegacy() {
+      if (!window.fbMigrateLegacy) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش");
+      if (!confirm(trText("هيتم إنشاء حساب دخول لكل طالب قديم وتنزيل ملف كلمات السر المؤقتة. كمّل؟"))) return;
+      toast("⏳ جاري الترحيل... ماتقفلش الصفحة");
+      let r; try { r = await window.fbMigrateLegacy(); } catch (e) { console.error(e); r = { ok: false, msg: "حصل خطأ، راجع الـ Console" }; }
+      render();
+      if (!r.ok) return toast("❌ " + (r.msg || "فشل الترحيل"));
+      alert(trText("تم ترحيل") + " " + r.done + " " + trText("طالب") + (r.failed.length ? "\n" + trText("فشل") + ": " + r.failed.map(f => f[0]).join(", ") + "\n" + trText("شغّل الترحيل تاني لإعادة المحاولة للي فشلوا.") : ""));
+    }
+    function openExamModal(lvl) {
+      document.getElementById("examModal").classList.remove("hidden");
+      document.getElementById("examBody").innerHTML = `
+        <p class="text-xs text-gray-300 mb-3">اختبار نهاية Step ${lvl}: هل أنت جاهز للترقية إلى Step ${lvl+1}؟</p>
+        <button onclick="passExam()" class="w-full py-2.5 rounded-xl text-xs gold-btn">إتمام الاختبار بنجاح والترقية إلى Step ${lvl+1} 🚀</button>
+      `;
+    }
+    function closeExamModal() { document.getElementById("examModal").classList.add("hidden"); }
+    function passExam() {
+      const u = currUser();
+      if (u && u.role === "student") { u.level = Math.min(6, Number(u.level) + 1); save(); closeExamModal(); render(); toast("🎉 مبروك! تمت ترقيتك إلى Step " + u.level); }
+    }
+
+    // ================= ECA ADDITIONS: students, attendance, backup, theme, PWA =================
+    function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+    function todayISO() { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
+    function stuMode(s) { return s.mode === "online" ? "online" : "offline"; }
+    function isCoach() { const u = currUser(); return !!(u && u.role === "coach"); }
+    function waLink(num) { let d = String(num || "").replace(/\D/g, ""); if (!d) return ""; if (d.startsWith("00")) d = d.slice(2); else if (d.startsWith("0")) d = "20" + d.slice(1); return "https://wa.me/" + d; }
+    function dl(name, text, type) { const b = new Blob([text], { type }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
+    function keepScroll(fn) { const y = window.scrollY; fn(); window.scrollTo(0, y); }
+
+    // ---------- Attendance ----------
+    let attDate = todayISO(), attMode = "offline", attQ = "", attMonth = todayISO().slice(0, 7);
+    const ATT_LABEL = { p: "حاضر", l: "متأخر", a: "غايب" };
+    function stuAttStats(id, month) {
+      let p = 0, l = 0, a = 0;
+      for (const d in db.attendance) {
+        if (month && !d.startsWith(month)) continue;
+        const v = db.attendance[d][id];
+        if (v === "p") p++; else if (v === "l") l++; else if (v === "a") a++;
+      }
+      const t = p + l + a;
+      return { p, l, a, t, rate: t ? Math.round(((p + l) / t) * 100) : null };
+    }
+    function setAtt(id, st) {
+      if (!isCoach()) return;
+      const r = db.attendance[attDate] = db.attendance[attDate] || {};
+      if (r[id] === st) delete r[id]; else r[id] = st;
+      if (!Object.keys(r).length) delete db.attendance[attDate];
+      save(); keepScroll(render);
+    }
+    function markAll(st) {
+      if (!isCoach()) return;
+      const r = db.attendance[attDate] = db.attendance[attDate] || {};
+      db.users.filter(u => u.role === "student" && stuMode(u) === attMode).forEach(s => { if (st) r[s.id] = st; else delete r[s.id]; });
+      if (!Object.keys(r).length) delete db.attendance[attDate];
+      save(); keepScroll(render);
+    }
+    function shiftDate(n) {
+      const d = new Date(attDate + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n);
+      attDate = d.toISOString().slice(0, 10); render();
+    }
+    function setAttDate(v) { if (/^\d{4}-\d{2}-\d{2}$/.test(v)) { attDate = v; render(); } }
+    function setStuMode(id, m) {
+      if (!isCoach()) return;
+      const s = db.users.find(u => u.id === id); if (!s) return;
+      s.mode = m; save(); keepScroll(render);
+      toast(m === "online" ? "💻 تم نقل الطالب إلى الأونلاين" : "🏫 تم نقل الطالب إلى الأوفلاين");
+    }
+    function renderAttendanceView() {
+      const all = db.users.filter(u => u.role === "student");
+      const inMode = all.filter(s => stuMode(s) === attMode);
+      const q = attQ.toLowerCase();
+      const list = inMode.filter(s => !q || String(s.name || "").toLowerCase().includes(q) || String(s.username || "").toLowerCase().includes(q));
+      const rec = db.attendance[attDate] || {};
+      const cnt = { p: 0, l: 0, a: 0 };
+      inMode.forEach(s => { if (rec[s.id]) cnt[rec[s.id]]++; });
+      const un = inMode.length - cnt.p - cnt.l - cnt.a;
+      const nOff = all.filter(s => stuMode(s) === "offline").length, nOn = all.length - nOff;
+      const dateLabel = new Date(attDate + "T12:00:00Z").toLocaleDateString(lang === "en" ? "en-GB" : "ar-EG", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+      const pill = (on, extra) => `tap px-3.5 rounded-xl text-xs font-bold ${on ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/25'} ${extra || ''}`;
+      return `
+        <div class="space-y-5">
+          <div class="gold-card rounded-2xl p-5 flex flex-wrap justify-between items-center gap-3">
+            <div>
+              <h2 class="font-display font-bold text-xl gold-gradient-text">✅ تسجيل الحضور</h2>
+              <p class="text-xs text-gray-400">سجّل حضور الطلاب الأونلاين والأوفلاين كل واحد في قسمه.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="openAddStu()" class="tap px-4 rounded-xl text-xs gold-btn">➕ إضافة طالب جديد</button>
+              <button onclick="exportBackup()" class="tap px-3 rounded-xl text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">💾 نسخة احتياطية</button>
+              <button onclick="document.getElementById('bkFile').click()" class="tap px-3 rounded-xl text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">📂 استرجاع نسخة</button>
+              <input id="bkFile" type="file" accept=".json,application/json" class="hidden" onchange="importBackup(this)" />
+            </div>
+          </div>
+
+          <div class="gold-card rounded-2xl p-4 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex flex-wrap gap-2">
+                <button onclick="attMode='offline'; render();" class="${pill(attMode === 'offline')}">🏫 طلبة الأوفلاين (${nOff})</button>
+                <button onclick="attMode='online'; render();" class="${pill(attMode === 'online')}">💻 طلبة الأونلاين (${nOn})</button>
+              </div>
+              <input id="attQInp" value="${esc(attQ)}" oninput="attQ=this.value; render();" placeholder="🔍 ابحث باسم الطالب..." class="tap flex-1 min-w-[160px] max-w-xs bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white" />
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="shiftDate(-1)" class="${pill(false)}">اليوم السابق</button>
+              <input type="date" value="${attDate}" onchange="setAttDate(this.value)" class="tap bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white" />
+              <button onclick="shiftDate(1)" class="${pill(false)}">اليوم التالي</button>
+              <button onclick="attDate=todayISO(); render();" class="${pill(attDate === todayISO())}">النهاردة</button>
+              <span class="text-xs text-yellow-300 font-bold">${dateLabel}</span>
+            </div>
+            <div class="grid grid-cols-4 gap-2 text-center">
+              <div class="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/40"><div class="text-lg font-bold text-emerald-300">${cnt.p}</div><div class="text-[11px] text-gray-400">حاضر</div></div>
+              <div class="p-2 rounded-xl bg-amber-500/20 border border-amber-500/40"><div class="text-lg font-bold text-amber-300">${cnt.l}</div><div class="text-[11px] text-gray-400">متأخر</div></div>
+              <div class="p-2 rounded-xl bg-red-500/10 border border-red-500/30"><div class="text-lg font-bold text-red-300">${cnt.a}</div><div class="text-[11px] text-gray-400">غايب</div></div>
+              <div class="p-2 rounded-xl bg-black/70 border border-yellow-500/20"><div class="text-lg font-bold text-white">${un}</div><div class="text-[11px] text-gray-400">لم يُسجَّل</div></div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="markAll('p')" class="tap px-3 rounded-xl text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">تحديد الكل حاضر</button>
+              <button onclick="markAll('')" class="tap px-3 rounded-xl text-xs bg-zinc-900 text-gray-300 border border-yellow-500/20">مسح تسجيل اليوم</button>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            ${list.length ? list.map(s => {
+              const cur = rec[s.id] || "", ss = stuAttStats(s.id), wa = waLink(s.parentPhone || s.phone);
+              const b = (st, txt) => `<button onclick="setAtt('${s.id}','${st}')" class="att-btn att-${st} ${cur === st ? 'on' : ''}">${txt}</button>`;
+              return `
+                <div class="gold-card rounded-xl p-3 flex flex-wrap items-center justify-between gap-2">
+                  <div class="min-w-0 flex-1" style="min-width:150px">
+                    <div class="font-bold text-sm text-white">${esc(s.name)} <span class="text-[11px] font-normal text-gray-400">@${esc(s.username)}</span></div>
+                    <div class="text-[11px] text-gray-400">Step ${esc(s.level)} • ${esc(s.group || '')} • ${ss.rate === null ? 'لا يوجد سجل بعد' : 'نسبة الحضور ' + ss.rate + '% (' + ss.t + ' حصة)'}</div>
+                  </div>
+                  <div class="flex gap-1.5">${b('p', '✓ حاضر')}${b('l', '⏰ متأخر')}${b('a', '✗ غايب')}</div>
+                  <div class="flex gap-1.5">
+                    ${wa ? `<a href="${wa}" target="_blank" rel="noopener" class="tap inline-flex items-center px-3 rounded-xl text-xs bg-zinc-900 border border-emerald-500/40 text-emerald-300" title="WhatsApp">💬</a>` : ''}
+                    <button onclick="setStuMode('${s.id}','${attMode === 'online' ? 'offline' : 'online'}')" class="tap px-3 rounded-xl text-[11px] bg-zinc-900 border border-yellow-500/25 text-gray-300">${attMode === 'online' ? '🏫 نقل للأوفلاين' : '💻 نقل للأونلاين'}</button>
+                    <button onclick="openAddStu('${s.id}')" class="tap px-3 rounded-xl text-xs bg-zinc-900 border border-yellow-500/25 text-yellow-300" title="Edit">✏️</button>
+                  </div>
+                </div>`;
+            }).join('') : `<div class="gold-card rounded-xl p-5 text-center text-xs text-gray-400">${all.length && !inMode.length ? 'لا يوجد طلاب في هذا القسم بعد. أضف طالباً جديداً أو انقل طالباً من القسم الآخر.' : (inMode.length ? 'لا توجد نتائج لهذا البحث.' : 'لا يوجد طلاب بعد. اضغط «إضافة طالب جديد».')}</div>`}
+          </div>
+
+          <div class="gold-card rounded-2xl p-4 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="font-display font-bold text-lg text-yellow-400">📊 تقرير الشهر — ${attMode === 'online' ? 'طلبة الأونلاين' : 'طلبة الأوفلاين'}</h3>
+              <div class="flex flex-wrap gap-2 items-center">
+                <input type="month" value="${attMonth}" onchange="if(this.value){attMonth=this.value; render();}" class="tap bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white" />
+                <button onclick="exportAttCSV()" class="tap px-3 rounded-xl text-xs gold-btn">⬇ تصدير CSV</button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-white">
+                <thead><tr class="text-yellow-300 border-b border-yellow-500/25"><th class="text-left py-2 pr-2">اسم الطالب</th><th class="py-2 px-2">حاضر</th><th class="py-2 px-2">متأخر</th><th class="py-2 px-2">غايب</th><th class="py-2 px-2">نسبة الحضور</th></tr></thead>
+                <tbody>
+                  ${inMode.length ? inMode.map(s => { const m = stuAttStats(s.id, attMonth); return `<tr class="border-b border-yellow-500/10"><td class="py-2 pr-2 font-bold">${esc(s.name)}</td><td class="text-center text-emerald-300">${m.p}</td><td class="text-center text-amber-300">${m.l}</td><td class="text-center text-red-300">${m.a}</td><td class="text-center">${m.rate === null ? '—' : m.rate + '%'}</td></tr>`; }).join('') : `<tr><td colspan="5" class="py-3 text-center text-gray-400">لا يوجد طلاب في هذا القسم بعد.</td></tr>`}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>`;
+    }
+    function exportAttCSV() {
+      if (!isCoach()) return;
+      const safe = c => { c = String(c); if (/^[=+\-@]/.test(c)) c = "'" + c; return '"' + c.replace(/"/g, '""') + '"'; };
+      const byId = {}; db.users.forEach(u => byId[u.id] = u);
+      const rows = [["التاريخ", "الاسم", "اليوزر", "النوع", "الحالة"]];
+      Object.keys(db.attendance).sort().forEach(d => {
+        if (!d.startsWith(attMonth)) return;
+        Object.entries(db.attendance[d]).forEach(([id, st]) => { const s = byId[id]; if (s) rows.push([d, s.name, s.username, stuMode(s) === "online" ? "أونلاين" : "أوفلاين", ATT_LABEL[st] || st]); });
+      });
+      if (rows.length === 1) return toast("لا توجد سجلات حضور في هذا الشهر");
+      dl("ECA-attendance-" + attMonth + ".csv", "\ufeff" + rows.map(r => r.map(safe).join(",")).join("\r\n"), "text/csv;charset=utf-8");
+    }
+
+    // ---------- Backup / restore ----------
+    function exportBackup() { if (!isCoach()) return; dl("ECA-backup-" + todayISO() + ".json", JSON.stringify(db, null, 1), "application/json"); toast("✅ تم تنزيل النسخة الاحتياطية"); }
+    function importBackup(inp) { try { inp.value = ""; } catch (_) {} toast("⚠️ استعادة النسخة الاحتياطية متوقفة (البيانات على Firebase). تصدير النسخة شغال."); }
+
+    // ---------- Add / edit / delete student ----------
+    let editStuId = null;
+    function openAddStu(id) {
+      if (!isCoach()) return;
+      editStuId = id || null;
+      const s = id ? db.users.find(u => u.id === id) : null;
+      const $ = x => document.getElementById(x);
+      $("asTitleNew").classList.toggle("hidden", !!s); $("asTitleEdit").classList.toggle("hidden", !s);
+      $("asSubNew").classList.toggle("hidden", !!s); $("asSubEdit").classList.toggle("hidden", !s);
+      $("asDelBtn").classList.toggle("hidden", !s); $("asEditHint").classList.toggle("hidden", !s);
+      $("asLevel").innerHTML = [1, 2, 3, 4, 5, 6].map(l => `<option value="${l}">Step ${l}</option>`).join("");
+      $("asGroup").innerHTML = db.groups.map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join("");
+      $("asName").value = s ? s.name : ""; $("asUser").value = s ? s.username : ""; $("asPass").value = ""; $("asUser").readOnly = !!s; $("asPass").disabled = !!s;
+      $("asAge").value = s && s.age ? s.age : ""; $("asPhone").value = s && s.phone ? s.phone : ""; $("asParent").value = s && s.parentPhone ? s.parentPhone : "";
+      $("asLevel").value = s ? String(s.level) : "1";
+      $("asGroup").value = s && s.group ? s.group : (db.groups[0] || "");
+      $("asMode").value = s ? stuMode(s) : attMode;
+      $("addStuModal").classList.remove("hidden"); applyLang(); $("asName").focus();
+    }
+    function closeAddStu() { document.getElementById("addStuModal").classList.add("hidden"); editStuId = null; }
+    async function saveStudent(ev) {
+      ev.preventDefault();
+      if (!isCoach()) return;
+      const g = x => document.getElementById(x).value.trim().replace(/[<>"'`]/g, "");
+      const name = g("asName"); if (!name) return toast("❌ اكتب اسم الطالب");
+      let username = g("asUser").toLowerCase().replace(/\s+/g, "_");
+      if (!username) username = "eca_" + String(Date.now()).slice(-6);
+      if (db.users.some(u => String(u.username || "").toLowerCase() === username && u.id !== editStuId)) return toast("❌ اسم المستخدم ده مستخدم قبل كده");
+      if (db.users.some(u => u.role === "student" && String(u.name || "").trim().toLowerCase() === name.toLowerCase() && u.id !== editStuId) && !confirm(trText("فيه طالب بنفس الاسم. هل تريد المتابعة؟"))) return;
+      const data = { name, username, level: Number(g("asLevel")) || 1, group: g("asGroup"), mode: g("asMode") === "online" ? "online" : "offline", age: g("asAge"), phone: g("asPhone"), parentPhone: g("asParent") };
+      const pass = document.getElementById("asPass").value.trim();
+      if (editStuId) {
+        const s = db.users.find(u => u.id === editStuId); if (!s) return;
+        delete data.username;                       // اسم المستخدم مربوط بحساب الدخول ومينفعش يتغير
+        Object.assign(s, data);
+        attMode = data.mode; save(); closeAddStu(); render();
+        toast(pass ? "ℹ️ تم الحفظ — كلمة السر ما اتغيرتش (الطالب يغيرها من زر 🔑)" : "✅ تم حفظ بيانات الطالب");
+      } else {
+        if (!window.fbCreateStudentAccount) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش، جرّب بعد ثواني");
+        const initPass = pass || randomPass();
+        if (initPass.length < 6) return toast("❌ كلمة السر لازم تكون 6 حروف على الأقل");
+        const btn = ev.submitter; if (btn) btn.disabled = true;
+        try {
+          const uid = await window.fbCreateStudentAccount(username, initPass);
+          const ns = Object.assign({ id: uid, email: username + "@eca.local", role: "student", att: {}, hw: {}, puz: { t: 0, c: 0 }, note: "لم تُضف ملاحظات بعد." }, data);
+          db.users.push(ns); attMode = data.mode; save(); closeAddStu(); render();
+          alert(trText("تم إنشاء حساب الطالب") + "\n" + trText("اسم المستخدم") + ": " + username + "\n" + trText("كلمة السر") + ": " + initPass + "\n\n" + trText("سجّل البيانات دي وسلّمها للطالب."));
+        } catch (e) {
+          toast(e && e.code === "auth/email-already-in-use" ? "❌ اسم المستخدم ده موجود فعلاً في نظام الدخول" : "❌ تعذّر إنشاء الحساب");
+        } finally { if (btn) btn.disabled = false; }
+      }
+    }
+    function deleteStudent() {
+      if (!isCoach() || !editStuId) return;
+      const s = db.users.find(u => u.id === editStuId); if (!s) return;
+      if (!confirm(trText("هل أنت متأكد من حذف الطالب نهائياً مع كل سجلات حضوره؟") + "\n" + s.name)) return;
+      const _delId = editStuId; db.users = db.users.filter(u => u.id !== editStuId); if (window.fbOnStudentDeleted) window.fbOnStudentDeleted(_delId);
+      for (const d in db.attendance) { delete db.attendance[d][editStuId]; if (!Object.keys(db.attendance[d]).length) delete db.attendance[d]; }
+      if (selStuId === editStuId) selStuId = "";
+      save(); closeAddStu(); render(); toast("🗑️ تم حذف الطالب");
+    }
+
+    // ---------- Theme (dark / light) ----------
+    function applyTheme(t) {
+      const d = document.documentElement; d.classList.remove("dark", "light"); d.classList.add(t);
+      try { localStorage.setItem("ECA_THEME", t); } catch (_) {}
+      const b = document.getElementById("themeBtn"); if (b) b.textContent = t === "light" ? "🌙" : "☀️";
+      const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", t === "light" ? "#f6f3ea" : "#050507");
+    }
+    function toggleTheme() { applyTheme(document.documentElement.classList.contains("light") ? "dark" : "light"); }
+    applyTheme(document.documentElement.classList.contains("light") ? "light" : "dark");
+
+    // ---------- PWA ----------
+    let deferredInstall = null;
+    const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    function showInstallBtn(v) { const b = document.getElementById("installBtn"); if (b) b.classList.toggle("hidden", !v); }
+    window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; showInstallBtn(true); });
+    window.addEventListener("appinstalled", () => { deferredInstall = null; showInstallBtn(false); });
+    if (isIOS && !isStandalone()) showInstallBtn(true);
+    function installApp() {
+      if (deferredInstall) { deferredInstall.prompt(); deferredInstall.userChoice.finally(() => { deferredInstall = null; showInstallBtn(false); }); }
+      else toast("📲 على الآيفون: اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»");
+    }
+    window.addEventListener("offline", () => toast("📴 لا يوجد إنترنت — الموقع يعمل والبيانات محفوظة على جهازك"));
+    window.addEventListener("online", () => toast("📶 عاد الاتصال بالإنترنت"));
+    if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+    }
+    // re-render date label etc. when language flips on the attendance page
+    { const _tl = toggleLang; toggleLang = function () { _tl(); if (tab === "attendance") render(); }; }
+
+    // Background Animation
+    const cv = document.getElementById("bgCanvas"), ctx = cv.getContext("2d");
+    function rsz() { cv.width = window.innerWidth; cv.height = window.innerHeight; }
+    window.addEventListener("resize", rsz); rsz();
+    const pts = Array.from({ length: 35 }, () => ({ x: Math.random() * cv.width, y: Math.random() * cv.height, r: Math.random() * 1.8 + 0.5, vx: (Math.random() - 0.5) * 0.25, vy: (Math.random() - 0.5) * 0.25 }));
+    function anim() {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      pts.forEach(p => {
+        p.x = (p.x + p.vx + cv.width) % cv.width; p.y = (p.y + p.vy + cv.height) % cv.height;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = document.documentElement.classList.contains("light") ? "rgba(153,116,21,0.28)" : "rgba(212,175,55,0.3)"; ctx.fill();
+      });
+      requestAnimationFrame(anim);
+    }
+    anim();
+    const h0 = (location.hash || "#home").slice(1);
+    tab = ["home", "lessons", "tracker", "attendance", "finance", "parent"].includes(h0) ? h0 : "home";
+    history.replaceState({ tab }, "", "#" + tab);
+    window.addEventListener("popstate", e => { tab = (e.state && e.state.tab) || "home"; render(); });
+    const _oe = openExamModal; openExamModal = function (l) { _oe(l); applyLang(); };
+    render();
+    // ================= ECA PRO UPGRADE: 6-IN-1 SMART EXAM, CERTIFICATES & DAILY PUZZLE =================
+    
+    // 1. تحميل مكتبة jsPDF مجاناً عند الحاجة فقط لتوليد ملف الـ PDF بأعلى سرعة
+    let jsPdfLoaded = false;
+    function loadJsPDF() {
+      return new Promise((resolve) => {
+        if (jsPdfLoaded && window.jspdf) return resolve(window.jspdf.jsPDF);
+        const s = document.createElement("script");
+        s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+        s.onload = () => { jsPdfLoaded = true; resolve(window.jspdf.jsPDF); };
+        document.head.appendChild(s);
+      });
+    }
+
+    // تحميل خط Cairo لدعم اللغة العربية في الشهادة بأناقة
+    if (!document.getElementById("cairoFontLink")) {
+      const fl = document.createElement("link");
+      fl.id = "cairoFontLink";
+      fl.rel = "stylesheet";
+      fl.href = "https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;900&display=swap";
+      document.head.appendChild(fl);
+    }
+
+    // 2. بنك الأسئلة التكتيكية المرتبط بالدروس لتوليد سؤال عشوائي لكل درس + اللغز اليومي المتغير
+    const LESSON_QUESTION_PATTERNS = [
+      { match: /mate|mating/i, q: (t) => `In "${t}", what is the primary objective to finish the game immediately?`, opts: ["Deliver a forced Checkmate net", "Trade all pawns", "Move the King to the corner"], ans: 0 },
+      { match: /pin/i, q: (t) => `In "${t}", how do you maximize pressure on a pinned piece?`, opts: ["Attack it with a pawn or another piece (Pile up)", "Immediately retreat your pieces", "Offer a draw"], ans: 0 },
+      { match: /double attack|twofold|fork/i, q: (t) => `In "${t}", what makes a double attack winning?`, opts: ["Creating two simultaneous threats the opponent cannot both defend", "Moving the same piece twice", "Trading Queens early"], ans: 0 },
+      { match: /discovered|x-ray/i, q: (t) => `In "${t}", how do you make a discovered attack most devastating?`, opts: ["Move the front piece with a direct check or tempo threat", "Put the King in the center", "Pass the turn"], ans: 0 },
+      { match: /defend|defence|eliminat/i, q: (t) => `In "${t}", what is the fastest way to break a strong defense?`, opts: ["Eliminate, capture, or lure away the key defending piece", "Wait passively", "Push flank pawns randomly"], ans: 0 },
+      { match: /pawn|breakthrough|square|passed/i, q: (t) => `In "${t}", what is the key strategic goal in pawn play?`, opts: ["Create an unstoppable passed pawn and control key promotion squares", "Keep all pawns on the 2nd rank", "Give up the center"], ans: 0 },
+      { match: /rook|seventh|open file/i, q: (t) => `In "${t}", how should Rooks be activated for maximum power?`, opts: ["Seize open files and penetrate to the 7th rank", "Keep Rooks locked behind unmoved pawns", "Trade Rooks for single pawns"], ans: 0 },
+      { match: /draw|stalemate|wrong bishop/i, q: (t) => `In "${t}", when you are down material in the endgame, what resource can save the game?`, opts: ["Aim for Stalemate, perpetual check, or a theoretical draw fortress", "Resign immediately", "Expose the King to checks"], ans: 0 },
+      { match: /opening|golden rules|castl/i, q: (t) => `In "${t}", what are the 3 Golden Rules of the opening?`, opts: ["Control the center, develop pieces quickly, and castle the King safely", "Bring the Queen out on move 2 and push all edge pawns", "Move only Knights"], ans: 0 }
+    ];
+
+    function buildLessonQuestion(lessonObj, idx, seedNum) {
+      const title = lessonObj.t;
+      const url = (lessonObj.l && lessonObj.l[0] && lessonObj.l[0][1]) ? lessonObj.l[0][1] : "https://lichess.org/training";
+      let pat = LESSON_QUESTION_PATTERNS.find(p => p.match.test(title));
+      let baseQ = pat ? pat.q(title) : `Tactical Evaluation — Lesson "${title}": Choose the most accurate chess principle:`;
+      let rawOpts = pat ? [...pat.opts] : [
+        `Apply the core tactical motif of "${title}" with calculation`,
+        "Play a passive waiting move without a plan",
+        "Give up material without compensation"
+      ];
+      // تبديل أماكن الاختيارات عشوائياً بناءً على البذرة (Seed) لضمان عدم حفظ المكان
+      const shift = (seedNum + idx) % 3;
+      const rotated = [0, 1, 2].map(i => ({ text: rawOpts[(i + shift) % 3], isCorrect: ((i + shift) % 3) === 0 }));
+      return {
+        lessonTitle: title,
+        url: url,
+        q: baseQ,
+        opts: rotated.map(r => r.text),
+        ans: rotated.findIndex(r => r.isCorrect)
+      };
+    }
+
+    // 3. تحديث اللغز اليومي تلقائياً كل يوم بناءً على دروس كل Step (الشرط رقم 6)
+    function updateDailyPuzzlesByDate() {
+      const dayKey = todayISO(); // YYYY-MM-DD
+      const dayHash = dayKey.split("-").reduce((acc, v) => acc + parseInt(v, 10) * 31, 7);
+      STEPS.forEach(st => {
+        if (st.lessons && st.lessons.length > 0) {
+          const lessonIdx = dayHash % st.lessons.length;
+          const les = st.lessons[lessonIdx];
+          const generated = buildLessonQuestion(les, lessonIdx, dayHash);
+          PUZZLES[st.step] = {
+            q: `[لغز اليوم ${dayKey} — درس: ${les.t}] ${generated.q}`,
+            opts: generated.opts,
+            ans: generated.ans,
+            url: generated.url,
+            dayKey: dayKey
+          };
+        }
+      });
+    }
+
+    // فتح اللغز اليومي تلقائياً عندما يتغير اليوم
+    function ensureDailyPuzzleFreshForUser(u) {
+      updateDailyPuzzlesByDate();
+      if (!u || u.role !== "student") return;
+      const dayKey = todayISO();
+      if (u.lastPuzDate !== dayKey) {
+        u.lastPuzDate = dayKey;
+        u.puzDone = {};
+      }
+    }
+
+    // 4. تعديل عرض صفحة الطالب لفرض شروط الامتحان وإظهار الشهادات وطلب الإعادة
+    const _origRenderStudentHome = renderStudentHome;
+    renderStudentHome = function(stu) {
+      ensureDailyPuzzleFreshForUser(stu);
+      const html = _origRenderStudentHome(stu);
+      const s = calcStats(stu);
+      const stepNum = Number(stu.level);
+      const exState = (stu.examState && stu.examState[stepNum]) || null; // { status: 'failed'|'passed', score: %, reqRetry: bool }
+      const certs = stu.certificates || [];
+
+      let examActionHtml = "";
+      if (s.attP < 100) {
+        examActionHtml = `
+          <div class="mt-4 pt-3 border-t border-yellow-500/20 flex flex-wrap justify-between items-center gap-2">
+            <span class="text-xs text-amber-300">🔒 يُفتح اختبار الترقية تلقائياً عند إتمام حضور 100% من دروس Step ${stepNum} (متبقي ${s.rem} درس)</span>
+            <button disabled class="px-4 py-2 rounded-xl text-xs bg-zinc-800 text-gray-500 cursor-not-allowed">🔒 مقفول (${s.attP}%)</button>
+          </div>`;
+      } else if (exState && exState.status === "failed") {
+        examActionHtml = `
+          <div class="mt-4 pt-3 border-t border-red-500/30 flex flex-wrap justify-between items-center gap-2">
+            <span class="text-xs text-red-300">❌ لم تجتز الاختبار (${exState.score}% — المطلوب 70%). مسموح بمحاولة واحدة فقط.</span>
+            ${exState.reqRetry 
+              ? `<span class="px-3 py-1.5 rounded-xl text-xs bg-amber-500/20 text-amber-300 border border-amber-500/40">⏳ تم إرسال طلب الإعادة للكوتش وبانتظار الموافقة</span>`
+              : `<button onclick="requestExamRetry()" class="px-4 py-2 rounded-xl text-xs gold-btn">📩 إرسال طلب إعادة الاختبار للكوتش</button>`
+            }
+          </div>`;
+      } else {
+        examActionHtml = `
+          <div class="mt-4 pt-3 border-t border-yellow-500/20 flex flex-wrap justify-between items-center gap-2">
+            <span class="text-xs text-emerald-300 font-bold">✅ أتممت 100% من الحضور! اختبار الترقية متاح الآن (محاولة واحدة - النجاح من 70%):</span>
+            <button onclick="openExamModal(${stepNum})" class="px-4 py-2 rounded-xl text-xs gold-btn">📝 بدء اختبار Step ${stepNum} الشامل</button>
+          </div>`;
+      }
+
+      // استبدال جزء زر الاختبار القديم بالجزء الذكي الجديد
+      const replaced = html.replace(
+        /<div class="mt-4 pt-3 border-t border-yellow-500\/20 flex justify-between items-center">[\s\S]*?<\/div>\s*<\/div>\s*<\/div>\s*<\/div>$/,
+        examActionHtml + `</div></div>` + (certs.length ? renderStudentCertificatesBox(stu) : "") + `</div>`
+      );
+      return replaced;
+    };
+
+    function renderStudentCertificatesBox(stu) {
+      const certs = stu.certificates || [];
+      return `
+        <div class="gold-card rounded-2xl p-6 mt-6">
+          <h3 class="font-display font-bold text-lg text-yellow-400 mb-3">🎓 شهادات التقدير المعتمدة (ECA Certificates)</h3>
+          <div class="grid sm:grid-cols-2 gap-4">
+            ${certs.map((c, idx) => `
+              <div class="p-4 rounded-xl bg-black/80 border border-yellow-500/40 flex flex-wrap justify-between items-center gap-3">
+                <div>
+                  <div class="text-sm font-bold text-white">🏆 شهادة إتمام Step ${c.step}</div>
+                  <div class="text-xs text-gray-400">النتيجة: ${c.score}% • المدرب: ${esc(c.coachName)} •${c.date}</div>
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="previewAndDownloadCert('${stu.id}',${idx}, false)" class="px-3 py-1.5 rounded-xl text-xs gold-btn">📄 تحميل PDF</button>
+                  <button onclick="previewAndDownloadCert('${stu.id}',${idx}, true)" class="px-3 py-1.5 rounded-xl text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">💬 إرسال لواتساب ولي الأمر</button>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        </div>`;
+    }
+
+    // 5. طلب إعادة الاختبار وموافقة الكوتش (الشرط رقم 5)
+    window.requestExamRetry = function() {
+      const u = currUser(); if (!u) return;
+      u.examState = u.examState || {};
+      const st = Number(u.level);
+      if (u.examState[st]) {
+        u.examState[st].reqRetry = true;
+        save(); render();
+        toast("📩 تم إرسال طلب إعادة الاختبار للمدرب المسؤول");
+      }
+    };
+
+    window.approveExamRetry = function(stuId, stepNum) {
+      if (!isCoach()) return;
+      const s = db.users.find(u => u.id === stuId); if (!s) return;
+      if (s.examState && s.examState[stepNum]) {
+        delete s.examState[stepNum];
+      }
+      save(); render();
+      toast("✅ تمت الموافقة على إعادة الاختبار للطالب " + s.name);
+    };
+
+    window.assignStudentCoach = function(stuId, coachName) {
+      if (!isCoach()) return;
+      const s = db.users.find(u => u.id === stuId); if (!s) return;
+      s.coachName = coachName.trim();
+      save(); toast("✅ تم تحديث اسم المدرب المسؤول عن الطالب");
+    };
+
+    // إضافة إشعار طلبات إعادة الاختبار وخانة اسم المدرب في لوحة تحكم المدرب
+    const _origRenderTrackerView = renderTrackerView;
+    renderTrackerView = function() {
+      const baseHtml = _origRenderTrackerView();
+      const students = db.users.filter(u => u.role === "student");
+      const retryRequests = [];
+      students.forEach(s => {
+        if (s.examState) {
+          Object.keys(s.examState).forEach(stKey => {
+            const inf = s.examState[stKey];
+            if (inf && inf.status === "failed" && inf.reqRetry) {
+              retryRequests.push({ stu: s, step: stKey, score: inf.score });
+            }
+          });
+        }
+      });
+
+      const retryBanner = retryRequests.length ? `
+        <div class="gold-card rounded-2xl p-4 mb-5 border-2 border-amber-500/60 bg-amber-950/20">
+          <h3 class="font-bold text-sm text-yellow-300 mb-2">🔔 طلبات إعادة اختبار الترقية بانتظار موافقتك (${retryRequests.length}):</h3>
+          <div class="space-y-2">
+            ${retryRequests.map(r => `
+              <div class="flex flex-wrap justify-between items-center gap-2 p-2.5 rounded-xl bg-black/80 border border-yellow-500/30 text-xs">
+                <span class="text-white font-bold">${esc(r.stu.name)} (@${esc(r.stu.username)}) — Step${r.step} <span class="text-red-300">(الدرجة السابقة: ${r.score}%)</span></span>
+                <button onclick="approveExamRetry('${r.stu.id}', '${r.step}')" class="px-3 py-1.5 rounded-xl text-xs gold-btn">✓ الموافقة على إعادة الاختبار</button>
+              </div>
+            `).join("")}
+          </div>
+        </div>` : "";
+
+      // نفس الطالب المختار في الجدول الأساسي (مع مراعاة الفلتر والبحث)
+      const q = searchQ.toLowerCase();
+      const filtered = students.filter(s => (grpFilter === "ALL" || s.group === grpFilter) && (!q || String(s.name || "").toLowerCase().includes(q) || String(s.username || "").toLowerCase().includes(q)));
+      const sel = students.find(s => s.id === selStuId) || filtered[0] || null;
+      let extraCoachControls = "";
+      if (sel) {
+        const curCoach = sel.coachName || (currUser() && currUser().name) || "الكوتش عبدالرحمن منصور";
+        const certs = sel.certificates || [];
+        extraCoachControls = `
+          <div class="gold-card rounded-2xl p-4 mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2 flex-1">
+              <span class="text-xs text-yellow-300 font-bold">👨‍🏫 اسم الكوتش في شهادة الطالب (${esc(sel.name)}):</span>
+              <input id="stuCoachInp" value="${esc(curCoach)}" onchange="assignStudentCoach('${sel.id}', this.value)" class="bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white" />
+            </div>
+            ${certs.length ? `<button onclick="previewAndDownloadCert('${sel.id}',${certs.length - 1}, true)" class="px-3 py-1.5 rounded-xl text-xs gold-btn">🎓 إرسال آخر شهادة لولي الأمر PDF</button>` : ""}
+          </div>`;
+      }
+
+      return retryBanner + baseHtml + extraCoachControls;
+    };
+
+    // 6. نظام الاختبار التفاعلي الشامل (لغز من كل درس + نجاح من 70% + محاولة واحدة)
+    let activeExam = null;
+    openExamModal = function(lvl) {
+      const u = currUser();
+      if (!u || u.role !== "student") return;
+      const stepNum = Number(lvl);
+      const stats = calcStats(u);
+
+      if (stats.attP < 100) {
+        return toast("🔒 يجب إتمام حضور 100% من دروس هذا المستوى أولاً لفتح الاختبار!");
+      }
+      u.examState = u.examState || {};
+      if (u.examState[stepNum] && u.examState[stepNum].status === "failed") {
+        return toast("❌ استنفدت محاولتك في هذا الاختبار. اطلب إعادة الاختبار من المدرب.");
+      }
+
+      const stObj = STEPS.find(x => x.step === stepNum);
+      if (!stObj || !stObj.lessons || stObj.lessons.length === 0) {
+        return toast("لا توجد دروس مسجلة في هذا المستوى حالياً");
+      }
+
+      const seed = Date.now() % 997;
+      const questions = stObj.lessons.map((les, idx) => buildLessonQuestion(les, idx, seed));
+      activeExam = { step: stepNum, questions, answers: {} };
+
+      const modal = document.getElementById("examModal");
+      modal.classList.remove("hidden");
+      renderActiveExamUI();
+    };
+
+    function renderActiveExamUI() {
+      if (!activeExam) return;
+      const total = activeExam.questions.length;
+      const answeredCount = Object.keys(activeExam.answers).length;
+      document.getElementById("examTitle").innerHTML = `🏆 اختبار ترقية Step ${activeExam.step} (${answeredCount}/${total} سؤال)`;
+      document.getElementById("examBody").innerHTML = `
+        <div class="text-xs text-gray-300 mb-3 p-2.5 rounded-xl bg-black/70 border border-yellow-500/30">
+          ⚠️ <b>تعليمات الاختبار:</b> يتكون الاختبار من <b>${total} لغز</b> (سؤال من كل درس في Step ${activeExam.step}). النجاح يتطلب <b>70% فأكثر</b> للترقية التلقائية وإصدار الشهادة. متاح لك <b>محاولة واحدة فقط</b>.
+        </div>
+        <div class="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
+          ${activeExam.questions.map((qObj, qIdx) => `
+            <div class="p-3.5 rounded-xl bg-black/80 border border-yellow-500/25 space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-xs font-bold text-yellow-400">لغز درس #${qIdx + 1}:${esc(qObj.lessonTitle)}</span>
+                <a href="${qObj.url}" target="_blank" class="text-[11px] text-sky-400 hover:underline">معاينة الرقعة ↗</a>
+              </div>
+              <p class="text-xs text-white font-medium">${esc(qObj.q)}</p>
+              <div class="space-y-1.5">
+                ${qObj.opts.map((optTxt, oIdx) => {
+                  const chosen = activeExam.answers[qIdx] === oIdx;
+                  return `
+                    <button type="button" onclick="selectExamAns(${qIdx}, ${oIdx})" class="w-full text-left px-3 py-2 rounded-lg text-xs border transition flex justify-between items-center ${chosen ? 'border-yellow-400 bg-yellow-500/20 text-yellow-200 font-bold' : 'border-zinc-800 bg-zinc-900/80 text-gray-300 hover:border-yellow-500/40'}">
+                      <span>${esc(optTxt)}</span>
+                      <span>${chosen ? '●' : '○'}</span>
+                    </button>`;
+                }).join("")}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+        <div class="mt-4 pt-3 border-t border-yellow-500/20 flex justify-between items-center">
+          <span class="text-xs text-gray-400">أجبت على ${answeredCount} من ${total}</span>
+          <button type="button" onclick="submitFullStepExam()" class="px-5 py-2.5 rounded-xl text-xs gold-btn">تسليم الاختبار والنتيجة النهائية 🚀</button>
+        </div>
+      `;
+    }
+window.selectExamAns = function(qIdx, oIdx) {
+   if (!activeExam) return;
+   const box = document.querySelector("#examBody .overflow-y-auto");
+   const prevTop = box ? box.scrollTop : 0;
+   activeExam.answers[qIdx] = oIdx;
+   renderActiveExamUI();
+   const newBox = document.querySelector("#examBody .overflow-y-auto");
+   if (newBox) newBox.scrollTop = prevTop;
+ };
+
+    window.submitFullStepExam = async function() {
+      if (!activeExam) return;
+      const total = activeExam.questions.length;
+      if (Object.keys(activeExam.answers).length < total) {
+        return toast("⚠️ يرجى الإجابة على جميع أسئلة الدروس قبل التسليم!");
+      }
+      let correct = 0;
+      activeExam.questions.forEach((qObj, idx) => {
+        if (activeExam.answers[idx] === qObj.ans) correct++;
+      });
+      const score = Math.round((correct / total) * 100);
+      const u = currUser(); if (!u) return;
+      const oldStep = activeExam.step;
+      u.examState = u.examState || {};
+
+      if (score >= 70) {
+        u.examState[oldStep] = { status: "passed", score: score, date: todayISO() };
+        const coachUser = db.users.find(x => x.role === "coach");
+        const coachName = u.coachName || (coachUser ? coachUser.name : "الكوتش عبدالرحمن منصور");
+        u.certificates = u.certificates || [];
+        u.certificates.push({
+          step: oldStep,
+          score: score,
+          studentName: u.name,
+          coachName: coachName,
+          date: todayISO()
+        });
+        const newLevel = Math.min(6, oldStep + 1);
+        u.level = newLevel;
+        save();
+        closeExamModal();
+        render();
+        toast(`🎉 مبروك! نجحت بنسبة ${score}% وتمت ترقيتك إلى Step ${newLevel}`);
+        // توليد الشهادة وعرض نافذة الإرسال لولي الأمر فوراً
+        setTimeout(() => {
+          previewAndDownloadCert(u.id, u.certificates.length - 1, true);
+        }, 400);
+      } else {
+        u.examState[oldStep] = { status: "failed", score: score, reqRetry: false, date: todayISO() };
+        save();
+        closeExamModal();
+        render();
+        toast(`❌ حصلت على ${score}% (المطلوب 70%). تم قفل الاختبار ويمكنك طلب إعادة الاختبار من المدرب.`);
+      }
+    };
+
+// 7. رسم الشهادة وعرضها في نافذة معاينة مع طباعة PDF وتنزيل مباشر مضمون 100%
+    window.buildCertificateDataURL = async function(cert) {
+      if (document.fonts && document.fonts.ready) {
+        try { await document.fonts.ready; } catch (_) {}
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = 1600;
+      canvas.height = 1130;
+      const c = canvas.getContext("2d");
+
+      // خلفية كريمي مطابقة للشهادة الرسمية
+      c.fillStyle = "#faf3e3";
+      c.fillRect(0, 0, canvas.width, canvas.height);
+
+      // الإطار الخارجي والداخلي
+      c.strokeStyle = "#1b2420";
+      c.lineWidth = 14;
+      c.strokeRect(36, 36, canvas.width - 72, canvas.height - 72);
+
+      c.strokeStyle = "#c59b27";
+      c.lineWidth = 4;
+      c.strokeRect(58, 58, canvas.width - 116, canvas.height - 116);
+
+      // علامة مائية خفيفة
+      c.save();
+      c.globalAlpha = 0.05;
+      c.fillStyle = "#1b2420";
+      c.font = "900 160px Cinzel, serif";
+      c.textAlign = "center";
+      c.fillText("ECA CHESS", canvas.width / 2, canvas.height / 2 + 40);
+      c.restore();
+
+      // العنوان العلوي: EGYPT CHESS ACADEMY (ECA)
+      c.fillStyle = "#9a7418";
+      c.font = "800 32px Cinzel, serif";
+      c.textAlign = "center";
+      c.fillText("EGYPT CHESS ACADEMY (ECA)", canvas.width / 2, 145);
+
+      // شهادة تقدير
+      c.fillStyle = "#18221f";
+      c.font = "900 90px Cairo, sans-serif";
+      c.fillText("شهادة تقدير", canvas.width / 2, 270);
+
+      // خط زخرفي
+      c.strokeStyle = "#c59b27";
+      c.lineWidth = 3;
+      c.beginPath();
+      c.moveTo(canvas.width / 2 - 220, 310);
+      c.lineTo(canvas.width / 2 + 220, 310);
+      c.stroke();
+
+      // تمنح هذه الشهادة للمتدرب
+      c.fillStyle = "#4b5563";
+      c.font = "700 34px Cairo, sans-serif";
+      c.fillText("تمنح هذه الشهادة للمتدرب", canvas.width / 2, 390);
+
+      // اسم الطالب
+      c.fillStyle = "#b07d12";
+      c.font = "900 64px Cairo, sans-serif";
+      c.fillText(cert.studentName, canvas.width / 2, 490);
+
+      // نص التقدير
+      c.fillStyle = "#1f2937";
+      c.font = "600 30px Cairo, sans-serif";
+      c.fillText(`تقديراً لأدائه الرائع والتزامه المتميز في التدريبات الشطرنجية، واجتيازه مستوى (Step ${cert.step}) بنسبة ${cert.score}%،`, canvas.width / 2, 580);
+      c.fillText("ونتمنى له دوام التقدم والتفوق في رحلته مع الشطرنج.", canvas.width / 2, 640);
+
+      // التوقيعات السفلية: المدرب (يمين) - الشعار (منتصف) - إدارة الأكاديمية (يسار)
+      c.fillStyle = "#18221f";
+      c.font = "800 34px Cairo, sans-serif";
+      c.fillText(cert.coachName, 1220, 855);
+      c.strokeStyle = "#9ca3af";
+      c.lineWidth = 2;
+      c.beginPath(); c.moveTo(1040, 880); c.lineTo(1400, 880); c.stroke();
+      c.fillStyle = "#6b7280";
+      c.font = "700 26px Cairo, sans-serif";
+      c.fillText("المدرب", 1220, 925);
+
+      // الشعار في المنتصف
+      c.beginPath();
+      c.arc(canvas.width / 2, 880, 78, 0, Math.PI * 2);
+      c.fillStyle = "#18221f";
+      c.fill();
+      c.lineWidth = 5;
+      c.strokeStyle = "#d4af37";
+      c.stroke();
+      c.fillStyle = "#d4af37";
+      c.font = "800 34px Cinzel, serif";
+      c.fillText("ECA", canvas.width / 2, 875);
+      c.font = "700 20px Cinzel, serif";
+      c.fillText("CHESS", canvas.width / 2, 907);
+
+      // إدارة الأكاديمية
+      c.fillStyle = "#18221f";
+      c.font = "800 24px Cinzel, serif";
+      c.fillText("EGYPT CHESS ACADEMY (ECA)", 380, 855);
+      c.beginPath(); c.moveTo(200, 880); c.lineTo(560, 880); c.stroke();
+      c.fillStyle = "#6b7280";
+      c.font = "700 26px Cairo, sans-serif";
+      c.fillText("إدارة الأكاديمية", 380, 925);
+
+      // التاريخ
+      c.fillStyle = "#9ca3af";
+      c.font = "600 20px Inter, sans-serif";
+      c.fillText(`Issued on: ${cert.date} • Official ECA Certificate`, canvas.width / 2, 1035);
+
+      return canvas.toDataURL("image/png");
+    };
+
+    window.previewAndDownloadCert = async function(stuId, certIdx, openWaAfter) {
+      const stu = db.users.find(u => u.id === stuId); if (!stu) return;
+      const cert = (stu.certificates || [])[certIdx]; if (!cert) return;
+
+      const dataUrl = await window.buildCertificateDataURL(cert);
+
+      // إنشاء أو فتح نافذة معاينة الشهادة داخل الموقع
+      let certModal = document.getElementById("certPreviewModal");
+      if (!certModal) {
+        certModal = document.createElement("div");
+        certModal.id = "certPreviewModal";
+        certModal.className = "fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4";
+        document.body.appendChild(certModal);
+      }
+      certModal.classList.remove("hidden");
+
+      const parentNum = stu.parentPhone || stu.phone || "";
+      const waBase = waLink(parentNum) || "https://wa.me/";
+      const waMsg = encodeURIComponent(
+        `🎉 تهنئة من Egypt Chess Academy (ECA) 👑\n\n` +
+        `نبارك للبطل (${cert.studentName}) اجتيازه اختبار مستوى (Step ${cert.step}) بنجاح باهر بنسبة (${cert.score}%) وترقيته تلقائياً للمستوى التالي! 🏆♟️\n` +
+        `إشراف المدرب: ${cert.coachName}\n` +
+        `(مرفق لحضرتك شهادة التقدير الرسمية المعتمدة من الأكاديمية 📄)`
+      );
+
+      certModal.innerHTML = `
+        <div class="gold-card rounded-2xl max-w-3xl w-full p-5 max-h-[92vh] overflow-y-auto space-y-4">
+          <div class="flex justify-between items-center">
+            <h3 class="font-display font-bold text-lg text-yellow-400">🎓 شهادة تقدير — ${esc(cert.studentName)} (Step ${cert.step})</h3>
+            <button onclick="document.getElementById('certPreviewModal').classList.add('hidden')" class="text-gray-400 hover:text-white px-2 text-lg">✕</button>
+          </div>
+          <div class="rounded-xl overflow-hidden border-2 border-yellow-500/50 bg-black">
+            <img id="certPreviewImg" src="${dataUrl}" alt="ECA Certificate" class="w-full h-auto block" />
+          </div>
+          <div class="flex flex-wrap justify-end gap-2 pt-2">
+            <button onclick="printCertAsPDF()" class="px-4 py-2.5 rounded-xl text-xs gold-btn">🖨️ طباعة / حفظ كملف PDF</button>
+            <a href="${dataUrl}" download="ECA-Certificate-Step${cert.step}-${stu.username}.png" class="px-4 py-2.5 rounded-xl text-xs bg-zinc-800 border border-yellow-500/40 text-yellow-300 font-bold">📥 تنزيل كصورة جاهزة</a>
+            <a href="${waBase}?text=${waMsg}" target="_blank" rel="noopener" class="px-4 py-2.5 rounded-xl text-xs bg-emerald-500 text-black font-bold">💬 إرسال لواتساب ولي الأمر</a>
+          </div>
+        </div>
+      `;
+
+      // إذا ضغط المستخدم على زر التحميل المباشر، نقوم بتنزيل ملف PDF أو الصورة فوراً
+      if (!openWaAfter) {
+        printCertAsPDF();
+      }
+    };
+
+    window.printCertAsPDF = function() {
+      const img = document.getElementById("certPreviewImg");
+      if (!img) return;
+      const src = img.src;
+      const w = window.open("", "_blank");
+      if (!w) {
+        // في حال كان المتصفح يمنع النوافذ المنبثقة، نقوم بتنزيلها مباشرة
+        const a = document.createElement("a");
+        a.href = src;
+        a.download = "ECA-Certificate.png";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return toast("📥 تم تنزيل الشهادة مباشرة على جهازك!");
+      }
+      w.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>ECA Official Certificate — Print / Save PDF</title>
+          <style>
+            @page { size: landscape; margin: 0; }
+            html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #faf3e3; display: flex; align-items: center; justify-content: center; }
+            img { width: 100vw; height: 100vh; object-fit: contain; }
+          </style>
+        </head>
+        <body>
+          <img src="${src}" onload="setTimeout(() => { window.print(); }, 250);" />
+        </body>
+        </html>
+      `);
+      w.document.close();
+    };
+
+    // تشغيل التوليد اليومي للألغاز فور فتح الموقع
+    updateDailyPuzzlesByDate();
+  </script>
+  <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, linkWithPopup, deleteUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { initializeFirestore, writeBatch, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDofyiWsg2HmOQgigWeqUpOaSupoMQ1GKc",
+      authDomain: "eca-chess.firebaseapp.com",
+      projectId: "eca-chess",
+      storageBucket: "eca-chess.firebasestorage.app",
+      messagingSenderId: "978726294610",
+      appId: "1:978726294610:web:17c0ad743303b700f4fb8b"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const googleProvider = new GoogleAuthProvider();
+    googleProvider.setCustomParameters({ prompt: "select_account" });
+    // كاش أوفلاين على الجهاز: القراءات المتكررة ما بتتحسبش تاني (بيوفر تكلفة) والموقع بيشتغل لو النت قطع
+    const firestore = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+
+    // ===================== أدوات مساعدة =====================
+    const MAIL_SUFFIX = "@eca.local";                  // الطلاب بيدخلوا بـ username؛ بنحوله لإيميل داخلي
+    const BAD = /[<>"'`]/g;                            // حروف ممنوعة (حماية من حقن HTML)
+    const FIN_KEYS = ["courseFee", "amountPaid", "remaining", "lastPayDate", "lastPayAmount"];   // مالية: للأدمن فقط
+    const PRIV_KEYS = ["note", "parentCode"];                                                     // ملاحظة سرية: للكوتش وولي الأمر فقط
+    const plain = o => JSON.parse(JSON.stringify(o));
+    function cleanDeep(v) {
+      if (typeof v === "string") return v.replace(BAD, "");
+      if (Array.isArray(v)) return v.map(cleanDeep);
+      if (v && typeof v === "object") { const o = {}; for (const k in v) o[String(k).replace(BAD, "")] = cleanDeep(v[k]); return o; }
+      return v;
+    }
+    function toAuthEmail(idf) {
+      idf = String(idf || "").trim().toLowerCase();
+      if (idf.includes("@")) return idf;               // الكوتش/الأدمن بإيميلهم الحقيقي
+      const local = idf.replace(/\s+/g, "_").replace(/[^a-z0-9._-]/g, c => "_x" + c.charCodeAt(0).toString(16) + "_");
+      return (local || "user") + MAIL_SUFFIX;
+    }
+    const isStaffRole = r => r === "coach" || r === "admin";
+
+    // ===================== الحالة =====================
+    let me = null;                       // { uid, role: coach|admin|student|parent, name, username, email }
+    let unsubs = [];
+    let maps = { core: {}, priv: {}, fin: {}, att: {} };
+    let synced = {};                     // مفتاح -> آخر JSON اتكتب/اتقرا (عشان نكتب اللي اتغير بس)
+    let loaded = { core: false, att: false, groups: false };
+    let applyingRemote = false, signingUp = false;
+
+    function resetState() {
+      unsubs.forEach(u => { try { u(); } catch (_) {} }); unsubs = [];
+      maps = { core: {}, priv: {}, fin: {}, att: {} }; synced = {};
+      loaded = { core: false, att: false, groups: false };
+    }
+
+    function split(u) {
+      const core = {}, priv = {}, fin = {};
+      for (const k of Object.keys(u)) {
+        if (k === "id" || k === "pass" || k === "isAdmin") continue;
+        if (PRIV_KEYS.includes(k)) priv[k] = u[k];
+        else if (FIN_KEYS.includes(k)) fin[k] = u[k];
+        else core[k] = u[k];
+      }
+      core.role = "student";
+      return { core: plain(core), priv: plain(priv), fin: plain(fin) };
+    }
+
+    // يبني db.users من الخرائط المحلية ويعيد الرسم
+    function rebuild() {
+      applyingRemote = true;
+      try {
+        const keepId = db.currId;
+        const users = [];
+        if (me && isStaffRole(me.role)) users.push({ id: me.uid, name: me.name, username: me.username, email: me.email, role: "coach", isAdmin: me.role === "admin" });
+        Object.keys(maps.core).forEach(id => {
+          const u = Object.assign({}, maps.core[id], { id, role: "student" }, maps.priv[id] || {}, maps.fin[id] || {});
+          users.push(u);
+          const p = split(u);
+          synced["c:" + id] = JSON.stringify(p.core);
+          if (Object.keys(p.priv).length) synced["p:" + id] = JSON.stringify(p.priv);
+          if (Object.keys(p.fin).length) synced["f:" + id] = JSON.stringify(p.fin);
+        });
+        db.users = users; db.currId = keepId;
+        window.isFinanceAdminUnlocked = !!(me && me.role === "admin");
+      } finally { applyingRemote = false; }
+      render();
+    }
+
+    // ===================== المزامنة (بنكتب الوثائق اللي اتغيرت بس) =====================
+    window.syncToCloud = async function () {
+      if (applyingRemote || !me) return;
+      const staff = isStaffRole(me.role), admin = me.role === "admin";
+      const jobs = [];
+      const push = (key, json, run) => {
+        if (synced[key] === json) return;
+        const prev = synced[key]; synced[key] = json;
+        jobs.push(async () => { try { await run(); } catch (err) { synced[key] = prev; console.error("Cloud Sync Error:", key, err); } });
+      };
+      try {
+        const present = new Set();
+        for (const u of db.users) {
+          if (u.role !== "student") continue;
+          if (!staff && u.id !== me.uid) continue;
+          present.add(u.id);
+          const p = split(u);
+          if (!staff && !loaded.core) continue;
+          push("c:" + u.id, JSON.stringify(p.core), () => staff ? setDoc(doc(firestore, "users", u.id), p.core) : updateDoc(doc(firestore, "users", u.id), p.core));
+          if (staff && Object.keys(p.priv).length) push("p:" + u.id, JSON.stringify(p.priv), () => setDoc(doc(firestore, "private", u.id), p.priv));
+          if (admin && Object.keys(p.fin).length) push("f:" + u.id, JSON.stringify(p.fin), () => setDoc(doc(firestore, "finance", u.id), p.fin));
+        }
+        if (staff) {
+          if (loaded.core) {
+            Object.keys(synced).forEach(key => {
+              const kind = key.slice(0, 2), id = key.slice(2);
+              if ((kind === "c:" || kind === "p:" || kind === "f:") && !present.has(id)) {
+                const coll = kind === "c:" ? "users" : kind === "p:" ? "private" : "finance";
+                if (coll === "finance" && !admin) return;
+                delete synced[key];
+                jobs.push(async () => { try { await deleteDoc(doc(firestore, coll, id)); } catch (err) { console.error("Cloud Delete Error:", key, err); } });
+              }
+            });
+          }
+          if (loaded.att) {
+            const dates = Object.keys(db.attendance || {});
+            dates.forEach(d => push("a:" + d, JSON.stringify(db.attendance[d]), () => setDoc(doc(firestore, "attendance", d), { r: plain(db.attendance[d]) })));
+            Object.keys(synced).forEach(key => {
+              if (key.startsWith("a:") && !(key.slice(2) in (db.attendance || {}))) {
+                const d = key.slice(2); delete synced[key];
+                jobs.push(async () => { try { await deleteDoc(doc(firestore, "attendance", d)); } catch (err) { console.error(err); } });
+              }
+            });
+          }
+          if (loaded.groups) push("g", JSON.stringify(db.groups || []), () => setDoc(doc(firestore, "meta", "groups"), { list: plain(db.groups || []) }));
+        }
+        for (const j of jobs) await j();
+      } catch (err) { console.error("Cloud Sync Error:", err); }
+    };
+
+    // ===================== الاستماع للتغييرات =====================
+    function applyColl(kind, snap) {
+      const next = {};
+      snap.forEach(d => { next[d.id] = cleanDeep(d.data()); });
+      Object.keys(maps[kind]).forEach(id => { if (!(id in next)) delete maps[kind][id]; });
+      Object.keys(next).forEach(id => { maps[kind][id] = next[id]; });
+      if (kind === "core") { loaded.core = true; window.__authLoading = false; }
+      rebuild();
+    }
+    function applyAtt(snap) {
+      const att = {};
+      snap.forEach(d => { const r = (d.data() || {}).r; if (r && typeof r === "object" && Object.keys(r).length) att[d.id] = cleanDeep(r); });
+      db.attendance = att; loaded.att = true;
+      Object.keys(synced).forEach(k => { if (k.startsWith("a:")) delete synced[k]; });
+      Object.keys(att).forEach(d => { synced["a:" + d] = JSON.stringify(att[d]); });
+      render();
+    }
+    function applyGroups(snap) {
+      const list = snap.exists() && Array.isArray(snap.data().list) ? cleanDeep(snap.data().list) : [];
+      db.groups = list; loaded.groups = true; synced["g"] = JSON.stringify(list);
+      render();
+    }
+    function onErr(label) { return err => { console.error("Firestore listener error (" + label + "):", err); window.__authLoading = false; if (window.toast) toast("⚠️ مفيش صلاحية لقراءة: " + label); }; }
+
+    function startListeners() {
+      if (!me) return;
+      if (isStaffRole(me.role)) {
+        unsubs.push(onSnapshot(collection(firestore, "users"), s => applyColl("core", s), onErr("users")));
+        unsubs.push(onSnapshot(collection(firestore, "private"), s => applyColl("priv", s), onErr("private")));
+        if (me.role === "admin") unsubs.push(onSnapshot(collection(firestore, "finance"), s => applyColl("fin", s), onErr("finance")));
+        unsubs.push(onSnapshot(collection(firestore, "attendance"), applyAtt, onErr("attendance")));
+      } else if (me.role === "student") {
+        unsubs.push(onSnapshot(doc(firestore, "users", me.uid), snap => {
+          if (snap.exists()) {
+            maps.core = {}; maps.core[me.uid] = cleanDeep(snap.data());
+            loaded.core = true; window.__authLoading = false; rebuild();
+          } else if (!signingUp) {
+            window.__authLoading = false;
+            if (window.toast) toast("❌ الحساب ده مش مربوط ببيانات طالب. كلّم الكوتش.");
+            signOut(auth);
+          }
+        }, onErr("users")));
+      }
+      unsubs.push(onSnapshot(doc(firestore, "meta", "groups"), applyGroups, onErr("groups")));
+    }
+
+    // ===================== حالة الدخول =====================
+    async function initUser(user) {
+      resetState();
+      if (!user) {
+        me = null; db.users = []; db.currId = null; db.attendance = {}; db.groups = [];
+        window.isFinanceAdminUnlocked = false; window.__authLoading = false; render(); return;
+      }
+      if (user.isAnonymous) {
+        me = { uid: user.uid, role: "parent" }; db.users = []; db.currId = null;
+        window.__authLoading = false; render(); return;
+      }
+      let staffData = null;
+      try { const s = await getDoc(doc(firestore, "staff", user.uid)); if (s.exists()) staffData = s.data(); } catch (_) {}
+      if (!staffData && isGoogleUser(user)) {
+        // أول دخول بجوجل: لو مفيش بيانات طالب، نطلب منه يختار (طالب / كوتش) مرة واحدة بس
+        let hasProfile = false;
+        try { hasProfile = (await getDoc(doc(firestore, "users", user.uid))).exists(); } catch (_) {}
+        if (!hasProfile) {
+          me = null; db.users = []; db.currId = null; pendingGoogle = user;
+          window.__authLoading = false; render(); openGoogleOnboarding(); return;
+        }
+      }
+      if (staffData) {
+        me = { uid: user.uid, role: staffData.role === "admin" ? "admin" : "coach", name: String(staffData.name || "Coach").replace(BAD, ""), username: String(staffData.username || "coach").replace(BAD, ""), email: user.email || "" };
+      } else {
+        me = { uid: user.uid, role: "student", email: user.email || "" };
+      }
+      db.currId = user.uid;
+      window.isFinanceAdminUnlocked = me.role === "admin";
+      startListeners();
+    }
+    onAuthStateChanged(auth, (user) => { if (signingUp) return; closeGoogleOnboarding(); initUser(user); });
+
+    // ===================== الدخول بضغطة واحدة عن طريق Google =====================
+    let pendingGoogle = null;            // مستخدم جوجل جديد مستني يختار نوع حسابه
+    let googleRole = "student";
+    try { googleRole = sessionStorage.getItem("ECA_G_ROLE") || "student"; } catch (_) {}
+    const isGoogleUser = u => !!(u && (u.providerData || []).some(p => p.providerId === "google.com"));
+    const G_ERR = {
+      "auth/popup-closed-by-user": "", "auth/cancelled-popup-request": "",
+      "auth/unauthorized-domain": "❌ الدومين ده مش مضاف في Firebase (Authorized domains)",
+      "auth/operation-not-allowed": "❌ الدخول بجوجل مش متفعّل في Firebase Authentication",
+      "auth/network-request-failed": "📡 مفيش اتصال بالإنترنت",
+      "auth/account-exists-with-different-credential": "❌ الإيميل ده مسجّل بطريقة دخول تانية — ادخل بالباسورد واربط جوجل من زر 🔗",
+      "auth/credential-already-in-use": "❌ حساب جوجل ده مربوط بحساب تاني على المنصة",
+      "auth/provider-already-linked": "✅ حسابك مربوط بجوجل بالفعل"
+    };
+    const gToast = e => { const c = e && e.code; const m = c in G_ERR ? G_ERR[c] : "❌ تعذّر الدخول بجوجل"; if (m) toast(m); console.error(e); };
+
+    window.fbGoogleLogin = async (role) => {
+      googleRole = role === "coach" ? "coach" : "student";
+      try { sessionStorage.setItem("ECA_G_ROLE", googleRole); } catch (_) {}
+      try { await signInWithPopup(auth, googleProvider); }
+      catch (e) {
+        // الموبايل أو متصفح بيمنع النوافذ المنبثقة → نحوّل لصفحة جوجل ونرجع تلقائياً
+        if (e && (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment")) {
+          try { await signInWithRedirect(auth, googleProvider); } catch (e2) { gToast(e2); }
+        } else gToast(e);
+      }
+    };
+    getRedirectResult(auth).catch(gToast);
+
+    // ربط جوجل بحساب موجود (طالب باليوزر نيم أو كوتش بالإيميل) عشان الدخول بعد كده يبقى بضغطة واحدة
+    window.fbLinkGoogle = async () => {
+      if (!auth.currentUser || auth.currentUser.isAnonymous) return;
+      try { await linkWithPopup(auth.currentUser, googleProvider); render(); toast("✅ تم ربط حسابك بجوجل — المرة الجاية ادخل بضغطة واحدة"); }
+      catch (e) { gToast(e); }
+    };
+    window.fbAuthInfo = () => {
+      const u = auth.currentUser, ps = (u && u.providerData || []).map(p => p.providerId);
+      return { google: ps.includes("google.com"), password: ps.includes("password") };
+    };
+
+    function closeGoogleOnboarding() { const m = document.getElementById("googleOnboardModal"); if (m) m.remove(); }
+    function openGoogleOnboarding(role) {
+      if (!pendingGoogle) return;
+      if (role) googleRole = role;
+      let m = document.getElementById("googleOnboardModal");
+      if (!m) { m = document.createElement("div"); m.id = "googleOnboardModal"; m.className = "fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4"; document.body.appendChild(m); }
+      const r = googleRole, gName = String(pendingGoogle.displayName || "").replace(BAD, "");
+      const tabCls = on => `py-2.5 rounded-xl text-xs font-bold border ${on ? 'border-yellow-400 text-yellow-300 bg-yellow-500/10' : 'border-zinc-800 text-gray-400'}`;
+      m.innerHTML = `
+        <form onsubmit="completeGoogleOnboarding(event)" class="gold-card rounded-2xl max-w-md w-full p-6 space-y-4">
+          <div class="flex justify-between items-center">
+            <h3 class="font-display font-bold text-lg text-yellow-400">👋 أهلاً بيك في ECA</h3>
+            <button type="button" onclick="cancelGoogleOnboarding()" class="text-gray-400 hover:text-white tap px-2">✕</button>
+          </div>
+          <p class="text-xs text-gray-300">دخلت بحساب <b dir="ltr">${esc(pendingGoogle.email || "")}</b>. اختار نوع حسابك مرة واحدة بس — بعد كده الدخول بضغطة واحدة.</p>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="openGoogleOnboarding('student')" class="${tabCls(r === 'student')}">🎓 طالب</button>
+            <button type="button" onclick="openGoogleOnboarding('coach')" class="${tabCls(r === 'coach')}">👑 كوتش</button>
+          </div>
+          <input id="gName" required value="${esc(gName)}" placeholder="الاسم بالكامل" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+          ${r === "student" ? `
+            <select id="gStep" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-yellow-300">
+              ${[1, 2, 3, 4, 5, 6].map(l => `<option value="${l}">Step ${l}</option>`).join("")}
+            </select>` : `
+            <input id="gCode" required autocomplete="off" autocapitalize="characters" placeholder="كود دعوة الكوتش (من الأدمن)" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white text-center tracking-widest uppercase" />
+            <p class="text-[11px] text-gray-400">الكود بيستخدم مرة واحدة، وبيطلعه الأدمن من زر «🎟️ كود دعوة كوتش جديد».</p>`}
+          <button class="w-full py-3 rounded-xl text-sm gold-btn">دخول المنصة 🚀</button>
+        </form>`;
+      applyLang();
+      const f = document.getElementById(r === "coach" ? "gCode" : "gName"); if (f) f.focus();
+    }
+    window.openGoogleOnboarding = openGoogleOnboarding;
+    window.cancelGoogleOnboarding = async () => { pendingGoogle = null; closeGoogleOnboarding(); try { await signOut(auth); } catch (_) {} };
+
+    window.completeGoogleOnboarding = async (ev) => {
+      ev.preventDefault();
+      const user = pendingGoogle; if (!user) return closeGoogleOnboarding();
+      const btn = ev.submitter; if (btn) btn.disabled = true;
+      const name = document.getElementById("gName").value.trim().replace(BAD, "");
+      const email = String(user.email || "").toLowerCase();
+      const base = (email.split("@")[0] || "user").replace(/[^a-z0-9_]/g, "_").slice(0, 20);
+      const username = base + "_" + user.uid.slice(0, 4).toLowerCase();   // مميز لكل حساب
+      signingUp = true;
+      try {
+        if (!name) throw { code: "no-name" };
+        if (googleRole === "coach") {
+          const code = document.getElementById("gCode").value.trim().toUpperCase();
+          if (!/^[A-Z0-9]{8,16}$/.test(code)) throw { code: "bad-invite" };
+          const batch = writeBatch(firestore);
+          batch.update(doc(firestore, "invites", code), { used: true, usedBy: user.uid });
+          batch.set(doc(firestore, "staff", user.uid), { role: "coach", name, username: base, invite: code });
+          await batch.commit();
+        } else {
+          let group = "";
+          try { const g = await getDoc(doc(firestore, "meta", "groups")); if (g.exists() && Array.isArray(g.data().list)) group = String(g.data().list[0] || ""); } catch (_) {}
+          const level = Number(document.getElementById("gStep").value) || 1;
+          await setDoc(doc(firestore, "users", user.uid), { name, username, email, role: "student", level, group, mode: "offline", att: {}, hw: {}, puz: { t: 0, c: 0 } });
+        }
+        pendingGoogle = null; closeGoogleOnboarding();
+        await initUser(user);
+        tab = "home"; render();
+        toast(googleRole === "coach" ? "✅ تم إنشاء حساب الكوتش!" : "✅ تم إنشاء حسابك!");
+      } catch (e) {
+        if (btn) btn.disabled = false;
+        const c = e && e.code;
+        toast(c === "no-name" ? "❌ اكتب الاسم" : (c === "bad-invite" || c === "permission-denied" || c === "not-found") ? "❌ كود الدعوة غير صحيح أو مستخدم قبل كده" : "❌ تعذّر إنشاء الحساب");
+        console.error(e);
+      } finally { signingUp = false; }
+    };
+
+    // ===================== واجهات تستدعيها الصفحة =====================
+    window.fbLogin = async (idf, pass) => {
+      try { await signInWithEmailAndPassword(auth, toAuthEmail(idf), pass); return { ok: true }; }
+      catch (e) { return { ok: false, code: e && e.code }; }
+    };
+    window.fbLogout = async () => { try { await signOut(auth); } catch (_) {} };
+
+    window.fbSignup = async ({ name, username, email, pass, level }) => {
+      signingUp = true;
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, toAuthEmail(username), pass);
+        let group = "";
+        try { const g = await getDoc(doc(firestore, "meta", "groups")); if (g.exists() && Array.isArray(g.data().list)) group = String(g.data().list[0] || ""); } catch (_) {}
+        const profile = { name, username, email: email || "", role: "student", level: Number(level) || 1, group, mode: "offline", att: {}, hw: {}, puz: { t: 0, c: 0 } };
+        await setDoc(doc(firestore, "users", cred.user.uid), profile);
+        await initUser(cred.user);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, code: e && e.code };
+      } finally { signingUp = false; }
+    };
+
+    // تسجيل كوتش جديد بكود دعوة (الكود بيتراجع في Firestore Rules مش في الصفحة، ومرة واحدة)
+    window.fbCoachSignup = async ({ name, username, email, pass, code }) => {
+      code = String(code || "").trim().toUpperCase();
+      if (!/^[A-Z0-9]{8,16}$/.test(code)) return { ok: false, code: "bad-invite" };
+      signingUp = true; let cred = null;
+      try {
+        cred = await createUserWithEmailAndPassword(auth, String(email).trim().toLowerCase(), pass);
+        const batch = writeBatch(firestore);
+        batch.update(doc(firestore, "invites", code), { used: true, usedBy: cred.user.uid });
+        batch.set(doc(firestore, "staff", cred.user.uid), { role: "coach", name, username, invite: code });
+        await batch.commit();
+        await initUser(cred.user);
+        return { ok: true };
+      } catch (e) {
+        if (cred) { try { await deleteUser(cred.user); } catch (_) {} await initUser(null); }
+        return { ok: false, code: e && e.code };
+      } finally { signingUp = false; }
+    };
+    window.fbCreateInvite = async () => {
+      if (!me || me.role !== "admin") return null;
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const r = crypto.getRandomValues(new Uint8Array(10));
+      let code = ""; for (const b of r) code += alphabet[b % alphabet.length];
+      try { await setDoc(doc(firestore, "invites", code), { used: false, createdBy: me.uid, createdAt: Date.now() }); return code; }
+      catch (e) { console.error(e); return null; }
+    };
+
+    // الكوتش بينشئ حساب طالب بدون ما يتسجّل خروج (بنستخدم نسخة ثانية من التطبيق)
+    let secApp = null;
+    window.fbCreateStudentAccount = async (username, pass) => {
+      if (!secApp) secApp = initializeApp(firebaseConfig, "secondary");
+      const a = getAuth(secApp);
+      const cred = await createUserWithEmailAndPassword(a, toAuthEmail(username), pass);
+      const uid = cred.user.uid;
+      try { await signOut(a); } catch (_) {}
+      return uid;
+    };
+
+    window.fbOnStudentDeleted = async (id) => {
+      try { await setDoc(doc(firestore, "deleted", id), { at: Date.now() }); } catch (e) { console.error(e); }
+      try {
+        const q = await getDocs(query(collection(firestore, "parentLinks"), where("sid", "==", id)));
+        for (const d of q.docs) await deleteDoc(d.ref);
+      } catch (e) { console.error(e); }
+    };
+
+    window.fbChangePassword = async (oldP, newP) => {
+      try {
+        const u = auth.currentUser; if (!u || !u.email) return { ok: false };
+        await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, oldP));
+        await updatePassword(u, newP);
+        return { ok: true };
+      } catch (e) { return { ok: false, code: e && e.code }; }
+    };
+
+    // ===================== ولي الأمر (كود متابعة) =====================
+    window.fbParentLookup = async (codeRaw) => {
+      const code = String(codeRaw || "").trim().toUpperCase();
+      if (!/^[A-Z0-9]{8,16}$/.test(code)) return { ok: false, code: "bad" };
+      try {
+        if (!auth.currentUser) await signInAnonymously(auth);
+        const uid = auth.currentUser.uid;
+        const c = await getDoc(doc(firestore, "parentCodes", code));
+        if (!c.exists()) return { ok: false, code: "notfound" };
+        const sid = c.data().sid;
+        await setDoc(doc(firestore, "parentLinks", uid + "_" + sid), { code, sid });
+        const u = await getDoc(doc(firestore, "users", sid));
+        let p = {}; try { const ps = await getDoc(doc(firestore, "private", sid)); if (ps.exists()) p = ps.data(); } catch (_) {}
+        if (!u.exists()) return { ok: false, code: "notfound" };
+        return { ok: true, stu: Object.assign({}, cleanDeep(u.data()), { id: sid, role: "student" }, cleanDeep(p)) };
+      } catch (e) { return { ok: false, code: e && e.code }; }
+    };
+
+    window.fbGenParentCode = async (sid) => {
+      if (!me || !isStaffRole(me.role)) return null;
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const r = crypto.getRandomValues(new Uint8Array(12));
+      let code = ""; for (const b of r) code += alphabet[b % alphabet.length];
+      const u = db.users.find(x => x.id === sid); if (!u) return null;
+      const old = u.parentCode;
+      await setDoc(doc(firestore, "parentCodes", code), { sid });
+      if (old) { try { await deleteDoc(doc(firestore, "parentCodes", old)); } catch (_) {} }
+      // تجديد الكود = سحب صلاحية أي جهاز كان مربوط بالكود القديم
+      try {
+        const q = await getDocs(query(collection(firestore, "parentLinks"), where("sid", "==", sid)));
+        for (const d of q.docs) await deleteDoc(d.ref);
+      } catch (_) {}
+      u.parentCode = code; save();
+      return code;
+    };
+
+    // ===================== ترحيل الطلاب من النظام القديم (للأدمن، مرة واحدة) =====================
+    window.fbMigrateLegacy = async () => {
+      if (!me || me.role !== "admin") return { ok: false, msg: "للأدمن فقط" };
+      const snap = await getDoc(doc(firestore, "eca_platform", "main_data"));
+      if (!snap.exists()) return { ok: false, msg: "مفيش بيانات قديمة" };
+      const L = snap.data();
+      const legacy = (L.users || []).filter(u => u && u.role === "student");
+      const have = new Set(db.users.filter(u => u.role === "student").map(u => String(u.username || "").toLowerCase()));
+      const idMap = {}, creds = [], failed = [];
+      for (const lu of legacy) {
+        const uname = String(lu.username || "").toLowerCase().replace(/\s+/g, "_").replace(BAD, "");
+        if (!uname || have.has(uname)) continue;
+        const temp = window.randomPass();
+        try {
+          const uid = await window.fbCreateStudentAccount(uname, temp);
+          idMap[lu.id] = uid;
+          const nu = cleanDeep(Object.assign({}, lu)); delete nu.pass; nu.id = uid; nu.username = uname; nu.role = "student";
+          db.users.push(nu); have.add(uname);
+          creds.push([lu.name || "", uname, temp]);
+        } catch (e) { failed.push([uname, (e && e.code) || String(e)]); }
+      }
+      const att = L.attendance || {};
+      for (const d in att) {
+        for (const oldId in att[d]) if (idMap[oldId]) { db.attendance[d] = db.attendance[d] || {}; db.attendance[d][idMap[oldId]] = att[d][oldId]; }
+      }
+      (L.groups || []).forEach(g => { g = String(g).replace(BAD, ""); if (g && !db.groups.includes(g)) db.groups.push(g); });
+      save();
+      if (creds.length) {
+        const rows = [["Name", "Username", "Temporary Password"]].concat(creds);
+        const csv = "\ufeff" + rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(",")).join("\r\n");
+        dl("ECA-new-logins-" + todayISO() + ".csv", csv, "text/csv;charset=utf-8");
+      }
+      return { ok: true, done: creds.length, failed };
+    };
+    // ================= ECA FINANCIAL & ANALYTICS DASHBOARD (CONVERTED FROM CODE.GS & HTML) =================
+   // ================= ECA FINANCIAL & ANALYTICS DASHBOARD (SELF-BINDING) =================
+    window.finSubTab = window.finSubTab || "analytics";
+    window.finSearchQ = window.finSearchQ || "";
+    window.finSelectedStuId = window.finSelectedStuId || "";
+
+    window.ensureStudentFinData = function(s, idx) {
+      if (!s.stuCode) s.stuCode = "ECA-" + String(idx + 1).padStart(4, "0");
+      s.courseFee = Number(s.courseFee) || 0;
+      s.amountPaid = Number(s.amountPaid) || 0;
+      s.remaining = Math.max(0, s.courseFee - s.amountPaid);
+      if (!s.coachName) s.coachName = "Coach Abdelrahman";
+      return s;
+    };
+
+    window.renderFinanceDashboardView = function() {
+      const students = db.users.filter(u => u.role === "student").map((s, idx) => window.ensureStudentFinData(s, idx));
+      const todayKey = todayISO();
+
+      let totalFees = 0, totalPaid = 0, totalRem = 0;
+      let todayCount = 0, todayPaid = 0, todayRem = 0;
+      const byStep = {};
+      const byCoach = {};
+
+      students.forEach(s => {
+        totalFees += s.courseFee;
+        totalPaid += s.amountPaid;
+        totalRem += s.remaining;
+
+        if (s.lastPayDate === todayKey) {
+          todayCount++;
+          todayPaid += Number(s.lastPayAmount) || 0;
+          todayRem += s.remaining;
+        }
+
+        const stLabel = "Step " + (s.level || 1);
+        byStep[stLabel] = byStep[stLabel] || { count: 0, paid: 0, fee: 0 };
+        byStep[stLabel].count++;
+        byStep[stLabel].paid += s.amountPaid;
+        byStep[stLabel].fee += s.courseFee;
+
+        const cName = s.coachName || "Coach Abdelrahman";
+        byCoach[cName] = byCoach[cName] || { count: 0, paid: 0, fee: 0 };
+        byCoach[cName].count++;
+        byCoach[cName].paid += s.amountPaid;
+        byCoach[cName].fee += s.courseFee;
+      });
+
+      const tabBtnCls = (t) => `flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition ${window.finSubTab === t ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/20 hover:border-yellow-400'}`;
+
+      return `
+        <div class="space-y-6">
+          <div class="gold-card rounded-2xl p-5 flex flex-wrap justify-between items-center gap-4">
+            <div>
+              <h2 class="font-display font-bold text-xl gold-gradient-text">📊 لوحة تحليلات وحسابات الأكاديمية (ECA ERP Dashboard)</h2>
+              <p class="text-xs text-gray-400 mt-1">إدارة الاشتراكات، المسدد، المتبقي، إحصائيات اليوم، وتحليل الإيرادات حسب المستوى والمدرب.</p>
+            </div>
+            <button onclick="exportFinanceCSV()" class="px-4 py-2 rounded-xl text-xs gold-btn">⬇ تصدير التقرير المالي (Excel/CSV)</button>
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="gold-card rounded-2xl p-4 text-center border-t-4 border-sky-500">
+              <div class="text-[11px] text-gray-400 font-bold">إجمالي الطلاب (TOTAL STUDENTS)</div>
+              <div class="text-2xl font-extrabold text-sky-400 mt-1">${students.length}</div>
+            </div>
+            <div class="gold-card rounded-2xl p-4 text-center border-t-4 border-yellow-500">
+              <div class="text-[11px] text-gray-400 font-bold">إجمالي قيمة الاشتراكات (TOTAL FEES)</div>
+              <div class="text-2xl font-extrabold text-yellow-300 mt-1">${totalFees.toLocaleString()} <span class="text-xs">EGP</span></div>
+            </div>
+            <div class="gold-card rounded-2xl p-4 text-center border-t-4 border-emerald-500">
+              <div class="text-[11px] text-gray-400 font-bold">إجمالي المسدد (TOTAL PAID)</div>
+              <div class="text-2xl font-extrabold text-emerald-400 mt-1">${totalPaid.toLocaleString()} <span class="text-xs">EGP</span></div>
+            </div>
+            <div class="gold-card rounded-2xl p-4 text-center border-t-4 border-red-500">
+              <div class="text-[11px] text-gray-400 font-bold">إجمالي المتبقي (REMAINING)</div>
+              <div class="text-2xl font-extrabold text-red-400 mt-1">${totalRem.toLocaleString()} <span class="text-xs">EGP</span></div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-2 bg-black/60 p-2 rounded-2xl border border-yellow-500/20">
+            <button onclick="window.finSubTab='analytics'; render();" class="${tabBtnCls('analytics')}">📈 الداشبورد والتحليلات</button>
+            <button onclick="window.finSubTab='manage'; render();" class="${tabBtnCls('manage')}">💳 تسجيل وبحث وتعديل اشتراك طالب</button>
+            <button onclick="window.finSubTab='today'; render();" class="${tabBtnCls('today')}">💰 إحصائيات وتحصيلات اليوم (${todayKey})</button>
+          </div>
+
+          ${window.finSubTab === "analytics" ? window.renderFinAnalyticsSection(students, byStep, byCoach, totalFees) : ""}
+          ${window.finSubTab === "manage" ? window.renderFinManageSection(students) : ""}
+          ${window.finSubTab === "today" ? window.renderFinTodaySection(students, todayKey, todayCount, todayPaid, todayRem) : ""}
+        </div>
+      `;
+    };
+
+    window.renderFinAnalyticsSection = function(students, byStep, byCoach, totalFees) {
+      const stepKeys = Object.keys(byStep).sort();
+      const coachKeys = Object.keys(byCoach);
+      const q = (window.finSearchQ || "").toLowerCase();
+      return `
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="gold-card rounded-2xl p-5 space-y-3">
+            <h3 class="font-display font-bold text-sm text-yellow-400">♟️ توزيع الطلاب والإيرادات حسب المستوى (Step 1 - 6)</h3>
+            <div class="space-y-3">
+              ${stepKeys.map(k => {
+                const item = byStep[k];
+                const pct = totalFees > 0 ? Math.round((item.fee / totalFees) * 100) : 0;
+                return `
+                  <div class="space-y-1">
+                    <div class="flex justify-between text-xs">
+                      <span class="font-bold text-white">${k} <span class="text-gray-400">(${item.count} طلاب)</span></span>
+                      <span class="text-emerald-300 font-bold">مسدد: ${item.paid.toLocaleString()} / ${item.fee.toLocaleString()} EGP (${pct}%)</span>
+                    </div>
+                    <div class="w-full h-2.5 bg-zinc-900 rounded-full overflow-hidden border border-yellow-500/20">
+                      <div class="h-full gold-btn" style="width: ${Math.max(5, pct)}%"></div>
+                    </div>
+                  </div>`;
+              }).join("")}
+            </div>
+          </div>
+
+          <div class="gold-card rounded-2xl p-5 space-y-3">
+            <h3 class="font-display font-bold text-sm text-yellow-400">👨‍🏫 إجمالي الاشتراكات والتحصيل حسب المدرب</h3>
+            <div class="space-y-3">
+              ${coachKeys.map(c => {
+                const item = byCoach[c];
+                const pct = item.fee > 0 ? Math.round((item.paid / item.fee) * 100) : 100;
+                return `
+                  <div class="space-y-1">
+                    <div class="flex justify-between text-xs">
+                      <span class="font-bold text-white">${esc(c)} <span class="text-gray-400">(${item.count} طلاب)</span></span>
+                      <span class="text-yellow-300 font-bold">تحصيل: ${item.paid.toLocaleString()} / ${item.fee.toLocaleString()} EGP (${pct}%)</span>
+                    </div>
+                    <div class="w-full h-2.5 bg-zinc-900 rounded-full overflow-hidden border border-emerald-500/20">
+                      <div class="h-full bg-emerald-500" style="width: ${Math.max(5, pct)}%"></div>
+                    </div>
+                  </div>`;
+              }).join("")}
+            </div>
+          </div>
+        </div>
+
+        <div class="gold-card rounded-2xl p-5 space-y-3">
+          <div class="flex flex-wrap justify-between items-center gap-2">
+            <h3 class="font-display font-bold text-sm text-yellow-400">📋 سجل اشتراكات الطلاب المالي الشامل</h3>
+            <input id="finQuickFilter" value="${esc(window.finSearchQ)}" oninput="window.finSearchQ=this.value; render();" placeholder="🔍 ابحث بالكود (ECA-0001) أو الاسم أو الموبايل..." class="bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white min-w-[240px]" />
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-white">
+              <thead>
+                <tr class="text-yellow-300 border-b border-yellow-500/30 text-left">
+                  <th class="py-2 px-2">كود الطالب</th>
+                  <th class="py-2 px-2">الاسم</th>
+                  <th class="py-2 px-2">المستوى / الجروب</th>
+                  <th class="py-2 px-2">المدرب</th>
+                  <th class="py-2 px-2">قيمة الاشتراك</th>
+                  <th class="py-2 px-2">المسدد</th>
+                  <th class="py-2 px-2">المتبقي</th>
+                  <th class="py-2 px-2">إجراءات سريعة</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-yellow-500/10">
+                ${students.filter(s => !q || s.name.toLowerCase().includes(q) || s.stuCode.toLowerCase().includes(q) || String(s.phone||"").includes(q)).map(s => {
+                  const wa = waLink(s.parentPhone || s.phone);
+                  const waMsg = encodeURIComponent(`أهلاً بحضرتك من Egypt Chess Academy (ECA) 👑\nتذكير ودي بخصوص اشتراك البطل (${s.name} - كود ${s.stuCode}):\n• إجمالي الاشتراك: ${s.courseFee} ج.م\n• المسدد: ${s.amountPaid} ج.م\n• المتبقي: ${s.remaining} ج.م\nشكراً لتعاونكم معنا! ♟️`);
+                  return `
+                    <tr class="hover:bg-yellow-500/5">
+                      <td class="py-2.5 px-2 font-mono text-yellow-300 font-bold">${s.stuCode}</td>
+                      <td class="py-2.5 px-2 font-bold">${esc(s.name)}</td>
+                      <td class="py-2.5 px-2 text-gray-300">Step ${s.level} •${esc(s.group || "")}</td>
+                      <td class="py-2.5 px-2 text-gray-300">${esc(s.coachName)}</td>
+                      <td class="py-2.5 px-2 font-bold">${s.courseFee} EGP</td>
+                      <td class="py-2.5 px-2 font-bold text-emerald-400">${s.amountPaid} EGP</td>
+                      <td class="py-2.5 px-2 font-bold ${s.remaining > 0 ? 'text-red-400' : 'text-gray-400'}">${s.remaining} EGP</td>
+                      <td class="py-2.5 px-2 flex gap-1.5">
+                        <button onclick="openFinEditForStudent('${s.id}')" class="px-2.5 py-1 rounded-lg bg-zinc-800 border border-yellow-500/40 text-yellow-300 hover:bg-yellow-500 hover:text-black font-bold">✏️ تحصيل / تعديل</button>
+                        ${s.remaining > 0 && wa ? `<a href="${wa}?text=${waMsg}" target="_blank" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">💬 تذكير واتساب</a>` : ""}
+                      </td>
+                    </tr>`;
+                }).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    };
+
+    window.renderFinManageSection = function(students) {
+      const sel = students.find(s => s.id === window.finSelectedStuId) || students[0] || null;
+      const fee = sel ? sel.courseFee : 0;
+      const paid = sel ? sel.amountPaid : 0;
+      const rem = Math.max(0, fee - paid);
+
+      return `
+        <div class="gold-card rounded-2xl p-6 max-w-3xl mx-auto space-y-5">
+          <div class="flex flex-wrap justify-between items-center gap-3 border-b border-yellow-500/20 pb-3">
+            <h3 class="font-display font-bold text-lg text-yellow-400">💳 استمارة تسجيل وتحديث رسوم الطالب</h3>
+            <button onclick="openAddStu()" class="px-3 py-1.5 rounded-xl text-xs bg-zinc-900 border border-yellow-500/40 text-yellow-300">➕ طالب جديد بالكامل</button>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <label class="block text-xs text-gray-400 mb-1">🔍 اختر الطالب أو ابحث بكوده (ECA):</label>
+              <select onchange="window.finSelectedStuId=this.value; render();" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2.5 text-xs text-yellow-300 font-bold">
+                ${students.map(s => `<option value="${s.id}" ${sel && sel.id === s.id ? 'selected' : ''}>${s.stuCode} —${esc(s.name)} (@${esc(s.username)}) \vert{} المتبقي: ${s.remaining} EGP</option>`).join("")}
+              </select>
+            </div>
+
+            ${sel ? `
+              <div>
+                <label class="block text-xs text-gray-400 mb-1">👤 اسم الطالب</label>
+                <input id="finName" value="${esc(sel.name)}" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-400 mb-1">📞 رقم هاتف ولي الأمر (واتساب)</label>
+                <input id="finPhone" value="${esc(sel.parentPhone || sel.phone || '')}" placeholder="010XXXXXXXX" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-400 mb-1">📚 المستوى / الدورة التدريبية</label>
+                <select id="finLevel" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-yellow-300">
+                  ${[1,2,3,4,5,6].map(l => `<option value="${l}" ${Number(sel.level)===l?'selected':''}>Step ${l}</option>`).join("")}
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-400 mb-1">👨‍🏫 اسم المدرب المحاضر</label>
+                <input id="finCoach" value="${esc(sel.coachName || 'Coach Abdelrahman')}" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-400 mb-1">💵 قيمة الكورس الإجمالية (EGP)</label>
+                <input id="finFee" type="number" min="0" value="${fee}" oninput="updateLiveCalcBox()" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-white font-bold" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-400 mb-1">💳 إجمالي المبلغ المسدد (EGP)</label>
+                <input id="finPaid" type="number" min="0" value="${paid}" oninput="updateLiveCalcBox()" class="w-full bg-black border border-emerald-500/40 rounded-xl px-3 py-2 text-xs text-emerald-300 font-bold" />
+              </div>
+            ` : ""}
+          </div>
+
+          <div class="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-black/80 border border-yellow-500/30 text-center">
+            <div>
+              <div class="text-[11px] text-gray-400">قيمة الكورس</div>
+              <div id="liveDispFee" class="text-lg font-extrabold text-white mt-0.5">${fee.toLocaleString()} EGP</div>
+            </div>
+            <div>
+              <div class="text-[11px] text-gray-400">المبلغ المسدد</div>
+              <div id="liveDispPaid" class="text-lg font-extrabold text-emerald-400 mt-0.5">${paid.toLocaleString()} EGP</div>
+            </div>
+            <div>
+              <div class="text-[11px] text-gray-400">المبلغ المتبقي</div>
+              <div id="liveDispRem" class="text-lg font-extrabold text-red-400 mt-0.5">${rem.toLocaleString()} EGP</div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap justify-end gap-2">
+            <button onclick="saveStudentFinanceRecord('${sel ? sel.id : ''}')" class="px-6 py-2.5 rounded-xl text-xs gold-btn">💾 حفظ البيانات المالية وتحديث الداشبورد</button>
+          </div>
+        </div>
+      `;
+    };
+
+    window.renderFinTodaySection = function(students, todayKey, todayCount, todayPaid, todayRem) {
+      const todayStudents = students.filter(s => s.lastPayDate === todayKey);
+      return `
+        <div class="space-y-5">
+          <div class="grid sm:grid-cols-4 gap-4">
+            <div class="p-5 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 text-white text-center shadow-lg">
+              <div class="text-xs opacity-90">عمليات تحصيل اليوم</div>
+              <div class="text-2xl font-extrabold mt-1">${todayCount}</div>
+            </div>
+            <div class="p-5 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-800 text-white text-center shadow-lg">
+              <div class="text-xs opacity-90">إجمالي المحصل اليوم</div>
+              <div class="text-2xl font-extrabold mt-1">${todayPaid.toLocaleString()} EGP</div>
+            </div>
+            <div class="p-5 rounded-2xl bg-gradient-to-br from-red-600 to-red-800 text-white text-center shadow-lg">
+              <div class="text-xs opacity-90">متبقيات طلاب اليوم</div>
+              <div class="text-2xl font-extrabold mt-1">${todayRem.toLocaleString()} EGP</div>
+            </div>
+            <div class="p-5 rounded-2xl bg-gradient-to-br from-purple-600 to-purple-800 text-white text-center shadow-lg">
+              <div class="text-xs opacity-90">تاريخ اليوم</div>
+              <div class="text-lg font-extrabold mt-2">${todayKey}</div>
+            </div>
+          </div>
+
+          <div class="gold-card rounded-2xl p-5">
+            <h4 class="font-bold text-sm text-yellow-400 mb-3">🧾 قائمة الطلاب المسددين اليوم (${todayKey}):</h4>
+            ${todayStudents.length === 0 ? `<p class="text-xs text-gray-400 text-center py-4">لا توجد تحصيلات مسجلة بتاريخ اليوم حتى الآن.</p>` : `
+              <div class="space-y-2">
+                ${todayStudents.map(s => `
+                  <div class="p-3 rounded-xl bg-black/70 border border-yellow-500/20 flex justify-between items-center text-xs">
+                    <span><b class="text-yellow-300">${s.stuCode}</b> — ${esc(s.name)} (Step ${s.level})</span>
+                    <span class="text-emerald-400 font-bold">سدد اليوم: ${Number(s.lastPayAmount||0).toLocaleString()} EGP | المتبقي: ${s.remaining.toLocaleString()} EGP</span>
+                  </div>
+                `).join("")}
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    };
+
+    window.updateLiveCalcBox = function() {
+      const fee = parseFloat(document.getElementById("finFee").value) || 0;
+      const paid = parseFloat(document.getElementById("finPaid").value) || 0;
+      const rem = Math.max(0, fee - paid);
+      document.getElementById("liveDispFee").textContent = fee.toLocaleString() + " EGP";
+      document.getElementById("liveDispPaid").textContent = paid.toLocaleString() + " EGP";
+      document.getElementById("liveDispRem").textContent = rem.toLocaleString() + " EGP";
+    };
+
+    window.openFinEditForStudent = function(stuId) {
+      window.finSelectedStuId = stuId;
+      window.finSubTab = "manage";
+      render();
+    };
+
+    window.saveStudentFinanceRecord = function(stuId) {
+      if (!isCoach()) return;
+      const s = db.users.find(u => u.id === stuId);
+      if (!s) return;
+      const prevPaid = Number(s.amountPaid) || 0;
+      const newFee = Math.max(0, parseFloat(document.getElementById("finFee").value) || 0);
+      const newPaid = Math.max(0, parseFloat(document.getElementById("finPaid").value) || 0);
+
+      s.name = document.getElementById("finName").value.trim() || s.name;
+      s.parentPhone = document.getElementById("finPhone").value.trim();
+      s.level = Number(document.getElementById("finLevel").value) || s.level;
+      s.coachName = document.getElementById("finCoach").value.trim() || "Coach Abdelrahman";
+      s.courseFee = newFee;
+      s.amountPaid = newPaid;
+      s.remaining = Math.max(0, newFee - newPaid);
+
+      if (newPaid > prevPaid) {
+        const diff = newPaid - prevPaid;
+        if (s.lastPayDate === todayISO()) {
+          s.lastPayAmount = (Number(s.lastPayAmount) || 0) + diff;
+        } else {
+          s.lastPayDate = todayISO();
+          s.lastPayAmount = diff;
+        }
+      }
+      save();
+      window.finSubTab = "analytics";
+      render();
+      toast(`✅ تم تحديث حساب الطالب (${s.stuCode}) — المتبقي: ${s.remaining} EGP`);
+    };
+
+    window.exportFinanceCSV = function() {
+      if (!isCoach()) return;
+      const students = db.users.filter(u => u.role === "student").map((s, i) => window.ensureStudentFinData(s, i));
+      const rows = [["Student ID", "Student Name", "Phone", "Step Level", "Coach", "Total Fee (EGP)", "Amount Paid (EGP)", "Remaining (EGP)", "Last Payment Date"]];
+      students.forEach(s => {
+        rows.push([s.stuCode, s.name, s.parentPhone || s.phone || "", "Step " + s.level, s.coachName, s.courseFee, s.amountPaid, s.remaining, s.lastPayDate || "—"]);
+      });
+      const csv = "\ufeff" + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+      dl("ECA-Financial-Dashboard-" + todayISO() + ".csv", csv, "text/csv;charset=utf-8");
+      toast("📥 تم تنزيل شيت الحسابات متوافق مع Excel و Google Sheets!");
+    };
+// ================= 1. ترجمة صفحة الحسابات والداشبورد للإنجليزية (AR / EN) =================
+    const FIN_DICT = [
+      ["💰 الحسابات والداشبورد", "💰 Finance & ERP"],
+      ["📊 لوحة تحليلات وحسابات الأكاديمية (ECA ERP Dashboard)", "📊 ECA Financial & Analytics ERP Dashboard"],
+      ["إدارة الاشتراكات، المسدد، المتبقي، إحصائيات اليوم، وتحليل الإيرادات حسب المستوى والمدرب.", "Manage subscriptions, paid & remaining balances, daily collections, and revenue by level & coach."],
+      ["⬇ تصدير التقرير المالي (Excel/CSV)", "⬇ Export Financial Report (Excel/CSV)"],
+      ["🔒 قفل الحسابات", "🔒 Lock Finance"],
+      ["إجمالي الطلاب (TOTAL STUDENTS)", "TOTAL STUDENTS"],
+      ["إجمالي قيمة الاشتراكات (TOTAL FEES)", "TOTAL SUBSCRIPTION FEES"],
+      ["إجمالي المسدد (TOTAL PAID)", "TOTAL PAID"],
+      ["إجمالي المتبقي (REMAINING)", "TOTAL REMAINING"],
+      ["📈 الداشبورد والتحليلات", "📈 Analytics Dashboard"],
+      ["💳 تسجيل وبحث وتعديل اشتراك طالب", "💳 Student Billing & Search"],
+      ["💰 إحصائيات وتحصيلات اليوم", "💰 Today's Collections"],
+      ["♟️ توزيع الطلاب والإيرادات حسب المستوى (Step 1 - 6)", "♟️ Students & Revenue by Level (Step 1 - 6)"],
+      ["👨‍🏫 إجمالي الاشتراكات والتحصيل حسب المدرب", "👨‍🏫 Subscriptions & Collection by Coach"],
+      ["📋 سجل اشتراكات الطلاب المالي الشامل", "📋 Complete Student Financial Registry"],
+      ["🔍 ابحث بالكود (ECA-0001) أو الاسم أو الموبايل...", "🔍 Search by code (ECA-0001), name, or phone..."],
+      ["كود الطالب", "Student ID"],
+      ["الاسم", "Name"],
+      ["المستوى / الجروب", "Level / Group"],
+      ["المدرب", "Coach"],
+      ["قيمة الاشتراك", "Course Fee"],
+      ["المسدد", "Paid"],
+      ["المتبقي:", "Remaining:"],
+      ["المتبقي", "Remaining"],
+      ["إجراءات سريعة", "Quick Actions"],
+      ["✏️ تحصيل / تعديل", "✏️ Collect / Edit"],
+      ["💬 تذكير واتساب", "💬 WhatsApp Reminder"],
+      ["💳 استمارة تسجيل وتحديث رسوم الطالب", "💳 Student Fee Registration & Update Form"],
+      ["➕ طالب جديد بالكامل", "➕ Add New Student"],
+      ["🔍 اختر الطالب أو ابحث بكوده (ECA):", "🔍 Select Student or Search by ID (ECA):"],
+      ["👤 اسم الطالب", "👤 Student Name"],
+      ["📞 رقم هاتف ولي الأمر (واتساب)", "📞 Parent Phone (WhatsApp)"],
+      ["📚 المستوى / الدورة التدريبية", "📚 Level / Course"],
+      ["👨‍🏫 اسم المدرب المحاضر", "👨‍🏫 Assigned Coach"],
+      ["💵 قيمة الكورس الإجمالية (EGP)", "💵 Total Course Fee (EGP)"],
+      ["💳 إجمالي المبلغ المسدد (EGP)", "💳 Total Amount Paid (EGP)"],
+      ["قيمة الكورس", "Course Fee"],
+      ["المبلغ المسدد", "Amount Paid"],
+      ["المبلغ المتبقي", "Remaining Balance"],
+      ["💾 حفظ البيانات المالية وتحديث الداشبورد", "💾 Save Financial Record & Update Dashboard"],
+      ["عمليات تحصيل اليوم", "Today's Transactions"],
+      ["إجمالي المحصل اليوم", "Total Collected Today"],
+      ["متبقيات طلاب اليوم", "Today's Students Remaining"],
+      ["تاريخ اليوم", "Today's Date"],
+      ["🧾 قائمة الطلاب المسددين اليوم", "🧾 Students Who Paid Today"],
+      ["لا توجد تحصيلات مسجلة بتاريخ اليوم حتى الآن.", "No collections recorded for today yet."],
+      ["سدد اليوم:", "Paid today:"],
+      ["طلاب)", "students)"],
+      ["مسدد:", "Paid:"],
+      ["تحصيل:", "Collected:"],
+      ["🔒 قسم الإدارة المالية (للمديرين فقط)", "🔒 Financial Management (Admins Only)"],
+      ["هذا القسم خاص بإدارة الأكاديمية. يرجى إدخال الباسورد الإداري للمتابعة:", "This section is restricted to Academy Management. Enter Admin Password:"],
+      ["أدخل باسورد الإدارة...", "Enter Admin Password..."],
+      ["فتح لوحة الحسابات 🔓", "Unlock Finance Dashboard 🔓"],
+      ["🔓 تم فتح لوحة الحسابات الإدارية", "🔓 Admin Finance Dashboard Unlocked"],
+      ["🔒 تم قفل لوحة الحسابات", "🔒 Finance Dashboard Locked"],
+      ["❌ باسورد الإدارة غير صحيح", "❌ Incorrect Admin Password"]
+    ];
+    FIN_DICT.forEach(pair => {
+      if (!DICT.some(d => d[0] === pair[0])) DICT.push(pair);
+    });
+    [
+      ["سجّل دخولك بحسابك، أو ادخل كود المتابعة لو انت ولي أمر:", "Log in with your account, or enter the follow-up code if you are a parent:"],
+      ["🔐 الدخول بحساب شخصي لكل مستخدم — مفيش كلمات سر مشتركة", "🔐 Every user has a personal account — no shared passwords"],
+      ["ادخل كود المتابعة لمعرفة تقدّم ابنك", "Enter the follow-up code to see your child's progress"],
+      ["اكتب كود المتابعة اللي استلمته من الأكاديمية", "Enter the follow-up code you received from the academy"],
+      ["اكتب كود المتابعة لعرض تقدّم الطالب.", "Enter the follow-up code to view the student's progress."],
+      ["كود ولي الأمر", "Parent code"], ["عرض", "View"],
+      ["🔒 ملاحظة المدرب لولي الأمر:", "🔒 Coach's note for the parent:"],
+      ["❌ الكود غير صحيح أو انتهت صلاحيته", "❌ Invalid or expired code"],
+      ["❌ اسم المستخدم أو كلمة السر غير صحيحة", "❌ Wrong username or password"],
+      ["✅ تم إنشاء حسابك!", "✅ Your account has been created!"],
+      ["❌ كلمة السر لازم تكون 6 حروف على الأقل", "❌ Password must be at least 6 characters"],
+      ["✅ تم تغيير كلمة السر", "✅ Password changed"],
+      ["⏳ جاري التحميل...", "⏳ Loading..."],
+      ["القسم المالي (للإدارة فقط)", "Financial Management (Admins Only)"],
+      ["⚡ دخول بضغطة واحدة بحساب Google", "⚡ One-tap login with Google"],
+      ["أول مرة بتختار طالب أو كوتش، وبعد كده بتدخل بضغطة واحدة من غير باسورد.", "Pick student or coach the first time, then log in with one tap — no password."],
+      ["🎓 دخول الطالب بجوجل", "🎓 Student — Google"],
+      ["👑 دخول الكوتش بجوجل", "👑 Coach — Google"],
+      ["أو باليوزر نيم / الإيميل", "or with username / email"],
+      ["👋 أهلاً بيك في ECA", "👋 Welcome to ECA"],
+      ["اختار نوع حسابك مرة واحدة بس — بعد كده الدخول بضغطة واحدة.", "Choose your account type once — after that it's one-tap login."],
+      ["دخلت بحساب", "Signed in as"],
+      ["🎓 طالب", "🎓 Student"],
+      ["👑 كوتش", "👑 Coach"],
+      ["الاسم بالكامل", "Full name"],
+      ["كود دعوة الكوتش (من الأدمن)", "Coach invite code (from admin)"],
+      ["الكود بيستخدم مرة واحدة، وبيطلعه الأدمن من زر «🎟️ كود دعوة كوتش جديد».", "The code is single-use; the admin generates it with \"🎟️ New coach invite code\"."],
+      ["دخول المنصة 🚀", "Enter platform 🚀"],
+      ["✅ تم ربط حسابك بجوجل — المرة الجاية ادخل بضغطة واحدة", "✅ Google linked — next time log in with one tap"],
+      ["ℹ️ حسابك بيدخل بجوجل — مفيش كلمة سر تتغير", "ℹ️ Your account uses Google — no password to change"],
+      ["❌ تعذّر الدخول بجوجل", "❌ Google sign-in failed"],
+      ["❌ الدومين ده مش مضاف في Firebase (Authorized domains)", "❌ This domain isn't in Firebase Authorized domains"],
+      ["❌ الدخول بجوجل مش متفعّل في Firebase Authentication", "❌ Google sign-in isn't enabled in Firebase Authentication"],
+      ["❌ حساب جوجل ده مربوط بحساب تاني على المنصة", "❌ This Google account is linked to another platform account"],
+      ["❌ كود الدعوة غير صحيح أو مستخدم قبل كده", "❌ Invite code is invalid or already used"],
+      ["❌ اكتب الاسم", "❌ Enter your name"],
+      ["❌ تعذّر إنشاء الحساب", "❌ Could not create the account"],
+      ["✅ تم إنشاء حساب الكوتش!", "✅ Coach account created!"]
+    ].forEach(p => { if (!DICT.some(d => d[0] === p[0])) DICT.push(p); });
+    DICT.sort((a, b) => b[0].length - a[0].length);
+
+    // ================= 2. حماية قسم الحسابات بباسورد خاص للمديرين فقط =================
+    // الصلاحية بتتحدد من Firebase: staff/{uid}.role == "admin" — مفيش كلمة سر في الكود
+    window.isFinanceAdminUnlocked = false;
+    window.unlockFinanceAdmin = function (ev) { if (ev) ev.preventDefault(); };
+    window.lockFinanceAdmin = function () {};
+    window.renderFinanceLockScreen = function () {
+      return `
+        <div class="max-w-md mx-auto mt-10 gold-card rounded-2xl p-6 text-center space-y-4 border-2 border-yellow-500/40">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-black border-2 border-yellow-500 flex items-center justify-center text-2xl shadow-lg">🔒</div>
+          <h2 class="font-display font-bold text-xl gold-gradient-text">القسم المالي (للإدارة فقط)</h2>
+          <p class="text-xs text-gray-400">الحساب ده مش عنده صلاحية الأدمن. الصلاحية بتتفعّل من لوحة Firebase.</p>
+        </div>
+      `;
+    };
+
+    // إضافة زر "🔒 قفل الحسابات" داخل الداشبورد بعد فتحها
+    const _origRenderFinanceDashboardView = window.renderFinanceDashboardView;
+    window.renderFinanceDashboardView = function() {
+      if (!window.isFinanceAdminUnlocked) {
+        return window.renderFinanceLockScreen();
+      }
+      const html = _origRenderFinanceDashboardView();
+      return html.replace(
+        `<button onclick="exportFinanceCSV()" class="px-4 py-2 rounded-xl text-xs gold-btn">⬇ تصدير التقرير المالي (Excel/CSV)</button>`,
+        `<div class="flex gap-2"><button onclick="exportFinanceCSV()" class="px-4 py-2 rounded-xl text-xs gold-btn">⬇ تصدير التقرير المالي (Excel/CSV)</button></div>`
+      );
+    };
+
+    // ربط تلقائي بـ _render مع ضمان تشغيل applyLang() لترجمة صفحة الحسابات فوراً
+    {
+      const _prevRender = window._render || _render;
+      window._render = _render = function() {
+        _prevRender();
+        const u = currUser();
+        if (u && u.role === "coach" && tab === "finance") {
+          document.getElementById("mainView").innerHTML = window.renderFinanceDashboardView();
+          applyLang();
+        }
+      };
+    }
+    // تشغيل المنصة فوراً بعد تحميل كل الإضافات
+    setTimeout(() => { if (typeof render === "function") render(); }, 100);
+  </script>
+</body>
+</html>
