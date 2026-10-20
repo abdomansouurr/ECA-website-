@@ -1695,6 +1695,7 @@ window.selectExamAns = function(qIdx, oIdx) {
       return (local || "user") + MAIL_SUFFIX;
     }
     const isStaffRole = r => r === "coach" || r === "admin";
+    const ADMIN_EMAILS = ["abdomansour563@gmail.com"];   // لازم يطابق الإيميل اللي في Firestore Rules
 
     // ===================== الحالة =====================
     let me = null;                       // { uid, role: coach|admin|student|parent, name, username, email }
@@ -1856,6 +1857,20 @@ window.selectExamAns = function(qIdx, oIdx) {
       catch (e) { staffErr = e; console.error("staff read failed for uid " + user.uid, e); }
       console.info("[ECA] uid:", user.uid, "| staff doc:", staffData);
       if (staffErr) toast("⚠️ Firebase منع قراءة بيانات الأدمن (" + ((staffErr && staffErr.code) || "error") + ") — راجع قواعد Firestore لـ staff");
+      // إيميل الأدمن الأساسي: أول دخول بجوجل بيعمله حساب أدمن تلقائياً من غير كود دعوة
+      const em = String(user.email || "").toLowerCase();
+      if (!staffData && !staffErr && isGoogleUser(user) && user.emailVerified && ADMIN_EMAILS.includes(em)) {
+        const sd = { role: "admin", name: String(user.displayName || "Admin").replace(BAD, ""), username: em.split("@")[0].replace(/[^a-z0-9_]/g, "_") };
+        try {
+          await setDoc(doc(firestore, "staff", user.uid), sd);
+          staffData = sd;
+          try { await deleteDoc(doc(firestore, "users", user.uid)); } catch (_) {}   // لو كان اتسجّل طالب بالغلط قبل كده
+          setTimeout(() => toast("👑 تم تفعيل حساب الأدمن"), 300);
+        } catch (e) {
+          console.error("admin bootstrap failed", e);
+          toast("⚠️ Firebase رفض إنشاء حساب الأدمن (" + ((e && e.code) || "error") + ") — ضيف قاعدة الأدمن في Firestore Rules");
+        }
+      }
       if (staffData) staffData.role = String(staffData.role || "").trim().toLowerCase();   // يقبل "Admin" أو " admin"
       if (!staffData && isGoogleUser(user)) {
         // أول دخول بجوجل: لو مفيش بيانات طالب، نطلب منه يختار (طالب / كوتش) مرة واحدة بس
