@@ -363,10 +363,9 @@
         cSearch.classList.add("hidden");
         nav.innerHTML = `
           <button onclick="switchTab('about')" class="px-3.5 py-2 rounded-xl text-xs font-bold ${isInfoTab(tab) ? 'gold-btn' : 'bg-zinc-900 border border-yellow-500/40 text-yellow-300'}">ℹ️ عن ECA</button>
-          <button onclick="switchTab('parent')" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-zinc-900 border border-yellow-500/40 text-yellow-300">👨‍👩‍👦 بوابة ولي الأمر</button>
           <button onclick="switchTab('home')" class="px-3.5 py-2 rounded-xl text-xs gold-btn">🔐 Login / Sign Up</button>
         `;
-        main.innerHTML = tab === "parent" ? renderParentView() : isInfoTab(tab) ? renderInfoPage(tab) : renderAuthView();
+        main.innerHTML = isInfoTab(tab) ? renderInfoPage(tab) : renderAuthView();
         return;
       }
 
@@ -378,7 +377,7 @@
         <button onclick="switchTab('arena')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='arena'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">♟️ ساحة التدريب</button>
         <button onclick="switchTab('ranks')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='ranks'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">🏅 الرتب والشارات</button>
         ${u.role==='coach'?`<button onclick="switchTab('tracker')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='tracker'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">📋 متابعة الطلاب والجروبات</button><button onclick="switchTab('attendance')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='attendance'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">✅ تسجيل الحضور</button><button onclick="switchTab('finance')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='finance'?'gold-btn':'bg-zinc-900 text-emerald-300 border border-emerald-500/40'}">💰 الحسابات والداشبورد</button>`:''}
-        <button onclick="switchTab('parent')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='parent'?'gold-btn':'bg-zinc-900 text-gray-300'}">👨‍👩‍👦 داشبورد ولي الأمر</button>
+        ${u.role === 'student' ? `<button onclick="switchTab('parent')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='parent'?'gold-btn':'bg-zinc-900 text-emerald-300 border border-emerald-500/40'}">📊 داشبورد ولي الأمر</button>` : ''}
         ${window.fbAuthInfo && !window.fbAuthInfo().google ? `<button onclick="linkGoogle()" title="ربط حسابك بجوجل للدخول بضغطة واحدة" class="px-2.5 py-1.5 rounded-xl text-xs bg-zinc-900 text-sky-300 border border-sky-500/30">🔗 Google</button>` : ''}
         ${!window.fbAuthInfo || window.fbAuthInfo().password ? `<button onclick="changeMyPassword()" title="تغيير كلمة السر" class="px-2.5 py-1.5 rounded-xl text-xs bg-zinc-900 text-yellow-300 border border-yellow-500/30">🔑</button>` : ''}
         <button onclick="logout()" class="px-2.5 py-1.5 rounded-xl text-xs bg-red-500/20 text-red-300 border border-red-500/30">خروج</button>
@@ -388,7 +387,7 @@
       else if (tab === "tracker" && u.role === "coach") main.innerHTML = renderTrackerView();
       else if (tab === "attendance" && u.role === "coach") main.innerHTML = renderAttendanceView();
       else if (tab === "finance" && u.role === "coach") main.innerHTML = renderFinanceDashboardView();
-      else if (tab === "parent") main.innerHTML = renderParentView();
+      else if (tab === "parent" && u.role === "student") main.innerHTML = renderStudentParentView(u);
       else if (tab === "arena") main.innerHTML = renderArenaView(u);
       else if (tab === "ranks") main.innerHTML = renderRanksView(u);
       else if (isInfoTab(tab)) main.innerHTML = renderInfoPage(tab);
@@ -401,16 +400,12 @@
             <div>
               <img src="img/eca-logo.jpg" alt="Egypt Chess Academy" class="w-32 h-32 mx-auto mb-3 rounded-2xl bg-white border-2 border-yellow-500/60 object-contain" />
               <h2 class="font-display font-bold text-xl gold-gradient-text">Egypt Chess Academy Portal</h2>
-              <p class="text-xs text-gray-400 mt-2">سجّل دخولك بحسابك، أو ادخل كود المتابعة لو انت ولي أمر:</p>
+              <p class="text-xs text-gray-400 mt-2">سجّل دخولك بحسابك. ولي الأمر يتابع ابنه من «📊 داشبورد ولي الأمر» جوه حساب الطالب.</p>
               <div class="mt-4 space-y-2.5">
                 <div class="w-full text-start p-3 rounded-xl bg-black/80 border border-yellow-500/40">
                   <div class="text-xs font-bold text-yellow-300">⚡ دخول بضغطة واحدة بحساب Google</div>
                   <div class="text-[11px] text-gray-400">أول مرة بتختار طالب أو كوتش، وبعد كده بتدخل بضغطة واحدة من غير باسورد.</div>
                 </div>
-                <button onclick="switchTab('parent')" class="w-full text-left p-3 rounded-xl bg-black/80 border border-emerald-500/40 hover:border-emerald-400">
-                  <div class="text-xs font-bold text-emerald-300">👨‍👩‍👦 بوابة ولي الأمر (Parent Dashboard)</div>
-                  <div class="text-[11px] text-gray-400">ادخل كود المتابعة لمعرفة تقدّم ابنك</div>
-                </button>
               </div>
             </div>
             <div class="text-[11px] text-gray-400 mt-4 pt-3 border-t border-yellow-500/20">
@@ -610,18 +605,6 @@
               <button onclick="switchTab('attendance')" class="px-4 py-2.5 rounded-xl text-xs gold-btn">✅ تسجيل الحضور</button>
             </div>
           </div>
-          <div class="gold-card rounded-2xl p-6">
-            <h3 class="font-display font-bold text-lg text-yellow-400 mb-4">🧩 Daily Puzzles for All Levels (Steps 1 – 6)</h3>
-            <div class="grid md:grid-cols-3 gap-4">
-              ${[1,2,3,4,5,6].map(l => `
-                <div class="p-4 rounded-xl bg-black/80 border border-yellow-500/25">
-                  <div class="text-xs font-bold text-yellow-400">STEP ${l} PUZZLE</div>
-                  <p class="text-xs text-gray-300 mt-1">${PUZZLES[l].q}</p>
-                  <a href="${PUZZLES[l].url}" target="_blank" class="inline-block mt-2 text-xs text-yellow-300 hover:underline">Open Study ↗</a>
-                </div>
-              `).join('')}
-            </div>
-          </div>
         </div>
       `;
     }
@@ -721,12 +704,6 @@
                     <div class="flex gap-2">
                       <input id="noteInp" value="${esc(sel.note||'')}" class="flex-1 bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" placeholder="ملاحظة سرية لولي الأمر..." />
                       <button onclick="saveNote('${sel.id}')" class="px-4 py-2 rounded-xl text-xs gold-btn">حفظ لولي الأمر 🔒</button>
-                    </div>
-                    <div class="flex flex-wrap gap-2 items-center text-xs">
-                      <span class="text-gray-400">🔑 كود ولي الأمر:</span>
-                      <b class="text-yellow-300 tracking-widest">${esc(sel.parentCode || '—')}</b>
-                      <button onclick="genParentCode('${sel.id}')" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-yellow-500/30 text-yellow-300">${sel.parentCode ? 'تجديد الكود' : 'إنشاء كود'}</button>
-                      ${sel.parentCode && sel.parentPhone ? `<a target="_blank" rel="noopener" href="${waLink(sel.parentPhone)}?text=${encodeURIComponent('كود متابعة ' + sel.name + ' على منصة ECA: ' + sel.parentCode + '\nادخل من هنا واكتب الكود: ' + location.origin + location.pathname + '#parent')}" class="px-3 py-1.5 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-300">إرسال واتساب</a>` : ''}
                     </div>
                     <div class="divide-y divide-yellow-500/15 border border-yellow-500/20 rounded-xl max-h-80 overflow-y-auto bg-black/60">
                       ${st.st.lessons.map((les, i) => {
@@ -846,14 +823,17 @@
         <button onclick="migrateLegacy()" class="px-3 py-2 rounded-xl bg-zinc-900 border border-yellow-500/40 text-yellow-300">ترحيل الطلاب من النظام القديم</button>
         <span class="text-gray-400">مرة واحدة: بينشئ حساب دخول لكل طالب وينزّل ملف فيه كلمات السر المؤقتة.</span>
         <button onclick="createInvite()" class="px-3 py-2 rounded-xl bg-zinc-900 border border-yellow-500/40 text-yellow-300">🎟️ كود دعوة كوتش جديد</button>
+        <button onclick="createInvite('admin')" class="px-3 py-2 rounded-xl bg-zinc-900 border border-red-500/50 text-red-300">👑 كود دعوة أدمن جديد</button>
       </div>`;
     }
-    async function createInvite() {
+    async function createInvite(role) {
       if (!window.fbCreateInvite) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش");
-      const c = await window.fbCreateInvite();
+      const isAdm = role === "admin";
+      if (isAdm && !confirm(trText("الأدمن بيشوف الحسابات والداشبورد المالي ويقدر يطلّع أكواد كوتش وأدمن. متأكد إنك عايز تعمل كود أدمن؟"))) return;
+      const c = await window.fbCreateInvite(isAdm ? "admin" : "coach");
       if (!c) return toast("❌ تعذّر إنشاء الكود");
       try { await navigator.clipboard.writeText(c); } catch (_) {}
-      alert(trText("كود دعوة الكوتش (يُستخدم مرة واحدة):") + "\n\n" + c + "\n\n" + trText("اتنسخ تلقائياً. ابعته للكوتش ليسجّل من تبويب «كوتش» في صفحة التسجيل."));
+      alert(trText(isAdm ? "كود دعوة الأدمن (يُستخدم مرة واحدة):" : "كود دعوة الكوتش (يُستخدم مرة واحدة):") + "\n\n" + c + "\n\n" + trText("اتنسخ تلقائياً. ابعته للشخص ده يدخل بـ «👑 دخول الكوتش بجوجل» ويكتب الكود."));
     }
     async function migrateLegacy() {
       if (!window.fbMigrateLegacy) return toast("⚠️ الاتصال بالسيرفر لسه ما كملش");
@@ -2557,7 +2537,7 @@ window.selectExamAns = function(qIdx, oIdx) {
         ["🧩 حل الألغاز", "لغز يومي، وألغاز حقيقية من Lichess بكل المستويات."],
         ["🔬 حلّل أدوارك", "رقعة تحليل بالمحرك عشان تعرف غلطاتك وتتحسن."],
         ["🏅 تابع تقدمك", "رتب وشارات بتكبر مع كل درس وواجب ولغز ودور."],
-        ["👨‍👩‍👦 ولي الأمر في الصورة", "كود متابعة لولي الأمر يشوف بيه الحضور والتقييم وملاحظات الكوتش."]
+        ["👨‍👩‍👦 ولي الأمر في الصورة", "داشبورد لولي الأمر جوه حساب الطالب فيه الحضور والواجبات والتقييم وكل إحصائياته."]
       ];
       const why = [
         ["🎯 التركيز", "الطفل اللي مشتت ومش بيركز في المذاكرة، الشطرنج بيعلّمه يركّز في حاجة واحدة لمدة طويلة."],
@@ -2657,7 +2637,7 @@ window.selectExamAns = function(qIdx, oIdx) {
         ["إيه قواعد الشطرنج؟", "الشطرنج بيتلعب على رقعة 8×8 وكل لاعب بيبدأ بـ 16 قطعة. الهدف إنك تعمل كش مات لملك الخصم. القواعد كلها موجودة في دروس Step 1."],
         ["أقدر ألعب مع صحابي؟", "الميزة دي لسه بنشتغل عليها. لحد ما تنزل، تقدر تتمرن ضد الكمبيوتر وفي لعبة البيادق."],
         ["ازاي أحسّن مستوايا؟", "اتمرن بانتظام، حل الواجبات واللغز اليومي، حلّل أدوارك في «رقعة التحليل»، والعب ضد مستويات أقوى من مستواك."],
-        ["ولي الأمر يتابع ازاي؟", "الكوتش بيدّي ولي الأمر «كود متابعة». ادخل «بوابة ولي الأمر» واكتب الكود عشان تشوف الحضور والتقييم وملاحظات الكوتش."],
+        ["ولي الأمر يتابع ازاي؟", "ادخل على حساب ابنك ودوس «📊 داشبورد ولي الأمر» — هتلاقي الحضور والواجبات والتقييم والامتحانات والشهادات ونشاطه في ساحة التدريب."],
         ["عندي مشكلة تقنية، أعمل إيه؟", "ابعتلنا من صفحة «📞 تواصل معنا» واكتب تفاصيل المشكلة، ولو تقدر ابعت صورة للشاشة."]
       ];
       return `
@@ -2799,6 +2779,102 @@ window.selectExamAns = function(qIdx, oIdx) {
       const _ch = renderCoachHome; renderCoachHome = function (c) { return `<div class="space-y-6">${_ch(c)}${homeExtrasHTML()}</div>`; };
     }
 
+    // ================= داشبورد ولي الأمر (جوه حساب الطالب، من غير كود) =================
+    function renderStudentParentView(u) {
+      const s = calcStats(u), a = u.arena || {}, gm = a.games || { w: 0, l: 0, d: 0 };
+      const xp = calcXP(u), rk = rankOf(xp.total), st = streaks(a.days);
+      const earned = badgeList(u).reduce((n, c) => n + c.items.filter(b => b[3]).length, 0), allBadges = badgeList(u).reduce((n, c) => n + c.items.length, 0);
+      const certs = u.certificates || [], exams = u.examState || {};
+      const cnt = (o, step) => Object.keys(o || {}).filter(k => o[k] && k.split("-")[0] === String(step)).length;
+      const games = (gm.w || 0) + (gm.l || 0) + (gm.d || 0);
+      const puzAcc = a.puzTried ? Math.round(((a.puzSolved || 0) / a.puzTried) * 100) : null;
+      const bar = (pct, color) => `<div class="eval-bar" style="height:10px"><div style="width:${Math.max(0, Math.min(100, pct))}%; background:${color}"></div></div>`;
+      const kpi = (val, label, cls) => `<div class="p-4 rounded-2xl bg-black/70 border border-yellow-500/20 text-center"><div class="text-2xl font-extrabold ${cls}">${val}</div><div class="text-[11px] text-gray-400 mt-1">${label}</div></div>`;
+      const lastDay = (a.days || []).slice().sort().pop();
+      return `
+        <div class="space-y-5">
+          <div class="gold-card rounded-2xl p-5 flex flex-wrap justify-between items-center gap-4">
+            <div>
+              <h2 class="font-display font-bold text-xl gold-gradient-text">📊 داشبورد ولي الأمر</h2>
+              <p class="text-xs text-gray-400 mt-1">كل إحصائيات <b class="text-white">${esc(u.name)}</b> في مكان واحد.</p>
+            </div>
+            <button onclick="window.print()" class="px-4 py-2 rounded-xl text-xs bg-zinc-900 border border-yellow-500/40 text-yellow-300">🖨️ طباعة التقرير</button>
+          </div>
+
+          <div class="gold-card rounded-2xl p-5 grid md:grid-cols-3 gap-5 items-center">
+            <div class="space-y-1">
+              <div class="text-xs text-yellow-400 font-bold">STEP ${esc(u.level)}${u.group ? ' • ' + esc(u.group) : ''} • ${stuMode(u) === 'online' ? '💻 أونلاين' : '🏫 أوفلاين'}</div>
+              <div class="font-display text-2xl font-extrabold text-white">${esc(u.name)}</div>
+              <div class="text-xs text-gray-400">@${esc(u.username || '')}${u.coachName ? ' • 👨‍🏫 ' + esc(u.coachName) : ''}</div>
+            </div>
+            <div class="px-5 py-4 rounded-2xl border ${s.evalCls} text-center">
+              <div class="text-[11px]">التقييم العام للطالب</div>
+              <div class="text-xl font-extrabold mt-1">${s.evalText}</div>
+              <div class="text-sm font-bold mt-1">${s.overall}%</div>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-14 h-14 rounded-xl bg-white/90 p-1.5 shrink-0"><img src="img/${rk.cur ? rk.cur.icon : 'chess-pawn-icon.svg'}" alt="" class="w-full h-full object-contain ${rk.cur ? '' : 'badge-off'}" /></div>
+              <div>
+                <div class="text-[11px] text-gray-400">الرتبة</div>
+                <div class="font-bold text-yellow-300">${rk.cur ? rk.cur.label : 'لسه بدون رتبة'}</div>
+                <div class="text-[11px] text-gray-400">${xp.total.toLocaleString()} XP • 🏅 ${earned}/${allBadges} شارة</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            ${kpi(s.attC + " / " + s.total, "الدروس اللي حضرها في Step " + esc(u.level), "text-emerald-300")}
+            ${kpi(s.hwC + " / " + s.total, "الواجبات اللي حلّها", "text-yellow-300")}
+            ${kpi(s.puzP + "%", "دقة اللغز اليومي", "text-sky-400")}
+            ${kpi(s.rem, "دروس فاضلة للامتحان", "text-white")}
+          </div>
+
+          <div class="grid lg:grid-cols-2 gap-5">
+            <div class="gold-card rounded-2xl p-5 space-y-4">
+              <h3 class="font-display font-bold text-lg text-yellow-400">📚 التقدم في المنهج</h3>
+              <div class="space-y-1"><div class="flex justify-between text-xs"><span class="text-gray-300">الحضور (Step ${esc(u.level)})</span><b class="text-emerald-300">${s.attP}%</b></div>${bar(s.attP, '#10b981')}</div>
+              <div class="space-y-1"><div class="flex justify-between text-xs"><span class="text-gray-300">الواجبات (Step ${esc(u.level)})</span><b class="text-yellow-300">${s.hwP}%</b></div>${bar(s.hwP, '#d4af37')}</div>
+              <div class="overflow-x-auto"><table class="w-full text-xs text-white mt-2">
+                <thead><tr class="text-yellow-300 border-b border-yellow-500/25"><th class="py-2 text-start">Step</th><th class="py-2">حضر</th><th class="py-2">الواجب</th><th class="py-2">الامتحان</th></tr></thead>
+                <tbody>${STEPS.filter(x => x.lessons.length).map(x => { const e = exams[x.step]; const cur = Number(u.level) === x.step; return `<tr class="border-b border-yellow-500/10 ${cur ? 'text-yellow-200 font-bold' : ''}"><td class="py-2">${cur ? '▶ ' : ''}Step ${x.step}</td><td class="py-2 text-center">${cnt(u.att, x.step)} / ${x.lessons.length}</td><td class="py-2 text-center">${cnt(u.hw, x.step)} / ${x.lessons.length}</td><td class="py-2 text-center">${e ? (e.status === 'passed' ? '<span class="text-emerald-300">✓ ' + e.score + '%</span>' : '<span class="text-red-300">✗ ' + e.score + '%</span>') : (x.step < Number(u.level) ? '✓' : '—')}</td></tr>`; }).join("")}</tbody>
+              </table></div>
+            </div>
+
+            <div class="gold-card rounded-2xl p-5 space-y-3">
+              <h3 class="font-display font-bold text-lg text-yellow-400">♟️ نشاطه في ساحة التدريب</h3>
+              <div class="grid grid-cols-2 gap-2">
+                ${kpi(gm.w + " / " + gm.d + " / " + gm.l, "ضد الكمبيوتر: فوز / تعادل / خسارة", "text-emerald-300")}
+                ${kpi(a.bestWin ? LEVELS[a.bestWin - 1].name : "—", "أعلى مستوى كسبه", "text-yellow-300")}
+                ${kpi((a.puzSolved || 0) + " / " + (a.puzTried || 0), "ألغاز اتحلّت / جرّبها" + (puzAcc !== null ? " (" + puzAcc + "%)" : ""), "text-sky-400")}
+                ${kpi("🔥 " + (a.puzBestStreak || 0), "أطول سلسلة ألغاز صح", "text-white")}
+                ${kpi(a.visionBest || 0, "أفضل نتيجة في تدريب الرؤية", "text-white")}
+                ${kpi((a.pawnWins || 0) + " / " + (a.pawnLosses || 0), "لعبة البيادق: فوز / خسارة", "text-white")}
+              </div>
+              <div class="text-xs text-gray-400 pt-1">📅 أيام تمرين ورا بعض دلوقتي: <b class="text-yellow-300">${st.current}</b> • أطول سلسلة: <b class="text-yellow-300">${st.best}</b>${lastDay ? ' • آخر تمرين: <b class="text-white" dir="ltr">' + lastDay + '</b>' : ''} • عدد الأدوار: <b class="text-white">${games}</b></div>
+            </div>
+          </div>
+
+          <div class="grid lg:grid-cols-2 gap-5">
+            <div class="gold-card rounded-2xl p-5">
+              <h3 class="font-display font-bold text-lg text-yellow-400 mb-3">🎓 الشهادات</h3>
+              ${certs.length ? `<div class="space-y-2">${certs.map((c, i) => `<div class="flex flex-wrap justify-between items-center gap-2 p-3 rounded-xl bg-black/70 border border-yellow-500/25">
+                <div><div class="text-sm font-bold text-white">🏆 شهادة إتمام Step ${esc(c.step)}</div><div class="text-[11px] text-gray-400">${esc(c.score)}% • ${esc(c.date)}</div></div>
+                <button onclick="previewAndDownloadCert('${u.id}', ${i}, false)" class="px-3 py-1.5 rounded-xl text-xs gold-btn">📄 تحميل PDF</button>
+              </div>`).join("")}</div>` : `<p class="text-xs text-gray-400">لسه مفيش شهادات — الشهادة بتطلع بعد ما ينجح في امتحان الـ Step.</p>`}
+            </div>
+            <div class="gold-card rounded-2xl p-5 space-y-3">
+              <h3 class="font-display font-bold text-lg text-yellow-400">📝 ملاحظات وتوصيات</h3>
+              ${u.note ? `<div class="p-3 rounded-xl bg-black/80 border border-yellow-500/40"><b class="text-xs text-yellow-400">ملاحظة الكوتش:</b><p class="text-sm text-white mt-1">${esc(u.note)}</p></div>` : ''}
+              <ul class="space-y-2 text-sm text-gray-300">
+                ${s.rem > 0 ? `<li>📚 فاضله <b class="text-white">${s.rem}</b> درس عشان يقدر يدخل امتحان Step ${esc(u.level)}.</li>` : `<li>✅ خلّص حضور كل دروس Step ${esc(u.level)} — امتحان الترقية متاح.</li>`}
+                ${s.hwP < 70 ? `<li>📝 الواجبات محتاجة متابعة: حلّ ${s.hwC} من ${s.total}.</li>` : `<li>👏 ملتزم في الواجبات (${s.hwP}%).</li>`}
+                ${st.current === 0 ? `<li>⏰ ما اتمرّنش النهاردة ولا امبارح على المنصة — شجّعه يحل اللغز اليومي.</li>` : `<li>🔥 بيتمرّن ${st.current} يوم ورا بعض — كمّل!</li>`}
+              </ul>
+            </div>
+          </div>
+        </div>`;
+    }
+
     // ترجمة الصفحات الجديدة للإنجليزي
     [
       ["♙ لعبة البيادق", "♙ Pawns game"], ["🔬 رقعة التحليل", "🔬 Analysis board"], ["🎨 ألوان الرقعة:", "🎨 Board colors:"], ["فاتح", "Light"], ["غامق", "Dark"],
@@ -2911,6 +2987,25 @@ window.selectExamAns = function(qIdx, oIdx) {
       ["🧠 اتخاذ القرار", "🧠 Decision-making"], ["كل نقلة قرار: بيتعلم يفكر قبل ما يتصرف، ويدوّر على الحل، ويخرج من المواقف الصعبة.", "Every move is a decision: they learn to think before acting, look for solutions and get out of tough situations."],
       ["⏳ الصبر والتخطيط", "⏳ Patience & planning"], ["بيتعلم يخطط لكذا خطوة قدام، ويستنى الفرصة الصح.", "They learn to plan several steps ahead and wait for the right moment."],
       ["🤝 الروح الرياضية", "🤝 Sportsmanship"], ["يكسب بتواضع، ويتعلم من خسارته، ويحترم منافسه.", "Win humbly, learn from losses and respect the opponent."],
+      ["👑 كود دعوة أدمن جديد", "👑 New admin invite code"], ["🎟️ كود دعوة كوتش جديد", "🎟️ New coach invite code"],
+      ["الأدمن بيشوف الحسابات والداشبورد المالي ويقدر يطلّع أكواد كوتش وأدمن. متأكد إنك عايز تعمل كود أدمن؟", "An admin can see the accounts and the finance dashboard and can create coach and admin codes. Create an admin code?"],
+      ["كود دعوة الأدمن (يُستخدم مرة واحدة):", "Admin invite code (single use):"], ["كود دعوة الكوتش (يُستخدم مرة واحدة):", "Coach invite code (single use):"],
+      ["اتنسخ تلقائياً. ابعته للشخص ده يدخل بـ «👑 دخول الكوتش بجوجل» ويكتب الكود.", "Copied automatically. Send it to that person: they sign in with \"👑 Coach — Google\" and enter the code."],
+      ["📊 داشبورد ولي الأمر", "📊 Parent dashboard"], ["كل إحصائيات", "All statistics of"], ["في مكان واحد.", "in one place."], ["🖨️ طباعة التقرير", "🖨️ Print report"],
+      ["💻 أونلاين", "💻 Online"], ["🏫 أوفلاين", "🏫 In-person"], ["التقييم العام للطالب", "Overall student rating"], ["شارة", "badges"],
+      ["الدروس اللي حضرها في Step", "Lessons attended in Step"], ["الواجبات اللي حلّها", "Homework done"], ["دروس فاضلة للامتحان", "Lessons left before the exam"],
+      ["📚 التقدم في المنهج", "📚 Curriculum progress"], ["الحضور (Step", "Attendance (Step"], ["الواجبات (Step", "Homework (Step"], ["الامتحان", "Exam"],
+      ["♟️ نشاطه في ساحة التدريب", "♟️ Training Arena activity"], ["ضد الكمبيوتر: فوز / تعادل / خسارة", "Vs computer: win / draw / loss"], ["أطول سلسلة ألغاز صح", "Longest correct-puzzle streak"],
+      ["أفضل نتيجة في تدريب الرؤية", "Best vision-training score"], ["لعبة البيادق: فوز / خسارة", "Pawns game: win / loss"],
+      ["📅 أيام تمرين ورا بعض دلوقتي:", "📅 Current daily streak:"], ["• آخر تمرين:", "• Last practice:"], ["• عدد الأدوار:", "• Games played:"],
+      ["🎓 الشهادات", "🎓 Certificates"], ["🏆 شهادة إتمام Step", "🏆 Completion certificate, Step"], ["لسه مفيش شهادات — الشهادة بتطلع بعد ما ينجح في امتحان الـ Step.", "No certificates yet — one is issued after passing a Step exam."],
+      ["📝 ملاحظات وتوصيات", "📝 Notes & recommendations"], ["ملاحظة الكوتش:", "Coach's note:"], ["📚 فاضله", "📚 Remaining:"], ["درس عشان يقدر يدخل امتحان Step", "lessons before the exam of Step"],
+      ["✅ خلّص حضور كل دروس Step", "✅ Attended all lessons of Step"], ["— امتحان الترقية متاح.", "— the promotion exam is open."], ["📝 الواجبات محتاجة متابعة: حلّ", "📝 Homework needs follow-up: done"],
+      ["👏 ملتزم في الواجبات", "👏 Consistent with homework"], ["⏰ ما اتمرّنش النهاردة ولا امبارح على المنصة — شجّعه يحل اللغز اليومي.", "⏰ No practice today or yesterday — encourage the daily puzzle."],
+      ["🔥 بيتمرّن", "🔥 Practising"], ["يوم ورا بعض — كمّل!", "days in a row — keep going!"],
+      ["سجّل دخولك بحسابك. ولي الأمر يتابع ابنه من «📊 داشبورد ولي الأمر» جوه حساب الطالب.", "Log in with your account. Parents follow their child from \"📊 Parent dashboard\" inside the student account."],
+      ["داشبورد لولي الأمر جوه حساب الطالب فيه الحضور والواجبات والتقييم وكل إحصائياته.", "A parent dashboard inside the student account with attendance, homework, rating and all statistics."],
+      ["ادخل على حساب ابنك ودوس «📊 داشبورد ولي الأمر» — هتلاقي الحضور والواجبات والتقييم والامتحانات والشهادات ونشاطه في ساحة التدريب.", "Open your child's account and tap \"📊 Parent dashboard\" — you'll find attendance, homework, rating, exams, certificates and Training Arena activity."],
       ["♟️ اختار وضع اللعب", "♟️ Choose a game mode"], ["📰 أخبار الشطرنج في العالم", "📰 Chess world news"], ["المصدر: The Week in Chess", "Source: The Week in Chess"]
     ].forEach(p => { if (!DICT.some(d => d[0] === p[0])) DICT.push(p); });
     DICT.sort((a, b) => b[0].length - a[0].length);
@@ -3269,7 +3364,16 @@ window.selectExamAns = function(qIdx, oIdx) {
         await b.commit();
         try { await deleteDoc(doc(firestore, "users", uid)); } catch (_) {}   // لو كان اتسجّل طالب بالغلط قبل كده
         return "admin";
-      } catch (_) { /* مش كود الأدمن → نجرب كود دعوة عادي */ }
+      } catch (_) { /* مش كود الأدمن الثابت → نجرب كود دعوة أدمن */ }
+      try {
+        // كود دعوة أدمن (invites/{code}.role == "admin") — الـ Rules بترفضه لو الكود ده كود كوتش
+        const b = writeBatch(firestore);
+        b.update(doc(firestore, "invites", code), { used: true, usedBy: uid });
+        b.set(doc(firestore, "staff", uid), { role: "admin", name, username, invite: code });
+        await b.commit();
+        try { await deleteDoc(doc(firestore, "users", uid)); } catch (_) {}
+        return "admin";
+      } catch (_) { /* مش كود أدمن → نجرب كود دعوة كوتش */ }
       const batch = writeBatch(firestore);
       batch.update(doc(firestore, "invites", code), { used: true, usedBy: uid });
       batch.set(doc(firestore, "staff", uid), { role: "coach", name, username, invite: code });
@@ -3314,12 +3418,14 @@ window.selectExamAns = function(qIdx, oIdx) {
         return { ok: false, code: e && e.code };
       } finally { signingUp = false; }
     };
-    window.fbCreateInvite = async () => {
+    window.fbCreateInvite = async (role) => {
       if (!me || me.role !== "admin") return null;
       const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
       const r = crypto.getRandomValues(new Uint8Array(10));
       let code = ""; for (const b of r) code += alphabet[b % alphabet.length];
-      try { await setDoc(doc(firestore, "invites", code), { used: false, createdBy: me.uid, createdAt: Date.now() }); return code; }
+      const data = { used: false, createdBy: me.uid, createdAt: Date.now() };
+      if (role === "admin") data.role = "admin";     // كود دعوة أدمن (صلاحيات كاملة)
+      try { await setDoc(doc(firestore, "invites", code), data); return code; }
       catch (e) { console.error(e); return null; }
     };
 
