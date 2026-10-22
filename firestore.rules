@@ -24,15 +24,174 @@ service cloud.firestore {
     function studentUpdateOk() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
           'role','username','group','mode','coachName','stuCode','parentPhone','parentCode','note',
-          'courseFee','amountPaid','remaining','lastPayDate','lastPayAmount'])
+          'courseFee','amountPaid','remaining','lastPayDate','lastPayAmount','att','hw'])
         && safeText(request.resource.data.name, 80)
-        && safeText(request.resource.data.get('email', ''), 120);
+        && safeText(request.resource.data.get('email', ''), 120)
+        && countersOk() && daysOk() && examOk() && levelOk() && certsOk();
     }
 
-    // ---------- الكوتش والأدمن (بتتضاف يدوي من لوحة Firebase، مفيش كتابة من الموقع) ----------
+    // ================= حماية الألغاز والامتحانات (من غير Cloud Functions) =================
+    // كل محاولة لغز/امتحان = وثيقة في attempts رقمها uid_نوع_مفتاح، بتتعمل create بس.
+    // عدّادات الطالب ما تزيدش إلا بواحد، ومع محاولة جديدة في نفس العملية → مفيش إعادة ومفيش تزوير أرقام.
+    function attDoc(id)  { return /databases/$(database)/documents/attempts/$(id); }
+    function num(m, k)   { return m.get(k, 0); }
+    function newL()      { return request.resource.data.get('lastAttempt', ''); }
+    function oldL()      { return resource.data.get('lastAttempt', ''); }
+    // محاولة جديدة من النوع ده اتعملت في نفس العملية، وبعد آخر محاولة بـ 3 ثواني على الأقل
+    function newAttempt(kind) {
+      return newL() is string
+        && newL().matches(request.auth.uid + '_' + kind + '_[A-Za-z0-9-]{1,40}')
+        && !exists(attDoc(newL())) && existsAfter(attDoc(newL()))
+        && (oldL() == '' || !exists(attDoc(oldL()))
+            || request.time > get(attDoc(oldL())).data.at + duration.value(3, 's'));
+    }
+    function newOk() { return getAfter(attDoc(newL())).data.ok == true; }
+
+    // اللغز اليومي (puz.t / puz.c) وألغاز الساحة (arena.puz*)
+    function puzSame(o, n)   { return num(o, 't') == num(n, 't') && num(o, 'c') == num(n, 'c'); }
+    function arenaSame(o, n) {
+      return num(o, 'puzTried') == num(n, 'puzTried') && num(o, 'puzSolved') == num(n, 'puzSolved')
+        && num(o, 'puzStreak') == num(n, 'puzStreak') && num(o, 'puzBestStreak') == num(n, 'puzBestStreak');
+    }
+    function dailyStep(o, n) {
+      return num(n, 't') == num(o, 't') + 1
+        && ((newOk() && num(n, 'c') == num(o, 'c') + 1) || (!newOk() && num(n, 'c') == num(o, 'c')));
+    }
+    function arenaStep(o, n) {
+      return num(n, 'puzTried') == num(o, 'puzTried') + 1
+        && ((newOk() && num(n, 'puzSolved') == num(o, 'puzSolved') + 1 && num(n, 'puzStreak') == num(o, 'puzStreak') + 1)
+            || (!newOk() && num(n, 'puzSolved') == num(o, 'puzSolved') && num(n, 'puzStreak') == 0))
+        && num(n, 'puzBestStreak') >= num(o, 'puzBestStreak')
+        && (num(n, 'puzBestStreak') == num(o, 'puzBestStreak') || num(n, 'puzBestStreak') == num(n, 'puzStreak'));
+    }
+    function countersOk() {
+      let op = resource.data.get('puz', {});
+      let np = request.resource.data.get('puz', {});
+      let oa = resource.data.get('arena', {});
+      let na = request.resource.data.get('arena', {});
+      return (puzSame(op, np) && arenaSame(oa, na))
+        || (!puzSame(op, np) && arenaSame(oa, na) && newAttempt('daily') && dailyStep(op, np))
+        || (puzSame(op, np) && !arenaSame(oa, na) && newAttempt('arena') && arenaStep(oa, na));
+    }
+
+    // أيام التمرين (السلاسل): يوم واحد جديد بس في كل مرة، وتاريخه قريب من النهاردة
+    function dateNear(p) {
+      return p.size() >= 3 && p[0].matches('[0-9]{4}') && p[1].matches('[0-9]{2}') && p[2].matches('[0-9]{2}')
+        && request.time > timestamp.date(int(p[0]), int(p[1]), int(p[2])) - duration.value(1, 'd')
+        && request.time < timestamp.date(int(p[0]), int(p[1]), int(p[2])) + duration.value(2, 'd');
+    }
+    // القديم لازم يفضل زي ما هو (أو يتشال أقدم يوم بس لما القائمة توصل 800)
+    function daysOk() {
+      let od = resource.data.get('arena', {}).get('days', []);
+      let nd = request.resource.data.get('arena', {}).get('days', []);
+      return nd == od
+        || (nd is list && nd.size() >= 1 && nd.size() <= od.size() + 1 && nd.size() <= 800
+            && nd[0:nd.size() - 1] == od[od.size() - (nd.size() - 1):od.size()]
+            && nd[nd.size() - 1] is string && dateNear(nd[nd.size() - 1].split('-')));
+    }
+
+    // الامتحان: بداية (مرة لكل محاولة مسموحة) ← نهاية خلال 20 دقيقة ← طلب إعادة. مفيش رجوع في النتيجة.
+    function examStart(k, a, b) {
+      return (a.size() == 0 || a.get('status', '') == 'retry')
+        && k == string(resource.data.get('level', 1))
+        && b.get('status', '') == 'failed' && b.get('score', -1) == 0 && b.get('inProgress', false) == true
+        && b.get('attempts', 0) == a.get('attempts', 0) + 1
+        && newAttempt('exam')
+        && getAfter(attDoc(newL())).data.key == k + '-' + string(b.get('attempts', 0));
+    }
+    function examInTime(k, a) {
+      let id = request.auth.uid + '_exam_' + k + '-' + string(a.get('attempts', 0));
+      return exists(attDoc(id)) && request.time < get(attDoc(id)).data.at + duration.value(20, 'm');
+    }
+    function examEnd(k, a, b) {
+      return a.get('inProgress', false) == true && a.get('status', '') == 'failed'
+        && b.get('inProgress', false) == false
+        && b.get('attempts', 0) == a.get('attempts', 0)
+        && b.get('score', -1) is number && b.score >= 0 && b.score <= 100
+        && ((b.get('status', '') == 'passed' && b.score >= 70)
+            || (b.get('status', '') == 'failed' && b.score < 70 && b.get('reqRetry', false) == false))
+        && examInTime(k, a);
+    }
+    function examFlags(a, b) {
+      return a.get('status', '') == 'failed'
+        && b.diff(a).affectedKeys().hasOnly(['reqRetry', 'rejected', 'reqDate']);
+    }
+    function examStepOk(k, o, n) {
+      let a = o.get(k, {});
+      let b = n.get(k, {});
+      return b is map && (examStart(k, a, b) || examEnd(k, a, b) || examFlags(a, b));
+    }
+    // الطالب بيمتحن في مستواه الحالي بس، فالمفتاح الوحيد المسموح يتغير هو رقم مستواه
+    function examOk() {
+      let k = string(resource.data.get('level', 1));
+      let o = resource.data.get('examState', {});
+      let n = request.resource.data.get('examState', {});
+      return n.diff(o).affectedKeys().size() == 0
+        || (n.diff(o).affectedKeys().hasOnly([k]) && examStepOk(k, o, n));
+    }
+    // المستوى يزيد واحد بس، ومع نجاح امتحان المستوى ده في نفس العملية
+    function passedNow(lv) {
+      return request.resource.data.get('examState', {}).get(string(lv), {}).get('status', '') == 'passed'
+        && resource.data.get('examState', {}).get(string(lv), {}).get('status', '') != 'passed';
+    }
+    function levelOk() {
+      let ol = resource.data.get('level', 1);
+      let nl = request.resource.data.get('level', 1);
+      return nl == ol || (nl == ol + 1 && nl <= 6 && passedNow(ol));
+    }
+    // الشهادات: بتتضاف بس (مفيش تعديل ولا مسح)، وشهادة واحدة مع كل نجاح
+    function certsOk() {
+      let oc = resource.data.get('certificates', []);
+      let nc = request.resource.data.get('certificates', []);
+      let ol = resource.data.get('level', 1);
+      return nc == oc
+        || (nc is list && nc.size() == oc.size() + 1 && nc[0:oc.size()] == oc
+            && passedNow(ol) && nc[oc.size()].get('step', 0) == ol
+            && nc[oc.size()].get('score', -1) == request.resource.data.examState[string(ol)].score);
+    }
+
+    // ---------- أكواد الدعوة (الأدمن بيطلّعها من الموقع، وكل كود يُستخدم مرة واحدة) ----------
+    function inviteDoc(code)      { return /databases/$(database)/documents/invites/$(code); }
+    function inviteRole(code)     { return get(inviteDoc(code)).data.get('role', 'coach'); }
+    // الكود موجود ولسه ما اتستخدمش، وفي نفس العملية بيتعلّم إنه اتستخدم بواسطة نفس الشخص
+    function claimsInvite(code) {
+      return code is string
+        && exists(inviteDoc(code))
+        && get(inviteDoc(code)).data.used == false
+        && getAfter(inviteDoc(code)).data.used == true
+        && getAfter(inviteDoc(code)).data.usedBy == request.auth.uid;
+    }
+
+    // ---------- الكوتش والأدمن ----------
+    // يتضافوا يدوي من لوحة Firebase، أو بالتسجيل بكود دعوة صالح (الصلاحية = صلاحية الكود بالظبط)
     match /staff/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
-      allow write: if false;
+      allow create: if notAnon() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['role','name','username','invite'])
+        && request.resource.data.role in ['coach','admin']
+        && safeText(request.resource.data.name, 80)
+        && safeText(request.resource.data.username, 40)
+        && claimsInvite(request.resource.data.invite)
+        && request.resource.data.role == inviteRole(request.resource.data.invite);
+      allow update, delete: if false;
+    }
+
+    match /invites/{code} {
+      allow read:   if isAdmin();
+      allow create: if isAdmin()
+        && code.matches('[A-Z0-9]{8,16}')
+        && request.resource.data.keys().hasOnly(['used','createdBy','createdAt','role'])
+        && request.resource.data.used == false
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.get('role', 'coach') in ['coach','admin'];
+      // الاستخدام: مرة واحدة، ومع إنشاء ملف staff لنفس الشخص في نفس العملية
+      allow update: if notAnon()
+        && resource.data.used == false
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used','usedBy'])
+        && request.resource.data.used == true
+        && request.resource.data.usedBy == request.auth.uid
+        && getAfter(/databases/$(database)/documents/staff/$(request.auth.uid)).data.invite == code;
+      allow delete: if isAdmin();
     }
 
     // ---------- ملف الطالب ----------
@@ -44,6 +203,54 @@ service cloud.firestore {
                         && validNewStudent(request.resource.data));
       allow update: if isStaff() || (notAnon() && request.auth.uid == uid && studentUpdateOk());
       allow delete: if isStaff();
+    }
+
+    // ---------- دفتر المحاولات (create فقط — مفيش تعديل، والمسح للكوتش بس) ----------
+    match /attempts/{id} {
+      allow read:   if isStaff() || (notAnon() && resource.data.uid == request.auth.uid) || hasParentLink(resource.data.uid);
+      allow create: if notAnon()
+        && request.resource.data.keys().hasOnly(['uid', 'kind', 'key', 'ok', 'at', 'step'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.kind in ['arena', 'daily', 'exam']
+        && request.resource.data.key is string && request.resource.data.key.matches('[A-Za-z0-9-]{1,40}')
+        && id == request.auth.uid + '_' + request.resource.data.kind + '_' + request.resource.data.key
+        && request.resource.data.ok is bool
+        && request.resource.data.at == request.time
+        && (request.resource.data.kind != 'daily' || dateNear(request.resource.data.key.split('-')))
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('lastAttempt', '') == id;
+      allow update: if false;
+      allow delete: if isStaff();
+    }
+
+    // ---------- البطولات الداخلية (الكوتش بيكتب، وأي حساب مسجّل بيقرا) ----------
+    function validTournament(d) {
+      return d.keys().hasOnly(['name','format','double','totalRounds','status','createdAt','finishedAt','date','players','rounds'])
+        && safeText(d.name, 80)
+        && d.format in ['rr','swiss'] && d.status in ['running','done']
+        && d.players is list && d.players.size() >= 3 && d.players.size() <= 64
+        && d.rounds is list && d.rounds.size() <= 70
+        && d.totalRounds is number && d.totalRounds >= 1 && d.totalRounds <= 70;
+    }
+    match /tournaments/{tid} {
+      allow read: if notAnon();
+      allow create, update: if isStaff() && tid.matches('[A-Za-z0-9]{4,40}') && validTournament(request.resource.data);
+      allow delete: if isStaff();
+    }
+
+    // ---------- سجل الأخطاء (أي حساب يكتب خطأ، والأدمن بس يقرا ويمسح) ----------
+    match /errors/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['msg','src','line','ua','uid','at','ver','tab'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.at == request.time
+        && request.resource.data.msg is string && request.resource.data.msg.size() <= 500
+        && request.resource.data.get('src', '') is string && request.resource.data.get('src', '').size() <= 300
+        && request.resource.data.get('ua', '') is string && request.resource.data.get('ua', '').size() <= 300
+        && request.resource.data.get('ver', '') is string && request.resource.data.get('ver', '').size() <= 20
+        && request.resource.data.get('tab', '') is string && request.resource.data.get('tab', '').size() <= 30
+        && request.resource.data.get('line', 0) is int;
+      allow read, delete: if isAdmin();
+      allow update: if false;
     }
 
     // ---------- الملاحظة السرية + كود ولي الأمر (الطالب ما يقراهاش) ----------
@@ -86,12 +293,6 @@ service cloud.firestore {
     // ---------- الطلاب المحذوفين (عشان ما يرجعوش ينشئوا ملف) ----------
     match /deleted/{uid} {
       allow read, write: if isStaff();
-    }
-
-    // ---------- بيانات النظام القديم: قراءة للكوتش بس لحد ما تتحوّل، وبعدها امسحها ----------
-    match /eca_platform/{docId} {
-      allow read: if isStaff();
-      allow write: if false;
     }
   }
 }

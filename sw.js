@@ -1,15 +1,32 @@
 // ECA service worker — offline support. Bump VERSION to force clients to refresh the cache.
-const VERSION = "eca-v1";
-const SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png"];
-const CDN = [
-  "https://cdn.tailwindcss.com",
-  "https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+const VERSION = "eca-v8";
+const SHELL = [
+  "./", "./index.html", "./manifest.json",
+  "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png",
+  "./img/eca-mark.png", "./img/eca-logo.jpg",
+  // ملفات الكود (لازم نفس ?v= اللي في index.html)
+  "./tailwind.css?v=eca-v8",
+  "./js/core.js?v=eca-v8", "./js/arena.js?v=eca-v8", "./js/extras.js?v=eca-v8", "./js/streaks.js?v=eca-v8", "./js/today.js?v=eca-v8", "./js/reports.js?v=eca-v8", "./js/tournaments.js?v=eca-v8", "./js/review.js?v=eca-v8", "./js/quality.js?v=eca-v8", "./js/announce.js?v=eca-v8", "./js/progress.js?v=eca-v8", "./js/firebase.js?v=eca-v8",
+  "./puzzles.js?v=eca-v8"   // عشان الامتحان يشتغل أوفلاين
 ];
+const CDN = [
+  "https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+];
+// Live data that must never be served from cache (Firebase, Lichess API, news proxy)
+const NO_CACHE_HOSTS = [
+  "firestore.googleapis.com", "identitytoolkit.googleapis.com", "securetoken.googleapis.com",
+  "www.googleapis.com", "apis.google.com", "accounts.google.com",
+  "api.allorigins.win"
+];
+const isLive = url => NO_CACHE_HOSTS.includes(url.hostname)
+  || url.hostname.endsWith(".firebaseapp.com")
+  || (url.hostname === "lichess.org" && url.pathname.startsWith("/api/"));
 
 self.addEventListener("install", e => {
   e.waitUntil((async () => {
     const c = await caches.open(VERSION);
-    await c.addAll(SHELL);
+    // one missing file must not break the whole install
+    await Promise.allSettled(SHELL.map(u => c.add(u)));
     // external libs: best effort (opaque responses are fine for <script>/<link>)
     await Promise.allSettled(CDN.map(u => fetch(new Request(u, { mode: "no-cors" })).then(r => c.put(u, r))));
     await self.skipWaiting();
@@ -28,6 +45,7 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.protocol !== "http:" && url.protocol !== "https:") return;
+  if (isLive(url)) return;            // let the browser go straight to the network
 
   // The app page: network first (so updates arrive), cache fallback (so it works offline)
   if (req.mode === "navigate") {
