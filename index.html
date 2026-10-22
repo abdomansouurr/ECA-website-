@@ -377,6 +377,7 @@
         <button onclick="switchTab('arena')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='arena'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">♟️ ساحة التدريب</button>
         <button onclick="switchTab('ranks')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='ranks'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">🏅 الرتب والشارات</button>
         ${u.role==='coach'?`<button onclick="switchTab('tracker')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='tracker'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">📋 متابعة الطلاب والجروبات</button><button onclick="switchTab('attendance')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='attendance'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">✅ تسجيل الحضور</button><button onclick="switchTab('finance')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='finance'?'gold-btn':'bg-zinc-900 text-emerald-300 border border-emerald-500/40'}">💰 الحسابات والداشبورد</button>`:''}
+        <button onclick="switchTab('honor')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='honor'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">🏆 قائمة الشرف</button>
         ${u.role === 'student' ? `<button onclick="switchTab('certs')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='certs'?'gold-btn':'bg-zinc-900 text-yellow-300 border border-yellow-500/40'}">🎓 شهاداتي${(u.certificates || []).length ? ' (' + u.certificates.length + ')' : ''}</button>` : ''}
         ${u.role === 'student' ? `<button onclick="switchTab('parent')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${tab==='parent'?'gold-btn':'bg-zinc-900 text-emerald-300 border border-emerald-500/40'}">📊 داشبورد ولي الأمر</button>` : ''}
         ${window.fbAuthInfo && !window.fbAuthInfo().google ? `<button onclick="linkGoogle()" title="ربط حسابك بجوجل للدخول بضغطة واحدة" class="px-2.5 py-1.5 rounded-xl text-xs bg-zinc-900 text-sky-300 border border-sky-500/30">🔗 Google</button>` : ''}
@@ -390,6 +391,7 @@
       else if (tab === "finance" && u.role === "coach") main.innerHTML = renderFinanceDashboardView();
       else if (tab === "parent" && u.role === "student") main.innerHTML = renderStudentParentView(u);
       else if (tab === "certs" && u.role === "student") main.innerHTML = renderMyCertsView(u);
+      else if (tab === "honor") main.innerHTML = renderHonorView(u);
       else if (tab === "arena") main.innerHTML = renderArenaView(u);
       else if (tab === "ranks") main.innerHTML = renderRanksView(u);
       else if (isInfoTab(tab)) main.innerHTML = renderInfoPage(tab);
@@ -1103,7 +1105,7 @@
     }
     anim();
     const h0 = (location.hash || "#home").slice(1);
-    tab = ["home", "lessons", "arena", "ranks", "certs", "tracker", "attendance", "finance", "parent", "about", "courses", "private", "faq", "fairplay", "contact"].includes(h0) ? h0 : "home";
+    tab = ["home", "lessons", "arena", "ranks", "certs", "honor", "tracker", "attendance", "finance", "parent", "about", "courses", "private", "faq", "fairplay", "contact"].includes(h0) ? h0 : "home";
     history.replaceState({ tab }, "", "#" + tab);
     window.addEventListener("popstate", e => { tab = (e.state && e.state.tab) || "home"; render(); });
     const _oe = openExamModal; openExamModal = function (l) { _oe(l); applyLang(); };
@@ -1771,22 +1773,30 @@ window.selectExamAns = function(qIdx, oIdx) {
     const STOCKFISH_URL = "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js";   // Stockfish.js (GPL)
     const PIECE = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
     const FILES = "abcdefgh";
+    // بوتات ساحة التدريب (من الأسهل للأصعب). ms = أقصى وقت تفكير بالملّي ثانية، rnd = نسبة النقلات العشوائية
+    // التقييم تقريبي للتوضيح بس. الاسم والوصف والصورة تقدر تغيّرهم من هنا (img = مسار صورة اختياري)
     const LEVELS = [
-      { name: "مبتدئ", desc: "بيلعب نقلات عشوائية كتير — مناسب لأول مرة.", skill: 0, depth: 1, rnd: .5 },
-      { name: "متعلّم", desc: "نقلات بسيطة وبيغلط كتير.", skill: 2, depth: 2, rnd: .25 },
-      { name: "متدرّب", desc: "بيعرف يستغل الأخطاء الواضحة.", skill: 4, depth: 3, rnd: .1 },
-      { name: "منافس", desc: "متوازن — مش سهل ومش صعب.", skill: 6, depth: 5, rnd: 0 },
-      { name: "استراتيجي", desc: "بيخطط وبيعمل فخاخ بسيطة.", skill: 9, depth: 7, rnd: 0 },
-      { name: "خبير", desc: "بيلعب تكتيك قوي — ركّز.", skill: 12, depth: 9, rnd: 0 },
-      { name: "أستاذ", desc: "صعب جداً وبيعاقب على أي غلطة.", skill: 16, depth: 12, rnd: 0 },
-      { name: "جراند ماستر", desc: "أقوى مستوى — للأبطال بس.", skill: 20, depth: 15, rnd: 0 }
+      { name: "مبتدئ", elo: "~300", piece: "p", color: "#94a3b8", img: "img/bots/1.png", desc: "أنا مش شاطر أوي، مناسب جداً للمبتدئين. يلا نلعب!", skill: 0, depth: 1, ms: 60, rnd: .6 },
+      { name: "متعلّم", elo: "~500", piece: "p", color: "#22c55e", img: "img/bots/2.png", desc: "بلعب نقلات لطيفة ومناسبة للمبتدئين.", skill: 1, depth: 2, ms: 100, rnd: .35 },
+      { name: "متدرّب", elo: "~700", piece: "n", color: "#ec4899", img: "img/bots/3.png", desc: "بحب المفاجآت وممكن أوقعك وانت مش واخد بالك!", skill: 3, depth: 3, ms: 160, rnd: .15 },
+      { name: "منافس", elo: "~900", piece: "n", color: "#f97316", img: "img/bots/4.png", desc: "متوازن — مش سهل أوي ومش صعب أوي.", skill: 5, depth: 4, ms: 220, rnd: .07 },
+      { name: "استراتيجي", elo: "~1150", piece: "b", color: "#06b6d4", img: "img/bots/5.png", desc: "نقلاتي ممكن تفاجئ حتى اللاعبين اللي عندهم خبرة!", skill: 8, depth: 6, ms: 350, rnd: .02 },
+      { name: "خبير", elo: "~1400", piece: "r", color: "#6366f1", img: "img/bots/6.png", desc: "بعرف استراتيجيات معقدة، جهّز نفسك!", skill: 11, depth: 9, ms: 550, rnd: 0 },
+      { name: "أستاذ", elo: "~1700", piece: "q", color: "#d946ef", img: "img/bots/7.png", desc: "صعب جداً وبنصب فخاخ لخصومي.", skill: 15, depth: 12, ms: 800, rnd: 0 },
+      { name: "جراند ماستر", elo: "2000+", piece: "k", color: "#d4af37", img: "img/bots/8.png", desc: "لاعب محترف — الأقوى بس هو اللي يقدر يكسبني.", skill: 20, depth: 18, ms: 1200, rnd: 0 }
     ];
+    // صورة البوت: لو له صورة بنعرضها، غير كده دايرة بلونه وفيها قطعته
+    function botAvatar(b, size) {
+      size = size || 48;
+      if (b.img) return `<img src="${esc(b.img)}" alt="" loading="lazy" class="rounded-full object-cover shrink-0 border-[3px] bg-white shadow-lg" style="width:${size}px;height:${size}px;border-color:${b.color}" />`;
+      return `<div class="rounded-full shrink-0 flex items-center justify-center border-2 border-white/30 shadow-lg" style="width:${size}px;height:${size}px;background:radial-gradient(circle at 30% 30%, ${b.color}ee, ${b.color}88 60%, #050507)"><span style="font-size:${Math.round(size * .58)}px;line-height:1;color:#fff;text-shadow:0 1px 3px #000;font-family:'Segoe UI Symbol','DejaVu Sans',sans-serif">${PIECE[b.piece]}&#xFE0E;</span></div>`;
+    }
     const PUZ_DIFF = [["daily", "🗓️ لغز اليوم من Lichess"], ["easiest", "سهل جداً"],["easier", "سهل"], ["normal", "متوسط"], ["harder", "صعب"], ["hardest", "صعب جداً"]];
     const VIS_SECONDS = 30;
 
     const arena = {
       sub: "play",
-      play: { game: null, level: 1, colorChoice: "w", color: "w", flip: false, sel: null, last: null, thinking: false, over: "" },
+      play: { game: null, level: 0, colorChoice: "w", color: "w", flip: false, sel: null, last: null, thinking: false, over: "" },
       puz: { game: null, sol: [], idx: 0, color: "w", flip: false, sel: null, last: null, flash: null, hint: null, status: "idle", diff: "easier", info: null, counted: false },
       vis: { active: false, target: "", score: 0, left: VIS_SECONDS, timer: null, attempts: [], coords: true, flip: false, flash: null, best: 0 }
     };
@@ -1823,8 +1833,11 @@ window.selectExamAns = function(qIdx, oIdx) {
       sfBusy = true; sfPending = cb;
       w.postMessage("setoption name Skill Level value " + lvl.skill);
       w.postMessage("position fen " + fen);
-      w.postMessage("go depth " + lvl.depth);
+      // حد أقصى للوقت: المحرك بيرد في وقت قصير ثابت بدل ما يقعد يحسب للعمق كله (ده اللي كان مخلّيه بطيء)
+      w.postMessage("go depth " + lvl.depth + (lvl.ms ? " movetime " + lvl.ms : ""));
     }
+    // تسخين المحرك أول ما الطالب يفتح «العب ضد الكمبيوتر» عشان أول نقلة ماتستناش تحميله
+    function warmEngine() { const w = engine(); if (w && !w.__warm) { w.__warm = true; w.postMessage("isready"); } }
 
     // ---------- الرقعة ----------
     function targetsOf(g, sel) {
@@ -1912,7 +1925,7 @@ window.selectExamAns = function(qIdx, oIdx) {
         P.thinking = false; if (r) P.last = [r.from, r.to];
         playCheckEnd(); arenaRefresh();
       };
-      const later = uci => setTimeout(() => apply(uci), Math.max(0, 500 - (Date.now() - t0)));
+      const later = uci => setTimeout(() => apply(uci), Math.max(0, 350 - (Date.now() - t0)));   // أقل وقت عشان النقلة تبان طبيعية
       if (Math.random() < lvl.rnd) later(randomUci()); else engineMove(fen, lvl, later);
     }
     function playCheckEnd() {
@@ -1920,8 +1933,14 @@ window.selectExamAns = function(qIdx, oIdx) {
       if (!g.isGameOver()) return;
       P.over = g.isCheckmate() ? (g.turn() === P.color ? "loss" : "win") : "draw";
       P.thinking = false;
-      recordArena(a => { a.games = a.games || { w: 0, l: 0, d: 0 }; a.games[P.over[0] === "w" ? "w" : P.over[0] === "l" ? "l" : "d"]++; if (P.over === "win") a.bestWin = Math.max(a.bestWin || 0, P.level + 1); });
-      toast(P.over === "win" ? "🏆 كسبت! برافو عليك" : P.over === "loss" ? "😔 الكمبيوتر كسب — جرّب تاني" : "🤝 تعادل");
+      recordArena(a => {
+        a.games = a.games || { w: 0, l: 0, d: 0 }; a.games[P.over[0] === "w" ? "w" : P.over[0] === "l" ? "l" : "d"]++;
+        if (P.over === "win") a.bestWin = Math.max(a.bestWin || 0, P.level + 1);
+        // ستريك الانتصارات ورا بعض (التعادل مابيقطعهوش، الخسارة بتصفّره)
+        if (P.over === "win") { a.winStreak = (a.winStreak || 0) + 1; a.bestWinStreak = Math.max(a.bestWinStreak || 0, a.winStreak); }
+        else if (P.over === "loss") a.winStreak = 0;
+      });
+      toast(P.over === "win" ? "🏆 كسبت ضد " + LEVELS[P.level].name + "! برافو عليك" : P.over === "loss" ? "😔 " + LEVELS[P.level].name + " كسب — جرّب تاني" : "🤝 تعادل");
     }
     function playUndo() {
       const P = arena.play, g = P.game; if (!g || P.thinking || !g.history().length) return;
@@ -1932,41 +1951,81 @@ window.selectExamAns = function(qIdx, oIdx) {
       const P = arena.play; if (!P.game || P.over) return;
       if (!confirm(trText("متأكد إنك عايز تستسلم؟"))) return;
       P.over = "loss"; P.thinking = false;
-      recordArena(a => { a.games = a.games || { w: 0, l: 0, d: 0 }; a.games.l++; });
+      recordArena(a => { a.games = a.games || { w: 0, l: 0, d: 0 }; a.games.l++; a.winStreak = 0; });
       arenaRefresh();
     }
+    function playNew() { const P = arena.play; P.game = null; P.over = ""; P.sel = null; P.last = null; P.thinking = false; render(); }
+    function botLine(b, P) {
+      if (P.over === "win") return "أحسنت! كسبتني المرة دي 👏";
+      if (P.over === "loss") return "كسبت المرة دي 😎 — جرّب تاني!";
+      if (P.over === "draw") return "تعادل! ماتش حلو 🤝";
+      if (P.thinking) return "🤔 بفكّر...";
+      if (P.game && P.game.inCheck() && P.game.turn() === P.color) return "كش! 😏";
+      return P.game && P.game.history().length ? "دورك 👀" : "يلا نلعب! ♟️";
+    }
     function arenaPlayHTML() {
-      const P = arena.play, g = P.game;
+      const P = arena.play, g = P.game, bot = LEVELS[P.level] || LEVELS[0];
+      warmEngine();
       const pill = (v, label) => `<button onclick="arena.play.colorChoice='${v}'; render();" class="flex-1 py-2 rounded-xl text-xs font-bold border ${P.colorChoice === v ? 'border-yellow-400 text-yellow-300 bg-yellow-500/10' : 'border-zinc-800 text-gray-400'}">${label}</button>`;
-      const status = !g ? "اختار المستوى واللون واضغط «ابدأ الدور»."
-        : P.over === "win" ? "🏆 كسبت الدور!" : P.over === "loss" ? "😔 خسرت الدور" : P.over === "draw" ? "🤝 الدور انتهى بالتعادل"
-        : P.thinking ? "🤔 الكمبيوتر بيفكر..." : (g.inCheck() ? "⚠️ كش! " : "") + "دورك — " + (P.color === "w" ? "انت بالأبيض" : "انت بالأسود");
-      const hist = g ? g.history() : [];
-      let rows = ""; for (let i = 0; i < hist.length; i += 2) rows += `<div class="flex gap-3 px-3 py-1 ${i % 4 === 0 ? 'bg-black/40' : ''}"><span class="w-6 text-gray-500">${i / 2 + 1}.</span><span class="w-16 text-white">${hist[i]}</span><span class="w-16 text-white">${hist[i + 1] || ''}</span></div>`;
+      // قبل الدور: اختيار البوت
+      if (!g) return `
+        <div class="gold-card rounded-2xl p-5 space-y-4">
+          <div>
+            <h3 class="font-display font-bold text-lg text-yellow-400">🤖 اختار البوت اللي هتلعب ضده</h3>
+            <p class="text-xs text-gray-400 mt-1">8 بوتات من الأسهل للأصعب — ابدأ من الأول وكل ما تكسب بوت جرّب اللي بعده.</p>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            ${LEVELS.map((b, i) => `
+              <button onclick="arena.play.level=${i}; render();" class="eca-tile p-3 rounded-2xl text-center border-2 ${P.level === i ? 'bg-yellow-500/10' : 'bg-black/70 border-zinc-800'}" style="${P.level === i ? 'border-color:' + b.color : ''}">
+                <div class="flex justify-center">${botAvatar(b, 56)}</div>
+                <div class="text-sm font-bold text-white mt-2">${esc(b.name)}</div>
+                <div class="text-[11px] font-bold" style="color:${b.color}" dir="ltr">${i + 1} • ${esc(b.elo)}</div>
+              </button>`).join("")}
+          </div>
+          <div class="flex flex-wrap items-center gap-4 p-4 rounded-2xl bg-black/70 border border-yellow-500/20">
+            ${botAvatar(bot, 64)}
+            <div class="flex-1 min-w-[180px]">
+              <div class="font-bold text-white">${esc(bot.name)} <span class="text-xs" style="color:${bot.color}" dir="ltr">(${esc(bot.elo)})</span></div>
+              <p class="text-xs text-gray-400 mt-1">${esc(bot.desc)}</p>
+            </div>
+            <div class="w-full sm:w-auto sm:min-w-[260px] space-y-2">
+              <div class="flex gap-2">${pill("w", "⚪ أبيض")}${pill("b", "⚫ أسود")}${pill("r", "🎲 عشوائي")}</div>
+              <button onclick="playStart()" class="w-full py-3 rounded-xl text-sm gold-btn">▶️ ابدأ الدور</button>
+            </div>
+          </div>
+          <p class="text-[10px] text-gray-500">التقييم جنب كل بوت تقريبي للتوضيح بس.</p>
+        </div>`;
+      const status = P.over === "win" ? "🏆 كسبت الدور!" : P.over === "loss" ? "😔 خسرت الدور" : P.over === "draw" ? "🤝 الدور انتهى بالتعادل"
+        : P.thinking ? "⏳ " + bot.name + " بيلعب..." : (g.inCheck() ? "⚠️ كش! " : "") + "دورك — " + (P.color === "w" ? "انت بالأبيض" : "انت بالأسود");
       return `
         <div class="grid lg:grid-cols-5 gap-5">
           <div class="min-w-0 lg:col-span-3 gold-card rounded-2xl p-3 sm:p-5">
-            ${boardHTML({ game: g || new ChessCls(), flip: P.flip, sel: P.sel, targets: g ? targetsOf(g, P.sel) : null, last: P.last, onClick: "playClick" })}
+            ${boardHTML({ game: g, flip: P.flip, sel: P.sel, targets: targetsOf(g, P.sel), last: P.last, onClick: "playClick" })}
           </div>
           <div class="min-w-0 lg:col-span-2 space-y-4">
             <div class="gold-card rounded-2xl p-5 space-y-3">
+              <div class="flex items-center gap-3">
+                ${botAvatar(bot, 56)}
+                <div class="min-w-0">
+                  <div class="font-bold text-white">${esc(bot.name)} <span class="text-xs" style="color:${bot.color}" dir="ltr">(${esc(bot.elo)})</span></div>
+                  <div class="mt-1 inline-block px-3 py-1 rounded-xl rounded-tr-none text-xs bg-white/10 text-gray-100 ${P.thinking ? 'animate-pulse' : ''}">${botLine(bot, P)}</div>
+                </div>
+              </div>
               <div class="text-sm font-bold ${P.over === 'win' ? 'text-emerald-300' : P.over === 'loss' ? 'text-red-300' : 'text-yellow-300'}">${status}</div>
-              <label class="block text-xs text-gray-400">مستوى الكمبيوتر</label>
-              <select onchange="arena.play.level=+this.value; render();" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-yellow-300">
-                ${LEVELS.map((l, i) => `<option value="${i}" ${P.level === i ? 'selected' : ''}>${i + 1}. ${l.name}</option>`).join("")}
-              </select>
-              <p class="text-[11px] text-gray-400">${LEVELS[P.level].desc}</p>
-              <div class="flex gap-2">${pill("w", "⚪ أبيض")}${pill("b", "⚫ أسود")}${pill("r", "🎲 عشوائي")}</div>
-              <button onclick="playStart()" class="w-full py-3 rounded-xl text-sm gold-btn">${g ? '🔄 دور جديد' : '▶️ ابدأ الدور'}</button>
-              ${g ? `<div class="grid grid-cols-3 gap-2">
+              <div class="grid grid-cols-3 gap-2">
                 <button onclick="playUndo()" class="tap rounded-xl text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">↩️ تراجع</button>
                 <button onclick="arena.play.flip=!arena.play.flip; render();" class="tap rounded-xl text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">🔃 اقلب الرقعة</button>
-                <button onclick="playResign()" class="tap rounded-xl text-xs bg-red-500/20 border border-red-500/30 text-red-300">🏳️ استسلام</button>
-              </div>` : ''}
+                <button onclick="playResign()" ${P.over ? 'disabled' : ''} class="tap rounded-xl text-xs bg-red-500/20 border border-red-500/30 text-red-300 disabled:opacity-40">🏳️ استسلام</button>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="playStart()" class="tap rounded-xl text-xs gold-btn">🔄 دور تاني مع ${esc(bot.name)}</button>
+                <button onclick="playNew()" class="tap rounded-xl text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">🤖 اختار بوت تاني</button>
+              </div>
+              ${P.over === "win" && P.level < LEVELS.length - 1 ? `<button onclick="arena.play.level=${P.level + 1}; playStart();" class="w-full py-2.5 rounded-xl text-xs font-bold bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">⬆️ العب ضد البوت اللي بعده: ${esc(LEVELS[P.level + 1].name)}</button>` : ''}
             </div>
             <div class="gold-card rounded-2xl p-4">
               <div class="text-xs font-bold text-yellow-400 mb-2">📜 النقلات</div>
-              <div dir="ltr" class="text-xs font-mono max-h-56 overflow-y-auto rounded-xl border border-yellow-500/15">${rows || `<div class="p-3 text-center text-gray-500">—</div>`}</div>
+              ${movesListHTML(g)}
             </div>
           </div>
         </div>`;
@@ -2566,7 +2625,7 @@ const ECA_PUZZLE_BANK = {
       "k7/pppppppp/8/8/8/8/PPPPPPPP/7K w - - 0 1", "7k/pppppppp/8/8/8/8/PPPPPPPP/K7 w - - 0 1", "8/ppkppp1p/8/8/8/8/PKPPPP1P/8 w - - 0 1",
       "4k3/ppp2ppp/8/8/8/8/PPP2PPP/3K4 w - - 0 1", "8/pppppppp/4k3/8/8/3K4/PPPPPPPP/8 w - - 0 1", "8/pppppppp/8/8/1K4k1/8/PPPPPPPP/8 w - - 0 1"
     ];
-    const PAWN_ENGINE = { skill: 12, depth: 4 };
+    const PAWN_ENGINE = { skill: 12, depth: 4, ms: 300 };
     arena.pawn = { idx: null, game: null, color: "w", flip: false, sel: null, last: null, thinking: false, over: "", started: false };
     function pawnPick(i) { arena.pawn.idx = i; pawnReset(); }
     function pawnReset() {
@@ -2810,7 +2869,7 @@ const ECA_PUZZLE_BANK = {
           ["حكم الوزير", "حل 50 لغز صح ورا بعض", "chess-queen-icon.svg", bs >= 50], ["فتوحات الملك", "حل 100 لغز صح ورا بعض", "chess-king-icon.svg", bs >= 100]] },
         { cat: "⭐ إنجازات متنوعة", items: [
           ["أول انتصار", "اكسب أول دور ضد الكمبيوتر", "chess-knight-icon.svg", (g.w || 0) >= 1],
-          ["قاهر الجراند ماستر", "اكسب ضد مستوى جراند ماستر", "chess-king-icon.svg", (a.bestWin || 0) >= 8],
+          ["قاهر الجراند ماستر", "اكسب ضد البوت «جراند ماستر»", "chess-king-icon.svg", (a.bestWin || 0) >= LEVELS.length],
           ["ملك البيادق", "اكسب 5 أدوار في لعبة البيادق", "chess-pawn-icon.svg", (a.pawnWins || 0) >= 5],
           ["عين الصقر", "جيب 20 نقطة أو أكتر في تدريب الرؤية", "chess_aim_target.jpg", (a.visionBest || 0) >= 20],
           ["أول شهادة", "اجتاز امتحان أول Step", "chess-queen-icon.svg", (s.certificates || []).length >= 1]] }
@@ -3338,6 +3397,70 @@ const ECA_PUZZLE_BANK = {
       applyLang();
     }
 
+    // ================= قائمة الشرف =================
+    // الكوتش بيشوف كل الطلبة فبيحسبها ويحفظها في meta/honor، والطالب بيقراها من هناك
+    const HONOR_TOP = 10;
+    function computeHonor() {
+      const studs = db.users.filter(s => s.role === "student");
+      const row = (s, v, streak) => ({ id: s.id, n: String(s.name || ""), s: Number(s.level) || 1, v, st: streak || 0 });
+      const top = (arr) => arr.filter(r => r.v > 0).sort((a, b) => b.v - a.v || b.st - a.st).slice(0, HONOR_TOP);
+      return {
+        puzzles: top(studs.map(s => { const a = s.arena || {}; return row(s, (a.puzSolved || 0) + ((s.puz && s.puz.c) || 0), a.puzBestStreak); })),
+        games: top(studs.map(s => { const a = s.arena || {}; return row(s, ((a.games && a.games.w) || 0) + (a.pawnWins || 0), a.bestWinStreak); })),
+        days: top(studs.map(s => { const a = s.arena || {}; const st = streaks(a.days); return row(s, st.best, st.current); }))
+      };
+    }
+    let honorTimer = null, honorLast = "";
+    function maybePublishHonor() {
+      if (!isCoach() || !window.fbPublishHonor) return;
+      clearTimeout(honorTimer);
+      honorTimer = setTimeout(async () => {
+        const data = computeHonor(), key = JSON.stringify(data);
+        if (key === honorLast) return;
+        if (await window.fbPublishHonor(Object.assign({ updated: Date.now() }, data))) honorLast = key;
+      }, 4000);
+    }
+    { const _r = render; render = function () { _r(); maybePublishHonor(); }; }
+
+    function renderHonorView(u) {
+      const coach = u.role === "coach";
+      const H = coach ? computeHonor() : (window.honorData || null);
+      const medal = i => i < 3 ? ["🥇", "🥈", "🥉"][i] : `<span class="text-gray-400">${i + 1}</span>`;
+      const board = (title, icon, list, valLabel, stLabel, emptyMsg) => `
+        <div class="gold-card rounded-2xl p-5">
+          <h3 class="font-display font-bold text-lg text-yellow-400 mb-3">${icon} ${title}</h3>
+          ${list && list.length ? `<div class="overflow-x-auto"><table class="w-full text-sm text-white">
+            <thead><tr class="text-yellow-300 border-b border-yellow-500/25 text-xs"><th class="py-2 w-10">#</th><th class="py-2 text-start">اسم الطالب</th><th class="py-2">Step</th><th class="py-2">${valLabel}</th><th class="py-2">${stLabel}</th></tr></thead>
+            <tbody>${list.map((r, i) => `<tr class="border-b border-yellow-500/10 ${r.id === u.id ? 'bg-yellow-500/15' : i < 3 ? 'bg-black/40' : ''}">
+              <td class="py-2.5 text-center text-lg">${medal(i)}</td>
+              <td class="py-2.5 font-bold ${i === 0 ? 'text-yellow-300' : ''}">${esc(r.n)}${r.id === u.id ? ' <span class="text-[10px] text-yellow-300">(انت)</span>' : ''}</td>
+              <td class="py-2.5 text-center text-gray-300">${esc(r.s)}</td>
+              <td class="py-2.5 text-center font-extrabold text-emerald-300">${esc(r.v)}</td>
+              <td class="py-2.5 text-center font-bold text-amber-300">🔥 ${esc(r.st)}</td>
+            </tr>`).join("")}</tbody>
+          </table></div>` : `<p class="text-xs text-gray-400">${emptyMsg}</p>`}
+        </div>`;
+      const myRank = (list) => { const i = (list || []).findIndex(r => r.id === u.id); return i >= 0 ? i + 1 : null; };
+      return `
+        <div class="space-y-5">
+          <div class="gold-card rounded-2xl p-6 text-center space-y-2 border-2 border-yellow-500/40">
+            <div class="text-4xl">🏆</div>
+            <h2 class="font-display font-extrabold text-2xl gold-gradient-text">قائمة الشرف</h2>
+            <p class="text-xs text-gray-400">أكتر الطلبة حلّاً للألغاز وكسباً للأدوار في ECA — وأعلى ستريك وصل له كل واحد.</p>
+            ${!coach && H ? `<div class="flex flex-wrap justify-center gap-2 pt-1 text-[11px]">
+              ${myRank(H.puzzles) ? `<span class="px-2.5 py-1 rounded-lg bg-yellow-500/15 text-yellow-300 border border-yellow-500/30">🧩 ترتيبك: ${myRank(H.puzzles)}</span>` : ''}
+              ${myRank(H.games) ? `<span class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">🤖 ترتيبك: ${myRank(H.games)}</span>` : ''}
+            </div>` : ''}
+          </div>
+          ${!H ? `<div class="gold-card rounded-2xl p-8 text-center text-sm text-gray-400">⏳ قائمة الشرف لسه بتتجهّز — بتتحدّث لما الكوتش يفتح المنصة.</div>` : `
+            ${board("أكتر الطلبة حلّاً للألغاز", "🧩", H.puzzles, "ألغاز اتحلّت", "أعلى ستريك ألغاز", "لسه محدش حل ألغاز — ادخل ساحة التدريب وابدأ!")}
+            ${board("أكتر الطلبة كسباً للأدوار", "🤖", H.games, "أدوار كسبها", "أعلى ستريك انتصارات", "لسه محدش كسب دور — العب ضد الكمبيوتر أو لعبة البيادق!")}
+            ${board("أطول ستريك تمرين", "📅", H.days, "أطول سلسلة (يوم)", "السلسلة الحالية", "لسه مفيش أيام تمرين متسجلة.")}
+            ${H.updated ? `<p class="text-[11px] text-gray-500 text-center">آخر تحديث: <span dir="ltr">${new Date(H.updated).toLocaleString(lang === "en" ? "en-GB" : "ar-EG")}</span></p>` : ''}`}
+          <p class="text-[11px] text-gray-500 text-center">الألغاز = ألغاز ساحة التدريب + اللغز اليومي • الأدوار = ضد الكمبيوتر + لعبة البيادق • بيظهر أول ${HONOR_TOP} في كل قائمة.</p>
+        </div>`;
+    }
+
     // ================= شهاداتي: كل شهادات الطالب في مكان واحد، متاحة في أي وقت =================
     function renderMyCertsView(u) {
       const certs = (u.certificates || []).map((c, i) => ({ c, i })).reverse();   // الأحدث الأول
@@ -3603,6 +3726,13 @@ const ECA_PUZZLE_BANK = {
       ["🎓 عرض الشهادة", "🎓 View certificate"], ["رجوع للرئيسية", "Back to home"], ["🏆 اختبار ترقية Step", "🏆 Promotion exam: Step"],
       ["✅ نقلة صحيحة!", "✅ Correct move!"], ["نقلة غلط", "Wrong move"], ["خلص الوقت", "Time's up"], ["🏳️ إنهاء الاختبار", "🏳️ End exam"],
       ["لو خرجت دلوقتي الألغاز اللي فاضلة هتتحسب غلط. متأكد؟", "If you leave now, the remaining puzzles count as wrong. Are you sure?"],
+      ["🏆 قائمة الشرف", "🏆 Honor roll"], ["قائمة الشرف", "Honor roll"], ["أكتر الطلبة حلّاً للألغاز وكسباً للأدوار في ECA — وأعلى ستريك وصل له كل واحد.", "ECA's top students in puzzles solved and games won — with each one's best streak."],
+      ["🧩 ترتيبك:", "🧩 Your rank:"], ["🤖 ترتيبك:", "🤖 Your rank:"], ["⏳ قائمة الشرف لسه بتتجهّز — بتتحدّث لما الكوتش يفتح المنصة.", "⏳ The honor roll is being prepared — it updates when the coach opens the platform."],
+      ["أكتر الطلبة حلّاً للألغاز", "Most puzzles solved"], ["ألغاز اتحلّت", "Puzzles solved"], ["أعلى ستريك ألغاز", "Best puzzle streak"], ["لسه محدش حل ألغاز — ادخل ساحة التدريب وابدأ!", "No puzzles solved yet — open the Training Arena and start!"],
+      ["أكتر الطلبة كسباً للأدوار", "Most games won"], ["أدوار كسبها", "Games won"], ["أعلى ستريك انتصارات", "Best win streak"], ["لسه محدش كسب دور — العب ضد الكمبيوتر أو لعبة البيادق!", "No games won yet — play the computer or the pawns game!"],
+      ["أطول ستريك تمرين", "Longest training streak"], ["أطول سلسلة (يوم)", "Longest streak (days)"], ["السلسلة الحالية", "Current streak"], ["لسه مفيش أيام تمرين متسجلة.", "No training days recorded yet."],
+      ["آخر تحديث:", "Last updated:"], ["(انت)", "(you)"],
+      ["الألغاز = ألغاز ساحة التدريب + اللغز اليومي • الأدوار = ضد الكمبيوتر + لعبة البيادق • بيظهر أول", "Puzzles = Training Arena + daily puzzle • Games = vs computer + pawns game • Showing the top"], ["في كل قائمة.", "in each list."],
       ["🎓 شهاداتي", "🎓 My certificates"], ["كل شهاداتك محفوظة هنا — تقدر تفتحها وتحمّلها بالعربي أو الإنجليزي في أي وقت.", "All your certificates are saved here — open and download them in Arabic or English any time."],
       ["📄 عربي", "📄 Arabic"], ["لسه مفيش شهادات", "No certificates yet"], ["الشهادة بتطلعلك لما تنجح في امتحان ترقية أي Step.", "You get a certificate when you pass any Step's promotion exam."],
       ["🎯 الشهادة الجاية:", "🎯 Next certificate:"], ["الصفحة الرئيسية ←", "Home →"], ["فاضلك", "You have"], ["درس في Step", "lessons left in Step"], ["عشان يفتحلك امتحان الترقية.", "before the promotion exam opens."],
@@ -3616,6 +3746,21 @@ const ECA_PUZZLE_BANK = {
       ["تم إلغاء طلب الإعادة", "Retry request cancelled"], ["رفض طلب الإعادة؟ الطالب هيقدر يبعت طلب تاني بعد كده.", "Decline this retry request? The student can send another one later."], ["تم رفض طلب الإعادة", "Retry request declined"],
       ["🔔 طلبات إعادة اختبار الترقية بانتظار موافقتك", "🔔 Exam retry requests waiting for your approval"], ["فتح المتابعة ←", "Open tracker →"], ["✓ موافقة", "✓ Approve"], ["✗ رفض", "✗ Decline"], ["(الدرجة السابقة:", "(previous score:"],
       ["📩 تم إرسال طلب إعادة الاختبار للمدرب المسؤول", "📩 Retry request sent to your coach"], ["✅ تمت الموافقة على إعادة الاختبار للطالب", "✅ Retake approved for"],
+      ["بيدقو", "Pawny"], ["سمسم", "Simsim"], ["ميمي", "Mimi"], ["كابتن زيزو", "Captain Zizo"], ["نورا", "Nora"], ["الحصان الأسود", "Black Knight"], ["الفيل الحكيم", "Wise Bishop"], ["الطابية الحديد", "Iron Rook"], ["الوزيرة", "The Queen"], ["الملك ECA", "King ECA"],
+      ["لسه بيتعلم القطع بتتحرك ازاي — بيلعب أي نقلة تقريباً.", "Still learning how the pieces move — plays almost any move."], ["بيحب يهجم بس بينسى يحمي قطعه.", "Loves to attack but forgets to defend."],
+      ["بتعرف الشوكة بالحصان، بس بتغلط كتير.", "Knows the knight fork, but makes lots of mistakes."], ["بيلعب بسرعة وبيستغل القطع السايبة.", "Plays fast and grabs loose pieces."],
+      ["هادية ومنظمة — بتطوّر قطعها صح.", "Calm and organised — develops pieces properly."], ["بيعمل فخاخ وتكتيكات مفاجئة.", "Sets traps and surprise tactics."],
+      ["بيخطط من بدري وبيسيطر على الأقطار.", "Plans early and controls the diagonals."], ["قوية في النهايات وما بتسيبش أي غلطة.", "Strong in endgames and never misses a mistake."],
+      ["هجوم مستمر وحسابات عميقة — ركّز كويس.", "Non-stop attacks and deep calculation — stay focused."], ["أقوى بوت في الأكاديمية — للأبطال بس.", "The academy's strongest bot — champions only."],
+      ["🤖 اختار البوت اللي هتلعب ضده", "🤖 Choose your opponent bot"], ["8 بوتات من الأسهل للأصعب — ابدأ من الأول وكل ما تكسب بوت جرّب اللي بعده.", "8 bots from easiest to hardest — start at the first and move up each time you win."],
+      ["التقييم جنب كل بوت تقريبي للتوضيح بس.", "Ratings next to each bot are approximate."], ["أحسنت! كسبتني المرة دي 👏", "Well done! You beat me this time 👏"], ["كسبت المرة دي 😎 — جرّب تاني!", "I won this time 😎 — try again!"],
+      ["تعادل! ماتش حلو 🤝", "A draw! Good game 🤝"], ["🤔 بفكّر...", "🤔 Thinking..."], ["كش! 😏", "Check! 😏"], ["دورك 👀", "Your move 👀"], ["يلا نلعب! ♟️", "Let's play! ♟️"], ["بيلعب...", "is moving..."],
+      ["🔄 دور تاني مع", "🔄 Rematch vs"], ["🤖 اختار بوت تاني", "🤖 Pick another bot"], ["⬆️ العب ضد البوت اللي بعده:", "⬆️ Play the next bot:"], ["🏆 كسبت ضد", "🏆 You beat"], ["! برافو عليك", "! Well done"], ["كسب — جرّب تاني", "won — try again"],
+      ["قاهر الجراند ماستر", "Grandmaster slayer"], ["اكسب ضد البوت «جراند ماستر»", "Beat the \"Grandmaster\" bot"],
+      ["أنا مش شاطر أوي، مناسب جداً للمبتدئين. يلا نلعب!", "I'm not very good, perfect for beginners. Let's play!"], ["بلعب نقلات لطيفة ومناسبة للمبتدئين.", "I make friendly, beginner-friendly moves."],
+      ["بحب المفاجآت وممكن أوقعك وانت مش واخد بالك!", "I love surprises and can catch you off guard!"], ["متوازن — مش سهل أوي ومش صعب أوي.", "I'm balanced — not too easy, but not too hard."],
+      ["نقلاتي ممكن تفاجئ حتى اللاعبين اللي عندهم خبرة!", "My moves can surprise even seasoned players!"], ["بعرف استراتيجيات معقدة، جهّز نفسك!", "I know complex strategies, prepare yourself!"],
+      ["صعب جداً وبنصب فخاخ لخصومي.", "I'm very challenging and lay traps for my opponents."], ["لاعب محترف — الأقوى بس هو اللي يقدر يكسبني.", "I'm an expert player — only the best can beat me."],
       ["📊 داشبورد ولي الأمر", "📊 Parent dashboard"], ["كل إحصائيات", "All statistics of"], ["في مكان واحد.", "in one place."], ["🖨️ طباعة التقرير", "🖨️ Print report"],
       ["💻 أونلاين", "💻 Online"], ["🏫 أوفلاين", "🏫 In-person"], ["التقييم العام للطالب", "Overall student rating"], ["شارة", "badges"],
       ["الدروس اللي حضرها في Step", "Lessons attended in Step"], ["الواجبات اللي حلّها", "Homework done"], ["دروس فاضلة للامتحان", "Lessons left before the exam"],
@@ -3819,6 +3964,11 @@ const ECA_PUZZLE_BANK = {
         }, onErr("users")));
       }
       unsubs.push(onSnapshot(doc(firestore, "meta", "groups"), applyGroups, onErr("groups")));
+      // قائمة الشرف: الكوتش بيحدّثها، والطلبة بيقروها (الطالب مايقدرش يقرا بيانات زمايله مباشرة)
+      unsubs.push(onSnapshot(doc(firestore, "meta", "honor"), s => {
+        window.honorData = s.exists() ? cleanDeep(s.data()) : null;
+        if (tab === "honor") render();
+      }, err => console.warn("honor roll not readable:", err && err.code)));
     }
 
     // ===================== حالة الدخول =====================
@@ -4042,6 +4192,11 @@ const ECA_PUZZLE_BANK = {
         if (cred) { try { await deleteUser(cred.user); } catch (_) {} await initUser(null); }
         return { ok: false, code: e && e.code };
       } finally { signingUp = false; }
+    };
+    window.fbPublishHonor = async (data) => {
+      if (!me || !isStaffRole(me.role)) return false;
+      try { await setDoc(doc(firestore, "meta", "honor"), plain(data)); return true; }
+      catch (e) { console.warn("honor roll publish failed:", e && e.code); return false; }
     };
     window.fbCreateInvite = async (role) => {
       if (!me || me.role !== "admin") return null;
