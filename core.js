@@ -160,6 +160,17 @@
     function switchTab(t) { go(t); render(); }
     function logout() { parentStu = null; parentQ = ""; if (window.fbLogout) window.fbLogout(); go("home"); render(); }
     function goHomeRefresh() { go("home"); render(); }
+    // قايمة الحساب (الأيقونة فوق يمين): فتح/قفل — كانت ناقصة من النسخة
+    function closeAcctMenu() { const m = document.getElementById("acctMenu"), b = document.getElementById("acctBtn"); if (m) m.classList.add("hidden"); if (b) b.setAttribute("aria-expanded", "false"); }
+    function toggleAcctMenu(ev) {
+      if (ev) ev.stopPropagation();
+      const m = document.getElementById("acctMenu"), b = document.getElementById("acctBtn"); if (!m) return;
+      const open = m.classList.contains("hidden");
+      m.classList.toggle("hidden", !open);
+      if (b) b.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+    document.addEventListener("click", e => { if (!e.target.closest || !e.target.closest("#acctMenu, #acctBtn")) closeAcctMenu(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") closeAcctMenu(); });
     function isInfoTab(t) { return typeof renderInfoPage === "function" && INFO_TABS.includes(t); }   // صفحات المعلومات (متعرّفة في سكريبت تحت)
 
     function calcStats(stu) {
