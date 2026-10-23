@@ -1,13 +1,13 @@
 // ECA service worker — offline support. Bump VERSION to force clients to refresh the cache.
-const VERSION = "eca-v9";
+const VERSION = "eca-v10";
 const SHELL = [
   "./", "./index.html", "./manifest.json",
   "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png",
   "./img/eca-mark.png", "./img/eca-logo.jpg",
   // ملفات الكود (لازم نفس ?v= اللي في index.html)
-  "./tailwind.css?v=eca-v9",
-  "./js/core.js?v=eca-v9", "./js/arena.js?v=eca-v9", "./js/extras.js?v=eca-v9", "./js/streaks.js?v=eca-v9", "./js/today.js?v=eca-v9", "./js/reports.js?v=eca-v9", "./js/tournaments.js?v=eca-v9", "./js/review.js?v=eca-v9", "./js/quality.js?v=eca-v9", "./js/announce.js?v=eca-v9", "./js/progress.js?v=eca-v9", "./js/firebase.js?v=eca-v9",
-  "./puzzles.js?v=eca-v9"   // عشان الامتحان يشتغل أوفلاين
+  "./tailwind.css?v=eca-v10",
+  "./js/core.js?v=eca-v10", "./js/arena.js?v=eca-v10", "./js/extras.js?v=eca-v10", "./js/streaks.js?v=eca-v10", "./js/today.js?v=eca-v10", "./js/reports.js?v=eca-v10", "./js/tournaments.js?v=eca-v10", "./js/review.js?v=eca-v10", "./js/quality.js?v=eca-v10", "./js/announce.js?v=eca-v10", "./js/progress.js?v=eca-v10", "./js/firebase.js?v=eca-v10",
+  "./puzzles.js?v=eca-v10"   // عشان الامتحان يشتغل أوفلاين
 ];
 const CDN = [
   "https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"
