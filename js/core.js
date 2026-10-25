@@ -132,7 +132,44 @@
         if (e.__p === undefined) e.__p = e.getAttribute("placeholder");
         e.setAttribute("placeholder", lang === "en" ? trText(e.__p) : e.__p);
       });
+      scheduleBidi();
     }
+    // ===== اتجاه النص (RTL) للجمل العربية =====
+    // الصفحة نفسها LTR، فالجملة العربية اللي فيها كلمة إنجليزي في أولها أو آخرها (Steps، Lichess، ECA…) كانت بتتعرض
+    // بترتيب غلط وعلامات الترقيم بتروح للجنب الغلط. هنا بنخلّي كل نص فيه عربي RTL، من غير ما نقلب شكل الصفحة.
+    const AR_LETTERS = /[\u0600-\u06FF\u0750-\u077F]/;
+    function fixBidi() {
+      const body = document.body; if (!body) return;
+      if (lang !== "ar") {                                     // الإنجليزي: شيل أي اتجاه ضفناه
+        body.querySelectorAll("[data-ecabidi]").forEach(el => {
+          if (el.dataset.ecabidi === "w") { const par = el.parentNode; while (el.firstChild) par.insertBefore(el.firstChild, el); par.removeChild(el); }
+          else { el.removeAttribute("dir"); el.removeAttribute("data-ecabidi"); }
+        });
+        return;
+      }
+      const w = document.createTreeWalker(body, NodeFilter.SHOW_TEXT), nodes = [];
+      while (w.nextNode()) { const n = w.currentNode; if (n.nodeValue && AR_LETTERS.test(n.nodeValue)) nodes.push(n); }
+      const disp = new Map(), flexish = d => /flex|grid/.test(d);
+      for (const n of nodes) {
+        let el = n.parentElement; if (!el) continue;
+        const tag = el.nodeName; if (tag === "SCRIPT" || tag === "STYLE" || tag === "TEXTAREA" || tag === "OPTION") continue;
+        if (el.hasAttribute("data-ecabidi")) continue;         // اتظبط قبل كده
+        if (el.closest('[dir="ltr"]') && !el.closest("[data-ecabidi]")) continue;   // مكان اتحدد له LTR عمدًا (أرقام، FEN…)
+        const direct = el;
+        while (el && el !== body) { let d = disp.get(el); if (!d) { d = getComputedStyle(el).display; disp.set(el, d); } if (d !== "inline") break; el = el.parentElement; }
+        if (!el || el === body) continue;
+        if (el.hasAttribute("data-ecabidi")) continue;
+        if (el.hasAttribute("dir")) continue;                  // فيه اتجاه محدد من الكود
+        if (el === direct && flexish(disp.get(el))) {          // نص مباشر جوه flex/grid: نلفّه في span عشان ما نقلبش ترتيب العناصر
+          const sp = document.createElement("span"); sp.setAttribute("dir", "rtl"); sp.dataset.ecabidi = "w";
+          n.parentNode.insertBefore(sp, n); sp.appendChild(n);
+        } else if (!flexish(disp.get(el))) { el.setAttribute("dir", "rtl"); el.dataset.ecabidi = "1"; }
+      }
+    }
+    let bidiTimer = 0;
+    function scheduleBidi() { clearTimeout(bidiTimer); bidiTimer = setTimeout(fixBidi, 40); }
+    try { new MutationObserver(scheduleBidi).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (_) {}
+
     function toggleLang() { lang = lang === "en" ? "ar" : "en"; localStorage.setItem("ECA_LANG", lang); render(); }   // render بيعمل applyLang + بيعيد التواريخ والجُمل اللي فيها أرقام
     const DB_KEY = "ECA_PLATFORM_V2";
     try { localStorage.removeItem(DB_KEY); } catch (_) {}   // مسح النسخة القديمة المخزنة في المتصفح (كانت فيها كلمات سر)

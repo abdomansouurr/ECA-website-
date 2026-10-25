@@ -7,14 +7,14 @@
       email: "egyptchessacademy@gmail.com",
       address: "Lakehouse - The Club, Cairo, Egypt",
       // من صفحات الأكاديمية على فيسبوك وإنستجرام
-      stats: [["+25K", "متابع على فيسبوك"], ["+5K", "متابع على إنستجرام"], ["9", "أماكن تدريب"], ["6", "Steps في المنهج"]],
-      branches: ["The Club - Lakehouse", "Steamulation Hub", "الرحاب", "Pegasus", "القطامية", "Beverly", "نادي الصيد - أكتوبر", "نادي الجزيرة", "نادي الصيد - الدقي"],
+      stats: [["+25K", "متابع على فيسبوك"], ["+5K", "متابع على إنستجرام"], ["11", "أماكن تدريب"], ["6", "Steps في المنهج"]],
+      branches: ["Gezira Sporting Club", "Lakehouse The Club", "Shooting Club Dokki", "Shooting Club 6th of October", "Shooting Club – Katameya", "Madinaty Sports Club", "Rehab Sporting Club", "Beverly Hills Clubhouse", "Pegasus Dreamland", "Steamulation Hub", "The Club New Capital"],
       achievements: [
         { icon: "", name: "عبدالرحمن سامح", text: "المركز الثاني عالمياً تحت 13 سنة في بطولة العالم للشطرنج بإسبانيا — إنجاز مشرّف يرفع اسم مصر." }
       ],
       facebook: "https://www.facebook.com/Egyptchessacademy",
       instagram: "https://www.instagram.com/egyptchessacademy",
-      tiktok: "https://www.tiktok.com/@egyptchessacademy",
+      tiktok: "https://www.tiktok.com/@egyptchess.academy",
       youtube: "",
       plans: [
         { name: "حصص جماعية أوفلاين", price: "", unit: "جنيه / شهرياً", features: ["حضور في الأكاديمية مع الكوتش", "منهج ECA من Step 1 لحد Step 6", "متابعة الحضور والواجب على المنصة", "ملاحظات الكوتش لولي الأمر", "شهادة بعد اجتياز كل Step"] },
@@ -377,7 +377,7 @@
       <div class="gold-card rounded-2xl p-6 grid md:grid-cols-3 gap-6 items-center">
         <img src="img/chess_set.png" alt="" loading="lazy" class="w-full max-w-[240px] mx-auto opacity-90" />
         <div class="md:col-span-2 space-y-3 text-center md:text-start">
-          <h3 class="font-display font-bold text-2xl gold-gradient-text">انضم وبقى لاعب أقوى!</h3>
+          <h3 class="font-display font-bold text-2xl gold-gradient-text">انضم وابقى لاعب أقوى!</h3>
           <p class="text-sm text-gray-300">احجز مكانك دلوقتي واكتشف إمكانياتك.</p>
           <button onclick="switchTab('contact')" class="px-6 py-3 rounded-xl text-sm gold-btn">انضم دلوقتي</button>
         </div>
@@ -415,11 +415,23 @@
           <h3 class="font-display font-bold text-xl text-yellow-400 mb-3">أبطالنا</h3>
           <div class="space-y-3">${ECA_INFO.achievements.map(a => `<div class="flex gap-3 items-start p-3 rounded-xl bg-black/70 border border-yellow-500/25"><span class="text-2xl">${esc(a.icon || "")}</span><div><b class="text-white">${esc(a.name)}</b><p class="text-sm text-gray-300 mt-0.5">${esc(a.text)}</p></div></div>`).join("")}</div>
         </div>` : ''}
-        ${ECA_INFO.branches.length ? `<div class="gold-card rounded-2xl p-6">
-          <h3 class="font-display font-bold text-xl text-yellow-400 mb-1">أماكن التدريب</h3>
-          <p class="text-xs text-gray-400 mb-3">بندرّب في أكتر من مكان في القاهرة والجيزة — اسأل على أقرب مكان ليك ومواعيده.</p>
-          <div class="flex flex-wrap gap-2">${ECA_INFO.branches.map(b => `<span class="px-3 py-1.5 rounded-xl text-xs font-bold bg-black/70 border border-yellow-500/30 text-yellow-200">${esc(b)}</span>`).join("")}</div>
-          <button onclick="switchTab('contact')" class="mt-4 px-5 py-2.5 rounded-xl text-xs gold-btn">اسأل على المواعيد</button>
+        ${ECA_INFO.branches.length ? `<div class="gold-card rounded-2xl p-6 space-y-4" dir="ltr" lang="en">
+          <h3 class="font-display font-bold text-2xl text-yellow-400">We are everywhere you are!</h3>
+          <div class="space-y-1 text-sm text-gray-300">
+            <p>Egypt Chess Academy is growing.. and we’re always near you..</p>
+            <p>Join us at one of our branches across Cairo &amp; beyond!</p>
+          </div>
+          <div>
+            <div class="text-sm font-bold text-yellow-300 mb-2">Our Branches:</div>
+            <div class="flex flex-wrap gap-2">${ECA_INFO.branches.map(b => `<span class="px-3 py-1.5 rounded-xl text-xs font-bold bg-black/70 border border-yellow-500/30 text-yellow-200">• ${esc(b)}</span>`).join("")}</div>
+          </div>
+          <div class="space-y-1 text-sm text-gray-300">
+            <p class="font-bold text-white">Can’t reach a branch? We’ve got you covered!</p>
+            <p>We also offer online training sessions, so you can learn, play, and improve from anywhere</p>
+            <p>Wherever you are, there’s always a board waiting for you.</p>
+          </div>
+          <p class="text-sm font-bold text-yellow-300">See you at Egypt Chess Academy!</p>
+          <button onclick="switchTab('contact')" class="px-5 py-2.5 rounded-xl text-xs gold-btn">Ask about schedules</button>
         </div>` : ''}
         <div class="gold-card rounded-2xl p-6 grid md:grid-cols-2 gap-6 items-center">
           <img src="img/chess-pieces-aboutUs.jpeg" alt="" loading="lazy" class="w-full rounded-2xl border border-yellow-500/30 object-cover max-h-72 md:order-none order-last" />
@@ -1085,7 +1097,7 @@
       ["نظام الرتب والشارات للطلاب، وترتيبهم حسب الـ XP.", "The students' ranks & badges system and their XP leaderboard."],
       ["عن ECA", "About ECA"], ["عن الأكاديمية", "About us"], ["الكورسات والأسعار", "Courses & prices"], ["الحصص الخاصة", "Private lessons"],
       ["الأسئلة الشائعة", "FAQ"], ["اللعب النظيف", "Fair play"], ["تواصل معنا", "Contact us"],
-      ["انضم وبقى لاعب أقوى!", "Join and become a better player!"], ["احجز مكانك دلوقتي واكتشف إمكانياتك.", "Sign up now and discover your potential."], ["انضم دلوقتي", "Join now"],
+      ["انضم وابقى لاعب أقوى!", "Join and become a better player!"], ["احجز مكانك دلوقتي واكتشف إمكانياتك.", "Sign up now and discover your potential."], ["انضم دلوقتي", "Join now"],
       ["عن الأكاديمية", "About us"],
       ["ECA أكاديمية شطرنج بتعلّم الطلاب من الصفر لحد المستويات المتقدمة بمنهج من 6 Steps. المنصة دي معمولة عشان الطالب يتعلم ويتمرن ويتابع تقدمه، والكوتش يتابع الحضور والواجبات، وولي الأمر يطمن على ابنه — كله في مكان واحد.", "ECA is a chess academy that teaches students from zero to advanced levels through a 6-Step curriculum. This platform lets students learn, practice and track progress, coaches follow attendance and homework, and parents stay informed — all in one place."],
       ["فلسفتنا", "Our philosophy"],
