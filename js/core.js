@@ -1034,20 +1034,47 @@
     // re-render date label etc. when language flips on the attendance page
     { const _tl = toggleLang; toggleLang = function () { _tl(); if (tab === "attendance") render(); }; }
 
-    // Background Animation
+    // Background Animation: نقط خفيفة + قطع شطرنج بتطفو ببطء في كل الصفحات.
+    // القطع هي قطع cburnett (img/pieces/lichess) مصبوغة بلون الثيم الحالي وشفافة جدًا عشان ما تأثرش على القراءة.
     const cv = document.getElementById("bgCanvas"), ctx = cv.getContext("2d");
     function rsz() { cv.width = window.innerWidth; cv.height = window.innerHeight; }
     window.addEventListener("resize", rsz); rsz();
+    const bgRoot = document.documentElement;
+    const bgRGB = () => bgRoot.classList.contains("eca") ? "10,69,168" : bgRoot.classList.contains("light") ? "153,116,21" : "212,175,55";
+    const bgStill = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);   // لو الجهاز طالب تقليل الحركة: ثابتة
     const pts = Array.from({ length: 35 }, () => ({ x: Math.random() * cv.width, y: Math.random() * cv.height, r: Math.random() * 1.8 + 0.5, vx: (Math.random() - 0.5) * 0.25, vy: (Math.random() - 0.5) * 0.25 }));
-    function anim() {
+    const BG_TYPES = ["K", "Q", "R", "B", "N", "P"], bgImgs = {}; let bgTint = {};
+    ["w", "b"].forEach(col => BG_TYPES.forEach(t => { const im = new Image(); im.onload = () => { bgImgs[col + t] = im; bgTint = {}; }; im.src = "img/pieces/lichess/" + col + t + ".svg"; }));
+    // الداكن: قطع بيضا متلونة بالدهبي، الفاتح/ECA: قطع سودا متلونة بلون الثيم. بنحافظ على تفاصيل القطعة عشان تتعرف.
+    function bgSprite(t, rgb) {
+      const dark = !bgRoot.classList.contains("light"), key = (dark ? "w" : "b") + t, k = key + rgb; if (bgTint[k]) return bgTint[k];
+      const im = bgImgs[key]; if (!im) return null;
+      const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d");
+      x.drawImage(im, 0, 0, 256, 256); x.globalCompositeOperation = "source-atop"; x.fillStyle = "rgba(" + rgb + "," + (dark ? 0.55 : 0.7) + ")"; x.fillRect(0, 0, 256, 256);
+      return (bgTint[k] = c);
+    }
+    const bgPieces = Array.from({ length: window.innerWidth < 700 ? 7 : 13 }, (_, i) => ({
+      t: BG_TYPES[i % 6], x: Math.random() * cv.width, y: Math.random() * cv.height, s: 70 + Math.random() * 90,
+      vy: -(0.12 + Math.random() * 0.22), vx: (Math.random() - 0.5) * 0.12, rot: (Math.random() - 0.5) * 0.7, vr: (Math.random() - 0.5) * 0.0025,
+      a: 0.10 + Math.random() * 0.10, ph: Math.random() * 6.28
+    }));
+    function anim(now) {
       ctx.clearRect(0, 0, cv.width, cv.height);
+      const rgb = bgRGB(), mv = bgStill ? 0 : 1, tm = now || 0;
+      bgPieces.forEach(p => {
+        p.y += p.vy * mv; p.x += (p.vx + Math.sin(tm * 0.0004 + p.ph) * 0.15) * mv; p.rot += p.vr * mv;
+        if (p.y < -p.s) { p.y = cv.height + p.s; p.x = Math.random() * cv.width; }
+        if (p.x < -p.s) p.x = cv.width + p.s; else if (p.x > cv.width + p.s) p.x = -p.s;
+        const sp = bgSprite(p.t, rgb); if (!sp) return;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.globalAlpha = p.a; ctx.drawImage(sp, -p.s / 2, -p.s / 2, p.s, p.s); ctx.restore();
+      });
       pts.forEach(p => {
-        p.x = (p.x + p.vx + cv.width) % cv.width; p.y = (p.y + p.vy + cv.height) % cv.height;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = document.documentElement.classList.contains("eca") ? "rgba(10,69,168,0.22)" : document.documentElement.classList.contains("light") ? "rgba(153,116,21,0.28)" : "rgba(212,175,55,0.3)"; ctx.fill();
+        p.x = (p.x + p.vx * mv + cv.width) % cv.width; p.y = (p.y + p.vy * mv + cv.height) % cv.height;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = "rgba(" + rgb + "," + (rgb === "10,69,168" ? 0.22 : rgb === "153,116,21" ? 0.28 : 0.3) + ")"; ctx.fill();
       });
       requestAnimationFrame(anim);
     }
-    anim();
+    requestAnimationFrame(anim);
     const h0 = (location.hash || "#home").slice(1);
     tab = ["home", "lessons", "arena", "ranks", "certs", "honor", "tracker", "attendance", "finance", "parent", "about", "courses", "private", "faq", "fairplay", "contact"].includes(h0) ? h0 : "home";
     history.replaceState({ tab }, "", "#" + tab);
