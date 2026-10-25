@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ar" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#050507" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" href="img/eca-mark.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="ECA Chess" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <script>(function(){try{var v=localStorage.getItem("ECA_THEME"),t=v==="light"||v==="eca"?v:"dark";var d=document.documentElement;d.classList.remove("dark","light","eca");d.classList.add(t==="eca"?"light":t);if(t==="eca")d.classList.add("eca");}catch(e){}})();</script>
+  <title>Egypt Chess Academy (ECA) — Full Platform</title>
+  <script>/* التقاط الأخطاء من أول لحظة — firebase.js بيبعتها لـ errors */window.__ecaErr=[];addEventListener("error",function(e){if(window.__ecaErr.length<30)window.__ecaErr.push({msg:String(e.message||"").slice(0,500),src:String(e.filename||"").slice(0,300),line:e.lineno||0})});addEventListener("unhandledrejection",function(e){var r=e.reason;if(window.__ecaErr.length<30)window.__ecaErr.push({msg:String((r&&(r.message||r))||"unhandled rejection").slice(0,500),src:"promise",line:0})});</script>
+  <meta name="description" content="أكاديمية مصر للشطرنج (ECA): منهج تدريبي من 6 مراحل، ألغاز يومية، لعب ضد بوتات بمستويات مختلفة، امتحانات ترقية وشهادات، ومتابعة كاملة لولي الأمر." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Egypt Chess Academy (ECA)" />
+  <meta property="og:title" content="Egypt Chess Academy — أكاديمية مصر للشطرنج" />
+  <meta property="og:description" content="منهج تدريبي، ألغاز يومية، بوتات تدريب، امتحانات ترقية وشهادات، ومتابعة لولي الأمر." />
+  <meta property="og:url" content="https://eca-website-for-coach.vercel.app/" />
+  <meta property="og:image" content="https://eca-website-for-coach.vercel.app/icon-512.png" />
+  <meta property="og:locale" content="ar_EG" />
+  <meta name="twitter:card" content="summary" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { background-color: #050507; color: #f3f4f6; font-family: 'Inter', 'Cairo', 'Segoe UI', Tahoma, sans-serif; overflow-x: hidden; }
+    .font-display { font-family: 'Cinzel', 'Cairo', serif; }
+    .gold-gradient-text { background: linear-gradient(135deg, #fff3c4 0%, #d4af37 50%, #997415 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .gold-card { background: rgba(14, 14, 21, 0.88); backdrop-filter: blur(12px); border: 1px solid rgba(212, 175, 55, 0.3); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65); }
+    .gold-btn { background: linear-gradient(135deg, #f3d266 0%, #d4af37 100%); color: #050507; font-weight: 700; }
+    .gold-btn:hover { filter: brightness(1.08); }
+
+    /* ===== ECA additions: mobile, attendance, light theme ===== */
+    body { padding-bottom: env(safe-area-inset-bottom); -webkit-tap-highlight-color: transparent; }
+    header.sticky { padding-top: env(safe-area-inset-top); }
+    @media (max-width: 640px) {
+      #navButtons { width: 100%; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+      #navButtons > button { white-space: nowrap; flex: 0 0 auto; }
+      input, select, textarea { font-size: 16px !important; }
+    }
+    .att-btn { min-height: 42px; min-width: 66px; padding: 0 12px; border-radius: 12px; font-size: 12px; font-weight: 700; background: #18181b; color: #d1d5db; border: 1px solid rgba(212,175,55,.25); }
+    .att-p.on { background: #10b981 !important; color: #04170f !important; border-color: #10b981 !important; }
+    .att-l.on { background: #f59e0b !important; color: #1a1000 !important; border-color: #f59e0b !important; }
+    .att-a.on { background: #ef4444 !important; color: #ffffff !important; border-color: #ef4444 !important; }
+    .tap { min-height: 44px; }
+    /* ===== إمكانية الوصول ===== */
+    /* ===== الهيدر والتاسك بار ===== */
+    .eca-header { background: rgba(8,8,12,.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid rgba(212,175,55,.22); }
+    html.light .eca-header { background: rgba(250,247,238,.94); border-bottom-color: rgba(122,90,7,.22); }
+    .icon-btn { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; border: 1px solid rgba(212,175,55,.35); background: #111114; color: #f3d266; transition: background .15s, border-color .15s; }
+    .icon-btn.wide { width: auto; min-width: 40px; padding: 0 10px; }
+    .icon-btn:hover { background: #1a1a1f; border-color: rgba(212,175,55,.6); }
+    .icon-btn svg { width: 18px; height: 18px; }
+    .icon-btn.danger { color: #fca5a5; border-color: rgba(239,68,68,.35); }
+    html.light .icon-btn { background: #fff; color: #7a5a07; border-color: rgba(122,90,7,.3); }
+    html.light .icon-btn.danger { color: #b91c1c; }
+    .nav-bar { display: flex; gap: 4px; overflow-x: auto; padding: 2px 0 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; }
+    .nav-bar::-webkit-scrollbar { display: none; }
+    .nav-bar:empty { display: none; }
+    .nav-tab { flex: 0 0 auto; display: inline-flex; align-items: center; height: 38px; padding: 0 14px; border-radius: 10px; font-size: 13px; font-weight: 600; color: #cbd5e1; background: transparent; border: 1px solid transparent; white-space: nowrap; scroll-snap-align: start; transition: background .15s, color .15s, border-color .15s; }
+    .nav-tab:hover { background: rgba(212,175,55,.08); color: #f3d266; }
+    .nav-tab.active { background: linear-gradient(135deg,#f3d266,#d4af37); color: #0b0b0f; font-weight: 700; }
+    .nav-tab .badge { margin-inline-start: 6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; font-size: 11px; line-height: 18px; text-align: center; background: rgba(212,175,55,.2); color: inherit; }
+    html.light .nav-tab { color: #374151; }
+    html.light .nav-tab:hover { background: rgba(122,90,7,.08); color: #7a5a07; }
+    html.light .nav-tab.active { color: #111827; }
+    .hdr-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand tools" "search search"; align-items: center; column-gap: 12px; row-gap: 8px; }
+    .hdr-brand { grid-area: brand; } .hdr-tools { grid-area: tools; } .hdr-search { grid-area: search; }
+    @media (min-width: 768px) { .hdr-row { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "brand search tools"; } .hdr-search { max-width: 420px; justify-self: center; width: 100%; } }
+    @media (max-width: 380px) { .icon-btn { width: 36px; height: 36px; } }
+    @media (min-width: 1024px) { .nav-bar { flex-wrap: wrap; overflow: visible; } .nav-tab { height: 36px; padding: 0 12px; } }
+    :focus-visible { outline: 2px solid #d4af37 !important; outline-offset: 2px; border-radius: 10px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+    html.light .text-gray-600 { color: #4b5563 !important; }
+    html.light .text-yellow-200 { color: #6b4f0a !important; }
+    html.light .text-sky-300, html.light .text-sky-200 { color: #075985 !important; }
+    html.light .text-emerald-200 { color: #065f46 !important; }
+    html.light .text-red-200 { color: #991b1b !important; }
+    html.light .text-amber-200 { color: #92400e !important; }
+    .g-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 46px; padding: 0 14px; border-radius: 12px; background: #fff; color: #1f1f1f; font-size: 13px; font-weight: 700; border: 1px solid #dadce0; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: background .15s; }
+    .g-btn:hover { background: #f1f3f4; }
+    html.light .g-btn, html.light .g-btn * { color: #1f1f1f !important; }
+
+    /* ===== ساحة التدريب: الرقعة ===== */
+    .eca-board { direction: ltr; width: 100%; max-width: 520px; aspect-ratio: 1 / 1; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); border-radius: 14px; overflow: hidden; border: 2px solid rgba(212,175,55,.55); box-shadow: 0 10px 30px rgba(0,0,0,.5); user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+    .eca-sq { position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .eca-sq.l { background: var(--sq-l, #f0d9b5); } .eca-sq.d { background: var(--sq-d, #b58863); }
+    .eval-bar { direction: ltr; height: 14px; border-radius: 999px; overflow: hidden; background: #1a1410; border: 1px solid rgba(212,175,55,.45); }
+    .eval-bar > div { height: 100%; background: linear-gradient(90deg, #fffdf5, #f3e7c4); transition: width .35s ease; }
+    .eca-tile { transition: transform .15s ease, border-color .15s ease; }
+    .eca-tile:hover { transform: translateY(-3px); border-color: rgba(250,204,21,.8); }
+    .badge-off { filter: grayscale(1); opacity: .35; }
+    details.faq > summary { list-style: none; cursor: pointer; }
+    details.faq > summary::-webkit-details-marker { display: none; }
+    details.faq[open] .faq-ic { transform: rotate(180deg); }
+    .eca-sq.last::before { content: ""; position: absolute; inset: 0; background: rgba(212,175,55,.45); }
+    .eca-sq.sel::before { content: ""; position: absolute; inset: 0; background: rgba(255,215,64,.7); }
+    .eca-sq.hint::before { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 4px #10b981; }
+    .eca-sq.good::before { content: ""; position: absolute; inset: 0; background: rgba(16,185,129,.6); }
+    .eca-sq.bad::before { content: ""; position: absolute; inset: 0; background: rgba(239,68,68,.65); }
+    .eca-sq.chk::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle, rgba(239,68,68,.95) 0%, rgba(239,68,68,.35) 55%, transparent 75%); }
+    .eca-sq.mv::after { content: ""; position: absolute; width: 28%; height: 28%; border-radius: 50%; background: rgba(5,5,7,.32); }
+    .eca-sq.cap::after { content: ""; position: absolute; inset: 6%; border-radius: 50%; border: 5px solid rgba(5,5,7,.32); }
+    .eca-pc { position: relative; z-index: 1; font-size: clamp(24px, 9.2vw, 54px); line-height: 1; font-family: "Segoe UI Symbol", "DejaVu Sans", "Noto Sans Symbols 2", sans-serif; pointer-events: none; }
+    .eca-pc.w { color: #fffdf5; text-shadow: 0 0 1px #000, 0 0 1px #000, 0 0 2px #000, 0 2px 3px rgba(0,0,0,.45); }
+    .eca-pc.b { color: #1a1410; text-shadow: 0 0 1px #f5e7c3, 0 1px 2px rgba(0,0,0,.4); }
+    .eca-pimg { position: relative; z-index: 1; width: 100%; height: 100%; display: block; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+    .eca-co { position: absolute; z-index: 2; font-size: 10px; font-weight: 700; pointer-events: none; }
+    .eca-co.f { right: 3px; bottom: 1px; } .eca-co.r { left: 3px; top: 1px; }
+    .eca-sq.l .eca-co { color: #b58863; } .eca-sq.d .eca-co { color: #f0d9b5; }
+    .vis-target { font-family: 'Cinzel', serif; font-size: 64px; font-weight: 800; line-height: 1; }
+    @keyframes ecaPop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .eca-pop { animation: ecaPop .18s ease-out; }
+    html.light body { background-color: #f6f3ea; color: #1f2937; }
+    html.light #bgCanvas { opacity: .6; }
+    html.light .gold-card { background: rgba(255,255,255,.94); border-color: rgba(153,116,21,.35); box-shadow: 0 6px 22px rgba(60,45,10,.12); }
+    html.light .gold-gradient-text { background: linear-gradient(135deg,#7a5a07 0%,#b8860b 50%,#6b4f0a 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    html.light [class*="bg-black"] { background-color: #ffffff !important; }
+    html.light .fixed.inset-0[class*="bg-black"] { background-color: rgba(20,15,5,.55) !important; }
+    html.light .bg-zinc-900 { background-color: #efe9d8 !important; }
+    html.light .bg-zinc-800 { background-color: #e3dabf !important; }
+    html.light .border-zinc-800 { border-color: #d9cfae !important; }
+    html.light .text-white { color: #111827 !important; }
+    html.light .text-gray-300 { color: #374151 !important; }
+    html.light .text-gray-400 { color: #4b5563 !important; }
+    html.light .text-gray-500 { color: #6b7280 !important; }
+    html.light .text-yellow-300, html.light .text-yellow-400 { color: #7a5a07 !important; }
+    html.light .text-emerald-300, html.light .text-emerald-400 { color: #047857 !important; }
+    html.light .text-amber-300 { color: #b45309 !important; }
+    html.light .text-red-300 { color: #b91c1c !important; }
+    html.light .text-sky-400 { color: #0369a1 !important; }
+    html.light .bg-emerald-950\/30 { background-color: #ecfdf5 !important; }
+    html.light .bg-amber-950\/40 { background-color: #fffbeb !important; }
+    html.light .att-btn { background: #efe9d8; color: #374151; }
+    html.light .gold-btn, html.light .gold-btn * { color: #050507 !important; }
+
+    /* ===== ثيم ECA: ألوان لوجو الأكاديمية (أزرق ملكي + أسود + أبيض) =====
+       بيشتغل فوق وضع الفاتح (html.light.eca)، فكل قواعد الفاتح بتفضل شغالة والأزرق بيحل محل الدهبي. */
+    html.eca { --eca-blue: #0a45a8; --eca-blue-d: #013c91; --eca-blue-l: #2563c9; --eca-ink: #0b1220; --eca-bg: #f2f6fd; }
+    html.eca body { background-color: var(--eca-bg); color: #0f172a; }
+    html.eca #bgCanvas { opacity: .35; }
+    html.eca .eca-header { background: rgba(255,255,255,.96); border-bottom-color: rgba(10,69,168,.28); }
+    html.eca .gold-card { background: rgba(255,255,255,.97); border-color: rgba(10,69,168,.26); box-shadow: 0 6px 22px rgba(10,40,100,.10); }
+    html.eca .gold-gradient-text { background: linear-gradient(135deg, #013c91 0%, #0a45a8 45%, #2563c9 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    html.eca .gold-btn, html.eca .nav-tab.active { background: linear-gradient(135deg, #0a45a8 0%, #013c91 100%); color: #fff; }
+    html.eca .gold-btn *, html.eca .nav-tab.active * { color: #fff !important; }
+    html.eca .gold-btn, html.eca .gold-btn * { color: #fff !important; }
+    html.eca .nav-tab { color: #1e293b; }
+    html.eca .nav-tab:hover { background: rgba(10,69,168,.08); color: var(--eca-blue); }
+    html.eca .nav-tab.active { color: #fff; }
+    html.eca .nav-tab .badge { background: rgba(255,255,255,.25); }
+    html.eca .icon-btn { background: #fff; color: var(--eca-blue); border-color: rgba(10,69,168,.35); }
+    html.eca .icon-btn:hover { background: #eaf1fd; border-color: rgba(10,69,168,.6); }
+    html.eca .icon-btn.danger { color: #b91c1c; }
+    html.eca :focus-visible { outline-color: var(--eca-blue) !important; }
+    html.eca .bg-zinc-900 { background-color: #e8eef9 !important; }
+    html.eca .bg-zinc-800 { background-color: #d7e2f5 !important; }
+    html.eca .border-zinc-800 { border-color: #c5d3ec !important; }
+    html.eca .att-btn { background: #e8eef9; color: #1e293b; border-color: rgba(10,69,168,.25); }
+    html.eca .text-white { color: var(--eca-ink) !important; }
+    html.eca .text-gray-300 { color: #1e293b !important; }
+    html.eca .text-gray-400 { color: #475569 !important; }
+    html.eca .text-gray-500 { color: #64748b !important; }
+    /* الدهبي -> أزرق اللوجو */
+    html.eca .text-yellow-200, html.eca .text-yellow-300, html.eca .text-yellow-400, html.eca .hover\:text-yellow-300:hover { color: var(--eca-blue) !important; }
+    html.eca .text-amber-300, html.eca .text-amber-200 { color: #1d4ed8 !important; }
+    html.eca [class*="border-yellow-"], html.eca [class*="border-amber-"] { border-color: rgba(10,69,168,.30) !important; }
+    html.eca [class*="border-yellow-500/4"], html.eca [class*="border-yellow-500/5"], html.eca [class*="border-yellow-500/6"], html.eca [class*="border-yellow-500/7"], html.eca .border-yellow-500, html.eca .border-yellow-400, html.eca .border-yellow-300 { border-color: rgba(10,69,168,.55) !important; }
+    html.eca [class*="divide-yellow-"] > :not([hidden]) ~ :not([hidden]) { border-color: rgba(10,69,168,.18) !important; }
+    html.eca [class*="bg-yellow-500/"], html.eca [class*="bg-amber-500/"], html.eca .hover\:bg-yellow-500\/10:hover, html.eca .hover\:bg-yellow-500\/5:hover { background-color: rgba(10,69,168,.10) !important; }
+    html.eca .bg-yellow-500, html.eca .bg-yellow-400, html.eca .hover\:bg-yellow-500:hover { background-color: var(--eca-blue) !important; color: #fff !important; }
+    html.eca .eca-sq.last::before { background: rgba(37,99,201,.35); }
+    html.eca .eca-sq.sel::before { background: rgba(37,99,201,.55); }
+    html.eca .eca-board { border-color: rgba(10,69,168,.55); }
+    html.eca .eval-bar { border-color: rgba(10,69,168,.4); }
+    html.eca .vis-target { color: var(--eca-blue); }
+    html.eca ::selection { background: rgba(10,69,168,.25); }
+  </style>
+  <script>window.ECA_VERSION = "eca-v13";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v13" />
+</head>
+<body class="min-h-screen flex flex-col relative">
+
+  <!-- Animated Gold Particles Background -->
+  <canvas id="bgCanvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-zinc-900 border border-yellow-500 text-yellow-300 px-5 py-3 rounded-xl shadow-2xl text-sm font-semibold"></div>
+
+  <!-- Level Up Test Modal -->
+  <div id="examModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="gold-card rounded-2xl max-w-lg w-full p-6">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-display font-bold text-lg text-yellow-400" id="examTitle">Level Promotion Test</h3>
+        <button onclick="closeExamModal()" class="text-gray-400 hover:text-white">✕</button>
+      </div>
+      <div id="examBody"></div>
+    </div>
+  </div>
+
+
+  <!-- Add / Edit Student Modal -->
+  <div id="addStuModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <form onsubmit="saveStudent(event)" class="gold-card rounded-2xl max-w-lg w-full p-5 max-h-[92vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-display font-bold text-lg text-yellow-400">
+          <span id="asTitleNew">إضافة طالب جديد</span><span id="asTitleEdit" class="hidden">تعديل بيانات الطالب</span>
+        </h3>
+        <button type="button" onclick="closeAddStu()" class="text-gray-400 hover:text-white tap px-2">✕</button>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <input id="asName" required placeholder="اسم الطالب بالكامل" class="sm:col-span-2 w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asUser" placeholder="اليوزر نيم بالإنجليزي (اختياري)" autocapitalize="none" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asPass" placeholder="كلمة السر (6+ حروف) — سيبها فاضية لتوليد تلقائي" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asAge" type="number" min="3" max="99" inputmode="numeric" placeholder="السن" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asPhone" type="tel" inputmode="tel" placeholder="موبايل الطالب" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <input id="asParent" type="tel" inputmode="tel" placeholder="موبايل ولي الأمر (واتساب)" class="sm:col-span-2 w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
+        <select id="asLevel" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-yellow-300"></select>
+        <select id="asGroup" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-yellow-300"></select>
+        <select id="asMode" class="sm:col-span-2 w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-yellow-300">
+          <option value="offline">طالب أوفلاين (حضوري)</option>
+          <option value="online">طالب أونلاين</option>
+        </select>
+      </div>
+      <p id="asEditHint" class="hidden text-[11px] text-gray-400 mt-2">اترك الباسورد فارغاً لو مش عايز تغيّره.</p>
+      <div class="flex flex-wrap justify-between items-center gap-2 mt-4">
+        <button id="asDelBtn" type="button" onclick="deleteStudent()" class="hidden tap px-4 rounded-xl text-xs bg-red-500/20 text-red-300 border border-red-500/30">حذف الطالب</button>
+        <div class="flex gap-2 mr-auto">
+          <button type="button" onclick="closeAddStu()" class="tap px-4 rounded-xl text-xs bg-zinc-800 text-gray-300">إلغاء</button>
+          <button class="tap px-5 rounded-xl text-xs gold-btn"><span id="asSubNew">إضافة الطالب</span><span id="asSubEdit" class="hidden">حفظ التعديلات</span></button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-30 eca-header">
+    <div class="max-w-7xl mx-auto px-3 sm:px-5">
+      <div class="hdr-row py-2.5">
+        <a href="#" onclick="goHomeRefresh(); return false;" class="hdr-brand flex items-center gap-2.5 select-none min-w-0" aria-label="Egypt Chess Academy">
+          <img src="img/eca-mark.png" alt="" width="40" height="40" class="w-10 h-10 rounded-lg bg-white border border-yellow-500/60 object-contain shrink-0" />
+          <span class="min-w-0 leading-tight">
+            <span class="block font-display font-extrabold text-[15px] sm:text-lg gold-gradient-text truncate">EGYPT CHESS ACADEMY</span>
+            <span dir="ltr" class="hidden sm:block text-[10px] text-gray-400 tracking-[.2em]">WHERE MINDS GROW STRONGER</span>
+          </span>
+        </a>
+
+        <!-- بحث الكوتش: صف لوحده على الموبايل، وجنب اللوجو على الكمبيوتر -->
+        <div id="coachSearchBox" class="hdr-search hidden">
+          <div class="relative flex items-center">
+            <input id="coachTopSearch" oninput="coachSearchStudent(this.value)" type="search" placeholder="Search student username..." aria-label="بحث عن طالب" class="w-full h-10 bg-black/80 border border-yellow-500/30 rounded-lg ps-3 pe-24 text-sm text-white" />
+            <button onclick="switchTab('tracker')" class="absolute end-1 h-8 gold-btn text-xs px-3 rounded-md">Follow Up</button>
+          </div>
+        </div>
+
+        <div class="hdr-tools flex items-center gap-1.5">
+          <button id="installBtn" onclick="installApp()" aria-label="تثبيت التطبيق" class="hidden icon-btn" title="تثبيت التطبيق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg></button>
+          <button id="themeBtn" onclick="toggleTheme(event)" aria-label="Choose theme" aria-haspopup="menu" aria-expanded="false" class="icon-btn" title="شكل الموقع / Theme"></button>
+          <button id="langBtn" onclick="toggleLang()" aria-label="تغيير اللغة / Change language" class="icon-btn wide text-xs font-bold">EN</button>
+          <div id="acctButtons" class="flex items-center gap-1.5"></div>
+        </div>
+      </div>
+      <nav id="navButtons" class="nav-bar" aria-label="القائمة الرئيسية"></nav>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main id="mainView" class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+    <!-- Fallback visible immediately -->
+    <div id="ecaSkeleton" class="space-y-5" aria-busy="true"><span class="sr-only">جاري التحميل...</span><div class="gold-card rounded-2xl p-6 space-y-3 animate-pulse"><div class="h-5 w-40 rounded bg-yellow-500/20"></div><div class="h-8 w-64 max-w-full rounded bg-zinc-800"></div><div class="h-3 w-80 max-w-full rounded bg-zinc-800"></div></div><div class="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-pulse"><div class="h-24 rounded-2xl bg-zinc-900"></div><div class="h-24 rounded-2xl bg-zinc-900"></div><div class="h-24 rounded-2xl bg-zinc-900"></div><div class="h-24 rounded-2xl bg-zinc-900"></div></div><div class="gold-card rounded-2xl p-6 space-y-3 animate-pulse"><div class="h-4 w-48 rounded bg-zinc-800"></div><div class="h-16 rounded-xl bg-zinc-900"></div><div class="h-16 rounded-xl bg-zinc-900"></div></div></div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer id="ecaFooter" class="relative z-10 gold-card border-t border-yellow-500/20 mt-8"></footer>
+
+  <!-- قايمة الحساب (أيقونة الشخص): معرّفة هنا عشان تشتغل حتى لو core.js اتحمّل من كاش قديم -->
+  <script>
+    function closeAcctMenu() { var m = document.getElementById("acctMenu"), b = document.getElementById("acctBtn"); if (m) m.classList.add("hidden"); if (b) b.setAttribute("aria-expanded", "false"); }
+    function toggleAcctMenu(ev) {
+      if (ev) ev.stopPropagation();
+      var m = document.getElementById("acctMenu"), b = document.getElementById("acctBtn"); if (!m) return;
+      var open = m.classList.contains("hidden");
+      m.classList.toggle("hidden", !open);
+      if (b) b.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+    document.addEventListener("click", function (e) { if (!e.target.closest || !e.target.closest("#acctMenu, #acctBtn")) closeAcctMenu(); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeAcctMenu(); });
+  </script>
+  <script src="js/core.js?v=eca-v13"></script>
+  <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
+  <script src="js/arena.js?v=eca-v13"></script>
+
+  <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
+
+  <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
+  <script src="js/extras.js?v=eca-v13"></script>
+  <script src="js/streaks.js?v=eca-v13"></script>
+  <script src="js/today.js?v=eca-v13"></script>
+  <script src="js/reports.js?v=eca-v13"></script>
+  <script src="js/tournaments.js?v=eca-v13"></script>
+  <script src="js/review.js?v=eca-v13"></script>
+  <script src="js/quality.js?v=eca-v13"></script>
+  <script src="js/announce.js?v=eca-v13"></script>
+  <script src="js/progress.js?v=eca-v13"></script>
+
+  <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
+  <script type="module" src="js/firebase.js?v=eca-v13"></script>
+</body>
+</html>
