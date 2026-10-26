@@ -104,11 +104,11 @@
       { step: 6, title: "Step 6", sub: "Coming Soon", lessons: [] }
     ];
 
-    // ===== تقسيمة عرض الدروس (eca-v19): Homework جنب التمارين =====
-    // لينكات كل درس بتتقسم 50/50: نص التمارين يفضل «Exercises» والنص التاني بيبقى «Homework» (نفس اللينكات بأسماء جديدة).
-    // زر الـ Homework باسم إنجليزي و bordered متقطع + فاصل رأسي بينه وبين لينكات الشرح عشان الطالب يلاحظه.
-    // الدرس اللي فيه تمرين واحد بس: بناخد له زر «Homework» بنفس اللينك مؤقتًا لحد ما ينشئ درس واجب منفصل على Lichess.
-    // الدرس اللي مفيهوش تمارين (Examples/Study بس): من غير زر واجب.
+    // ===== تقسيمة عرض الدروس (eca-v20): واجب ألغاز تفاعلي =====
+    // قواعد الواجب: التمارين ≥ 2 → النص التاني يبقى Homework | تمرين واحد → نفس اللينك واجب مؤقت
+    // مفيش تمارين → آخر لينك موجود في الدرس بيبقى هو الواجب (بيتنقل من لينكات الشرح).
+    // الدروس اللي مواقفها قابلة للحل: زر Homework بيفتح لاعب الألغاز جوه المنصة (js/homework.js)،
+    // واللي مش قابلة للحل (مفاهيم/قراءة): بيفتح لينك Lichess عادي.
     const LESSONS_VIEW = new Map();
     STEPS.forEach(st => st.lessons.forEach((les, i) => {
       const ex = les.l.filter(x => /^Exercises?/i.test(x[0]));
@@ -117,8 +117,11 @@
       const keepEx = ex.slice(0, ex.length - hwN);
       const hw = ex.length === 1
         ? [{ t: "Homework", u: ex[0][1] }]
-        : ex.slice(ex.length - hwN).map((x, j) => ({ t: hwN > 1 ? "Homework " + (j + 1) : "Homework", u: x[1] }));
-      LESSONS_VIEW.set(st.step + "-" + i, { links: [...rest, ...keepEx].map(x => ({ t: x[0], u: x[1] })), hw });
+        : ex.length >= 2
+          ? ex.slice(ex.length - hwN).map((x, j) => ({ t: hwN > 1 ? "Homework " + (j + 1) : "Homework", u: x[1] }))
+          : (les.l.length ? [{ t: "Homework", u: les.l[les.l.length - 1][1] }] : []);
+      const links = ex.length ? [...rest, ...keepEx] : les.l.slice(0, Math.max(0, les.l.length - 1));
+      LESSONS_VIEW.set(st.step + "-" + i, { links: links.map(x => ({ t: x[0], u: x[1] })), hw });
     }));
 
     const PUZZLES = {
@@ -303,6 +306,7 @@
       </div>`;
 
       if (tab === "lessons") main.innerHTML = renderLessonsView(u);
+      else if (tab === "homework" && typeof renderHomeworkPlayer === "function") main.innerHTML = renderHomeworkPlayer(u);
       else if (tab === "today" && u.role === "coach") main.innerHTML = renderTodayView(u);
       else if (tab === "tracker" && u.role === "coach") main.innerHTML = renderTrackerView();
       else if (tab === "attendance" && u.role === "coach") main.innerHTML = renderAttendanceView();
@@ -547,6 +551,20 @@
                         else if (a) { tCls = "text-red-400"; chip = `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 shrink-0">شرح فقط</span>`; }
                       }
                       const lkBtn = (t, url, isHw) => `<a href="${url}" target="_blank" class="px-3 py-1 rounded-lg text-xs bg-zinc-900 border ${isHw ? 'border-dashed border-yellow-500/60' : 'border-yellow-500/35'} text-yellow-300 hover:bg-yellow-500 hover:text-black">${t} ↗</a>`;
+                      // زر الواجب: لو الموقف قابل للحل يفتح لاعب الألغاز جوه المنصة، غير كده لينك Lichess
+                      const hwKey = st.step + "-" + idx;
+                      const hwBtn = x => {
+                        const HE = hwEntry(hwKey);
+                        const cls = 'px-3 py-1 rounded-lg text-xs bg-zinc-900 border border-dashed border-yellow-500/60 text-yellow-300 hover:bg-yellow-500 hover:text-black';
+                        return HE && HE.puzzles && HE.puzzles.length
+                          ? `<button onclick="openHomework('${hwKey}')" class="${cls}">Homework ↗</button>`
+                          : lkBtn(x.t, x.u, true);
+                      };
+                      // نتيجة الواجب للطالب (كام إجابة صح من أول محاولة)
+                      const hwScore = u.role === "student" && u.hwp && u.hwp[hwKey] && hwEntry(hwKey) && (hwEntry(hwKey).puzzles || []).length
+                        ? (() => { const r = u.hwp[hwKey], good = r.ft === r.t;
+                            return `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${good ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300' : 'bg-yellow-500/15 border border-yellow-500/40 text-yellow-300'} shrink-0">${lang === 'en' ? 'First try' : 'أول مرة'} ${r.ft}/${r.t}</span>`; })()
+                        : '';
                       // فاصل رأسي واضح بين لينكات الشرح (Examples/Study/Exercises) وزر الـ Homework
                       const hwSep = (LV.links.length && LV.hw.length) ? `<span aria-hidden="true" class="w-px self-stretch shrink-0 bg-gradient-to-b from-transparent via-yellow-400/90 to-transparent"></span>` : '';
                       return `
@@ -558,7 +576,8 @@
                         <div class="flex flex-wrap items-stretch gap-2">
                           ${LV.links.map(x => lkBtn(x.t, x.u, false)).join('')}
                           ${hwSep}
-                          ${LV.hw.map(x => lkBtn(x.t, x.u, true)).join('')}
+                          ${LV.hw.map(x => hwBtn(x)).join('')}
+                          ${hwScore}
                         </div>
                       </div>
                     `; }).join('')}
@@ -634,16 +653,20 @@
                         const k = sel.level + "-" + i;
                         const a = !!(sel.att && sel.att[k]);
                         const h = !!(sel.hw && sel.hw[k]);
+                        const HE = hwEntry ? hwEntry(k) : null;
+                        const wp = sel.hwp && sel.hwp[k] && HE && (HE.puzzles || []).length ? sel.hwp[k] : null;
+                        const wChip = wp ? `<span class="text-[10px] px-1.5 py-0.5 rounded-md ${wp.ft === wp.t ? 'bg-emerald-500/20 text-emerald-300' : 'bg-yellow-500/15 text-yellow-300'}" title="${lang === 'en' ? 'First-try correct / total' : 'صح من أول محاولة / الإجمالي'}">${wp.ft}/${wp.t}</span>` : '';
                         return `
                           <div class="px-4 py-2.5 flex justify-between items-center text-xs">
                             <span class="text-white font-medium">${i+1}. ${les.t}</span>
-                            <div class="flex gap-4">
+                            <div class="flex gap-4 items-center">
                               <label class="flex items-center gap-1 cursor-pointer ${a?'text-emerald-300 font-bold':'text-gray-400'}">
                                 <input type="checkbox" ${a?'checked':''} onchange="togCheck('${sel.id}','${k}','att')" /> حضر
                               </label>
                               <label class="flex items-center gap-1 cursor-pointer ${h?'text-yellow-300 font-bold':'text-gray-400'}">
                                 <input type="checkbox" ${h?'checked':''} onchange="togCheck('${sel.id}','${k}','hw')" /> الواجب
                               </label>
+                              ${wChip}
                             </div>
                           </div>
                         `;

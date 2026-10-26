@@ -25,7 +25,7 @@
     };
 
     // ================= ألوان الرقعة (محفوظة على الجهاز) =================
-    const BOARD_THEMES = [["كلاسيك", "#f0d9b5", "#b58863"], ["دهبي", "#f6e7b4", "#a8802a"], ["أخضر", "#eeeed2", "#769656"], ["أزرق", "#dee3e6", "#8ca2ad"], ["رمادي", "#e0e0e0", "#607d8b"]];
+    const BOARD_THEMES = [["Lichess بني", "#f0d9b5", "#b58863"], ["Lichess أزرق", "#dee3e6", "#8ca2ad"], ["Lichess أخضر", "#ffffdd", "#86a666"], ["Lichess بنفسجي", "#9f90b0", "#7fa87f"], ["Lichess رمادي", "#ececec", "#c1c18e"], ["دهبي ECA", "#f6e7b4", "#a8802a"]];
     let boardColors = { l: "#f0d9b5", d: "#b58863" };
     try { const s = JSON.parse(localStorage.getItem("ECA_BOARD") || "null"); if (s && /^#[0-9a-f]{6}$/i.test(s.l) && /^#[0-9a-f]{6}$/i.test(s.d)) boardColors = s; } catch (_) {}
     function applyBoardColors() { const st = document.documentElement.style; st.setProperty("--sq-l", boardColors.l); st.setProperty("--sq-d", boardColors.d); }
