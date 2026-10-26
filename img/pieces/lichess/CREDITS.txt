@@ -1,0 +1,4 @@
+Chess piece artwork: "cburnett" set (the default piece set on Lichess)
+(c) Colin M.L. Burnett  https://en.wikipedia.org/wiki/User:Cburnett
+Licensed under GPLv2+ / BSD / CC BY-SA 3.0 (triple license, as published on Wikimedia Commons).
+Extracted from the python-chess library (chess/svg.py), which redistributes the same artwork.
