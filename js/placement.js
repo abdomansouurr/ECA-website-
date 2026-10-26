@@ -70,7 +70,7 @@
       if (!/^\d{8,15}$/.test(pk)) return bad(ptL("رقم ولي الأمر غير صحيح.", "The parent phone number is invalid."));
       if (f.rating.length > 20 || /[<>"'`]/.test(f.rating)) return bad(ptL("التقييم غير صحيح.", "The rating is invalid."));
       if (f.link && !/^https:\/\/[^\s<>"'`]{3,180}$/.test(f.link)) return bad(ptL("اللينك لازم يبدأ بـ https://", "The link must start with https://"));
-      if (f.mode !== "online" && f.mode !== "offline") return bad(ptL("اختار نوع الطالب (أونلاين / أوفلاين).", "Choose online or offline."));
+      if (f.mode !== "online" && f.mode !== "offline") return bad(ptL("اختار الحضور (أونلاين / أوفلاين).", "Choose attendance (online / offline)."));
       f.key = key; f.pk = pk;
       ptStart();
     }
@@ -233,7 +233,7 @@
           ${PT.err ? `<div class="text-sm text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg p-2.5">${PT.err}</div>` : ""}
           ${fld("ptName", ptL("الاسم *", "Name *"), "text", f.name, "", 'maxlength="80"')}
           <div class="grid grid-cols-2 gap-3">${fld("ptAge", ptL("السن *", "Age *"), "number", f.age || "", "", 'min="3" max="99" inputmode="numeric"')}
-            <div><label class="pt-lb" for="ptMode">${ptL("نوع الطالب *", "Student type *")}</label><select id="ptMode" class="pt-in"><option value="">—</option><option value="online" ${f.mode === "online" ? "selected" : ""}>Online</option><option value="offline" ${f.mode === "offline" ? "selected" : ""}>Offline</option></select></div></div>
+            <div><label class="pt-lb" for="ptMode">${ptL("الحضور *", "Attendance *")}</label><select id="ptMode" class="pt-in"><option value="">—</option><option value="online" ${f.mode === "online" ? "selected" : ""}>Online</option><option value="offline" ${f.mode === "offline" ? "selected" : ""}>Offline</option></select></div></div>
           ${fld("ptPhone", ptL("رقم الطالب *", "Student phone *"), "tel", f.phone, "01xxxxxxxxx", 'dir="ltr" inputmode="tel" maxlength="20"')}
           ${fld("ptParent", ptL("رقم ولي الأمر *", "Parent phone *"), "tel", f.parentPhone, "01xxxxxxxxx", 'dir="ltr" inputmode="tel" maxlength="20"')}
           ${fld("ptRating", ptL("التقييم الحالي (إن وجد)", "Current rating (if any)"), "text", f.rating, "1200", 'maxlength="20" dir="ltr"')}
