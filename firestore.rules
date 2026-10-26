@@ -301,7 +301,7 @@ service cloud.firestore {
     match /placementTests/{id} {
       allow read:   if isStaff() || (signedIn() && resource.data.owner == request.auth.uid);
       allow create: if signedIn() && id.matches('[0-9]{8,15}')
-        && request.resource.data.keys().hasOnly(['name','age','phone','parentPhone','rating','link','mode','owner','status','createdAt','answers','total'])
+        && request.resource.data.keys().hasOnly(['name','age','phone','parentPhone','rating','link','mode','owner','status','createdAt','answers','total','lk'])
         && request.resource.data.owner == request.auth.uid
         && request.resource.data.status == 'in_progress'
         && request.resource.data.phone == id
@@ -313,11 +313,25 @@ service cloud.firestore {
         && (request.resource.data.link == '' || request.resource.data.link.matches('https://.*'))
         && request.resource.data.mode in ['online','offline']
         && request.resource.data.total == 20
-        && request.resource.data.answers.size() == 0;
+        && request.resource.data.answers.size() == 0
+        && request.resource.data.get('lk', '') is string
+        && (request.resource.data.get('lk', '') == '' || (request.resource.data.lk.matches('[0-9a-f]{64}')
+            && existsAfter(/databases/$(database)/documents/placementLocks/$('l_' + request.resource.data.lk))))
+        && existsAfter(/databases/$(database)/documents/placementLocks/$('u_' + request.auth.uid));
       allow update: if isStaff()
         || (signedIn() && resource.data.owner == request.auth.uid && resource.data.status == 'in_progress'
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['answers','status','score','correct','suggested','finishedAt'])
             && request.resource.data.status in ['in_progress','done']);
+      allow delete: if isStaff();
+    }
+    // أقفال منع إعادة الاختبار (جهاز / حساب شطرنج): تتكتب مرة واحدة فقط مع وثيقة الاختبار، والكوتش بس هو اللي يمسحها (إعادة الفتح)
+    match /placementLocks/{key} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn() && request.resource.data.keys().hasOnly(['owner','t'])
+        && request.resource.data.owner == request.auth.uid
+        && (key == 'u_' + request.auth.uid || key.matches('l_[0-9a-f]{64}'));
+      allow update: if false;
       allow delete: if isStaff();
     }
     // النسخ الاحتياطية للتقارير (تتحذف تلقائياً بعد 30 يوم: فعّل TTL على الحقل expireAt)
