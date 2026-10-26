@@ -9,6 +9,8 @@
     "test:rules": "node scripts/rules-sim.test.js"
   },
   "devDependencies": {
+    "chess.js": "^1.4.0",
+    "stockfish": "^19.0.1",
     "tailwindcss": "3.4.17"
   }
 }

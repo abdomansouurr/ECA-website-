@@ -186,8 +186,8 @@
     html.eca .vis-target { color: var(--eca-blue); }
     html.eca ::selection { background: rgba(10,69,168,.25); }
   </style>
-  <script>window.ECA_VERSION = "eca-v19";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v19" />
+  <script>window.ECA_VERSION = "eca-v21";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v21" />
 </head>
 <body class="min-h-screen flex flex-col relative">
 
@@ -296,27 +296,28 @@
     document.addEventListener("click", function (e) { if (!e.target.closest || !e.target.closest("#acctMenu, #acctBtn")) closeAcctMenu(); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeAcctMenu(); });
   </script>
-  <script src="js/core.js?v=eca-v19"></script>
+  <script src="js/core.js?v=eca-v21"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v19"></script>
+  <script src="js/arena.js?v=eca-v21"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v19"></script>
-  <script src="js/streaks.js?v=eca-v19"></script>
-  <script src="js/today.js?v=eca-v19"></script>
-  <script src="js/reports.js?v=eca-v19"></script>
-  <script src="js/tournaments.js?v=eca-v19"></script>
-  <script src="js/review.js?v=eca-v19"></script>
-  <script src="js/quality.js?v=eca-v19"></script>
-  <script src="js/announce.js?v=eca-v19"></script>
-  <script src="js/progress.js?v=eca-v19"></script>
-  <script src="js/arena2.js?v=eca-v19"></script>
-  <script src="js/placement-data.js?v=eca-v19"></script>
-  <script src="js/placement.js?v=eca-v19"></script>
+  <script src="js/extras.js?v=eca-v21"></script>
+  <script src="js/streaks.js?v=eca-v21"></script>
+  <script src="js/today.js?v=eca-v21"></script>
+  <script src="js/reports.js?v=eca-v21"></script>
+  <script src="js/tournaments.js?v=eca-v21"></script>
+  <script src="js/review.js?v=eca-v21"></script>
+  <script src="js/quality.js?v=eca-v21"></script>
+  <script src="js/announce.js?v=eca-v21"></script>
+  <script src="js/progress.js?v=eca-v21"></script>
+  <script src="js/arena2.js?v=eca-v21"></script>
+  <script src="js/homework.js?v=eca-v21"></script>
+  <script src="js/placement-data.js?v=eca-v21"></script>
+  <script src="js/placement.js?v=eca-v21"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v19"></script>
+  <script type="module" src="js/firebase.js?v=eca-v21"></script>
 </body>
 </html>
