@@ -252,9 +252,10 @@
       if (!u) {
         cSearch.classList.add("hidden");
         acct.innerHTML = "";
-        nav.innerHTML = `<button onclick="switchTab('home')" class="nav-tab ${!isInfoTab(tab) ? 'active' : ''}">تسجيل الدخول</button>
-          <button onclick="switchTab('about')" class="nav-tab ${isInfoTab(tab) ? 'active' : ''}">عن الأكاديمية</button>`;
-        main.innerHTML = isInfoTab(tab) ? renderInfoPage(tab) : renderAuthView();
+        nav.innerHTML = `<button onclick="switchTab('home')" class="nav-tab ${!isInfoTab(tab) && tab !== 'placement' ? 'active' : ''}">تسجيل الدخول</button>
+          <button onclick="switchTab('about')" class="nav-tab ${isInfoTab(tab) ? 'active' : ''}">عن الأكاديمية</button>
+          <button onclick="switchTab('placement')" class="nav-tab ${tab === 'placement' ? 'active' : ''}">اختبار تحديد المستوى</button>`;
+        main.innerHTML = isInfoTab(tab) ? renderInfoPage(tab) : tab === "placement" && typeof renderPlacementPage === "function" ? renderPlacementPage() : renderAuthView();
         return;
       }
 
@@ -264,7 +265,7 @@
       const certN = (u.certificates || []).length;
       nav.innerHTML = u.role === "coach"
         ? T("home", "الرئيسية") + T("today", "جدول اليوم") + T("attendance", "تسجيل الحضور") + T("tracker", "متابعة الطلاب") + T("finance", "الحسابات")
-          + T("lessons", "المنهج") + T("arena", "ساحة التدريب") + T("tournaments", "البطولات") + T("honor", "قائمة الشرف") + T("ranks", "الرتب والشارات")
+          + T("lessons", "المنهج") + T("arena", "ساحة التدريب") + T("tournaments", "البطولات") + T("honor", "قائمة الشرف") + T("ranks", "الرتب والشارات") + T("placeresults", "اختبار المستوى")
         : T("home", "الرئيسية") + T("lessons", "دروسي") + T("arena", "ساحة التدريب") + T("tournaments", "البطولات") + T("ranks", "الرتب والشارات")
           + T("honor", "قائمة الشرف") + T("certs", "شهاداتي", certN ? `<span class="badge">${certN}</span>` : "") + T("parent", "تقرير ولي الأمر");
       const ai = window.fbAuthInfo ? window.fbAuthInfo() : { password: true, google: true };
@@ -289,6 +290,7 @@
       else if (tab === "tracker" && u.role === "coach") main.innerHTML = renderTrackerView();
       else if (tab === "attendance" && u.role === "coach") main.innerHTML = renderAttendanceView();
       else if (tab === "finance" && u.role === "coach") main.innerHTML = renderFinanceDashboardView();
+      else if (tab === "placeresults" && u.role === "coach" && typeof renderPlacementResults === "function") main.innerHTML = renderPlacementResults(u);
       else if (tab === "parent" && u.role === "student") main.innerHTML = renderStudentParentView(u);
       else if (tab === "certs" && u.role === "student") main.innerHTML = renderMyCertsView(u);
       else if (tab === "honor") main.innerHTML = renderHonorView(u);
@@ -1050,7 +1052,7 @@
       const dark = !bgRoot.classList.contains("light"), key = (dark ? "w" : "b") + t, k = key + rgb; if (bgTint[k]) return bgTint[k];
       const im = bgImgs[key]; if (!im) return null;
       const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d");
-      x.drawImage(im, 0, 0, 256, 256); x.globalCompositeOperation = "source-atop"; x.fillStyle = "rgba(" + rgb + "," + (dark ? 0.55 : 0.7) + ")"; x.fillRect(0, 0, 256, 256);
+      x.drawImage(im, 0, 0, 256, 256); x.globalCompositeOperation = "source-atop"; x.fillStyle = "rgba(" + rgb + "," + (dark ? 0.55 : 0.92) + ")"; x.fillRect(0, 0, 256, 256);
       return (bgTint[k] = c);
     }
     const bgPieces = Array.from({ length: window.innerWidth < 700 ? 7 : 13 }, (_, i) => ({
@@ -1060,23 +1062,34 @@
     }));
     function anim(now) {
       ctx.clearRect(0, 0, cv.width, cv.height);
-      const rgb = bgRGB(), mv = bgStill ? 0 : 1, tm = now || 0;
+      const rgb = bgRGB(), mv = bgStill ? 0 : 1, tm = now || 0, lite = bgRoot.classList.contains("light");
       bgPieces.forEach(p => {
         p.y += p.vy * mv; p.x += (p.vx + Math.sin(tm * 0.0004 + p.ph) * 0.15) * mv; p.rot += p.vr * mv;
         if (p.y < -p.s) { p.y = cv.height + p.s; p.x = Math.random() * cv.width; }
         if (p.x < -p.s) p.x = cv.width + p.s; else if (p.x > cv.width + p.s) p.x = -p.s;
         const sp = bgSprite(p.t, rgb); if (!sp) return;
-        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.globalAlpha = p.a; ctx.drawImage(sp, -p.s / 2, -p.s / 2, p.s, p.s); ctx.restore();
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); 
+        // في الفاتح وECA القطع بتبان أوضح (الخلفية فاتحة) وبتتنفّس بهدوء
+        const sc = lite ? 1 + 0.05 * Math.sin(tm * 0.0009 + p.ph) : 1;
+        ctx.scale(sc, sc); ctx.globalAlpha = lite ? Math.min(0.46, p.a * 2.4) : p.a; ctx.drawImage(sp, -p.s / 2, -p.s / 2, p.s, p.s); ctx.restore();
       });
       pts.forEach(p => {
         p.x = (p.x + p.vx * mv + cv.width) % cv.width; p.y = (p.y + p.vy * mv + cv.height) % cv.height;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = "rgba(" + rgb + "," + (rgb === "10,69,168" ? 0.22 : rgb === "153,116,21" ? 0.28 : 0.3) + ")"; ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = "rgba(" + rgb + "," + (rgb === "10,69,168" ? 0.5 : rgb === "153,116,21" ? 0.5 : 0.3) + ")"; ctx.fill();
       });
+      // خطوط خفيفة بين النقط القريبة (شبكة) في الفاتح وECA
+      if (lite) {
+        ctx.lineWidth = 1;
+        for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+          const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y, d = dx * dx + dy * dy;
+          if (d < 19600) { ctx.strokeStyle = "rgba(" + rgb + "," + (0.2 * (1 - d / 19600)) + ")"; ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.stroke(); }
+        }
+      }
       requestAnimationFrame(anim);
     }
     requestAnimationFrame(anim);
     const h0 = (location.hash || "#home").slice(1);
-    tab = ["home", "lessons", "arena", "ranks", "certs", "honor", "tracker", "attendance", "finance", "parent", "about", "courses", "private", "faq", "fairplay", "contact"].includes(h0) ? h0 : "home";
+    tab = ["home", "lessons", "arena", "ranks", "certs", "honor", "tracker", "attendance", "finance", "parent", "about", "courses", "private", "faq", "fairplay", "contact", "placement", "placeresults"].includes(h0) ? h0 : "home";
     history.replaceState({ tab }, "", "#" + tab);
     window.addEventListener("popstate", e => { tab = (e.state && e.state.tab) || "home"; render(); });
     const _oe = openExamModal; openExamModal = function (l) { _oe(l); applyLang(); };

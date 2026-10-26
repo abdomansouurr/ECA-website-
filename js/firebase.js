@@ -558,6 +558,60 @@
       return uid;
     };
 
+    // ===================== اختبار تحديد المستوى =====================
+    // الطالب بدون حساب: بنستخدم نسخة تانية من التطبيق (placement) بدخول مجهول، عشان ما نغيّر حالة الموقع الرئيسي (ولي أمر/طالب)
+    let ptApp = null, ptAuth = null, ptDb = null;
+    const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej({ code: "timeout" }), ms))]);
+    async function ptInit() {
+      if (!ptApp) { ptApp = initializeApp(firebaseConfig, "placement"); ptAuth = getAuth(ptApp); ptDb = initializeFirestore(ptApp, {}); }
+      try { if (ptAuth.authStateReady) await ptAuth.authStateReady(); } catch (_) {}
+      if (!ptAuth.currentUser) await signInAnonymously(ptAuth);
+      return ptAuth.currentUser.uid;
+    }
+    window.fbPtStart = async (rec) => {
+      try {
+        const uid = await withTimeout(ptInit(), 15000);
+        const id = rec.id; delete rec.id;
+        await withTimeout(setDoc(doc(ptDb, "placementTests", id), Object.assign({}, rec, { owner: uid, status: "in_progress", createdAt: Date.now(), answers: {} })), 15000);
+        return { ok: true };
+      } catch (e) { return { ok: false, code: e && e.code }; }
+    };
+    window.fbPtSave = async (id, patch, tries) => {
+      let last = null;
+      for (let k = 0; k < (tries || 3); k++) {
+        try { await ptInit(); await withTimeout(updateDoc(doc(ptDb, "placementTests", id), patch), 12000); return { ok: true }; }
+        catch (e) { last = e; if (e && e.code === "permission-denied") break; await new Promise(r => setTimeout(r, 700 * (k + 1))); }
+      }
+      return { ok: false, code: last && last.code };
+    };
+    window.fbPtList = async () => {
+      if (!me || !isStaffRole(me.role)) return { ok: false, rows: [] };
+      try {
+        const q = await getDocs(query(collection(firestore, "placementTests"), orderBy("createdAt", "desc"), limit(500)));
+        return { ok: true, rows: q.docs.map(d => Object.assign({ id: d.id }, d.data())) };
+      } catch (e) { console.error(e); return { ok: false, rows: [] }; }
+    };
+    window.fbPtUpdate = async (id, patch) => {
+      try { await updateDoc(doc(firestore, "placementTests", id), patch); return { ok: true }; } catch (e) { console.error(e); return { ok: false }; }
+    };
+    window.fbPtReopen = async (id) => {
+      try { await deleteDoc(doc(firestore, "placementTests", id)); return { ok: true }; } catch (e) { console.error(e); return { ok: false }; }
+    };
+    // نسخة احتياطية من كل تقرير: بتتحذف بعد 30 يوم (expireAt) — TTL من Firebase + تنضيف من الكوتش عند فتح الصفحة
+    window.fbPtSaveReport = async (rows) => {
+      if (!me || !isStaffRole(me.role)) return { ok: false };
+      try {
+        const now = Date.now();
+        await setDoc(doc(firestore, "placementReports", String(now)), { createdAt: now, expireAt: new Date(now + 30 * 86400000), by: me.uid, count: rows.length, rows: JSON.stringify(rows) });
+        return { ok: true };
+      } catch (e) { console.error(e); return { ok: false }; }
+    };
+    window.fbPtCleanup = async () => {
+      if (!me || !isStaffRole(me.role)) return;
+      const q = await getDocs(query(collection(firestore, "placementReports"), where("expireAt", "<", new Date())));
+      for (const d of q.docs) await deleteDoc(d.ref);
+    };
+
     window.fbOnStudentDeleted = async (id) => {
       try { await setDoc(doc(firestore, "deleted", id), { at: Date.now() }); } catch (e) { console.error(e); }
       try {

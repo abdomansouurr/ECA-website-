@@ -79,7 +79,21 @@
       const g = o.game, b = g ? g.board() : null;
       let chk = null;
       if (g && g.inCheck()) b.forEach(row => row.forEach(p => { if (p && p.type === "k" && p.color === g.turn()) chk = p.square; }));
-      let h = `<div class="eca-board mx-auto" dir="ltr">`;
+      // انيميشن انزلاق القطعة: بيشتغل مرة واحدة لكل وضع جديد على الرقعة (ومابيشتغلش بعد السحب لأن القطعة وصلت بإيد اللاعب)
+      let slide = null;
+      if (g && o.last && o.last.length === 2) {
+        const key = g.fen();
+        if (key !== window.__ecaAnimKey) {
+          window.__ecaAnimKey = key;
+          if (!window.__ecaNoAnim && g.get(o.last[1])) {
+            const sc = q => { const f = FILES.indexOf(q[0]), k = Number(q[1]); return [o.flip ? 7 - f : f, o.flip ? k - 1 : 8 - k]; };
+            const a = sc(o.last[0]), z = sc(o.last[1]);
+            slide = { to: o.last[1], dx: a[0] - z[0], dy: a[1] - z[1] };
+          }
+        }
+        window.__ecaNoAnim = false;
+      }
+      let h = `<div class="eca-board mx-auto" dir="ltr"${o.onClick && o.onClick !== "ptNoop" ? ` data-h="${o.onClick}"` : ""}>`;
       for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
         const rank = o.flip ? r + 1 : 8 - r, file = o.flip ? 7 - c : c, sq = FILES[file] + rank;
         const p = b ? b[8 - rank][file] : null;
@@ -90,9 +104,10 @@
         if (chk === sq) cls.push("chk");
         if (o.flash && o.flash[sq]) cls.push(o.flash[sq]);
         if (o.targets && o.targets[sq]) cls.push(o.targets[sq]);
+        const sl = slide && slide.to === sq ? ` eca-slide" style="--dx:${slide.dx};--dy:${slide.dy}` : "";
         let inner = p ? (pieceSet === "lichess"
-          ? `<img class="eca-pimg" src="img/pieces/lichess/${p.color}${p.type.toUpperCase()}.svg" alt="" draggable="false" />`
-          : `<span class="eca-pc ${p.color}">${PIECE[p.type]}&#xFE0E;</span>`) : "";
+          ? `<img class="eca-pimg${sl}" src="img/pieces/lichess/${p.color}${p.type.toUpperCase()}.svg" alt="" draggable="false" />`
+          : `<span class="eca-pc ${p.color}${sl}">${PIECE[p.type]}&#xFE0E;</span>`) : "";
         if (o.coords !== false) {
           if (r === 7) inner += `<span class="eca-co f">${FILES[file]}</span>`;
           if (c === 0) inner += `<span class="eca-co r">${rank}</span>`;
