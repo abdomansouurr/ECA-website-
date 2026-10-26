@@ -179,8 +179,8 @@
     html.eca .vis-target { color: var(--eca-blue); }
     html.eca ::selection { background: rgba(10,69,168,.25); }
   </style>
-  <script>window.ECA_VERSION = "eca-v14";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v14" />
+  <script>window.ECA_VERSION = "eca-v15";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v15" />
 </head>
 <body class="min-h-screen flex flex-col relative">
 
@@ -251,7 +251,7 @@
         <!-- بحث الكوتش: صف لوحده على الموبايل، وجنب اللوجو على الكمبيوتر -->
         <div id="coachSearchBox" class="hdr-search hidden">
           <div class="relative flex items-center">
-            <input id="coachTopSearch" oninput="coachSearchStudent(this.value)" type="search" placeholder="Search student username..." aria-label="بحث عن طالب" class="w-full h-10 bg-black/80 border border-yellow-500/30 rounded-lg ps-3 pe-24 text-sm text-white" />
+            <input id="coachTopSearch" oninput="coachSearchStudent(this.value)" type="search" placeholder="ابحث بالاسم / الموبايل" aria-label="بحث عن طالب" class="w-full h-10 bg-black/80 border border-yellow-500/30 rounded-lg ps-3 pe-24 text-sm text-white" />
             <button onclick="switchTab('tracker')" class="absolute end-1 h-8 gold-btn text-xs px-3 rounded-md">Follow Up</button>
           </div>
         </div>
@@ -289,24 +289,26 @@
     document.addEventListener("click", function (e) { if (!e.target.closest || !e.target.closest("#acctMenu, #acctBtn")) closeAcctMenu(); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeAcctMenu(); });
   </script>
-  <script src="js/core.js?v=eca-v14"></script>
+  <script src="js/core.js?v=eca-v15"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v14"></script>
+  <script src="js/arena.js?v=eca-v15"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v14"></script>
-  <script src="js/streaks.js?v=eca-v14"></script>
-  <script src="js/today.js?v=eca-v14"></script>
-  <script src="js/reports.js?v=eca-v14"></script>
-  <script src="js/tournaments.js?v=eca-v14"></script>
-  <script src="js/review.js?v=eca-v14"></script>
-  <script src="js/quality.js?v=eca-v14"></script>
-  <script src="js/announce.js?v=eca-v14"></script>
-  <script src="js/progress.js?v=eca-v14"></script>
+  <script src="js/extras.js?v=eca-v15"></script>
+  <script src="js/streaks.js?v=eca-v15"></script>
+  <script src="js/today.js?v=eca-v15"></script>
+  <script src="js/reports.js?v=eca-v15"></script>
+  <script src="js/tournaments.js?v=eca-v15"></script>
+  <script src="js/review.js?v=eca-v15"></script>
+  <script src="js/quality.js?v=eca-v15"></script>
+  <script src="js/announce.js?v=eca-v15"></script>
+  <script src="js/progress.js?v=eca-v15"></script>
+  <script src="js/placement-data.js?v=eca-v15"></script>
+  <script src="js/placement.js?v=eca-v15"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v14"></script>
+  <script type="module" src="js/firebase.js?v=eca-v15"></script>
 </body>
 </html>

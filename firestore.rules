@@ -294,5 +294,38 @@ service cloud.firestore {
     match /deleted/{uid} {
       allow read, write: if isStaff();
     }
+
+    // ---------- اختبار تحديد المستوى ----------
+    // الطالب (دخول مجهول من نسخة placement): ينشئ وثيقة واحدة بمفتاح رقم موبايله (create فقط)، ويكمّل إجاباته طالما in_progress،
+    // وبعد done مفيش تعديل منه. القراءة والاعتماد والحذف (إعادة الفتح) للكوتش/الأدمن فقط.
+    match /placementTests/{id} {
+      allow read:   if isStaff() || (signedIn() && resource.data.owner == request.auth.uid);
+      allow create: if signedIn() && id.matches('[0-9]{8,15}')
+        && request.resource.data.keys().hasOnly(['name','age','phone','parentPhone','rating','link','mode','owner','status','createdAt','answers','total'])
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.status == 'in_progress'
+        && request.resource.data.phone == id
+        && safeText(request.resource.data.name, 80)
+        && request.resource.data.age is number && request.resource.data.age >= 3 && request.resource.data.age <= 99
+        && request.resource.data.parentPhone is string && request.resource.data.parentPhone.matches('[0-9]{8,15}')
+        && safeText(request.resource.data.rating, 20)
+        && safeText(request.resource.data.link, 200)
+        && (request.resource.data.link == '' || request.resource.data.link.matches('https://.*'))
+        && request.resource.data.mode in ['online','offline']
+        && request.resource.data.total == 20
+        && request.resource.data.answers.size() == 0;
+      allow update: if isStaff()
+        || (signedIn() && resource.data.owner == request.auth.uid && resource.data.status == 'in_progress'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['answers','status','score','correct','suggested','finishedAt'])
+            && request.resource.data.status in ['in_progress','done']);
+      allow delete: if isStaff();
+    }
+    // النسخ الاحتياطية للتقارير (تتحذف تلقائياً بعد 30 يوم: فعّل TTL على الحقل expireAt)
+    match /placementReports/{id} {
+      allow read, delete: if isStaff();
+      allow create: if isStaff() && request.resource.data.keys().hasOnly(['createdAt','expireAt','by','count','rows'])
+        && request.resource.data.expireAt is timestamp && request.resource.data.by == request.auth.uid;
+      allow update: if false;
+    }
   }
 }
