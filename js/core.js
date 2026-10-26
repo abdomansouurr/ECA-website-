@@ -272,6 +272,9 @@
       if (!u) {
         cSearch.classList.add("hidden");
         acct.innerHTML = "";
+        if (typeof closeSideNav === "function") closeSideNav();
+        const sItems = document.getElementById("sideNavItems"); if (sItems) sItems.innerHTML = "";
+        const nTg = document.getElementById("navToggle"); if (nTg) nTg.classList.add("hidden");
         nav.innerHTML = `<button onclick="switchTab('home')" class="nav-tab ${!isInfoTab(tab) && tab !== 'placement' ? 'active' : ''}">تسجيل الدخول</button>
           <button onclick="switchTab('about')" class="nav-tab ${isInfoTab(tab) ? 'active' : ''}">عن الأكاديمية</button>
           <button onclick="switchTab('placement')" class="nav-tab ${tab === 'placement' ? 'active' : ''}">اختبار تحديد المستوى</button>`;
@@ -283,11 +286,18 @@
 
       const T = (id, label, extra) => `<button onclick="switchTab('${id}')" class="nav-tab ${tab === id ? 'active' : ''}" ${tab === id ? 'aria-current="page"' : ''}>${label}${extra || ''}</button>`;
       const certN = (u.certificates || []).length;
-      nav.innerHTML = u.role === "coach"
+      // ===== القائمة الجانبية الرأسية: نفس تابات الدور بتتحط في الدرج (عربي يمين / إنجليزي شمال)
+      // وزر ☰ في الهيدر هو اللي بيفتحها ويقفلها — شريط التابات الأفقي بيختفي للمدخلين.
+      const tabsHtml = u.role === "coach"
         ? T("home", "الرئيسية") + T("today", "جدول اليوم") + T("attendance", "تسجيل الحضور") + T("tracker", "متابعة الطلاب") + T("finance", "الحسابات")
           + T("lessons", "المنهج") + T("arena", "ساحة التدريب") + T("tournaments", "البطولات") + T("honor", "قائمة الشرف") + T("ranks", "الرتب والشارات") + T("placeresults", "اختبار المستوى")
         : T("home", "الرئيسية") + T("lessons", "دروسي") + T("arena", "ساحة التدريب") + T("tournaments", "البطولات") + T("ranks", "الرتب والشارات")
           + T("honor", "قائمة الشرف") + T("certs", "شهاداتي", certN ? `<span class="badge">${certN}</span>` : "") + T("parent", "تقرير ولي الأمر");
+      nav.innerHTML = "";                                    // .nav-bar:empty بتختفي من CSS
+      const sideItems = document.getElementById("sideNavItems");
+      if (sideItems) sideItems.innerHTML = tabsHtml.replaceAll("switchTab(", "closeSideNav();switchTab(");
+      const navTg = document.getElementById("navToggle");
+      if (navTg) navTg.classList.remove("hidden");
       const ai = window.fbAuthInfo ? window.fbAuthInfo() : { password: true, google: true };
       const mi = (fn, label, icon, cls) => `<button onclick="closeAcctMenu(); ${fn}" role="menuitem" class="w-full flex items-center gap-2.5 px-3 h-11 rounded-lg text-sm text-start hover:bg-yellow-500/10 ${cls || 'text-gray-200'}">${icon}<span>${label}</span></button>`;
       acct.innerHTML = `<div class="relative">
