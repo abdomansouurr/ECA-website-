@@ -568,12 +568,20 @@
       if (!ptAuth.currentUser) await signInAnonymously(ptAuth);
       return ptAuth.currentUser.uid;
     }
+    // منع إعادة الاختبار: بنقفل (1) الجهاز/المتصفح عن طريق uid الدخول المجهول، (2) بصمة لينك حساب الشطرنج، (3) الـ uid القديم المحفوظ في الجهاز.
+    // كله في batch واحد مع وثيقة الاختبار، فلو أي قفل موجود قبل كده العملية كلها بتترفض (permission-denied).
     window.fbPtStart = async (rec) => {
       try {
         const uid = await withTimeout(ptInit(), 15000);
-        const id = rec.id; delete rec.id;
-        await withTimeout(setDoc(doc(ptDb, "placementTests", id), Object.assign({}, rec, { owner: uid, status: "in_progress", createdAt: Date.now(), answers: {} })), 15000);
-        return { ok: true };
+        const id = rec.id, prior = rec.prior; delete rec.id; delete rec.prior;
+        const chk = ["u_" + uid]; if (prior) chk.push("u_" + prior); if (rec.lk) chk.push("l_" + rec.lk);
+        for (const k of chk) { const s = await withTimeout(getDoc(doc(ptDb, "placementLocks", k)), 12000); if (s.exists()) return { ok: false, code: "permission-denied" }; }
+        const b = writeBatch(ptDb), now = Date.now();
+        b.set(doc(ptDb, "placementLocks", "u_" + uid), { owner: uid, t: now });
+        if (rec.lk) b.set(doc(ptDb, "placementLocks", "l_" + rec.lk), { owner: uid, t: now });
+        b.set(doc(ptDb, "placementTests", id), Object.assign({}, rec, { owner: uid, status: "in_progress", createdAt: now, answers: {} }));
+        await withTimeout(b.commit(), 15000);
+        return { ok: true, uid };
       } catch (e) { return { ok: false, code: e && e.code }; }
     };
     window.fbPtSave = async (id, patch, tries) => {
@@ -594,8 +602,14 @@
     window.fbPtUpdate = async (id, patch) => {
       try { await updateDoc(doc(firestore, "placementTests", id), patch); return { ok: true }; } catch (e) { console.error(e); return { ok: false }; }
     };
-    window.fbPtReopen = async (id) => {
-      try { await deleteDoc(doc(firestore, "placementTests", id)); return { ok: true }; } catch (e) { console.error(e); return { ok: false }; }
+    window.fbPtReopen = async (id, row) => {
+      try {
+        const b = writeBatch(firestore);
+        b.delete(doc(firestore, "placementTests", id));
+        if (row && row.owner) b.delete(doc(firestore, "placementLocks", "u_" + row.owner));
+        if (row && row.lk) b.delete(doc(firestore, "placementLocks", "l_" + row.lk));
+        await b.commit(); return { ok: true };
+      } catch (e) { console.error(e); return { ok: false }; }
     };
     // نسخة احتياطية من كل تقرير: بتتحذف بعد 30 يوم (expireAt) — TTL من Firebase + تنضيف من الكوتش عند فتح الصفحة
     window.fbPtSaveReport = async (rows) => {

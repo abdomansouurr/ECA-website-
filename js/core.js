@@ -1052,7 +1052,7 @@
       const dark = !bgRoot.classList.contains("light"), key = (dark ? "w" : "b") + t, k = key + rgb; if (bgTint[k]) return bgTint[k];
       const im = bgImgs[key]; if (!im) return null;
       const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d");
-      x.drawImage(im, 0, 0, 256, 256); x.globalCompositeOperation = "source-atop"; x.fillStyle = "rgba(" + rgb + "," + (dark ? 0.55 : 0.7) + ")"; x.fillRect(0, 0, 256, 256);
+      x.drawImage(im, 0, 0, 256, 256); x.globalCompositeOperation = "source-atop"; x.fillStyle = "rgba(" + rgb + "," + (dark ? 0.55 : 0.92) + ")"; x.fillRect(0, 0, 256, 256);
       return (bgTint[k] = c);
     }
     const bgPieces = Array.from({ length: window.innerWidth < 700 ? 7 : 13 }, (_, i) => ({
@@ -1062,18 +1062,29 @@
     }));
     function anim(now) {
       ctx.clearRect(0, 0, cv.width, cv.height);
-      const rgb = bgRGB(), mv = bgStill ? 0 : 1, tm = now || 0;
+      const rgb = bgRGB(), mv = bgStill ? 0 : 1, tm = now || 0, lite = bgRoot.classList.contains("light");
       bgPieces.forEach(p => {
         p.y += p.vy * mv; p.x += (p.vx + Math.sin(tm * 0.0004 + p.ph) * 0.15) * mv; p.rot += p.vr * mv;
         if (p.y < -p.s) { p.y = cv.height + p.s; p.x = Math.random() * cv.width; }
         if (p.x < -p.s) p.x = cv.width + p.s; else if (p.x > cv.width + p.s) p.x = -p.s;
         const sp = bgSprite(p.t, rgb); if (!sp) return;
-        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.globalAlpha = p.a; ctx.drawImage(sp, -p.s / 2, -p.s / 2, p.s, p.s); ctx.restore();
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); 
+        // في الفاتح وECA القطع بتبان أوضح (الخلفية فاتحة) وبتتنفّس بهدوء
+        const sc = lite ? 1 + 0.05 * Math.sin(tm * 0.0009 + p.ph) : 1;
+        ctx.scale(sc, sc); ctx.globalAlpha = lite ? Math.min(0.46, p.a * 2.4) : p.a; ctx.drawImage(sp, -p.s / 2, -p.s / 2, p.s, p.s); ctx.restore();
       });
       pts.forEach(p => {
         p.x = (p.x + p.vx * mv + cv.width) % cv.width; p.y = (p.y + p.vy * mv + cv.height) % cv.height;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = "rgba(" + rgb + "," + (rgb === "10,69,168" ? 0.22 : rgb === "153,116,21" ? 0.28 : 0.3) + ")"; ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = "rgba(" + rgb + "," + (rgb === "10,69,168" ? 0.5 : rgb === "153,116,21" ? 0.5 : 0.3) + ")"; ctx.fill();
       });
+      // خطوط خفيفة بين النقط القريبة (شبكة) في الفاتح وECA
+      if (lite) {
+        ctx.lineWidth = 1;
+        for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+          const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y, d = dx * dx + dy * dy;
+          if (d < 19600) { ctx.strokeStyle = "rgba(" + rgb + "," + (0.2 * (1 - d / 19600)) + ")"; ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.stroke(); }
+        }
+      }
       requestAnimationFrame(anim);
     }
     requestAnimationFrame(anim);

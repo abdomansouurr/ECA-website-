@@ -96,8 +96,10 @@
         const sits = ptShuffle(window.ECA_PLACEMENT_SITUATIONS || []).slice(0, 8);
         if (sits.length < 8) throw new Error("not enough situations");
         for (const s of sits) {
-          const g = new ChessCls(s.fen), right = s.opts[s.ans];
-          qs.push({ kind: "s", game: g, flip: g.turn() === "b", q: s.q, qe: s.qe, opts: ptShuffle(s.opts), right });
+          const right = s.opts[s.ans];
+          if (s.img) { const im = new Image(); im.src = s.img; }              // تحميل مسبق: السؤال اللي بعده يظهر فوراً
+          const g = s.fen ? new ChessCls(s.fen) : null;
+          qs.push({ kind: "s", img: s.img || "", game: g, flip: g ? g.turn() === "b" : false, q: s.q, qe: s.qe, opts: ptShuffle(s.opts), right });
         }
         PT.qs = qs;
       } catch (e) {
@@ -105,14 +107,15 @@
       }
       // تسجيل المحاولة مقدّماً (create فقط): لو الرقم ده اتسجّل قبل كده القواعد بترفض → الاختبار مقفول
       const f = PT.form;
-      const r = await window.fbPtStart({ id: f.key, name: f.name, age: f.age, phone: f.key, parentPhone: f.pk, rating: f.rating, link: f.link, mode: f.mode, total: PT.qs.length });
+      let prior = ""; try { prior = (JSON.parse(localStorage.getItem("eca_pt_done") || "null") || {}).u || ""; } catch (_) {}
+      const r = await window.fbPtStart({ id: f.key, name: f.name, age: f.age, phone: f.key, parentPhone: f.pk, rating: f.rating, link: f.link, mode: f.mode, total: PT.qs.length, lk: await ptLinkKey(f.link), prior });
       if (!PT) return;
       PT.busy = false;
       if (!r || !r.ok) {
         if (r && r.code === "permission-denied") { PT.phase = "locked"; return ptPaint(); }
         PT.phase = "form"; PT.err = ptL("تعذّر الحفظ — اتأكد من الإنترنت وجرّب تاني.", "Could not save — check your connection and try again."); return ptPaint();
       }
-      try { localStorage.setItem(PT_CUR, JSON.stringify({ key: f.key, answers: {}, total: PT.qs.length, ts: Date.now() })); } catch (_) {}
+      try { localStorage.setItem(PT_CUR, JSON.stringify({ key: f.key, answers: {}, total: PT.qs.length, ts: Date.now() })); localStorage.setItem("eca_pt_done", JSON.stringify({ u: r.uid, key: f.key })); } catch (_) {}
       window.onbeforeunload = () => "";
       PT.phase = "play"; ptQuestion(0);
     }
@@ -216,6 +219,10 @@
 
     function ptPaint() {
       if (!PT) return;
+      const _keepSet = pieceSet; pieceSet = "lichess";                 // اختبار تحديد المستوى دايماً بقطع Lichess
+      try { ptPaint2(); } finally { pieceSet = _keepSet; }
+    }
+    function ptPaint2() {
       let el = document.getElementById("ptTest");
       if (!el) { el = document.createElement("div"); el.id = "ptTest"; document.body.appendChild(el); document.body.style.overflow = "hidden"; }
       const f = PT.form || {}, fld = (id, lb, type, val, ph, extra) => `<div><label class="pt-lb" for="${id}">${lb}</label><input id="${id}" class="pt-in" type="${type}" value="${esc(val || "")}" placeholder="${esc(ph || "")}" ${extra || ""} autocomplete="off" /></div>`;
@@ -247,7 +254,7 @@
             <div style="max-width:min(100%, 62vh); margin:0 auto;">${boardHTML({ game: q.game, flip: q.flip, sel: q.sel, targets: PT.busy ? null : targetsOf(q.game, q.sel), last: q.last, onClick: "ptClick" })}</div>`;
         } else {
           main = `<div class="text-sm font-bold text-center text-yellow-300">${ptL(q.q, q.qe || q.q)}</div>
-            <div style="max-width:min(100%, 54vh); margin:0 auto;">${boardHTML({ game: q.game, flip: q.flip, onClick: "ptNoop" })}</div>
+            <div style="max-width:min(100%, 54vh); margin:0 auto;">${q.img ? `<img src="${esc(q.img)}" alt="" draggable="false" style="width:100%;border-radius:14px;border:2px solid rgba(212,175,55,.5);display:block" />` : boardHTML({ game: q.game, flip: q.flip, onClick: "ptNoop" })}</div>
             <div class="grid gap-2" dir="ltr">${q.opts.map((o, k) => `<button class="pt-opt" onclick="ptPick(${k})"><b>${"ABCDEF"[k]}</b><span>${esc(o)}</span></button>`).join("")}</div>`;
         }
         body = `<div class="gold-card rounded-2xl p-4 space-y-3">
@@ -262,6 +269,12 @@
       if (typeof lang !== "undefined" && lang === "en" && typeof applyLang === "function") applyLang();
     }
     function ptNoop() {}
+    // لينك حساب الشطرنج → بصمة (SHA-256) عشان نمنع الطالب يعيد الاختبار بنفس الحساب حتى لو غيّر اسمه وأرقامه
+    async function ptLinkKey(link) {
+      if (!link) return "";
+      const t = String(link).toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/[?#].*$/, "").replace(/\/+$/, "");
+      try { const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, "0")).join(""); } catch (_) { return ""; }
+    }
 
     // ================= الكوتش / الأدمن =================
     const PTR = { list: null, loading: false, q: "", err: "", busy: false };
@@ -283,8 +296,19 @@
     }
     const ptDate = ts => { try { return new Date(ts).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (_) { return ""; } };
 
+    // تنبيهات للكوتش: نفس رقم ولي الأمر / نفس حساب الشطرنج / نفس الجهاز / نفس الاسم عند طالب تاني (ممكن إخوات أو محاولة غش)
+    function ptDupes(r) {
+      const o = (PTR.list || []).filter(x => x.id !== r.id), out = [], nm = x => String(x.name || "").replace(/\s+/g, " ").trim().toLowerCase();
+      const names = a => a.map(x => esc(x.name)).join("، ");
+      let a = o.filter(x => x.parentPhone === r.parentPhone); if (a.length) out.push("نفس رقم ولي الأمر مع: " + names(a));
+      a = o.filter(x => r.lk && x.lk === r.lk); if (a.length) out.push("نفس حساب الشطرنج مع: " + names(a));
+      a = o.filter(x => r.owner && x.owner === r.owner); if (a.length) out.push("نفس الجهاز مع: " + names(a));
+      a = o.filter(x => nm(x) === nm(r)); if (a.length) out.push("نفس الاسم عند طالب تاني");
+      return out;
+    }
     function ptRowCard(r, compact) {
-      const done = r.status === "done", fin = ptFinal(r), by = Number(r.level) ? "كوتش" : "النظام";
+      const done = r.status === "done", fin = ptFinal(r), by = Number(r.level) ? "كوتش: " + esc(r.levelCoach || "") : "النظام — لسه ما اتعتمدش";
+      const dup = ptDupes(r);
       const opts = [1, 2, 3, 4, 5, 6].map(n => `<option value="${n}" ${fin === n ? "selected" : ""}>Level ${n}</option>`).join("");
       return `<div class="gold-card rounded-2xl p-4 space-y-2.5">
         <div class="flex flex-wrap items-start justify-between gap-2">
@@ -292,6 +316,7 @@
             <div class="text-xs text-gray-400 mt-0.5" dir="ltr">📱 ${esc(r.phone)} &nbsp;|&nbsp; 👨‍👦 ${esc(r.parentPhone)}</div></div>
           <span class="text-[11px] px-2 py-1 rounded-lg border ${done ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10" : "border-amber-500/40 text-amber-300 bg-amber-500/10"}">${done ? "خلّص الاختبار" : "لم يكتمل"}</span>
         </div>
+        ${dup.length ? `<div class="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg p-2">⚠️ ${dup.join(" • ")}</div>` : ""}
         <div class="text-xs text-gray-300 flex flex-wrap gap-x-4 gap-y-1"><span>التقييم: ${esc(r.rating) || "—"}</span><span>${r.link ? `<a href="${esc(r.link)}" target="_blank" rel="noopener" class="text-yellow-300 underline">حساب الشطرنج</a>` : "بدون لينك"}</span><span>${esc(ptDate(r.createdAt))}</span></div>
         ${done ? `<div class="flex flex-wrap items-center gap-2 text-sm"><span class="text-gray-300">النتيجة: <b class="text-white">${r.score}%</b> (${r.correct}/${r.total})</span><span class="text-gray-300">المقترح: <b class="text-yellow-300">Level ${r.suggested}</b></span>
           <span class="text-gray-300">المعتمد:</span><select onchange="ptSetLevel('${r.id}', this.value)" class="pt-in" style="width:auto;height:34px">${opts}</select><span class="text-[11px] text-gray-400">(${by})</span>
@@ -321,30 +346,31 @@
     }
     async function ptSetLevel(id, lv) {
       const r = (PTR.list || []).find(x => x.id === id); lv = Number(lv); if (!r || !(lv >= 1 && lv <= 6)) return;
-      const res = await window.fbPtUpdate(id, { level: lv, levelBy: "coach", confirmedAt: Date.now() });
-      if (res && res.ok) { r.level = lv; r.levelBy = "coach"; toast("تم اعتماد المستوى " + lv); } else toast("تعذّر الحفظ — جرّب تاني.");
+      const cu = currUser(), nm = String((cu && cu.name) || "").slice(0, 80);
+      const res = await window.fbPtUpdate(id, { level: lv, levelBy: "coach", levelCoach: nm, confirmedAt: Date.now() });
+      if (res && res.ok) { r.level = lv; r.levelBy = "coach"; r.levelCoach = nm; toast("تم اعتماد المستوى " + lv); } else toast("تعذّر الحفظ — جرّب تاني.");
       render();
     }
     async function ptReopen(id) {
       const r = (PTR.list || []).find(x => x.id === id); if (!r) return;
       if (!confirm("هتفتح الاختبار تاني للطالب «" + r.name + "»؟ نتيجته الحالية هتتمسح وهيقدر يعيده مرة واحدة.")) return;
-      const res = await window.fbPtReopen(id);
+      const res = await window.fbPtReopen(id, r);
       if (res && res.ok) { PTR.list = PTR.list.filter(x => x.id !== id); toast("تم فتح الاختبار للطالب."); } else toast("تعذّر فتح الاختبار — جرّب تاني.");
       render();
     }
 
     // ---------- التقرير: Excel / طباعة / واتساب ----------
-    const PT_HEAD = ["#", "الاسم", "السن", "رقم الطالب", "رقم ولي الأمر", "التقييم الحالي", "لينك الحساب", "النوع", "المستوى", "اعتمده", "تاريخ الاختبار"];
+    const PT_HEAD = ["#", "الاسم", "السن", "رقم الطالب", "رقم ولي الأمر", "التقييم الحالي", "لينك الحساب", "النوع", "المستوى", "اسم الكوتش المعتمد", "تاريخ الاختبار"];
     function ptReportRows() {
       const rows = (PTR.list || []).filter(r => r.status === "done" && ptMatch(r, PTR.q)).sort((a, b) => (a.finishedAt || a.createdAt || 0) - (b.finishedAt || b.createdAt || 0));
-      return rows.map((r, k) => [k + 1, r.name, r.age, r.phone, r.parentPhone, r.rating || "", r.link || "", r.mode === "online" ? "Online" : "Offline", "Level " + ptFinal(r), Number(r.level) ? "الكوتش" : "النظام", ptDate(r.finishedAt || r.createdAt)]);
+      return rows.map((r, k) => [k + 1, r.name, r.age, r.phone, r.parentPhone, r.rating || "", r.link || "", r.mode === "online" ? "Online" : "Offline", "Level " + ptFinal(r), Number(r.level) ? (r.levelCoach || "كوتش") : "لم يُعتمد بعد (مقترح النظام)", ptDate(r.finishedAt || r.createdAt)]);
     }
     // ملف xlsx بسيط من غير مكتبات (zip بدون ضغط + XML)
     function ptXlsx(rows) {
       const x = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
       const col = n => String.fromCharCode(65 + n);
       const all = [PT_HEAD].concat(rows);
-      const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews><cols>${[5, 26, 7, 16, 16, 12, 34, 10, 11, 10, 18].map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols><sheetData>${all.map((r, ri) => `<row r="${ri + 1}">${r.map((v, ci) => `<c r="${col(ci)}${ri + 1}" t="inlineStr"${ri === 0 ? ' s="1"' : ""}><is><t xml:space="preserve">${x(v)}</t></is></c>`).join("")}</row>`).join("")}</sheetData></worksheet>`;
+      const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews><cols>${[5, 26, 7, 16, 16, 12, 34, 10, 11, 26, 18].map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols><sheetData>${all.map((r, ri) => `<row r="${ri + 1}">${r.map((v, ci) => `<c r="${col(ci)}${ri + 1}" t="inlineStr"${ri === 0 ? ' s="1"' : ""}><is><t xml:space="preserve">${x(v)}</t></is></c>`).join("")}</row>`).join("")}</sheetData></worksheet>`;
       const files = [
         ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`],
         ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
