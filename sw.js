@@ -1,5 +1,5 @@
 // ECA service worker — offline support. Bump VERSION to force clients to refresh the cache.
-const VERSION = "eca-v21";
+const VERSION = "eca-v24";
 const SHELL = [
   "./", "./index.html", "./manifest.json",
   "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png",
@@ -7,9 +7,9 @@ const SHELL = [
   "./img/pieces/lichess/wK.svg", "./img/pieces/lichess/wQ.svg", "./img/pieces/lichess/wR.svg", "./img/pieces/lichess/wB.svg", "./img/pieces/lichess/wN.svg", "./img/pieces/lichess/wP.svg",
   "./img/pieces/lichess/bK.svg", "./img/pieces/lichess/bQ.svg", "./img/pieces/lichess/bR.svg", "./img/pieces/lichess/bB.svg", "./img/pieces/lichess/bN.svg", "./img/pieces/lichess/bP.svg",
   // ملفات الكود (لازم نفس ?v= اللي في index.html)
-  "./tailwind.css?v=eca-v21",
-  "./js/core.js?v=eca-v21", "./js/arena.js?v=eca-v21", "./js/extras.js?v=eca-v21", "./js/streaks.js?v=eca-v21", "./js/today.js?v=eca-v21", "./js/reports.js?v=eca-v21", "./js/tournaments.js?v=eca-v21", "./js/review.js?v=eca-v21", "./js/quality.js?v=eca-v21", "./js/announce.js?v=eca-v21", "./js/progress.js?v=eca-v21", "./js/arena2.js?v=eca-v21", "./js/homework.js?v=eca-v21", "./img/placement/s1.jpg", "./img/placement/s2.jpg", "./img/placement/s3.jpg", "./img/placement/s4.jpg", "./img/placement/s5.jpg", "./img/placement/s6.jpg", "./img/placement/s7.jpg", "./img/placement/s8.jpg", "./js/placement-data.js?v=eca-v21", "./js/placement.js?v=eca-v21", "./js/firebase.js?v=eca-v21",
-  "./puzzles.js?v=eca-v21"   // عشان الامتحان يشتغل أوفلاين
+  "./tailwind.css?v=eca-v24",
+  "./js/core.js?v=eca-v24", "./js/arena.js?v=eca-v24", "./js/extras.js?v=eca-v24", "./js/streaks.js?v=eca-v24", "./js/today.js?v=eca-v24", "./js/reports.js?v=eca-v24", "./js/tournaments.js?v=eca-v24", "./js/review.js?v=eca-v24", "./js/quality.js?v=eca-v24", "./js/announce.js?v=eca-v24", "./js/progress.js?v=eca-v24", "./js/arena2.js?v=eca-v24", "./js/homework.js?v=eca-v24", "./img/placement/s1.jpg", "./img/placement/s2.jpg", "./img/placement/s3.jpg", "./img/placement/s4.jpg", "./img/placement/s5.jpg", "./img/placement/s6.jpg", "./img/placement/s7.jpg", "./img/placement/s8.jpg", "./js/placement-data.js?v=eca-v24", "./js/placement.js?v=eca-v24", "./js/firebase.js?v=eca-v24",
+  "./puzzles.js?v=eca-v24"   // عشان الامتحان يشتغل أوفلاين
 ];
 const CDN = [
   "https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"
@@ -37,8 +37,13 @@ self.addEventListener("install", e => {
 
 self.addEventListener("activate", e => {
   e.waitUntil((async () => {
-    for (const k of await caches.keys()) if (k !== VERSION) await caches.delete(k);
+    const keys = await caches.keys();
+    const hadOld = keys.some(k => k !== VERSION);      // في تحديث نسخة → نبلّش الصفحات تعمل reload مرة واحدة
+    for (const k of keys) if (k !== VERSION) await caches.delete(k);
     await self.clients.claim();
+    if (hadOld) (await self.clients.matchAll({ type: "window" })).forEach(c => {
+      try { c.postMessage({ type: "ECA_SW_UPDATED", ver: VERSION }); } catch (_) {}
+    });
   })());
 });
 
@@ -63,10 +68,12 @@ self.addEventListener("fetch", e => {
     return;
   }
 
-  // Everything else: cache first, refresh in background
+  // Everything else: cache first, refresh in background — ماعدا ملفات النسخة (?v=eca-vN) دي ثابتة (immutable):
+  // ممنوع نحدّث محتواها تحت نفس المفتاح، عشان HTML نسخة قديمة ميتفدملش مع جافاسكريبت نسخة جديدة (ده اللي كان بيعمل خلط النسخ)
   e.respondWith((async () => {
     const cached = await caches.match(req);
-    const net = fetch(req).then(async res => {
+    const immutable = /(?:^|&)v=eca-/.test(url.search);
+    const net = immutable ? Promise.resolve(null) : fetch(req).then(async res => {
       if (res && (res.ok || res.type === "opaque")) { const c = await caches.open(VERSION); c.put(req, res.clone()); }
       return res;
     }).catch(() => null);

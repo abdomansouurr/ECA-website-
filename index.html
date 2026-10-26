@@ -71,6 +71,17 @@
     @media (min-width: 768px) { .hdr-row { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "brand search tools"; } .hdr-search { max-width: 420px; justify-self: center; width: 100%; } }
     @media (max-width: 380px) { .icon-btn { width: 36px; height: 36px; } }
     @media (min-width: 1024px) { .nav-bar { flex-wrap: wrap; overflow: visible; } .nav-tab { height: 36px; padding: 0 12px; } }
+    /* ===== القائمة الجانبية الرأسية (Side navigation drawer) =====
+       عربي = على يمين الشاشة، إنجليزي = على شمالها — زر واحد يفتح ويقفل. */
+    #sideNav { position: fixed; top: 0; bottom: 0; width: 284px; max-width: 86vw; z-index: 50; display: flex; flex-direction: column; background: rgba(9,9,13,.985); transition: transform .28s ease; overscroll-behavior: contain; }
+    html[lang="ar"] #sideNav { right: 0; transform: translateX(106%); border-left: 1px solid rgba(212,175,55,.28); box-shadow: 14px 0 44px rgba(0,0,0,.5); }
+    html[lang="en"] #sideNav { left: 0; transform: translateX(-106%); border-right: 1px solid rgba(212,175,55,.28); box-shadow: -14px 0 44px rgba(0,0,0,.5); }
+    html[lang="ar"] #sideNav.open, html[lang="en"] #sideNav.open { transform: translateX(0); }
+    html.light #sideNav { background: rgba(250,247,238,.985); box-shadow: 0 0 44px rgba(0,0,0,.2); }
+    #sideNavItems { scrollbar-width: thin; }
+    #sideNavItems .nav-tab { display: flex; width: 100%; height: 46px; justify-content: flex-start; padding: 0 14px; font-size: 14px; border-radius: 12px; }
+    #sideNavItems .nav-tab.active { font-weight: 800; }
+    @media (max-width: 380px) { #sideNav { width: 260px; } }
     :focus-visible { outline: 2px solid #d4af37 !important; outline-offset: 2px; border-radius: 10px; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
@@ -186,8 +197,8 @@
     html.eca .vis-target { color: var(--eca-blue); }
     html.eca ::selection { background: rgba(10,69,168,.25); }
   </style>
-  <script>window.ECA_VERSION = "eca-v21";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v21" />
+  <script>window.ECA_VERSION = "eca-v24";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v24" />
 </head>
 <body class="min-h-screen flex flex-col relative">
 
@@ -196,6 +207,19 @@
 
   <!-- Toast -->
   <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-zinc-900 border border-yellow-500 text-yellow-300 px-5 py-3 rounded-xl shadow-2xl text-sm font-semibold"></div>
+
+  <!-- القائمة الجانبية الرأسية: عربي يمين / إنجليزي شمال — زر واحد يفتحها ويقفلها -->
+  <div id="sideBackdrop" class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm hidden" onclick="closeSideNav()" aria-hidden="true"></div>
+  <aside id="sideNav" aria-label="القائمة الرئيسية">
+    <div class="flex items-center justify-between gap-2 px-4 py-3 border-b border-yellow-500/20 shrink-0">
+      <span class="flex items-center gap-2 min-w-0">
+        <img src="img/eca-mark.png" alt="" width="32" height="32" class="w-8 h-8 rounded-lg bg-white border border-yellow-500/60 object-contain shrink-0" />
+        <span class="font-display font-extrabold text-sm gold-gradient-text truncate">EGYPT CHESS ACADEMY</span>
+      </span>
+      <button onclick="closeSideNav()" aria-label="إغلاق القائمة" class="icon-btn shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <nav id="sideNavItems" class="flex-1 overflow-y-auto p-3 space-y-1.5" aria-label="أقسام المنصة"></nav>
+  </aside>
 
   <!-- Level Up Test Modal -->
   <div id="examModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
@@ -264,6 +288,7 @@
         </div>
 
         <div class="hdr-tools flex items-center gap-1.5">
+          <button id="navToggle" onclick="toggleSideNav(event)" aria-label="القائمة الرئيسية" aria-expanded="false" aria-controls="sideNav" class="icon-btn hidden" title="القائمة / Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
           <button id="installBtn" onclick="installApp()" aria-label="تثبيت التطبيق" class="hidden icon-btn" title="تثبيت التطبيق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg></button>
           <button id="themeBtn" onclick="toggleTheme(event)" aria-label="Choose theme" aria-haspopup="menu" aria-expanded="false" class="icon-btn" title="شكل الموقع / Theme"></button>
           <button id="langBtn" onclick="toggleLang()" aria-label="تغيير اللغة / Change language" class="icon-btn wide text-xs font-bold">EN</button>
@@ -295,29 +320,63 @@
     }
     document.addEventListener("click", function (e) { if (!e.target.closest || !e.target.closest("#acctMenu, #acctBtn")) closeAcctMenu(); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeAcctMenu(); });
+    // ===== القائمة الجانبية الرأسية: نفس الزر يفتح ويقفل — عربي يمين / إنجليزي شمال (CSS) =====
+    function openSideNav() {
+      var s = document.getElementById("sideNav"), b = document.getElementById("sideBackdrop"), t = document.getElementById("navToggle");
+      if (!s) return;
+      s.classList.add("open");
+      if (b) b.classList.remove("hidden");
+      if (t) t.setAttribute("aria-expanded", "true");
+    }
+    function closeSideNav() {
+      var s = document.getElementById("sideNav"), b = document.getElementById("sideBackdrop"), t = document.getElementById("navToggle");
+      if (!s) return;
+      s.classList.remove("open");
+      if (b) b.classList.add("hidden");
+      if (t) t.setAttribute("aria-expanded", "false");
+    }
+    function toggleSideNav(ev) {
+      if (ev) ev.stopPropagation();
+      var s = document.getElementById("sideNav"); if (!s) return;
+      if (s.classList.contains("open")) closeSideNav(); else openSideNav();
+    }
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeSideNav(); });
   </script>
-  <script src="js/core.js?v=eca-v21"></script>
+  <script>
+    // لما يترفع تحديث جديد والسيرفيس ووركر الجديد يتفعّل: نعمل reload مرة واحدة بس
+    // عشان الـ HTML والجافاسكريبت يبقوا دايمًا نفس النسخة (ده اللي كان بيخلّي القوائم تختفي بعد رفع تحديث)
+    try {
+      if (sessionStorage.getItem("ECA_SW_RELOADED")) sessionStorage.removeItem("ECA_SW_RELOADED");
+      if (navigator.serviceWorker) navigator.serviceWorker.addEventListener("message", function (e) {
+        if (e.data && e.data.type === "ECA_SW_UPDATED" && !sessionStorage.getItem("ECA_SW_RELOADED")) {
+          sessionStorage.setItem("ECA_SW_RELOADED", "1");
+          location.reload();
+        }
+      });
+    } catch (_) {}
+  </script>
+  <script src="js/core.js?v=eca-v24"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v21"></script>
+  <script src="js/arena.js?v=eca-v24"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v21"></script>
-  <script src="js/streaks.js?v=eca-v21"></script>
-  <script src="js/today.js?v=eca-v21"></script>
-  <script src="js/reports.js?v=eca-v21"></script>
-  <script src="js/tournaments.js?v=eca-v21"></script>
-  <script src="js/review.js?v=eca-v21"></script>
-  <script src="js/quality.js?v=eca-v21"></script>
-  <script src="js/announce.js?v=eca-v21"></script>
-  <script src="js/progress.js?v=eca-v21"></script>
-  <script src="js/arena2.js?v=eca-v21"></script>
-  <script src="js/homework.js?v=eca-v21"></script>
-  <script src="js/placement-data.js?v=eca-v21"></script>
-  <script src="js/placement.js?v=eca-v21"></script>
+  <script src="js/extras.js?v=eca-v24"></script>
+  <script src="js/streaks.js?v=eca-v24"></script>
+  <script src="js/today.js?v=eca-v24"></script>
+  <script src="js/reports.js?v=eca-v24"></script>
+  <script src="js/tournaments.js?v=eca-v24"></script>
+  <script src="js/review.js?v=eca-v24"></script>
+  <script src="js/quality.js?v=eca-v24"></script>
+  <script src="js/announce.js?v=eca-v24"></script>
+  <script src="js/progress.js?v=eca-v24"></script>
+  <script src="js/arena2.js?v=eca-v24"></script>
+  <script src="js/homework.js?v=eca-v24"></script>
+  <script src="js/placement-data.js?v=eca-v24"></script>
+  <script src="js/placement.js?v=eca-v24"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v21"></script>
+  <script type="module" src="js/firebase.js?v=eca-v24"></script>
 </body>
 </html>
