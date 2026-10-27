@@ -140,11 +140,16 @@
       const q = PT.qs[PT.i]; if (q.kind !== "p") return;
       const g = q.game, mv = pickOrMove(q, sq, q.color);
       if (!mv) return ptPaint();
+      // ترقية البيدق: اختيار القطعة زي Lichess — والقطعة غير قطعة الحل بتتحسب غلط
+      if (mv.promotion && promoNeeded(q, mv.from, mv.to)) return promoShow(q, mv.from, mv.to, pc => ptPlay(Object.assign(mv, { promotion: pc })));
+      ptPlay(mv);
+    }
+    function ptPlay(mv) {
+      const q = PT.qs[PT.i], g = q.game;
       const want = q.sol[q.idx] || "";
       let r = null; try { r = g.move(mv); } catch (_) {}
       if (!r) return ptPaint();
-      if (want.length === 5 && r.from + r.to === want.slice(0, 4) && r.promotion !== want[4]) { g.undo(); r = uciMove(g, want); }
-      const ok = r.from + r.to + (r.promotion || "") === want || g.isCheckmate();
+      const ok = r.from + r.to + (r.promotion || "") === want || g.isCheckmate();   // قطعة الترقية الغلط = غلط زي Lichess
       q.last = [r.from, r.to]; q.sel = null;
       if (!ok) return ptAnswer(false, r.from + r.to);
       q.idx++;

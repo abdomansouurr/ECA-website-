@@ -130,6 +130,45 @@
     const lastOf = g => { const h = g.history({ verbose: true }); const m = h[h.length - 1]; return m ? [m.from, m.to] : null; };
     function uciMove(g, u) { return g.move(u.length > 4 ? { from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] } : { from: u.slice(0, 2), to: u.slice(2, 4) }); }
 
+    // ===== اختيار قطعة الترقية زي Lichess بالظبط: عمود رأسي على ملف مربع الترقية بيمتد جوه الرقعة =====
+    // Q عند مربع الترقية وبعده N وR وB — الضغط برة الاختيار بيلغيه، واختيار قطعة غير قطعة الحل بيحسب غلط زي Lichess
+    let ECA_PROMO = null;                                  // { st, from, to, cb }
+    function promoNeeded(st, from, to) {
+      const g = st.game; if (!g || !from || !to) return false;
+      const p = g.get(from);
+      if (!p || p.type !== "p") return false;
+      return (p.color === "w" && to[1] === "8") || (p.color === "b" && to[1] === "1");
+    }
+    function promoShow(st, from, to, cb) {
+      ECA_PROMO = { st, from, to, cb };
+      promoPaint();
+    }
+    function promoPaint() {
+      document.querySelectorAll(".eca-promo").forEach(el => el.remove());
+      const P = ECA_PROMO; if (!P) return;
+      const wrap = document.querySelector(`.eca-sq[data-sq="${P.to}"]`);
+      const board = wrap ? wrap.closest(".eca-board") : null;
+      if (!board) { ECA_PROMO = null; return; }
+      const color = (P.st.game && P.st.game.get(P.from) || {}).color || "w";
+      const idx = Array.prototype.indexOf.call(board.querySelectorAll(".eca-sq"), wrap);
+      const row = Math.floor(idx / 8);                     // 0 = أول صف معروض (فوق)
+      const down = row < 4;                                // مربع الترقية في النص العلوي → العمود بيمتد لتحت
+      const f = idx % 8;
+      const sqs = board.querySelectorAll(".eca-sq");       // لون كل خلية = لون المربع الحقيقي اللي فوقه زي Lichess
+      const cellBg = i => { const el = sqs[(down ? row + i : row - i) * 8 + f]; return el && el.classList.contains("l") ? "var(--sq-l,#f0d9b5)" : "var(--sq-d,#b58863)"; };
+      const cell = (t, i) => `<button type="button" class="eca-promo-pc" onclick="event.stopPropagation(); promoPick('${t}')" style="top:${(down ? row + i : row - i) * 12.5}%;left:${f * 12.5}%;background:${cellBg(i)}" aria-label="Promote to ${t.toUpperCase()}">${
+        pieceSet === "lichess"
+          ? `<img src="img/pieces/lichess/${color}${t.toUpperCase()}.svg" alt="" draggable="false" />`
+          : `<span class="eca-pc ${color}">${PIECE[t]}&#xFE0E;</span>`}</button>`;
+      const layer = document.createElement("div");
+      layer.className = "eca-promo";
+      layer.innerHTML = `<div class="eca-promo-bg" onclick="promoCancel()"></div>${["q", "n", "r", "b"].map(cell).join("")}`;
+      board.appendChild(layer);
+    }
+    function promoPick(t) { const p = ECA_PROMO; ECA_PROMO = null; promoPaint(); if (p && p.cb) p.cb(t); }
+    function promoCancel() { const p = ECA_PROMO; ECA_PROMO = null; promoPaint(); if (p && p.st) { p.st.sel = null; if (typeof render === "function") render(); } }
+    window.promoPick = promoPick; window.promoCancel = promoCancel;
+
     // إحصائيات الطالب بتتحفظ في حسابه (الكوتش بيشوفها في المتابعة)
     function recordArena(fn) {
       const u = currUser(); if (!u || u.role !== "student") return;
@@ -156,8 +195,9 @@
       const P = arena.play; if (!P.game || P.over || P.thinking) return;
       const mv = pickOrMove(P, sq, P.color);
       if (mv) {
-        let r = null; try { r = P.game.move(mv); } catch (_) {}
-        if (r) { P.last = [r.from, r.to]; playCheckEnd(); if (!P.over) return playEngine(); }
+        const play = m => { let r = null; try { r = P.game.move(m); } catch (_) {} if (r) { P.last = [r.from, r.to]; playCheckEnd(); if (!P.over) playEngine(); } };
+        if (mv.promotion && promoNeeded(P, mv.from, mv.to)) return promoShow(P, mv.from, mv.to, pc => play(Object.assign(mv, { promotion: pc })));
+        play(mv);
       }
       arenaRefresh();
     }
@@ -310,7 +350,9 @@
       const Z = arena.puz; if (Z.counted) return; Z.counted = true;
       if (Z.review && typeof reviewResult === "function") return reviewResult(Z.info && Z.info.id, solved);   // المراجعة مابتتحسبش في العدّادات
       const id = Z.info && Z.info.id; if (!id) return;          // من غير رقم لغز مانقدرش نسجّل محاولة
-      recordAttempt("arena", id, solved, u => {
+      // مفتاح فريد لكل حل: لو Lichess رجّعت نفس اللغز تاني بيتحسب تاني في العداد (بدل «اتحسب قبل كده»)
+      const key = id + "-" + Date.now().toString(36);
+      recordAttempt("arena", key, solved, u => {
         const a = u.arena = u.arena || {}; markActiveDay(u);
         if (!solved && typeof reviewAdd === "function") reviewAdd(u, id, Z.info.rating);     // اللغز الغلط يدخل المراجعة
         a.puzTried = (a.puzTried || 0) + 1;
@@ -323,12 +365,16 @@
       const Z = arena.puz, g = Z.game; if (Z.status !== "play" || !g) return;
       const mv = pickOrMove(Z, sq, Z.color);
       if (!mv) return arenaRefresh();
-      const want = Z.sol[Z.idx] || "";
+      // ترقية؟ اختر القطعة زي Lichess (Q N R B) — الاختيار بيفتح على الرقعة نفسها
+      if (mv.promotion && promoNeeded(Z, mv.from, mv.to)) return promoShow(Z, mv.from, mv.to, pc => puzPlay(Object.assign(mv, { promotion: pc })));
+      puzPlay(mv);
+    }
+    function puzPlay(mv) {
+      const Z = arena.puz, g = Z.game;
       let r = null; try { r = g.move(mv); } catch (_) {}
       if (!r) return arenaRefresh();
-      // الترقية: لو النقلة صح بس الحل بيرقّي لقطعة غير الوزير، نصحّحها
-      if (want.length === 5 && r.from + r.to === want.slice(0, 4) && r.promotion !== want[4]) { g.undo(); r = uciMove(g, want); }
-      const ok = r.from + r.to + (r.promotion || "") === want || g.isCheckmate();
+      const want = Z.sol[Z.idx] || "";
+      const ok = r.from + r.to + (r.promotion || "") === want || g.isCheckmate();   // قطعة الترقية الغلط = نقلة غلط زي Lichess
       Z.last = [r.from, r.to];
       if (!ok) {
         Z.status = "wrong"; Z.flash = { [r.to]: "bad" }; puzCount(false); arenaRefresh();

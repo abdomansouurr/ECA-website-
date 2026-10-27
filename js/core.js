@@ -272,6 +272,8 @@
       if (!u) {
         cSearch.classList.add("hidden");
         acct.innerHTML = "";
+        const vTh = document.getElementById("themeBtn"), vLg = document.getElementById("langBtn");
+        if (vTh) vTh.classList.remove("hidden"); if (vLg) vLg.classList.remove("hidden");   // الزائر لسه محتاج الشكل واللغة في الهيدر
         if (typeof closeSideNav === "function") closeSideNav();
         const sItems = document.getElementById("sideNavItems"); if (sItems) sItems.innerHTML = "";
         const nTg = document.getElementById("navToggle"); if (nTg) nTg.classList.add("hidden");
@@ -317,11 +319,24 @@
             <div class="text-sm font-bold text-white truncate">${esc(u.name || "")}</div>
             <div class="text-[11px] text-gray-400 truncate" dir="ltr">@${esc(u.username || "")}</div>
           </div>
+          <div class="px-1.5 pb-1.5 mb-1 border-b border-yellow-500/15 space-y-1">
+            <div class="flex items-center justify-between gap-2 px-2 pt-0.5">
+              <span class="text-[11px] text-gray-400">${lang === "en" ? "Theme" : "شكل الموقع"}</span>
+              <span class="flex gap-1.5">
+                ${THEMES.map(x => `<button type="button" class="thm-chip w-6 h-6 rounded-full border-2 shrink-0" data-t="${x[0]}" onclick="menuTheme('${x[0]}')" aria-label="${lang === "en" ? x[2] : x[1]}" aria-pressed="${currentTheme() === x[0]}" style="border-color:${currentTheme() === x[0] ? "#d4af37" : "rgba(128,128,128,.4)"};background:${THEME_SWATCH[x[0]]}"></button>`).join("")}
+              </span>
+            </div>
+            <button onclick="toggleLang()" role="menuitem" class="w-full flex items-center gap-2.5 px-3 h-10 rounded-lg text-sm text-start hover:bg-yellow-500/10 text-gray-200"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" class="w-4 h-4"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z"/></svg><span>${lang === "en" ? "العربية" : "English"}</span></button>
+          </div>
           ${!ai.google ? mi("linkGoogle()", "ربط حساب Google", '<svg viewBox="0 0 24 24" class="w-4 h-4" aria-hidden="true"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.9-5.5 3.9-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.3 14.6 2.3 12 2.3 6.6 2.3 2.3 6.6 2.3 12s4.3 9.7 9.7 9.7c5.6 0 9.3-3.9 9.3-9.5 0-.6-.1-1.1-.2-1.6H12z"/></svg>') : ""}
           ${ai.password ? mi("changeMyPassword()", "تغيير كلمة السر", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3m-3 3 2 2m-5 1 2 2"/></svg>') : ""}
           ${mi("logout()", "تسجيل الخروج", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11"/></svg>', "text-red-300")}
         </div>
       </div>`;
+      // أيقونات الشكل واللغة بقوا جوه قايمة الحساب للمدخلين — بنخفيهم من الهيدر
+      const thB = document.getElementById("themeBtn"), lgB = document.getElementById("langBtn");
+      if (thB) thB.classList.add("hidden");
+      if (lgB) lgB.classList.add("hidden");
 
       if (tab === "lessons") main.innerHTML = renderLessonsView(u);
       else if (tab === "homework" && typeof renderHomeworkPlayer === "function") main.innerHTML = renderHomeworkPlayer(u);
@@ -463,7 +478,7 @@
     function renderStudentHome(stu) {
       const s = calcStats(stu);
       const puz = PUZZLES[stu.level] || PUZZLES[1];
-      const done = (stu.puzDone || {})[stu.level];
+      const done = (stu.puzDone || {})[puzDayKey(stu.level)];   // القفل اليومي: بيفتح تاني كل يوم (كان بيتقفل للأبد)
       return `
         <div class="space-y-6">
           <div class="gold-card rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
@@ -504,14 +519,16 @@
       `;
     }
 
+    // مفتاح لغز اليوم: بيتميز بالتاريخ عشان اللغز يفتح تاني كل يوم ويتحسب في العداد
+    function puzDayKey(lvl) { return lvl + "_" + todayISO(); }
     function solvePuzzle(i, ans) {
       const u = currUser();
       u.puzDone = u.puzDone || {};
-      if (u.puzDone[u.level]) return toast("اللغز مقفول بالفعل");
+      if (u.puzDone[puzDayKey(u.level)]) return toast("اللغز مقفول بالفعل");
       const ok = i === ans;
       recordAttempt("daily", todayISO() + "-L" + u.level, ok, s => {
         s.puz = s.puz || { t: 0, c: 0 }; s.puz.t = (s.puz.t || 0) + 1; if (ok) s.puz.c = (s.puz.c || 0) + 1;
-        s.puzDone = s.puzDone || {}; s.puzDone[s.level] = { i, ok };
+        s.puzDone = s.puzDone || {}; s.puzDone[puzDayKey(s.level)] = { i, ok };
         if (typeof markActiveDay === "function") markActiveDay(s);   // اللغز اليومي بيحسب في سلسلة أيام التمرين
       }).then(r => { if (!r.ok && r.code === "permission-denied") { toast("لغز النهاردة اتحسب قبل كده"); render(); } });
       toast(ok ? "إجابة صحيحة! أحسنت يا بطل" : "إجابة خاطئة — تم قفل اللغز");
@@ -702,7 +719,7 @@
 
     function resetPuz(id) {
       const s = db.users.find(u => u.id === id); if (!s) return;
-      if (s.puzDone) delete s.puzDone[s.level];
+      if (s.puzDone) { delete s.puzDone[puzDayKey(s.level)]; delete s.puzDone[s.level]; }   // نمسح مفتاح النهاردة + المفتاح القديم بالفعل
       // لازم نمسح محاولة النهاردة من الدفتر كمان، وإلا القواعد هترفض الحل التاني
       if (window.fbDeleteAttempt) window.fbDeleteAttempt(id + "_daily_" + attemptKey(todayISO() + "-L" + s.level));
       save(); render(); toast("تم إعادة فتح اللغز");
@@ -1076,6 +1093,16 @@
     }
     function closeThemeMenu() { const m = document.getElementById("themeMenu"); if (m) m.remove(); const b = document.getElementById("themeBtn"); if (b) b.setAttribute("aria-expanded", "false"); }
     function pickTheme(t) { applyTheme(t); closeThemeMenu(); }
+    // اختيار الشكل من جوه قايمة الحساب: بيفضل القايمة مفتوحة ويحدّث الشارة النشطة
+    function menuTheme(t) {
+      applyTheme(t);
+      document.querySelectorAll("#acctMenu .thm-chip").forEach(b => {
+        const on = b.dataset.t === t;
+        b.style.borderColor = on ? "#d4af37" : "rgba(128,128,128,.4)";
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+    }
+    window.menuTheme = menuTheme;
     function toggleTheme(ev) {
       if (ev) ev.stopPropagation();
       if (document.getElementById("themeMenu")) return closeThemeMenu();

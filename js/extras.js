@@ -90,8 +90,9 @@
       const P = arena.pawn; if (!P.game || P.over || P.thinking) return;
       const mv = pickOrMove(P, sq, P.color);
       if (mv) {
-        let r = null; try { r = P.game.move(mv); } catch (_) {}
-        if (r) { P.started = true; P.last = [r.from, r.to]; pawnCheck(r); if (!P.over) return pawnEngine(); }
+        const play = m => { let r = null; try { r = P.game.move(m); } catch (_) {} if (r) { P.started = true; P.last = [r.from, r.to]; pawnCheck(r); if (!P.over) pawnEngine(); } };
+        if (mv.promotion && promoNeeded(P, mv.from, mv.to)) return promoShow(P, mv.from, mv.to, pc => play(Object.assign(mv, { promotion: pc })));
+        play(mv);
       }
       arenaRefresh();
     }
@@ -202,7 +203,12 @@
     function anaClick(sq) {
       const A = arena.ana, g = A.game; if (!g) return;
       const mv = pickOrMove(A, sq, g.turn());
-      if (mv) { let r = null; try { r = g.move(mv); } catch (_) {} if (r) { A.last = [r.from, r.to]; arenaRefresh(); return anaAnalyze(); } }
+      if (mv) {
+        const play = m => { let r = null; try { r = g.move(m); } catch (_) {} if (r) { A.last = [r.from, r.to]; arenaRefresh(); return anaAnalyze(); } arenaRefresh(); };
+        if (mv.promotion && promoNeeded(A, mv.from, mv.to)) return promoShow(A, mv.from, mv.to, pc => play(Object.assign(mv, { promotion: pc })));
+        play(mv);
+        return;
+      }
       arenaRefresh();
     }
     function anaSet(g) { const A = arena.ana; A.game = g; A.sel = null; A.last = lastOf(g); arenaRefresh(); anaAnalyze(); }
@@ -737,11 +743,16 @@
       const q = EX.list[EX.i], g = q.game;
       const mv = pickOrMove(q, sq, q.color);
       if (!mv) return examPaint();
+      // ترقية البيدق: اختيار القطعة زي Lichess — والقطعة غير قطعة الحل بتتحسب غلط
+      if (mv.promotion && promoNeeded(q, mv.from, mv.to)) return promoShow(q, mv.from, mv.to, pc => examPlay(Object.assign(mv, { promotion: pc })));
+      examPlay(mv);
+    }
+    function examPlay(mv) {
+      const q = EX.list[EX.i], g = q.game;
       const want = q.sol[q.idx] || "";
       let r = null; try { r = g.move(mv); } catch (_) {}
       if (!r) return examPaint();
-      if (want.length === 5 && r.from + r.to === want.slice(0, 4) && r.promotion !== want[4]) { g.undo(); r = uciMove(g, want); }
-      const ok = r.from + r.to + (r.promotion || "") === want || g.isCheckmate();
+      const ok = r.from + r.to + (r.promotion || "") === want || g.isCheckmate();   // قطعة الترقية الغلط = غلط زي Lichess
       if (!ok) return examAnswer(false, r);
       q.idx++; q.sel = null; q.last = [r.from, r.to]; q.flash = { [r.to]: "good" };
       if (q.idx >= q.sol.length || g.isCheckmate()) return examAnswer(true, r);

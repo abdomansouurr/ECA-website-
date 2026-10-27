@@ -991,10 +991,16 @@ function hwClick(sq) {
   if (HW.idx % 2 === 1 || HW.idx >= HW.sol.length) return;   // دور الخصم (رد آلي) — استنى
   const mv = pickOrMove(HW, sq, HW.color);
   if (!mv) return render();
+  // ترقية البيدق: اختيار القطعة زي Lichess بالظبط (Q N R B على الرقعة) — واختيار قطعة غير قطعة الحل بيتحسب غلط
+  if (mv.promotion && promoNeeded(HW, mv.from, mv.to)) return promoShow(HW, mv.from, mv.to, pc => hwPlay(Object.assign(mv, { promotion: pc })));
+  hwPlay(mv);
+}
+function hwPlay(mv) {
   let r = null; try { r = HW.game.move(mv); } catch (_) {}
   if (!r) return render();
   const u = r.from + r.to + (r.promotion || ""), want = HW.sol[HW.idx] || "";
-  const ok = u.slice(0, 4) === want.slice(0, 4)
+  // لو الحل بيرقّي لقطعة محددة: لازم الطالب يختار نفس القطعة (زي Lichess) — غير كده مقارنة المربع بس
+  const ok = (want.length === 5 ? u === want : u.slice(0, 4) === want.slice(0, 4))
     || (HW.idx === 0 && (HW.alts || []).some(a => a.slice(0, 4) === u.slice(0, 4)))
     || HW.game.isCheckmate();
   HW.last = [r.from, r.to]; HW.sel = null; HW.hint = null;
