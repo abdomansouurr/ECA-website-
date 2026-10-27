@@ -73,7 +73,7 @@
     @media (min-width: 1024px) { .nav-bar { flex-wrap: wrap; overflow: visible; } .nav-tab { height: 36px; padding: 0 12px; } }
     /* ===== القائمة الجانبية الرأسية (Side navigation drawer) =====
        عربي = على يمين الشاشة، إنجليزي = على شمالها — زر واحد يفتح ويقفل. */
-    #sideNav { position: fixed; top: 0; bottom: 0; width: 284px; max-width: 86vw; z-index: 50; display: flex; flex-direction: column; background: rgba(9,9,13,.985); transition: transform .28s ease; overscroll-behavior: contain; }
+    #sideNav { position: fixed; top: 0; bottom: 0; width: 284px; max-width: 86vw; z-index: 50; display: flex; flex-direction: column; background: rgba(9,9,13,.985); transition: transform .34s cubic-bezier(.22,.9,.3,1); overscroll-behavior: contain; will-change: transform; }
     html[lang="ar"] #sideNav { right: 0; transform: translateX(106%); border-left: 1px solid rgba(212,175,55,.28); box-shadow: 14px 0 44px rgba(0,0,0,.5); }
     html[lang="en"] #sideNav { left: 0; transform: translateX(-106%); border-right: 1px solid rgba(212,175,55,.28); box-shadow: -14px 0 44px rgba(0,0,0,.5); }
     html[lang="ar"] #sideNav.open, html[lang="en"] #sideNav.open { transform: translateX(0); }
@@ -82,6 +82,25 @@
     #sideNavItems .nav-tab { display: flex; width: 100%; height: 46px; justify-content: flex-start; padding: 0 14px; font-size: 14px; border-radius: 12px; }
     #sideNavItems .nav-tab.active { font-weight: 800; }
     @media (max-width: 380px) { #sideNav { width: 260px; } }
+    /* انيميشن فتح/قفل الدرج: الخلفية بتتلاشى والعناصر بتدخل واحدة ورا التانية */
+    #sideBackdrop { opacity: 0; transition: opacity .3s ease; }
+    #sideBackdrop.show { opacity: 1; }
+    @keyframes ecaNavIn { from { opacity: 0; transform: translateX(var(--nav-in, 16px)); } to { opacity: 1; transform: none; } }
+    html[lang="ar"] { --nav-in: 16px; }
+    html[lang="en"] { --nav-in: -16px; }
+    #sideNavItems .nav-tab { opacity: 0; }
+    #sideNav.open #sideNavItems .nav-tab { animation: ecaNavIn .4s cubic-bezier(.22,.9,.3,1) forwards; }
+    #sideNav.open #sideNavItems .nav-tab:nth-child(1) { animation-delay: .03s }
+    #sideNav.open #sideNavItems .nav-tab:nth-child(2) { animation-delay: .06s }
+    #sideNav.open #sideNavItems .nav-tab:nth-child(3) { animation-delay: .09s }
+    #sideNav.open #sideNavItems .nav-tab:nth-child(4) { animation-delay: .12s }
+    #sideNav.open #sideNavItems .nav-tab:nth-child(5) { animation-delay: .15s }
+    #sideNav.open #sideNavItems .nav-tab:nth-child(6) { animation-delay: .18s }
+    #sideNav.open #sideNavItems .nav-tab:nth-child(7) { animation-delay: .21s }
+    #sideNav.open #sideNavItems .nav-tab:nth-child(8) { animation-delay: .24s }
+    #sideNav.open #sideNavItems .nav-tab:nth-child(9) { animation-delay: .27s }
+    #sideNav.open #sideNavItems .nav-tab:nth-child(10) { animation-delay: .3s }
+    #sideNav.open #sideNavItems .nav-tab:nth-child(n+11) { animation-delay: .33s }
     :focus-visible { outline: 2px solid #d4af37 !important; outline-offset: 2px; border-radius: 10px; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
@@ -96,7 +115,14 @@
     html.light .g-btn, html.light .g-btn * { color: #1f1f1f !important; }
 
     /* ===== ساحة التدريب: الرقعة ===== */
-    .eca-board { direction: ltr; width: 100%; max-width: 520px; aspect-ratio: 1 / 1; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); border-radius: 14px; overflow: hidden; border: 2px solid rgba(212,175,55,.55); box-shadow: 0 10px 30px rgba(0,0,0,.5); user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+    .eca-board { direction: ltr; width: 100%; max-width: 520px; aspect-ratio: 1 / 1; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); border-radius: 14px; overflow: hidden; border: 2px solid rgba(212,175,55,.55); box-shadow: 0 10px 30px rgba(0,0,0,.5); user-select: none; -webkit-user-select: none; touch-action: manipulation; position: relative; }
+    /* اختيار قطعة الترقية زي Lichess: عمود رأسي على ملف مربع الترقية */
+    .eca-promo { position: absolute; inset: 0; z-index: 30; }
+    .eca-promo-bg { position: absolute; inset: 0; background: rgba(0,0,0,.55); cursor: pointer; }
+    .eca-promo-pc { position: absolute; width: 12.5%; height: 12.5%; display: flex; align-items: center; justify-content: center; border: none; padding: 0; margin: 0; cursor: pointer; box-shadow: inset 0 0 0 2px rgba(212,175,55,.55); animation: promoIn .16s ease both; }
+    .eca-promo-pc:hover { box-shadow: inset 0 0 0 3px #d4af37; filter: brightness(1.06); }
+    .eca-promo-pc img, .eca-promo-pc .eca-pc { width: 80%; height: 80%; pointer-events: none; }
+    @keyframes promoIn { from { opacity: 0; } to { opacity: 1; } }
     .eca-sq { position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; }
     .eca-sq.l { background: var(--sq-l, #f0d9b5); } .eca-sq.d { background: var(--sq-d, #b58863); }
     .eval-bar { direction: ltr; height: 14px; border-radius: 999px; overflow: hidden; background: #1a1410; border: 1px solid rgba(212,175,55,.45); }
@@ -197,8 +223,8 @@
     html.eca .vis-target { color: var(--eca-blue); }
     html.eca ::selection { background: rgba(10,69,168,.25); }
   </style>
-  <script>window.ECA_VERSION = "eca-v24";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v24" />
+  <script>window.ECA_VERSION = "eca-v25";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v25" />
 </head>
 <body class="min-h-screen flex flex-col relative">
 
@@ -321,18 +347,20 @@
     document.addEventListener("click", function (e) { if (!e.target.closest || !e.target.closest("#acctMenu, #acctBtn")) closeAcctMenu(); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeAcctMenu(); });
     // ===== القائمة الجانبية الرأسية: نفس الزر يفتح ويقفل — عربي يمين / إنجليزي شمال (CSS) =====
+    // الخلفية المعتمة بتتلاشى بالتدريج (opacity) بدل ما تظهر وتختفي فجأة
+    var __sideBgT = null;
     function openSideNav() {
       var s = document.getElementById("sideNav"), b = document.getElementById("sideBackdrop"), t = document.getElementById("navToggle");
       if (!s) return;
       s.classList.add("open");
-      if (b) b.classList.remove("hidden");
+      if (b) { clearTimeout(__sideBgT); b.classList.remove("hidden"); requestAnimationFrame(function () { requestAnimationFrame(function () { b.classList.add("show"); }); }); }
       if (t) t.setAttribute("aria-expanded", "true");
     }
     function closeSideNav() {
       var s = document.getElementById("sideNav"), b = document.getElementById("sideBackdrop"), t = document.getElementById("navToggle");
       if (!s) return;
       s.classList.remove("open");
-      if (b) b.classList.add("hidden");
+      if (b) { b.classList.remove("show"); clearTimeout(__sideBgT); __sideBgT = setTimeout(function () { b.classList.add("hidden"); }, 340); }
       if (t) t.setAttribute("aria-expanded", "false");
     }
     function toggleSideNav(ev) {
@@ -355,28 +383,28 @@
       });
     } catch (_) {}
   </script>
-  <script src="js/core.js?v=eca-v24"></script>
+  <script src="js/core.js?v=eca-v25"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v24"></script>
+  <script src="js/arena.js?v=eca-v25"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v24"></script>
-  <script src="js/streaks.js?v=eca-v24"></script>
-  <script src="js/today.js?v=eca-v24"></script>
-  <script src="js/reports.js?v=eca-v24"></script>
-  <script src="js/tournaments.js?v=eca-v24"></script>
-  <script src="js/review.js?v=eca-v24"></script>
-  <script src="js/quality.js?v=eca-v24"></script>
-  <script src="js/announce.js?v=eca-v24"></script>
-  <script src="js/progress.js?v=eca-v24"></script>
-  <script src="js/arena2.js?v=eca-v24"></script>
-  <script src="js/homework.js?v=eca-v24"></script>
-  <script src="js/placement-data.js?v=eca-v24"></script>
-  <script src="js/placement.js?v=eca-v24"></script>
+  <script src="js/extras.js?v=eca-v25"></script>
+  <script src="js/streaks.js?v=eca-v25"></script>
+  <script src="js/today.js?v=eca-v25"></script>
+  <script src="js/reports.js?v=eca-v25"></script>
+  <script src="js/tournaments.js?v=eca-v25"></script>
+  <script src="js/review.js?v=eca-v25"></script>
+  <script src="js/quality.js?v=eca-v25"></script>
+  <script src="js/announce.js?v=eca-v25"></script>
+  <script src="js/progress.js?v=eca-v25"></script>
+  <script src="js/arena2.js?v=eca-v25"></script>
+  <script src="js/homework.js?v=eca-v25"></script>
+  <script src="js/placement-data.js?v=eca-v25"></script>
+  <script src="js/placement.js?v=eca-v25"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v24"></script>
+  <script type="module" src="js/firebase.js?v=eca-v25"></script>
 </body>
 </html>

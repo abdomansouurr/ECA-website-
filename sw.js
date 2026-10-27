@@ -1,5 +1,5 @@
 // ECA service worker — offline support. Bump VERSION to force clients to refresh the cache.
-const VERSION = "eca-v24";
+const VERSION = "eca-v25";
 const SHELL = [
   "./", "./index.html", "./manifest.json",
   "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png",
@@ -7,9 +7,9 @@ const SHELL = [
   "./img/pieces/lichess/wK.svg", "./img/pieces/lichess/wQ.svg", "./img/pieces/lichess/wR.svg", "./img/pieces/lichess/wB.svg", "./img/pieces/lichess/wN.svg", "./img/pieces/lichess/wP.svg",
   "./img/pieces/lichess/bK.svg", "./img/pieces/lichess/bQ.svg", "./img/pieces/lichess/bR.svg", "./img/pieces/lichess/bB.svg", "./img/pieces/lichess/bN.svg", "./img/pieces/lichess/bP.svg",
   // ملفات الكود (لازم نفس ?v= اللي في index.html)
-  "./tailwind.css?v=eca-v24",
-  "./js/core.js?v=eca-v24", "./js/arena.js?v=eca-v24", "./js/extras.js?v=eca-v24", "./js/streaks.js?v=eca-v24", "./js/today.js?v=eca-v24", "./js/reports.js?v=eca-v24", "./js/tournaments.js?v=eca-v24", "./js/review.js?v=eca-v24", "./js/quality.js?v=eca-v24", "./js/announce.js?v=eca-v24", "./js/progress.js?v=eca-v24", "./js/arena2.js?v=eca-v24", "./js/homework.js?v=eca-v24", "./img/placement/s1.jpg", "./img/placement/s2.jpg", "./img/placement/s3.jpg", "./img/placement/s4.jpg", "./img/placement/s5.jpg", "./img/placement/s6.jpg", "./img/placement/s7.jpg", "./img/placement/s8.jpg", "./js/placement-data.js?v=eca-v24", "./js/placement.js?v=eca-v24", "./js/firebase.js?v=eca-v24",
-  "./puzzles.js?v=eca-v24"   // عشان الامتحان يشتغل أوفلاين
+  "./tailwind.css?v=eca-v25",
+  "./js/core.js?v=eca-v25", "./js/arena.js?v=eca-v25", "./js/extras.js?v=eca-v25", "./js/streaks.js?v=eca-v25", "./js/today.js?v=eca-v25", "./js/reports.js?v=eca-v25", "./js/tournaments.js?v=eca-v25", "./js/review.js?v=eca-v25", "./js/quality.js?v=eca-v25", "./js/announce.js?v=eca-v25", "./js/progress.js?v=eca-v25", "./js/arena2.js?v=eca-v25", "./js/homework.js?v=eca-v25", "./img/placement/s1.jpg", "./img/placement/s2.jpg", "./img/placement/s3.jpg", "./img/placement/s4.jpg", "./img/placement/s5.jpg", "./img/placement/s6.jpg", "./img/placement/s7.jpg", "./img/placement/s8.jpg", "./js/placement-data.js?v=eca-v25", "./js/placement.js?v=eca-v25", "./js/firebase.js?v=eca-v25",
+  "./puzzles.js?v=eca-v25"   // عشان الامتحان يشتغل أوفلاين
 ];
 const CDN = [
   "https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"
