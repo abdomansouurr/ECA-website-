@@ -246,6 +246,31 @@
     document.addEventListener("keydown", e => { if (e.key === "Escape") closeAcctMenu(); });
     function isInfoTab(t) { return typeof renderInfoPage === "function" && INFO_TABS.includes(t); }   // صفحات المعلومات (متعرّفة في سكريبت تحت)
 
+    // ===== القوائم بتدخل واحدة ورا التانية بانسيابية =====
+    // بنعلّم أكبر حايمة قايمة في الصفحة (جريد/ليستة/سكاشن/جدول) بـ .stagger-in
+    // والـ CSS بيعمل التتابع — مربعات الرقعة مستثناة، وأي حايمة جوه حايمة متحركة بتتفضل ثابتة عشان الحركة متبقاش متراكبة
+    function staggerLists(root) {
+      if (!root || !root.querySelectorAll) return;
+      try {
+        root.querySelectorAll(".grid, ul, tbody, [class*='space-y']").forEach(el => {
+          if (el.classList.contains("eca-board") || el.closest(".eca-board")) return;      // مربعات الشطرنج ميتحركش
+          if (el.closest(".stagger-in")) return;                                            // أكبر حايمة بس (ما عدا صفوف الجداول)
+          if (el.children.length < 2) return;
+          el.classList.add("stagger-in");
+        });
+        root.querySelectorAll("tbody").forEach(el => {                                     // صفوف الجداول بترقق دايمًا — أجمل شكل للليدربورد
+          if (el.closest(".eca-board") || el.children.length < 2) return;
+          el.classList.add("stagger-in");
+        });
+        // بنود الـ details (الأسئلة الشائعة وغيرها): كل بند بيدخل بعد اللي قبله
+        root.querySelectorAll("details").forEach((d, i) => {
+          if (d.closest(".eca-board") || d.closest(".stagger-in")) return;
+          d.classList.add("st-item");
+          d.style.animationDelay = (60 + Math.min(i, 11) * 45) + "ms";
+        });
+      } catch (_) {}
+    }
+
     function calcStats(stu) {
       const st = STEPS.find(x => x.step === Number(stu.level)) || STEPS[0];
       const total = st.lessons.length || 1;
@@ -270,9 +295,27 @@
       const winY = window.scrollY;
       const innerScrolls = Array.from(document.querySelectorAll("#mainView .overflow-y-auto")).map(el => el.scrollTop);
       const a = document.activeElement, id = a && a.id, s = a && a.selectionStart, e = a && a.selectionEnd;
+      render.__skel = false;
       _render(); applyLang();
-      // انيميشن انتقال الصفحات: أول ما التاب يتغير المحتوى بيظهر بتلاشٍ وحركة خفيفة (لن نفس التاب مفيش إعادة تشغيل)
-      if (render.__pg !== tab) { render.__pg = tab; const mv = document.getElementById("mainView"); if (mv) { mv.classList.remove("page-enter"); void mv.offsetWidth; mv.classList.add("page-enter"); } }
+      // انيميشن متنوع لكل صفحة: كل تاب ليه حركة دخول مختلفة (data-pg بتختارها من CSS)
+      // + القوائم جوه الصفحة بتدخل واحدة ورا التانية
+      // المفتاح = التاب + هوية المستخدم: كده أول ظهور حقيقي بعد الـ skeleton بيتحرك، والدخول من صفحة اللوجين للهوم بيتحرك،
+      // بس إعادة الرندر العادية (بحث/حفظ/تبديل لغة) مبتحركش
+      const pgKey = tab + "|" + ((currUser() || {}).id || "guest");
+      // الـ skeleton مستهلكش انيميشن الدخول — أول رندر بمحتوى حقيقي هو اللي بيتحرك
+      // + نافذة سماح 600ms: أي رندر تابع (بيانات واصلة/تهيئة) القوائم الجديدة فيه تكمل الدخول بانسيابية بدل ما تظهر فجائي
+      const nowMs = Date.now();
+      if (render.__pg !== pgKey && !render.__skel) {
+        render.__pg = pgKey; render.__pgAt = nowMs; render.__skel = false;
+        const mv = document.getElementById("mainView");
+        if (mv) {
+          mv.dataset.pg = (typeof isInfoTab === "function" && isInfoTab(tab)) ? "info" : tab;
+          mv.classList.remove("page-enter"); void mv.offsetWidth; mv.classList.add("page-enter");
+          staggerLists(mv);
+        }
+      } else if (render.__pgAt && nowMs - render.__pgAt < 600) {
+        staggerLists(document.getElementById("mainView"));
+      }
       if (id) { const el = document.getElementById(id); if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); try { el.setSelectionRange(s, e); } catch (_) {} } }
       document.querySelectorAll("#mainView .overflow-y-auto").forEach((el, i) => { if (innerScrolls[i] !== undefined) el.scrollTop = innerScrolls[i]; });
       window.scrollTo(0, winY);
@@ -282,7 +325,7 @@
       const nav = document.getElementById("navButtons");
       const cSearch = document.getElementById("coachSearchBox");
       const main = document.getElementById("mainView"), acct = document.getElementById("acctButtons");
-      if (!u && window.__authLoading) { cSearch.classList.add("hidden"); nav.innerHTML = ""; acct.innerHTML = ""; main.innerHTML = document.getElementById("ecaSkeleton") ? main.innerHTML : SKELETON_HTML; return; }
+      if (!u && window.__authLoading) { cSearch.classList.add("hidden"); nav.innerHTML = ""; acct.innerHTML = ""; render.__pg = "loading"; render.__skel = true; main.innerHTML = document.getElementById("ecaSkeleton") ? main.innerHTML : SKELETON_HTML; return; }   // الـ skeleton مستهلكش انيميشن الصفحة — أول رندر حقيقي بيتحرك
 
       if (!u) {
         cSearch.classList.add("hidden");

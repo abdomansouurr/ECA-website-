@@ -31,6 +31,8 @@
       vis: { active: false, target: "", score: 0, left: VIS_SECONDS, timer: null, attempts: [], coords: true, flip: false, flash: null, best: 0 }
     };
     const arenaRefresh = () => { if (tab === "arena") render(); };
+    // تبديل الصفحات الفرعية للساحة (لعب/ألغاز/بيادق/رؤية/تحليل) = انتقال كامل: انيميشن الصفحة + القوائم بتتوالى
+    function arenaSub(k) { arena.sub = k; render(); const mv = document.getElementById("mainView"); if (mv) { mv.classList.remove("page-enter"); void mv.offsetWidth; mv.classList.add("page-enter"); if (typeof staggerLists === "function") staggerLists(mv); } }
 
     // ---------- تحميل مكتبة الشطرنج (أول مرة بس) ----------
     let ChessCls = null, chessLoading = false;
@@ -516,7 +518,7 @@
     function renderArenaView(u) {
       if (arena.sub !== "vision") loadChess();
       const sub = arena.sub, a = (u.role === "student" && u.arena) || {}, gm = a.games || { w: 0, l: 0, d: 0 };
-      const tb = (k, label) => `<button onclick="arena.sub='${k}'; render();" class="flex-1 min-w-[140px] py-2.5 px-3 rounded-xl text-xs font-bold ${sub === k ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/20'}">${label}</button>`;
+      const tb = (k, label) => `<button onclick="arenaSub('${k}')" class="flex-1 min-w-[140px] py-2.5 px-3 rounded-xl text-xs font-bold ${sub === k ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/20'}">${label}</button>`;
       const body = sub === "vision" ? arenaVisHTML()
         : !ChessCls ? `<div class="gold-card rounded-2xl p-8 text-center text-sm text-gray-400">جاري تحميل الرقعة...</div>`
         : sub === "puzzles" ? arenaPuzHTML() : sub === "pawns" ? arenaPawnsHTML() : sub === "analysis" ? arenaAnaHTML() : arenaPlayHTML();

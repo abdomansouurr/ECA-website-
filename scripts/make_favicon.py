@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
-"""Generate img/favicon.png from the high-res academy logo (img/eca-logo.jpg).
-White background -> transparent (smoothstep alpha keying), square crop, 128x128."""
+"""Generate the tab/app icons from the high-res academy logo (img/eca-logo.jpg):
+  - img/favicon.png     128x128 tab icon (rounded white badge, transparent corners)
+  - favicon.ico         16+32+48 at the site ROOT (browsers request /favicon.ico directly;
+                          this is the bulletproof fallback when <link rel=icon> is missing/old)
+  - apple-touch-icon.png 180x180 opaque (iOS home screen)
+White background -> transparent (smoothstep alpha keying), square crop."""
 import numpy as np
 from PIL import Image
 
@@ -71,3 +75,15 @@ badge.paste(white, (0, 0), draw)
 badge.alpha_composite(mark)
 badge.save(OUT)
 print("saved", OUT, badge.size)
+
+# --- favicon.ico at the site root: 16/32/48 multi-size ICO ---
+# المتصفحات بتطلب /favicon.ico مباشرة لو ملقيتش <link rel=icon> — أو لو الـ HTML لسه نسخة قديمة.
+# وجوده في الجذر بيضمن إن اللوجو يظهر مهما حصل.
+badge.save("favicon.ico", format="ICO", sizes=[(16, 16), (32, 32), (48, 48)])
+print("saved favicon.ico (16/32/48)")
+
+# --- apple-touch-icon.png 180x180: iOS مش بيحب الشفافية → خلفية بيضاء مصمتة ---
+touch = Image.new("RGBA", (180, 180), (255, 255, 255, 255))
+touch.alpha_composite(badge.resize((180, 180), Image.LANCZOS))
+touch.convert("RGB").save("apple-touch-icon.png")
+print("saved apple-touch-icon.png (180x180)")
