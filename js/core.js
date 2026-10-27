@@ -234,13 +234,14 @@
     function logout() { parentStu = null; parentQ = ""; if (window.fbLogout) window.fbLogout(); go("home"); render(); }
     function goHomeRefresh() { go("home"); render(); }
     // قايمة الحساب (الأيقونة فوق يمين): فتح/قفل — كانت ناقصة من النسخة
-    function closeAcctMenu() { const m = document.getElementById("acctMenu"), b = document.getElementById("acctBtn"); if (m) m.classList.add("hidden"); if (b) b.setAttribute("aria-expanded", "false"); }
+    function closeAcctMenu() { const m = document.getElementById("acctMenu"), b = document.getElementById("acctBtn"); if (m && !m.classList.contains("hidden")) { if (window.ecaCurtainHide) ecaCurtainHide(m); else m.classList.add("hidden"); } if (b) b.setAttribute("aria-expanded", "false"); }
     function toggleAcctMenu(ev) {
       if (ev) ev.stopPropagation();
       const m = document.getElementById("acctMenu"), b = document.getElementById("acctBtn"); if (!m) return;
-      const open = m.classList.contains("hidden");
-      m.classList.toggle("hidden", !open);
-      if (b) b.setAttribute("aria-expanded", open ? "true" : "false");
+      const open = m.classList.contains("hidden") || m.__closing;
+      if (!open) { closeAcctMenu(); return; }
+      m.classList.remove("hidden"); if (window.ecaCurtainShow) ecaCurtainShow(m);
+      if (b) b.setAttribute("aria-expanded", "true");
     }
     document.addEventListener("click", e => { if (!e.target.closest || !e.target.closest("#acctMenu, #acctBtn")) closeAcctMenu(); });
     document.addEventListener("keydown", e => { if (e.key === "Escape") closeAcctMenu(); });
@@ -292,7 +293,7 @@
     }
 
  function render() {
-      const winY = window.scrollY;
+      let winY = window.scrollY;
       const innerScrolls = Array.from(document.querySelectorAll("#mainView .overflow-y-auto")).map(el => el.scrollTop);
       const a = document.activeElement, id = a && a.id, s = a && a.selectionStart, e = a && a.selectionEnd;
       render.__skel = false;
@@ -306,7 +307,7 @@
       // + نافذة سماح 600ms: أي رندر تابع (بيانات واصلة/تهيئة) القوائم الجديدة فيه تكمل الدخول بانسيابية بدل ما تظهر فجائي
       const nowMs = Date.now();
       if (render.__pg !== pgKey && !render.__skel) {
-        render.__pg = pgKey; render.__pgAt = nowMs; render.__skel = false;
+        render.__pg = pgKey; render.__pgAt = nowMs; render.__skel = false; winY = 0;
         const mv = document.getElementById("mainView");
         if (mv) {
           mv.dataset.pg = (typeof isInfoTab === "function" && isInfoTab(tab)) ? "info" : tab;
@@ -627,7 +628,7 @@
             const isOpen = openSteps[st.step] !== false;
             return `
               <div class="gold-card rounded-2xl overflow-hidden">
-                <button onclick="openSteps[${st.step}]=!openSteps[${st.step}]; render();" class="w-full px-6 py-4 flex justify-between items-center text-left hover:bg-yellow-500/5">
+                <button onclick="(window.ecaCurtainToggle||function(k,f){f()})('step-${st.step}',function(){openSteps[${st.step}]=!openSteps[${st.step}]; render();})" class="w-full px-6 py-4 flex justify-between items-center text-left hover:bg-yellow-500/5">
                   <div>
                     <h3 class="font-display font-bold text-lg text-yellow-300">${st.title} <span class="text-xs text-gray-400 font-sans">(${st.lessons.length} Lessons)</span></h3>
                     <p class="text-xs text-gray-400">${st.sub}</p>
@@ -635,7 +636,7 @@
                   <span class="text-yellow-400 text-xs font-bold">${isOpen ? '▲ إخفاء القائمة' : '▼ عرض الدروس'}</span>
                 </button>
                 ${isOpen ? `
-                  <div class="divide-y divide-yellow-500/15 border-t border-yellow-500/20 bg-black/60">
+                  <div data-curtain="step-${st.step}" class="divide-y divide-yellow-500/15 border-t border-yellow-500/20 bg-black/60">
                     ${st.lessons.length === 0 ? `<div class="p-5 text-xs text-gray-500 text-center">Coming Soon</div>` : st.lessons.map((les, idx) => {
                       const LV = LESSONS_VIEW.get(st.step + "-" + idx) || { links: les.l.map(x => ({ t: x[0], u: x[1] })), hw: [] };
                       let tCls = "text-white", chip = "";

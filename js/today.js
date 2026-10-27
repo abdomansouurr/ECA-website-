@@ -258,11 +258,11 @@
         </div>` : ""}
 
         <div class="gold-card rounded-2xl p-5 space-y-3">
-          <button onclick="todaySchedOpen=!todaySchedOpen; render();" aria-expanded="${todaySchedOpen}" class="w-full flex items-center justify-between text-start">
+          <button onclick="(window.ecaCurtainToggle||function(k,f){f()})('sched',function(){todaySchedOpen=!todaySchedOpen; render();})" aria-expanded="${todaySchedOpen}" class="w-full flex items-center justify-between text-start">
             <span class="font-bold text-yellow-300">مواعيد المجموعات</span>
             <span class="text-xs text-gray-400">${todaySchedOpen ? "▲ إخفاء" : "▼ تعديل"}</span>
           </button>
-          ${todaySchedOpen ? schedEditor() : ""}
+          ${todaySchedOpen ? `<div data-curtain="sched">${schedEditor()}</div>` : ""}
         </div>
       </div>`;
     }
