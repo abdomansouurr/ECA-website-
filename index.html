@@ -5,8 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#050507" />
   <link rel="manifest" href="manifest.json" />
-  <link rel="icon" type="image/png" href="img/eca-mark.png" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <!-- لوجو الأكاديمية على تاب المتصفح: ICO في الجذر (الفولباك الأضمن — المتصفحات بتطلبه من /favicon.ico مباشرة)
+       + PNG للتاب الحديث + apple-touch للآيفون — كلهم بنفس اللوجو ومع رقم نسخة يكسر الكاش -->
+  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v27" />
+  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v27" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v27" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ECA Chess" />
@@ -82,6 +85,67 @@
     #sideNavItems .nav-tab { display: flex; width: 100%; height: 46px; justify-content: flex-start; padding: 0 14px; font-size: 14px; border-radius: 12px; }
     #sideNavItems .nav-tab.active { font-weight: 800; }
     @media (max-width: 380px) { #sideNav { width: 260px; } }
+    /* ===== انتقال ناعم بين الصفحات: انيميشن مختلف لكل قسم — الموقع بيبقى حي ومتنوع ===== */
+    /* بتتشتغل من core.js لما التاب يتغير بس (مفيش إعادة تشغيل على نفس الصفحة) وبتقف مع prefers-reduced-motion */
+    @keyframes ecaPageIn { from { opacity: 0; transform: translateY(12px) scale(.996); } to { opacity: 1; transform: none; } }
+    .page-enter { animation: ecaPageIn .32s cubic-bezier(.22,.61,.36,1) both; }
+    /* ٥ شخصيات حركة: هوم (طلعة+تكبير) / صعود بضبابية / انزلاق جانبي حسب اللغة / زوم / داتا (ضبابية+طلعة) */
+    @keyframes ecaPgHome { from { opacity: 0; transform: translateY(18px) scale(.98); } to { opacity: 1; transform: none; } }
+    @keyframes ecaPgRise { from { opacity: 0; transform: translateY(24px); filter: blur(4px); } to { opacity: 1; transform: none; filter: blur(0); } }
+    @keyframes ecaPgSide { from { opacity: 0; transform: translateX(var(--pg-side, -26px)); } to { opacity: 1; transform: none; } }
+    @keyframes ecaPgZoom { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: none; } }
+    @keyframes ecaPgData { from { opacity: 0; transform: translateY(10px) scale(.99); filter: blur(5px); } to { opacity: 1; transform: none; filter: blur(0); } }
+    html[lang="ar"] { --pg-side: 26px; }   /* عربي: المحتوى بيدخل من اليمين */
+    html[lang="en"] { --pg-side: -26px; }  /* إنجليزي: من الشمال */
+    #mainView[data-pg="home"].page-enter        { animation-name: ecaPgHome; animation-duration: .46s; }
+    #mainView[data-pg="info"].page-enter         { animation-name: ecaPgRise; animation-duration: .42s; }
+    #mainView[data-pg="lessons"].page-enter      { animation-name: ecaPgRise; animation-duration: .42s; }
+    #mainView[data-pg="arena"].page-enter        { animation-name: ecaPgSide; animation-duration: .4s; }
+    #mainView[data-pg="homework"].page-enter     { animation-name: ecaPgZoom; animation-duration: .38s; }
+    #mainView[data-pg="tournaments"].page-enter  { animation-name: ecaPgRise; animation-duration: .42s; }
+    #mainView[data-pg="honor"].page-enter        { animation-name: ecaPgData; animation-duration: .46s; }
+    #mainView[data-pg="ranks"].page-enter        { animation-name: ecaPgZoom; animation-duration: .4s; }
+    #mainView[data-pg="tracker"].page-enter      { animation-name: ecaPgSide; animation-duration: .4s; }
+    #mainView[data-pg="attendance"].page-enter   { animation-name: ecaPgData; animation-duration: .46s; }
+    #mainView[data-pg="finance"].page-enter      { animation-name: ecaPgData; animation-duration: .46s; }
+    #mainView[data-pg="today"].page-enter        { animation-name: ecaPgSide; animation-duration: .4s; }
+    #mainView[data-pg="placeresults"].page-enter { animation-name: ecaPgRise; animation-duration: .42s; }
+    #mainView[data-pg="parent"].page-enter       { animation-name: ecaPgRise; animation-duration: .42s; }
+    #mainView[data-pg="certs"].page-enter        { animation-name: ecaPgZoom; animation-duration: .4s; }
+    #mainView[data-pg="placement"].page-enter    { animation-name: ecaPgZoom; animation-duration: .4s; }
+    /* ===== القوائم: أول ما الصفحة تتفتح العناصر بتدخل واحدة ورا التانية بانسيابية =====
+       core.js بيعلّم أكبر حايمة قايمة في الصفحة بـ .stagger-in والباقي CSS
+       (backwards مش both — عشان أنيميشن الـ hover زي رفع الكروت يفضل شغال بعد الدخول) */
+    @keyframes ecaItemIn { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+    .stagger-in > *, .st-item { animation: ecaItemIn .36s cubic-bezier(.22,.61,.36,1) backwards; }
+    .stagger-in > *:nth-child(1) { animation-delay: .05s }
+    .stagger-in > *:nth-child(2) { animation-delay: .085s }
+    .stagger-in > *:nth-child(3) { animation-delay: .12s }
+    .stagger-in > *:nth-child(4) { animation-delay: .155s }
+    .stagger-in > *:nth-child(5) { animation-delay: .19s }
+    .stagger-in > *:nth-child(6) { animation-delay: .225s }
+    .stagger-in > *:nth-child(7) { animation-delay: .26s }
+    .stagger-in > *:nth-child(8) { animation-delay: .295s }
+    .stagger-in > *:nth-child(9) { animation-delay: .33s }
+    .stagger-in > *:nth-child(10) { animation-delay: .365s }
+    .stagger-in > *:nth-child(11) { animation-delay: .4s }
+    .stagger-in > *:nth-child(12) { animation-delay: .435s }
+    .stagger-in > *:nth-child(n+13) { animation-delay: .47s }
+    /* قايمة الحساب: بتنزل من عند الزر بتكبير ناعم والصفوف بتتوالى */
+    @keyframes ecaMenuIn { from { opacity: 0; transform: translateY(-8px) scale(.95); } to { opacity: 1; transform: none; } }
+    #acctMenu:not(.hidden) { animation: ecaMenuIn .22s cubic-bezier(.22,.9,.3,1) backwards; transform-origin: top right; }
+    html[lang="ar"] #acctMenu:not(.hidden) { transform-origin: top left; }
+    #acctMenu:not(.hidden) > * { animation: ecaItemIn .3s cubic-bezier(.22,.61,.36,1) backwards; }
+    #acctMenu:not(.hidden) > *:nth-child(1) { animation-delay: .03s }
+    #acctMenu:not(.hidden) > *:nth-child(2) { animation-delay: .07s }
+    #acctMenu:not(.hidden) > *:nth-child(3) { animation-delay: .11s }
+    #acctMenu:not(.hidden) > *:nth-child(4) { animation-delay: .15s }
+    #acctMenu:not(.hidden) > *:nth-child(n+5) { animation-delay: .19s }
+    /* المودالز: الخلفية بتتلاشى جوه والكارت بيدخل من تحت بتكبير ناعم */
+    @keyframes ecaBkIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes ecaModalIn { from { opacity: 0; transform: translateY(18px) scale(.96); } to { opacity: 1; transform: none; } }
+    .fixed.inset-0[class*="bg-black"]:not(#sideBackdrop) { animation: ecaBkIn .2s ease backwards; }
+    .fixed.inset-0[class*="bg-black"]:not(#sideBackdrop) > * { animation: ecaModalIn .3s cubic-bezier(.22,.9,.3,1) backwards; }
     /* انيميشن فتح/قفل الدرج: الخلفية بتتلاشى والعناصر بتدخل واحدة ورا التانية */
     #sideBackdrop { opacity: 0; transition: opacity .3s ease; }
     #sideBackdrop.show { opacity: 1; }
@@ -223,8 +287,8 @@
     html.eca .vis-target { color: var(--eca-blue); }
     html.eca ::selection { background: rgba(10,69,168,.25); }
   </style>
-  <script>window.ECA_VERSION = "eca-v25";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v25" />
+  <script>window.ECA_VERSION = "eca-v27";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v27" />
 </head>
 <body class="min-h-screen flex flex-col relative">
 
@@ -383,28 +447,28 @@
       });
     } catch (_) {}
   </script>
-  <script src="js/core.js?v=eca-v25"></script>
+  <script src="js/core.js?v=eca-v27"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v25"></script>
+  <script src="js/arena.js?v=eca-v27"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v25"></script>
-  <script src="js/streaks.js?v=eca-v25"></script>
-  <script src="js/today.js?v=eca-v25"></script>
-  <script src="js/reports.js?v=eca-v25"></script>
-  <script src="js/tournaments.js?v=eca-v25"></script>
-  <script src="js/review.js?v=eca-v25"></script>
-  <script src="js/quality.js?v=eca-v25"></script>
-  <script src="js/announce.js?v=eca-v25"></script>
-  <script src="js/progress.js?v=eca-v25"></script>
-  <script src="js/arena2.js?v=eca-v25"></script>
-  <script src="js/homework.js?v=eca-v25"></script>
-  <script src="js/placement-data.js?v=eca-v25"></script>
-  <script src="js/placement.js?v=eca-v25"></script>
+  <script src="js/extras.js?v=eca-v27"></script>
+  <script src="js/streaks.js?v=eca-v27"></script>
+  <script src="js/today.js?v=eca-v27"></script>
+  <script src="js/reports.js?v=eca-v27"></script>
+  <script src="js/tournaments.js?v=eca-v27"></script>
+  <script src="js/review.js?v=eca-v27"></script>
+  <script src="js/quality.js?v=eca-v27"></script>
+  <script src="js/announce.js?v=eca-v27"></script>
+  <script src="js/progress.js?v=eca-v27"></script>
+  <script src="js/arena2.js?v=eca-v27"></script>
+  <script src="js/homework.js?v=eca-v27"></script>
+  <script src="js/placement-data.js?v=eca-v27"></script>
+  <script src="js/placement.js?v=eca-v27"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v25"></script>
+  <script type="module" src="js/firebase.js?v=eca-v27"></script>
 </body>
 </html>
