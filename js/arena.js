@@ -1,10 +1,8 @@
 // ECA — arena.js (اتفصل من index.html في eca-v3)
-    // المكتبات بتتحمّل من vendor/ (نسخة على سيرفرك). لو الملفات لسه ما اتحطتش (npm run vendor) بيرجع للـ CDN كاحتياطي بس
-    const CHESS_JS_URL = "https://cdn.jsdelivr.net/npm/chess.js@1.0.0/+esm";   // احتياطي
-    const STOCKFISH_URL = "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js";   // احتياطي
+    // المكتبات بتتحمّل من vendor/ على سيرفرك (من غير CDN)
     const CHESS_LOCAL = new URL("vendor/chess.js", document.baseURI).href, STOCKFISH_LOCAL = new URL("vendor/stockfish.js", document.baseURI).href;
-    const loadChessModule = () => import(CHESS_LOCAL).catch(() => import(CHESS_JS_URL));
-    const stockfishBoot = () => `try { importScripts("${STOCKFISH_LOCAL}"); } catch (e) { importScripts("${STOCKFISH_URL}"); }`;   // Stockfish.js (GPL)
+    const loadChessModule = () => import(CHESS_LOCAL);
+    const stockfishBoot = () => `importScripts("${STOCKFISH_LOCAL}");`;
     const PIECE = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
     const FILES = "abcdefgh";
     // بوتات ساحة التدريب (من الأسهل للأصعب). ms = أقصى وقت تفكير بالملّي ثانية، rnd = نسبة النقلات العشوائية
@@ -99,7 +97,7 @@
         }
         window.__ecaNoAnim = false;
       }
-      let h = `<div class="eca-board mx-auto" dir="ltr"${o.onClick && o.onClick !== "ptNoop" ? ` data-h="${o.onClick}"` : ""}>`;
+      let h = `<div class="eca-board mx-auto" dir="ltr"${o.onClick && o.onClick !== "ptNoop" ? ` data-h="${o.onClick}"` : ""}${g ? ` data-fen="${g.fen().split(" ").slice(0, 2).join(" ")}"` : ""}>`;
       for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
         const rank = o.flip ? r + 1 : 8 - r, file = o.flip ? 7 - c : c, sq = FILES[file] + rank;
         const p = b ? b[8 - rank][file] : null;

@@ -4,6 +4,7 @@
     // الكوتش/الأدمن: صفحة «اختبار المستوى» فيها النتائج، اعتماد/تعديل المستوى، تصدير Excel، طباعة، إرسال واتساب، إعادة فتح الاختبار.
     const PT_PLAN = [["easiest", 2], ["easier", 2], ["normal", 2], ["harder", 2], ["hardest", 4]];
     const PT_SECONDS = 60, PT_CUR = "eca_pt_cur";
+    const ptSecs = i => (i >= 6 && i < 12) ? 120 : PT_SECONDS;   // الألغاز 7-12 (الصعب والصعب جدًا) = دقيقتين، والباقي دقيقة
     const ptL = (a, e) => (typeof lang !== "undefined" && lang === "en") ? e : a;
     let PT = null;
 
@@ -44,7 +45,7 @@
         </div>
         <ul class="text-sm text-gray-300 space-y-2 list-disc ps-5">
           <li>${ptL("20 سؤال: 12 لغز شطرنج + 8 مواقف على الرقعة بتختار إجابتها من اختيارات.", "20 questions: 12 chess puzzles + 8 board positions with multiple-choice answers.")}</li>
-          <li>${ptL("دقيقة واحدة لكل سؤال — لو الوقت خلص السؤال بيتحسب غلط وينتقل للي بعده.", "One minute per question — when time runs out the question counts as wrong and the next one appears.")}</li>
+          <li>${ptL("دقيقة واحدة لكل سؤال، ودقيقتين للألغاز الصعبة والصعبة جدًا — لو الوقت خلص السؤال بيتحسب غلط وينتقل للي بعده.", "One minute per question (two minutes for the hard and very hard puzzles) — when time runs out the question counts as wrong and the next one appears.")}</li>
           <li>${ptL("مش هيظهرلك الصح والغلط أثناء الاختبار، والنتيجة بيشوفها الكوتش بس.", "You won't see right or wrong during the test; only the coach sees the result.")}</li>
           <li>${ptL("الاختبار بيتعمل مرة واحدة بس، ومش بيتعاد إلا بموافقة الكوتش.", "The test can be taken once only, and reopened only by the coach.")}</li>
           <li>${ptL("اقفل أي حاجة تانية وركّز، واستخدم موبايل أو جهاز بشاشة مريحة.", "Close other apps, stay focused, and use a comfortable screen.")}</li>
@@ -130,13 +131,13 @@
 
     function ptQuestion(i) {
       PT.i = i; PT.locked = false; PT.busy = false;
-      PT.deadline = Date.now() + PT_SECONDS * 1000; PT.t0 = Date.now();
+      PT.secs = ptSecs(i); PT.deadline = Date.now() + PT.secs * 1000; PT.t0 = Date.now();
       clearInterval(PT.timer);
       PT.timer = setInterval(() => {
         if (!PT || PT.phase !== "play" || PT.locked) return;
         const left = Math.max(0, PT.deadline - Date.now());
         const bar = document.getElementById("ptBar"), txt = document.getElementById("ptSec");
-        if (bar) { bar.style.width = (left / (PT_SECONDS * 10)) + "%"; bar.style.background = left < 15000 ? "#ef4444" : "linear-gradient(90deg,#f3d266,#d4af37)"; }
+        if (bar) { bar.style.width = (left / (PT.secs * 10)) + "%"; bar.style.background = left < 15000 ? "#ef4444" : "linear-gradient(90deg,#f3d266,#d4af37)"; }
         if (txt) txt.textContent = Math.ceil(left / 1000);
         if (left <= 0) ptAnswer(false, "timeout");
       }, 200);
@@ -182,7 +183,7 @@
       if (!PT || PT.locked || PT.phase !== "play") return;
       PT.locked = true; clearInterval(PT.timer);
       const i = PT.i, q = PT.qs[i];
-      const a = { k: q.kind, ok: ok ? 1 : 0, c: String(choice || "").slice(0, 24), s: Math.min(PT_SECONDS, Math.round((Date.now() - PT.t0) / 1000)), q: String((q.kind === "p" ? q.id : q.sid) || "").slice(0, 16) };
+      const a = { k: q.kind, ok: ok ? 1 : 0, c: String(choice || "").slice(0, 24), s: Math.min(PT.secs || PT_SECONDS, Math.round((Date.now() - PT.t0) / 1000)), q: String((q.kind === "p" ? q.id : q.sid) || "").slice(0, 16) };
       if (q.kind === "p") a.x = q.idx | 0;   // كام نقلة من الحل اتلعبت قبل الغلطة (عشان الكوتش يشوف نفس الوضع)
       PT.answers[i] = a;
       ptBackup();
@@ -207,7 +208,7 @@
       return { correct: c, score: pct, suggested: ptLevel(pct) };
     }
     async function ptPush(key, answers, total) {
-      const full = {}; for (let k = 0; k < total; k++) full[k] = answers[k] || { k: k < 12 ? "p" : "s", ok: 0, c: "none", s: PT_SECONDS };
+      const full = {}; for (let k = 0; k < total; k++) full[k] = answers[k] || { k: k < 12 ? "p" : "s", ok: 0, c: "none", s: ptSecs(k) };
       const res = ptCompute(full, total);
       const r = await window.fbPtSave(key, Object.assign({ answers: full, status: "done", total, finishedAt: Date.now() }, res), 4);
       return r && r.ok;
@@ -274,12 +275,18 @@
         body = `<div class="gold-card rounded-2xl p-4 space-y-3">
             <div class="flex flex-wrap justify-between items-center gap-2"><div class="font-display font-bold text-yellow-400">${ptL("اختبار تحديد المستوى", "Placement test")}</div><div class="text-sm text-gray-300" dir="ltr"><b class="text-white">${PT.i + 1}</b> / ${n}</div></div>
             <div class="flex flex-wrap gap-1 justify-center">${dots}</div>
-            <div class="flex items-center gap-3"><div class="eval-bar flex-1" style="height:10px"><div id="ptBar" style="width:${left / (PT_SECONDS * 10)}%; background:linear-gradient(90deg,#f3d266,#d4af37)"></div></div><div class="text-sm font-extrabold text-yellow-300 w-10 text-center"><span id="ptSec">${Math.ceil(left / 1000)}</span></div></div>
+            <div class="flex items-center gap-3"><div class="eval-bar flex-1" style="height:10px"><div id="ptBar" style="width:${left / ((PT.secs || PT_SECONDS) * 10)}%; background:linear-gradient(90deg,#f3d266,#d4af37)"></div></div><div class="text-sm font-extrabold text-yellow-300 w-10 text-center"><span id="ptSec">${Math.ceil(left / 1000)}</span></div></div>
           </div>
           <div class="space-y-3">${main}</div>
           <div class="text-center"><button onclick="ptQuit()" class="px-4 py-2 rounded-xl text-xs bg-red-500/15 border border-red-500/30 text-red-300">${ptL("إنهاء الاختبار", "End the test")}</button></div>`;
       }
-      el.innerHTML = `<div class="fixed inset-0 z-[60] bg-black/95 backdrop-blur-md overflow-y-auto p-3 sm:p-6"><div class="max-w-xl mx-auto space-y-3">${body}</div></div>`;
+      // مهم: النافذة بتتبني مرة واحدة والمحتوى بس هو اللي بيتبدّل — لو اتمسحت كلها مع كل ضغطة السكرول بيرجع لفوق (ده كان سبب الاهتزاز)
+      let wrap = el.firstElementChild;
+      if (!wrap || !wrap.classList.contains("pt-wrap")) { el.innerHTML = `<div class="pt-wrap fixed inset-0 z-[60] bg-black/95 backdrop-blur-md overflow-y-auto p-3 sm:p-6"><div class="max-w-xl mx-auto space-y-3"></div></div>`; wrap = el.firstElementChild; }
+      const keep = (PT.__pi === PT.i && PT.__pph === PT.phase) ? wrap.scrollTop : 0;
+      PT.__pi = PT.i; PT.__pph = PT.phase;
+      wrap.firstElementChild.innerHTML = body;
+      wrap.scrollTop = keep;
       if (typeof lang !== "undefined" && lang === "en" && typeof applyLang === "function") applyLang();
     }
     function ptNoop() {}
