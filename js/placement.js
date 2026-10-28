@@ -29,7 +29,8 @@
       st.textContent = `.pt-in{width:100%;height:42px;background:rgba(0,0,0,.85);border:1px solid rgba(234,179,8,.35);border-radius:10px;padding:0 12px;color:#fff;font-size:14px}
       .pt-in:focus{outline:none;border-color:#facc15}.pt-lb{display:block;font-size:12px;font-weight:700;color:#fde68a;margin-bottom:4px}
       .pt-opt{width:100%;display:flex;align-items:center;gap:10px;text-align:start;padding:12px 14px;border-radius:12px;background:rgba(24,24,27,.95);border:1px solid rgba(234,179,8,.3);color:#fff;font-weight:700;font-size:15px;transition:transform .08s,border-color .1s}
-      .pt-opt:hover{border-color:#facc15}.pt-opt:active{transform:scale(.98)}.pt-opt b{width:26px;height:26px;border-radius:8px;background:#d4af37;color:#000;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex:none}`;
+      .pt-opt:hover{border-color:#facc15}.pt-opt:active{transform:scale(.98)}.pt-opt b{width:26px;height:26px;border-radius:8px;background:#d4af37;color:#000;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex:none}
+      .pt-mini .eca-board{grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));border-radius:10px}.pt-mini .eca-sq{min-width:0;min-height:0;overflow:hidden}.pt-mini .eca-pc{font-size:20px}.pt-mini .eca-pimg{width:100%;height:100%}.pt-mini .eca-co{font-size:7px}`;
       document.head.appendChild(st);
     })();
 
@@ -106,7 +107,7 @@
           const right = s.opts[s.ans];
           if (s.img) { const im = new Image(); im.src = s.img; }              // تحميل مسبق: السؤال اللي بعده يظهر فوراً
           const g = s.fen ? new ChessCls(s.fen) : null;
-          qs.push({ kind: "s", img: s.img || "", game: g, flip: g ? g.turn() === "b" : false, q: s.q, qe: s.qe, opts: ptShuffle(s.opts), right });
+          qs.push({ kind: "s", sid: String(s.img || "").split("/").pop().replace(/\.\w+$/, ""), img: s.img || "", game: g, flip: g ? g.turn() === "b" : false, q: s.q, qe: s.qe, opts: ptShuffle(s.opts), right });
         }
         PT.qs = qs;
       } catch (e) {
@@ -181,7 +182,8 @@
       if (!PT || PT.locked || PT.phase !== "play") return;
       PT.locked = true; clearInterval(PT.timer);
       const i = PT.i, q = PT.qs[i];
-      const a = { k: q.kind, ok: ok ? 1 : 0, c: String(choice || "").slice(0, 24), s: Math.min(PT_SECONDS, Math.round((Date.now() - PT.t0) / 1000)) };
+      const a = { k: q.kind, ok: ok ? 1 : 0, c: String(choice || "").slice(0, 24), s: Math.min(PT_SECONDS, Math.round((Date.now() - PT.t0) / 1000)), q: String((q.kind === "p" ? q.id : q.sid) || "").slice(0, 16) };
+      if (q.kind === "p") a.x = q.idx | 0;   // كام نقلة من الحل اتلعبت قبل الغلطة (عشان الكوتش يشوف نفس الوضع)
       PT.answers[i] = a;
       ptBackup();
       const key = PT.form.key, patch = {}; patch["answers." + i] = a;
@@ -289,7 +291,7 @@
     }
 
     // ================= الكوتش / الأدمن =================
-    const PTR = { list: null, loading: false, q: "", err: "", busy: false };
+    const PTR = { list: null, loading: false, q: "", err: "", busy: false, open: {}, det: {} };
     async function ptLoad(force) {
       if (PTR.loading || (PTR.list && !force)) return;
       PTR.loading = true; PTR.err = ""; render();
@@ -334,6 +336,7 @@
         ${done ? `<div class="flex flex-wrap items-center gap-2 text-sm"><span class="text-gray-300">النتيجة: <b class="text-white">${r.score}%</b> (${r.correct}/${r.total})</span><span class="text-gray-300">المقترح: <b class="text-yellow-300">Level ${r.suggested}</b></span>
           <span class="text-gray-300">المعتمد:</span><select onchange="ptSetLevel('${r.id}', this.value)" class="pt-in" style="width:auto;height:34px">${opts}</select><span class="text-[11px] text-gray-400">(${by})</span>
           ${Number(r.level) ? "" : `<button onclick="ptSetLevel('${r.id}', ${r.suggested})" class="px-3 py-1.5 rounded-lg text-xs gold-btn">اعتماد المقترح</button>`}</div>` : ""}
+        ${done ? ptDetBlock(r) : ""}
         <div class="flex justify-end"><button onclick="ptReopen('${r.id}')" class="px-3 py-1.5 rounded-lg text-xs bg-red-500/15 border border-red-500/30 text-red-300">إعادة فتح الاختبار للطالب</button></div>
       </div>`;
     }
@@ -357,6 +360,83 @@
         ${PTR.loading && !PTR.list ? `<div class="text-center text-gray-400 py-8">جاري التحميل...</div>` : rows.length ? rows.map(r => ptRowCard(r)).join("") : `<div class="text-center text-gray-400 py-8">${PTR.q ? "مفيش نتايج للبحث ده." : "لسه محدش عمل الاختبار."}</div>`}
       </div>`;
     }
+    // ---------- الكوتش: أخطاء الطالب في الاختبار (السؤال + إجابته + الصح) ----------
+    const PT_DIFF = ["سهل جدًا", "سهل", "متوسط", "صعب", "صعب جدًا"];
+    const ptDiffOf = i => PT_DIFF[i < 2 ? 0 : i < 4 ? 1 : i < 6 ? 2 : i < 8 ? 3 : 4];
+    async function ptToggleDet(id) {
+      PTR.open[id] = !PTR.open[id];
+      const r = (PTR.list || []).find(x => x.id === id);
+      if (PTR.open[id] && r && !PTR.det[id]) {
+        PTR.det[id] = { loading: true }; render();
+        try { PTR.det[id] = await ptBuildDet(r); } catch (e) { console.error(e); PTR.det[id] = { err: true }; }
+      }
+      render();
+    }
+    async function ptBuildDet(r) {
+      const ans = r.answers || {}, total = Number(r.total) || 20, items = [];
+      let idx = null;
+      if (Object.keys(ans).some(k => ans[k] && ans[k].k === "p" && ans[k].q)) {
+        await ensureChess(); const bank = await loadPuzzleBank(); idx = {};
+        for (const lvl in bank) for (const row of bank[lvl]) idx[row.slice(0, row.indexOf("|"))] = row;
+      }
+      for (let i = 0; i < total; i++) {
+        const a = ans[i] || null, it = { i, k: a ? a.k : (i < 12 ? "p" : "s"), ok: !!(a && a.ok), c: a ? String(a.c || "") : "none", s: a ? Number(a.s) || 0 : 0, q: (a && a.q) || "" };
+        if (it.k === "p") it.diff = ptDiffOf(i);
+        if (!it.ok && it.k === "p" && it.q && idx && idx[it.q]) {
+          try {
+            const mv = idx[it.q].split("|")[2].split(" "), sol = mv.slice(1), x = Math.max(0, Math.min(sol.length - 1, Number(a.x) || 0));
+            const g = new ChessCls(idx[it.q].split("|")[1]); uciMove(g, mv[0]);
+            for (let t = 0; t < x; t++) uciMove(g, sol[t]);
+            it.fen = g.fen(); it.solFrom = sol[x].slice(0, 2); it.solTo = sol[x].slice(2, 4);
+            it.solSan = uciMove(new ChessCls(it.fen), sol[x]).san;
+            if (/^[a-h][1-8][a-h][1-8]$/.test(it.c)) { try { const m = new ChessCls(it.fen).move({ from: it.c.slice(0, 2), to: it.c.slice(2, 4), promotion: "q" }); it.wrongSan = m.san; } catch (_) {} }
+          } catch (e) { console.warn("placement detail", it.q, e); }
+        }
+        if (it.k === "s" && it.q) {
+          const sit = (window.ECA_PLACEMENT_SITUATIONS || []).find(s => s.img && s.img.indexOf("/" + it.q + ".") >= 0);
+          if (sit) { it.img = sit.img; it.right = sit.opts[sit.ans]; }
+        }
+        items.push(it);
+      }
+      return { items };
+    }
+    function ptDetBlock(r) {
+      const ans = r.answers || {}, total = Number(r.total) || 20; let wrong = 0;
+      for (let k = 0; k < total; k++) if (!(ans[k] && ans[k].ok)) wrong++;
+      const open = !!PTR.open[r.id];
+      return `<div><button onclick="ptToggleDet('${r.id}')" class="px-3 py-1.5 rounded-lg text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">${open ? "إخفاء" : "عرض"} تفاصيل الأخطاء (${wrong} من ${total})</button></div>${open ? ptDetHtml(r) : ""}`;
+    }
+    function ptDetHtml(r) {
+      const d = PTR.det[r.id];
+      if (!d || d.loading) return `<div class="text-xs text-gray-400 py-2">جاري تحميل التفاصيل…</div>`;
+      if (d.err) return `<div class="text-xs text-red-300 py-2">تعذّر تحميل التفاصيل — جرّب تاني.</div>`;
+      const its = d.items, P = its.filter(x => x.k === "p"), S = its.filter(x => x.k === "s");
+      const byD = PT_DIFF.map(n => { const a = P.filter(x => x.diff === n); return a.length ? `<span class="px-2 py-0.5 rounded-md border ${a.every(x => x.ok) ? "border-emerald-500/40 text-emerald-300" : "border-red-500/40 text-red-300"}">${n}: ${a.filter(x => x.ok).length}/${a.length}</span>` : ""; }).join("");
+      const quick = its.filter(x => !x.ok && x.c !== "timeout" && x.c !== "none" && x.s > 0 && x.s <= 3).length, slow = its.filter(x => x.c === "timeout").length;
+      const wrong = its.filter(x => !x.ok);
+      const card = x => {
+        const head = `<div class="flex justify-between items-center text-[12px]"><b class="text-white">${x.k === "p" ? "لغز" : "موقف"} ${x.k === "p" ? x.i + 1 : x.i - 11} ${x.diff ? "• " + x.diff : ""}</b><span class="text-gray-400">${x.c === "none" ? "ما اتجاوبش" : x.c === "timeout" ? "الوقت خلص" : x.s + " ث"}</span></div>`;
+        if (x.k === "p") {
+          if (!x.fen) return `<div class="rounded-xl border border-red-500/20 p-2.5 space-y-1.5">${head}<div class="text-[12px] text-gray-400">${x.q ? "تعذّر عرض اللغز" : "الاختبار ده اتسجّل قبل التحديث — التفاصيل مش متاحة"}</div></div>`;
+          const fl = {}; fl[x.solFrom] = "good"; fl[x.solTo] = "good";
+          if (/^[a-h][1-8][a-h][1-8]$/.test(x.c)) { if (x.c.slice(0, 2) !== x.solFrom) fl[x.c.slice(0, 2)] = "bad"; fl[x.c.slice(2, 4)] = "bad"; }
+          const g = new ChessCls(x.fen);
+          return `<div class="rounded-xl border border-red-500/25 p-2.5 space-y-1.5">${head}<div style="max-width:210px" class="mx-auto pt-mini">${boardHTML({ game: g, flip: g.turn() === "b", flash: fl, onClick: "ptNoop" })}</div>
+            <div class="text-[12px] text-gray-300">الحل: <b class="text-emerald-300" dir="ltr">${esc(x.solSan)}</b> &nbsp; ${x.wrongSan ? `الطالب لعب: <b class="text-red-300" dir="ltr">${esc(x.wrongSan)}</b>` : x.c === "timeout" ? "" : `الطالب لعب: <b class="text-red-300" dir="ltr">${esc(x.c)}</b>`}</div></div>`;
+        }
+        const pick = x.c === "timeout" || x.c === "none" ? "" : `اختار: <b class="text-red-300" dir="ltr">${esc(x.c)}</b> &nbsp; `;
+        return `<div class="rounded-xl border border-red-500/25 p-2.5 space-y-1.5">${head}${x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy" class="rounded-lg mx-auto" style="max-height:190px">` : `<div class="text-[12px] text-gray-400">${x.q ? "" : "الاختبار ده اتسجّل قبل التحديث — الصورة مش متاحة"}</div>`}
+          <div class="text-[12px] text-gray-300">${pick}${x.right ? `الصح: <b class="text-emerald-300" dir="ltr">${esc(x.right)}</b>` : ""}</div></div>`;
+      };
+      return `<div class="rounded-xl border border-yellow-500/20 bg-black/30 p-3 space-y-3">
+        <div class="flex flex-wrap gap-1.5 text-[11px] items-center"><span class="text-gray-300">ألغاز: <b class="text-white">${P.filter(x => x.ok).length}/${P.length}</b></span>${byD}<span class="text-gray-300 ms-2">مواقف: <b class="text-white">${S.filter(x => x.ok).length}/${S.length}</b></span></div>
+        ${quick || slow ? `<div class="text-[11px] text-amber-300">${quick ? `⚠️ ${quick} إجابات غلط في 3 ثواني أو أقل (ممكن تخمين). ` : ""}${slow ? `${slow} أسئلة الوقت خلص فيها.` : ""}</div>` : ""}
+        ${wrong.length ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">${wrong.map(card).join("")}</div>` : `<div class="text-sm text-emerald-300">جاوب كل الأسئلة صح 👏</div>`}
+        <div class="text-[11px] text-gray-400">على الرقعة: <span class="text-emerald-300">الأخضر = الحل الصح</span> • <span class="text-red-300">الأحمر = الحركة اللي لعبها الطالب</span> (الرقعة من منظور اللاعب اللي عليه الدور).</div>
+        <div class="text-[11px] text-gray-500">الأسئلة الصح: ${its.filter(x => x.ok).map(x => x.i + 1).join("، ") || "—"}</div>
+      </div>`;
+    }
+
     async function ptSetLevel(id, lv) {
       const r = (PTR.list || []).find(x => x.id === id); lv = Number(lv); if (!r || !(lv >= 1 && lv <= 6)) return;
       const cu = currUser(), nm = String((cu && cu.name) || "").slice(0, 80);
