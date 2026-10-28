@@ -13,17 +13,28 @@ service cloud.firestore {
     // نص آمن: بدون < > " ' ` (حماية من حقن HTML)
     function safeText(v, max) { return v is string && v.size() <= max && v.matches('[^<>"\'`]*'); }
 
+    // المستوى الابتدائي: Step 1، إلا لو الطالب ربط حسابه بنتيجة اختبار تحديد مستوى معتمدة (plk = مفتاح placementLevels)
+    function plOk(d) {
+      return d.get('plk', '') == '' ? d.level == 1
+        : (d.plk is string && d.plk.matches('[0-9a-f]{64}')
+           && exists(/databases/$(database)/documents/placementLevels/$(d.plk))
+           && d.level == get(/databases/$(database)/documents/placementLevels/$(d.plk)).data.level);
+    }
+
     function validNewStudent(d) {
-      return d.keys().hasOnly(['name','username','email','role','level','group','mode','att','hw','puz'])
+      return d.keys().hasOnly(['name','username','email','role','level','group','mode','att','hw','puz','plk'])
         && d.role == 'student'
         && safeText(d.name, 80) && safeText(d.username, 40)
         && safeText(d.get('email', ''), 120) && safeText(d.get('group', ''), 80)
-        && d.level is number && d.level >= 1 && d.level <= 6;
+        && plOk(d)
+        // الحضور والواجبات والعدّادات بتبدأ فاضية/صفر (الكوتش بس هو اللي يسجّلها، والعدّادات بتزيد بمحاولات مسجّلة)
+        && d.get('att', {}) == {} && d.get('hw', {}) == {}
+        && d.get('puz', {'t': 0, 'c': 0}) == {'t': 0, 'c': 0};
     }
     // الطالب ممنوع يعدّل الحقول دي في ملفه (الكوتش بس)
     function studentUpdateOk() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-          'role','username','group','mode','coachName','stuCode','parentPhone','parentCode','note',
+          'role','username','group','mode','plk','coachName','stuCode','parentPhone','parentCode','note',
           'courseFee','amountPaid','remaining','lastPayDate','lastPayAmount','att','hw'])
         && safeText(request.resource.data.name, 80)
         && safeText(request.resource.data.get('email', ''), 120)
@@ -202,7 +213,8 @@ service cloud.firestore {
                         && !exists(/databases/$(database)/documents/deleted/$(uid))
                         && validNewStudent(request.resource.data));
       allow update: if isStaff() || (notAnon() && request.auth.uid == uid && studentUpdateOk());
-      allow delete: if isStaff();
+      allow delete: if isAdmin()   // حذف الطالب للأدمن بس
+                    || (isStaff() && request.auth.uid == uid);   // والكوتش يمسح ملف الطالب بتاعه هو لما يتحوّل لحساب كوتش
     }
 
     // ---------- دفتر المحاولات (create فقط — مفيش تعديل، والمسح للكوتش بس) ----------
@@ -219,7 +231,7 @@ service cloud.firestore {
         && (request.resource.data.kind != 'daily' || dateNear(request.resource.data.key.split('-')))
         && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('lastAttempt', '') == id;
       allow update: if false;
-      allow delete: if isStaff();
+      allow delete: if isAdmin();
     }
 
     // ---------- البطولات الداخلية (الكوتش بيكتب، وأي حساب مسجّل بيقرا) ----------
@@ -292,7 +304,20 @@ service cloud.firestore {
 
     // ---------- الطلاب المحذوفين (عشان ما يرجعوش ينشئوا ملف) ----------
     match /deleted/{uid} {
-      allow read, write: if isStaff();
+      allow read: if isStaff();
+      allow write: if isAdmin();
+    }
+
+    // ---------- المستوى المعتمد من اختبار تحديد المستوى ----------
+    // المفتاح = SHA-256 لرقم الطالب + رقم ولي الأمر (مفيش اسم ولا رقم في الوثيقة). الطالب بيعمل get بس، ومفيش list،
+    // فلازم يعرف الرقمين. الكوتش هو اللي يكتب/يمسح عند اعتماد أو إعادة فتح الاختبار.
+    match /placementLevels/{key} {
+      allow get: if notAnon();
+      allow list: if false;
+      allow create, update: if isStaff() && key.matches('[0-9a-f]{64}')
+        && request.resource.data.keys().hasOnly(['level', 'at'])
+        && request.resource.data.level is int && request.resource.data.level >= 1 && request.resource.data.level <= 6;
+      allow delete: if isStaff();
     }
 
     // ---------- اختبار تحديد المستوى ----------

@@ -1,1 +1,10 @@
 node_modules/
+
+# أسرار ومفاتيح: ما تترفعش على GitHub أبدًا
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+serviceAccount*.json
+*-adminsdk-*.json
