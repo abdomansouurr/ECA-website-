@@ -1,6 +1,8 @@
 // ECA — arena.js (اتفصل من index.html في eca-v3)
-    const CHESS_JS_URL = "https://cdn.jsdelivr.net/npm/chess.js@1.0.0/+esm";
-    const STOCKFISH_URL = "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js";   // Stockfish.js (GPL)
+    // المكتبات بتتحمّل من vendor/ على سيرفرك (من غير CDN)
+    const CHESS_LOCAL = new URL("vendor/chess.js", document.baseURI).href, STOCKFISH_LOCAL = new URL("vendor/stockfish.js", document.baseURI).href;
+    const loadChessModule = () => import(CHESS_LOCAL);
+    const stockfishBoot = () => `importScripts("${STOCKFISH_LOCAL}");`;
     const PIECE = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
     const FILES = "abcdefgh";
     // بوتات ساحة التدريب (من الأسهل للأصعب). ms = أقصى وقت تفكير بالملّي ثانية، rnd = نسبة النقلات العشوائية
@@ -31,13 +33,15 @@
       vis: { active: false, target: "", score: 0, left: VIS_SECONDS, timer: null, attempts: [], coords: true, flip: false, flash: null, best: 0 }
     };
     const arenaRefresh = () => { if (tab === "arena") render(); };
+    // تبديل الصفحات الفرعية للساحة (لعب/ألغاز/بيادق/رؤية/تحليل) = انتقال كامل: انيميشن الصفحة + القوائم بتتوالى
+    function arenaSub(k) { arena.sub = k; render(); const mv = document.getElementById("mainView"); if (mv) { mv.classList.remove("page-enter"); void mv.offsetWidth; mv.classList.add("page-enter"); if (typeof staggerLists === "function") staggerLists(mv); } }
 
     // ---------- تحميل مكتبة الشطرنج (أول مرة بس) ----------
     let ChessCls = null, chessLoading = false;
     function loadChess() {
       if (ChessCls || chessLoading) return;
       chessLoading = true;
-      import(CHESS_JS_URL).then(m => { ChessCls = m.Chess; chessLoading = false; arenaRefresh(); })
+      loadChessModule().then(m => { ChessCls = m.Chess; chessLoading = false; arenaRefresh(); })
         .catch(e => { chessLoading = false; console.error(e); toast("تعذّر تحميل مكتبة الشطرنج — اتأكد من الإنترنت"); });
     }
 
@@ -46,7 +50,7 @@
     function engine() {
       if (sfWorker || sfFailed) return sfWorker;
       try {
-        sfWorker = new Worker(URL.createObjectURL(new Blob([`importScripts("${STOCKFISH_URL}");`], { type: "application/javascript" })));
+        sfWorker = new Worker(URL.createObjectURL(new Blob([stockfishBoot()], { type: "application/javascript" })));
         sfWorker.onmessage = e => {
           const m = String(e.data).match(/^bestmove\s+(\S+)/); if (!m) return;
           if (sfSkip > 0) { sfSkip--; return; }
@@ -79,18 +83,35 @@
       const g = o.game, b = g ? g.board() : null;
       let chk = null;
       if (g && g.inCheck()) b.forEach(row => row.forEach(p => { if (p && p.type === "k" && p.color === g.turn()) chk = p.square; }));
-      let h = `<div class="eca-board mx-auto" dir="ltr">`;
+      // انيميشن انزلاق القطعة: بيشتغل مرة واحدة لكل وضع جديد على الرقعة (ومابيشتغلش بعد السحب لأن القطعة وصلت بإيد اللاعب)
+      let slide = null;
+      if (g && o.last && o.last.length === 2) {
+        const key = g.fen();
+        if (key !== window.__ecaAnimKey) {
+          window.__ecaAnimKey = key;
+          if (!window.__ecaNoAnim && g.get(o.last[1])) {
+            const sc = q => { const f = FILES.indexOf(q[0]), k = Number(q[1]); return [o.flip ? 7 - f : f, o.flip ? k - 1 : 8 - k]; };
+            const a = sc(o.last[0]), z = sc(o.last[1]);
+            slide = { to: o.last[1], dx: a[0] - z[0], dy: a[1] - z[1] };
+          }
+        }
+        window.__ecaNoAnim = false;
+      }
+      let h = `<div class="eca-board mx-auto" dir="ltr"${o.onClick && o.onClick !== "ptNoop" ? ` data-h="${o.onClick}"` : ""}>`;
       for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
         const rank = o.flip ? r + 1 : 8 - r, file = o.flip ? 7 - c : c, sq = FILES[file] + rank;
         const p = b ? b[8 - rank][file] : null;
-        const cls = ["eca-sq", (file + rank) % 2 === 0 ? "d" : "l"];
+        const cls = ["eca-sq", (file + rank) % 2 === 0 ? "l" : "d"];
         if (o.last && o.last.includes(sq)) cls.push("last");
         if (o.sel === sq) cls.push("sel");
         if (o.hint === sq) cls.push("hint");
         if (chk === sq) cls.push("chk");
         if (o.flash && o.flash[sq]) cls.push(o.flash[sq]);
         if (o.targets && o.targets[sq]) cls.push(o.targets[sq]);
-        let inner = p ? `<span class="eca-pc ${p.color}">${PIECE[p.type]}&#xFE0E;</span>` : "";
+        const sl = slide && slide.to === sq ? ` eca-slide" style="--dx:${slide.dx};--dy:${slide.dy}` : "";
+        let inner = p ? (pieceSet === "lichess"
+          ? `<img class="eca-pimg${sl}" src="img/pieces/lichess/${p.color}${p.type.toUpperCase()}.svg" alt="" draggable="false" />`
+          : `<span class="eca-pc ${p.color}${sl}">${PIECE[p.type]}&#xFE0E;</span>`) : "";
         if (o.coords !== false) {
           if (r === 7) inner += `<span class="eca-co f">${FILES[file]}</span>`;
           if (c === 0) inner += `<span class="eca-co r">${rank}</span>`;
@@ -112,6 +133,45 @@
     }
     const lastOf = g => { const h = g.history({ verbose: true }); const m = h[h.length - 1]; return m ? [m.from, m.to] : null; };
     function uciMove(g, u) { return g.move(u.length > 4 ? { from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] } : { from: u.slice(0, 2), to: u.slice(2, 4) }); }
+
+    // ===== اختيار قطعة الترقية زي Lichess بالظبط: عمود رأسي على ملف مربع الترقية بيمتد جوه الرقعة =====
+    // Q عند مربع الترقية وبعده N وR وB — الضغط برة الاختيار بيلغيه، واختيار قطعة غير قطعة الحل بيحسب غلط زي Lichess
+    let ECA_PROMO = null;                                  // { st, from, to, cb }
+    function promoNeeded(st, from, to) {
+      const g = st.game; if (!g || !from || !to) return false;
+      const p = g.get(from);
+      if (!p || p.type !== "p") return false;
+      return (p.color === "w" && to[1] === "8") || (p.color === "b" && to[1] === "1");
+    }
+    function promoShow(st, from, to, cb) {
+      ECA_PROMO = { st, from, to, cb };
+      promoPaint();
+    }
+    function promoPaint() {
+      document.querySelectorAll(".eca-promo").forEach(el => el.remove());
+      const P = ECA_PROMO; if (!P) return;
+      const wrap = document.querySelector(`.eca-sq[data-sq="${P.to}"]`);
+      const board = wrap ? wrap.closest(".eca-board") : null;
+      if (!board) { ECA_PROMO = null; return; }
+      const color = (P.st.game && P.st.game.get(P.from) || {}).color || "w";
+      const idx = Array.prototype.indexOf.call(board.querySelectorAll(".eca-sq"), wrap);
+      const row = Math.floor(idx / 8);                     // 0 = أول صف معروض (فوق)
+      const down = row < 4;                                // مربع الترقية في النص العلوي → العمود بيمتد لتحت
+      const f = idx % 8;
+      const sqs = board.querySelectorAll(".eca-sq");       // لون كل خلية = لون المربع الحقيقي اللي فوقه زي Lichess
+      const cellBg = i => { const el = sqs[(down ? row + i : row - i) * 8 + f]; return el && el.classList.contains("l") ? "var(--sq-l,#f0d9b5)" : "var(--sq-d,#b58863)"; };
+      const cell = (t, i) => `<button type="button" class="eca-promo-pc" onclick="event.stopPropagation(); promoPick('${t}')" style="top:${(down ? row + i : row - i) * 12.5}%;left:${f * 12.5}%;background:${cellBg(i)}" aria-label="Promote to ${t.toUpperCase()}">${
+        pieceSet === "lichess"
+          ? `<img src="img/pieces/lichess/${color}${t.toUpperCase()}.svg" alt="" draggable="false" />`
+          : `<span class="eca-pc ${color}">${PIECE[t]}&#xFE0E;</span>`}</button>`;
+      const layer = document.createElement("div");
+      layer.className = "eca-promo";
+      layer.innerHTML = `<div class="eca-promo-bg" onclick="promoCancel()"></div>${["q", "n", "r", "b"].map(cell).join("")}`;
+      board.appendChild(layer);
+    }
+    function promoPick(t) { const p = ECA_PROMO; ECA_PROMO = null; promoPaint(); if (p && p.cb) p.cb(t); }
+    function promoCancel() { const p = ECA_PROMO; ECA_PROMO = null; promoPaint(); if (p && p.st) { p.st.sel = null; if (typeof render === "function") render(); } }
+    window.promoPick = promoPick; window.promoCancel = promoCancel;
 
     // إحصائيات الطالب بتتحفظ في حسابه (الكوتش بيشوفها في المتابعة)
     function recordArena(fn) {
@@ -139,8 +199,9 @@
       const P = arena.play; if (!P.game || P.over || P.thinking) return;
       const mv = pickOrMove(P, sq, P.color);
       if (mv) {
-        let r = null; try { r = P.game.move(mv); } catch (_) {}
-        if (r) { P.last = [r.from, r.to]; playCheckEnd(); if (!P.over) return playEngine(); }
+        const play = m => { let r = null; try { r = P.game.move(m); } catch (_) {} if (r) { P.last = [r.from, r.to]; playCheckEnd(); if (!P.over) playEngine(); } };
+        if (mv.promotion && promoNeeded(P, mv.from, mv.to)) return promoShow(P, mv.from, mv.to, pc => play(Object.assign(mv, { promotion: pc })));
+        play(mv);
       }
       arenaRefresh();
     }
@@ -293,7 +354,9 @@
       const Z = arena.puz; if (Z.counted) return; Z.counted = true;
       if (Z.review && typeof reviewResult === "function") return reviewResult(Z.info && Z.info.id, solved);   // المراجعة مابتتحسبش في العدّادات
       const id = Z.info && Z.info.id; if (!id) return;          // من غير رقم لغز مانقدرش نسجّل محاولة
-      recordAttempt("arena", id, solved, u => {
+      // مفتاح فريد لكل حل: لو Lichess رجّعت نفس اللغز تاني بيتحسب تاني في العداد (بدل «اتحسب قبل كده»)
+      const key = id + "-" + Date.now().toString(36);
+      recordAttempt("arena", key, solved, u => {
         const a = u.arena = u.arena || {}; markActiveDay(u);
         if (!solved && typeof reviewAdd === "function") reviewAdd(u, id, Z.info.rating);     // اللغز الغلط يدخل المراجعة
         a.puzTried = (a.puzTried || 0) + 1;
@@ -306,12 +369,16 @@
       const Z = arena.puz, g = Z.game; if (Z.status !== "play" || !g) return;
       const mv = pickOrMove(Z, sq, Z.color);
       if (!mv) return arenaRefresh();
-      const want = Z.sol[Z.idx] || "";
+      // ترقية؟ اختر القطعة زي Lichess (Q N R B) — الاختيار بيفتح على الرقعة نفسها
+      if (mv.promotion && promoNeeded(Z, mv.from, mv.to)) return promoShow(Z, mv.from, mv.to, pc => puzPlay(Object.assign(mv, { promotion: pc })));
+      puzPlay(mv);
+    }
+    function puzPlay(mv) {
+      const Z = arena.puz, g = Z.game;
       let r = null; try { r = g.move(mv); } catch (_) {}
       if (!r) return arenaRefresh();
-      // الترقية: لو النقلة صح بس الحل بيرقّي لقطعة غير الوزير، نصحّحها
-      if (want.length === 5 && r.from + r.to === want.slice(0, 4) && r.promotion !== want[4]) { g.undo(); r = uciMove(g, want); }
-      const ok = r.from + r.to + (r.promotion || "") === want || g.isCheckmate();
+      const want = Z.sol[Z.idx] || "";
+      const ok = r.from + r.to + (r.promotion || "") === want || g.isCheckmate();   // قطعة الترقية الغلط = نقلة غلط زي Lichess
       Z.last = [r.from, r.to];
       if (!ok) {
         Z.status = "wrong"; Z.flash = { [r.to]: "bad" }; puzCount(false); arenaRefresh();
@@ -453,7 +520,7 @@
     function renderArenaView(u) {
       if (arena.sub !== "vision") loadChess();
       const sub = arena.sub, a = (u.role === "student" && u.arena) || {}, gm = a.games || { w: 0, l: 0, d: 0 };
-      const tb = (k, label) => `<button onclick="arena.sub='${k}'; render();" class="flex-1 min-w-[140px] py-2.5 px-3 rounded-xl text-xs font-bold ${sub === k ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/20'}">${label}</button>`;
+      const tb = (k, label) => `<button onclick="arenaSub('${k}')" class="flex-1 min-w-[140px] py-2.5 px-3 rounded-xl text-xs font-bold ${sub === k ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/20'}">${label}</button>`;
       const body = sub === "vision" ? arenaVisHTML()
         : !ChessCls ? `<div class="gold-card rounded-2xl p-8 text-center text-sm text-gray-400">جاري تحميل الرقعة...</div>`
         : sub === "puzzles" ? arenaPuzHTML() : sub === "pawns" ? arenaPawnsHTML() : sub === "analysis" ? arenaAnaHTML() : arenaPlayHTML();
@@ -478,6 +545,10 @@
             <label class="flex items-center gap-1">فاتح <input type="color" value="${boardColors.l}" onchange="setBoardColor('l', this.value)" class="w-8 h-6 rounded bg-transparent border-0 cursor-pointer" /></label>
             <label class="flex items-center gap-1">غامق <input type="color" value="${boardColors.d}" onchange="setBoardColor('d', this.value)" class="w-8 h-6 rounded bg-transparent border-0 cursor-pointer" /></label>
             ${BOARD_THEMES.map(t => `<button onclick="setBoardColor('l','${t[1]}'); setBoardColor('d','${t[2]}')" title="${t[0]}" class="w-6 h-6 rounded-md border border-yellow-500/30" style="background:linear-gradient(135deg, ${t[1]} 50%, ${t[2]} 50%)"></button>`).join("")}
+          </div>
+          <div class="flex flex-wrap items-center gap-3 text-[11px] text-gray-400">
+            <span>شكل القطع:</span>
+            ${PIECE_SETS.map(ps => `<button onclick="setPieceSet('${ps[0]}')" aria-pressed="${pieceSet === ps[0]}" class="px-3 py-1.5 rounded-lg text-[11px] font-bold ${pieceSet === ps[0] ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/20'}">${ps[1]}</button>`).join("")}
           </div>
           ${body}
         </div>`;
