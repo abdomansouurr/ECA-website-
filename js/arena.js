@@ -1,6 +1,10 @@
 // ECA — arena.js (اتفصل من index.html في eca-v3)
-    const CHESS_JS_URL = "https://cdn.jsdelivr.net/npm/chess.js@1.0.0/+esm";
-    const STOCKFISH_URL = "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js";   // Stockfish.js (GPL)
+    // المكتبات بتتحمّل من vendor/ (نسخة على سيرفرك). لو الملفات لسه ما اتحطتش (npm run vendor) بيرجع للـ CDN كاحتياطي بس
+    const CHESS_JS_URL = "https://cdn.jsdelivr.net/npm/chess.js@1.0.0/+esm";   // احتياطي
+    const STOCKFISH_URL = "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js";   // احتياطي
+    const CHESS_LOCAL = new URL("vendor/chess.js", document.baseURI).href, STOCKFISH_LOCAL = new URL("vendor/stockfish.js", document.baseURI).href;
+    const loadChessModule = () => import(CHESS_LOCAL).catch(() => import(CHESS_JS_URL));
+    const stockfishBoot = () => `try { importScripts("${STOCKFISH_LOCAL}"); } catch (e) { importScripts("${STOCKFISH_URL}"); }`;   // Stockfish.js (GPL)
     const PIECE = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
     const FILES = "abcdefgh";
     // بوتات ساحة التدريب (من الأسهل للأصعب). ms = أقصى وقت تفكير بالملّي ثانية، rnd = نسبة النقلات العشوائية
@@ -39,7 +43,7 @@
     function loadChess() {
       if (ChessCls || chessLoading) return;
       chessLoading = true;
-      import(CHESS_JS_URL).then(m => { ChessCls = m.Chess; chessLoading = false; arenaRefresh(); })
+      loadChessModule().then(m => { ChessCls = m.Chess; chessLoading = false; arenaRefresh(); })
         .catch(e => { chessLoading = false; console.error(e); toast("تعذّر تحميل مكتبة الشطرنج — اتأكد من الإنترنت"); });
     }
 
@@ -48,7 +52,7 @@
     function engine() {
       if (sfWorker || sfFailed) return sfWorker;
       try {
-        sfWorker = new Worker(URL.createObjectURL(new Blob([`importScripts("${STOCKFISH_URL}");`], { type: "application/javascript" })));
+        sfWorker = new Worker(URL.createObjectURL(new Blob([stockfishBoot()], { type: "application/javascript" })));
         sfWorker.onmessage = e => {
           const m = String(e.data).match(/^bestmove\s+(\S+)/); if (!m) return;
           if (sfSkip > 0) { sfSkip--; return; }

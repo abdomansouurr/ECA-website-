@@ -417,9 +417,9 @@
           </div>
           <input id="gName" required value="${esc(gName)}" placeholder="الاسم بالكامل" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
           ${r === "student" ? `
-            <select id="gStep" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-yellow-300">
-              ${[1, 2, 3, 4, 5, 6].map(l => `<option value="${l}">Step ${l}</option>`).join("")}
-            </select>` : `
+            <input id="gPhone" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="رقم الطالب (اختياري)" />
+            <input id="gParent" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="رقم ولي الأمر (اختياري)" />
+            <p class="text-[12px] text-gray-400 leading-relaxed">لو عملت اختبار تحديد المستوى، اكتب رقمك ورقم ولي الأمر زي ما سجّلتهم في الاختبار، وهتبدأ من المستوى اللي اتعتمد. غير كده بتبدأ من Step 1.</p>` : `
             <input id="gCode" required autocomplete="off" autocapitalize="characters" placeholder="كود الأدمن أو كود دعوة الكوتش" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white text-center tracking-widest uppercase" />
             <p class="text-[11px] text-gray-400">أول مرة: اكتب كود الأدمن الثابت. بعد كده الأدمن بيطلّع أكواد للكوتشات من زر «كود دعوة كوتش جديد».</p>`}
           <button class="w-full py-3 rounded-xl text-sm gold-btn">دخول المنصة</button>
@@ -451,8 +451,11 @@
         } else {
           let group = "";
           try { const g = await getDoc(doc(firestore, "meta", "groups")); if (g.exists() && Array.isArray(g.data().list)) group = String(g.data().list[0] || ""); } catch (_) {}
-          const level = Number(document.getElementById("gStep").value) || 1;
-          await setDoc(doc(firestore, "users", user.uid), { name, username, email, role: "student", level, group, mode: "offline", att: {}, hw: {}, puz: { t: 0, c: 0 } });
+          const pl = await plLookup((document.getElementById("gPhone") || {}).value, (document.getElementById("gParent") || {}).value);
+          const prof = { name, username, email, role: "student", level: pl ? pl.level : 1, group, mode: "offline", att: {}, hw: {}, puz: { t: 0, c: 0 } };
+          if (pl) prof.plk = pl.key;
+          await setDoc(doc(firestore, "users", user.uid), prof);
+          if (pl) setTimeout(() => toast("تم تطبيق مستواك من اختبار تحديد المستوى: Step " + pl.level), 400);
         }
         pendingGoogle = null; pendingUpgrade = false; closeGoogleOnboarding();
         await initUser(user);
@@ -501,16 +504,49 @@
     };
     window.fbLogout = async () => { try { await signOut(auth); } catch (_) {} };
 
-    window.fbSignup = async ({ name, username, email, pass, level }) => {
+    // مستوى معتمد من اختبار تحديد المستوى (بالرقمين: الطالب + ولي الأمر). لو مفيش → null ويبدأ Step 1
+    async function plLookup(phone, parent) {
+      try {
+        const key = window.ecaPlKey ? await window.ecaPlKey(phone, parent) : "";
+        if (!key) return null;
+        const s = await getDoc(doc(firestore, "placementLevels", key));
+        const lv = s.exists() ? Number(s.data().level) : 0;
+        return lv >= 1 && lv <= 6 ? { key, level: lv } : null;
+      } catch (_) { return null; }
+    }
+    // الكوتش: نشر/مسح المستوى المعتمد (بيتكتب بالمفتاح المشفّر، من غير اسم ولا أرقام)
+    window.fbPlPublish = async (rows) => {
+      if (!me || !isStaffRole(me.role)) return { ok: false };
+      try {
+        const list = (rows || []).filter(x => x && Number(x.level) >= 1 && Number(x.level) <= 6);
+        for (let i = 0; i < list.length; i += 400) {
+          const b = writeBatch(firestore); let n = 0;
+          for (const x of list.slice(i, i + 400)) {
+            const key = await window.ecaPlKey(x.phone, x.parentPhone); if (!key) continue;
+            b.set(doc(firestore, "placementLevels", key), { level: Number(x.level), at: Date.now() }); n++;
+          }
+          if (n) await b.commit();
+        }
+        return { ok: true };
+      } catch (e) { console.warn("placementLevels:", e && e.code); return { ok: false }; }
+    };
+    window.fbPlRemove = async (phone, parent) => {
+      if (!me || !isStaffRole(me.role)) return;
+      try { const key = await window.ecaPlKey(phone, parent); if (key) await deleteDoc(doc(firestore, "placementLevels", key)); } catch (_) {}
+    };
+
+    window.fbSignup = async ({ name, username, email, pass, level, phone, parent }) => {
       signingUp = true;
       try {
         const cred = await createUserWithEmailAndPassword(auth, toAuthEmail(username), pass);
         let group = "";
         try { const g = await getDoc(doc(firestore, "meta", "groups")); if (g.exists() && Array.isArray(g.data().list)) group = String(g.data().list[0] || ""); } catch (_) {}
-        const profile = { name, username, email: email || "", role: "student", level: Number(level) || 1, group, mode: "offline", att: {}, hw: {}, puz: { t: 0, c: 0 } };
+        const pl = await plLookup(phone, parent);
+        const profile = { name, username, email: email || "", role: "student", level: pl ? pl.level : 1, group, mode: "offline", att: {}, hw: {}, puz: { t: 0, c: 0 } };
+        if (pl) profile.plk = pl.key;
         await setDoc(doc(firestore, "users", cred.user.uid), profile);
         await initUser(cred.user);
-        return { ok: true };
+        return { ok: true, level: profile.level, linked: !!pl };
       } catch (e) {
         return { ok: false, code: e && e.code };
       } finally { signingUp = false; }
@@ -853,7 +889,7 @@
                       <td class="py-2.5 px-2 font-bold ${s.remaining > 0 ? 'text-red-400' : 'text-gray-400'}">${s.remaining} EGP</td>
                       <td class="py-2.5 px-2 flex gap-1.5">
                         <button onclick="openFinEditForStudent('${s.id}')" class="px-2.5 py-1 rounded-lg bg-zinc-800 border border-yellow-500/40 text-yellow-300 hover:bg-yellow-500 hover:text-black font-bold">تحصيل / تعديل</button>
-                        ${s.remaining > 0 && wa ? `<a href="${wa}?text=${waMsg}" target="_blank" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">تذكير واتساب</a>` : ""}
+                        ${s.remaining > 0 && wa ? `<a href="${wa}?text=${waMsg}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">تذكير واتساب</a>` : ""}
                       </td>
                     </tr>`;
                 }).join("")}
@@ -1108,7 +1144,7 @@
       ["الكود غير صحيح أو انتهت صلاحيته", "Invalid or expired code"],
       ["اسم المستخدم أو كلمة السر غير صحيحة", "Wrong username or password"],
       ["تم إنشاء حسابك!", "Your account has been created!"],
-      ["كلمة السر لازم تكون 6 حروف على الأقل", "Password must be at least 6 characters"],
+      ["كلمة السر لازم تكون 8 حروف على الأقل", "Password must be at least 8 characters"],
       ["تم تغيير كلمة السر", "Password changed"],
       ["جاري التحميل...", "Loading..."],
       ["القسم المالي (للإدارة فقط)", "Financial Management (Admins Only)"],

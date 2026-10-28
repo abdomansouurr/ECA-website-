@@ -464,9 +464,11 @@
                   <input id="sPass" type="password" required placeholder="Password" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
                 </div>
                 ${signupRole === "student" ? `
-                  <select id="sLvl" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-yellow-300">
-                    <option value="1">Step 1</option><option value="2">Step 2</option><option value="3">Step 3</option><option value="4">Step 4</option><option value="5">Step 5</option><option value="6">Step 6</option>
-                  </select>
+                  <div class="grid grid-cols-2 gap-2">
+                    <input id="sPhone" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="موبايل الطالب" />
+                    <input id="sParent" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="موبايل ولي الأمر" />
+                  </div>
+                  <p class="text-[12px] text-gray-400 leading-relaxed">لو عملت اختبار تحديد المستوى، اكتب رقمك ورقم ولي الأمر زي ما سجّلتهم في الاختبار، وهتبدأ من المستوى اللي اتعتمد. غير كده بتبدأ من Step 1.</p>
                 ` : `
                   <input id="sCode" required autocomplete="off" autocapitalize="characters" placeholder="كود دعوة الكوتش (من الأدمن)" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-white" />
                 `}
@@ -518,21 +520,21 @@
         if (!window.fbCoachSignup) return toast("الاتصال بالسيرفر لسه ما كملش، جرّب بعد ثواني");
         const code = document.getElementById("sCode").value.trim();
         if (!name || !email) return toast("اكتب الاسم والإيميل");
-        if (pass.length < 6) return toast("كلمة السر لازم تكون 6 حروف على الأقل");
+        if (pass.length < 8) return toast("كلمة السر لازم تكون 8 حروف على الأقل");
         const b2 = ev.submitter; if (b2) b2.disabled = true;
         const rc = await window.fbCoachSignup({ name, username: username || email.split("@")[0].replace(/[^a-z0-9_]/g, ""), email, pass, code });
         if (b2) b2.disabled = false;
         if (!rc.ok) return toast(rc.code === "auth/email-already-in-use" ? "الإيميل ده مسجّل قبل كده" : (rc.code === "auth/weak-password" ? "كلمة السر ضعيفة" : (rc.code === "bad-invite" || rc.code === "permission-denied" || rc.code === "not-found" ? "كود الدعوة غير صحيح أو مستخدم قبل كده" : "تعذّر إنشاء حساب الكوتش")));
         signupRole = "student"; tab = "home"; return toast("تم إنشاء حساب الكوتش!");
       }
-      const level = Number(document.getElementById("sLvl").value) || 1;
+      const level = 1;
       if (!name || !username) return toast("اكتب الاسم واسم المستخدم");
-      if (pass.length < 6) return toast("كلمة السر لازم تكون 6 حروف على الأقل");
+      if (pass.length < 8) return toast("كلمة السر لازم تكون 8 حروف على الأقل");
       const btn = ev.submitter; if (btn) btn.disabled = true;
-      const r = await window.fbSignup({ name, username, email, pass, level });
+      const r = await window.fbSignup({ name, username, email, pass, level, phone: (document.getElementById("sPhone") || {}).value, parent: (document.getElementById("sParent") || {}).value });
       if (btn) btn.disabled = false;
       if (!r.ok) return toast(r.code === "auth/email-already-in-use" ? "اسم المستخدم ده مستخدم قبل كده" : (r.code === "auth/weak-password" ? "كلمة السر ضعيفة" : "تعذّر إنشاء الحساب"));
-      tab = "home"; toast("تم إنشاء حسابك!");
+      tab = "home"; toast(r.linked ? "تم إنشاء حسابك — مستواك Step " + r.level + " من اختبار تحديد المستوى" : "تم إنشاء حسابك!");
     }
     function renderStudentHome(stu) {
       const s = calcStats(stu);
@@ -645,7 +647,7 @@
                         if (a && h) { tCls = "text-emerald-400"; chip = `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 shrink-0">درس مكتمل ✓</span>`; }
                         else if (a) { tCls = "text-red-400"; chip = `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 shrink-0">شرح فقط</span>`; }
                       }
-                      const lkBtn = (t, url, isHw) => `<a href="${url}" target="_blank" class="px-3 py-1 rounded-lg text-xs bg-zinc-900 border ${isHw ? 'border-dashed border-yellow-500/60' : 'border-yellow-500/35'} text-yellow-300 hover:bg-yellow-500 hover:text-black">${t} ↗</a>`;
+                      const lkBtn = (t, url, isHw) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="px-3 py-1 rounded-lg text-xs bg-zinc-900 border ${isHw ? 'border-dashed border-yellow-500/60' : 'border-yellow-500/35'} text-yellow-300 hover:bg-yellow-500 hover:text-black">${t} ↗</a>`;
                       // زر الواجب: لو الموقف قابل للحل يفتح لاعب الألغاز جوه المنصة، غير كده لينك Lichess
                       const hwKey = st.step + "-" + idx;
                       const hwBtn = x => {
@@ -665,7 +667,7 @@
                       return `
                       <div class="px-6 py-3 flex flex-wrap justify-between items-center gap-2 hover:bg-yellow-500/5">
                         <span class="flex items-center gap-2 min-w-0">
-                          <a href="${les.l[0][1]}" target="_blank" class="text-sm font-semibold ${tCls} hover:text-yellow-300">${idx + 1}.${les.t} ↗</a>
+                          <a href="${les.l[0][1]}" target="_blank" rel="noopener noreferrer" class="text-sm font-semibold ${tCls} hover:text-yellow-300">${idx + 1}.${les.t} ↗</a>
                           ${chip}
                         </span>
                         <div class="flex flex-wrap items-stretch gap-2">
@@ -860,8 +862,8 @@
       if (!window.fbChangePassword) return;
       if (window.fbAuthInfo && !window.fbAuthInfo().password) return toast("حسابك بيدخل بجوجل — مفيش كلمة سر تتغير");
       const o = prompt(trText("كلمة السر الحالية")); if (o == null) return;
-      const n = prompt(trText("كلمة السر الجديدة (6 حروف على الأقل)")); if (n == null) return;
-      if (n.length < 6) return toast("كلمة السر لازم تكون 6 حروف على الأقل");
+      const n = prompt(trText("كلمة السر الجديدة (8 حروف على الأقل)")); if (n == null) return;
+      if (n.length < 8) return toast("كلمة السر لازم تكون 8 حروف على الأقل");
       const r = await window.fbChangePassword(o, n);
       toast(r.ok ? "تم تغيير كلمة السر" : "كلمة السر الحالية غير صحيحة");
     }
@@ -1078,7 +1080,7 @@
       const $ = x => document.getElementById(x);
       $("asTitleNew").classList.toggle("hidden", !!s); $("asTitleEdit").classList.toggle("hidden", !s);
       $("asSubNew").classList.toggle("hidden", !!s); $("asSubEdit").classList.toggle("hidden", !s);
-      $("asDelBtn").classList.toggle("hidden", !s); $("asEditHint").classList.toggle("hidden", !s);
+      $("asDelBtn").classList.toggle("hidden", !s || !window.isFinanceAdminUnlocked); $("asEditHint").classList.toggle("hidden", !s);
       $("asLevel").innerHTML = [1, 2, 3, 4, 5, 6].map(l => `<option value="${l}">Step ${l}</option>`).join("");
       $("asGroup").innerHTML = db.groups.map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join("");
       $("asName").value = s ? s.name : ""; $("asUser").value = s ? s.username : ""; $("asPass").value = ""; $("asUser").readOnly = !!s; $("asPass").disabled = !!s;
@@ -1109,7 +1111,7 @@
       } else {
         if (!window.fbCreateStudentAccount) return toast("الاتصال بالسيرفر لسه ما كملش، جرّب بعد ثواني");
         const initPass = pass || randomPass();
-        if (initPass.length < 6) return toast("كلمة السر لازم تكون 6 حروف على الأقل");
+        if (initPass.length < 8) return toast("كلمة السر لازم تكون 8 حروف على الأقل");
         const btn = ev.submitter; if (btn) btn.disabled = true;
         try {
           const uid = await window.fbCreateStudentAccount(username, initPass);
@@ -1122,6 +1124,7 @@
       }
     }
     function deleteStudent() {
+      if (!window.isFinanceAdminUnlocked) return toast("حذف الطالب للأدمن بس");
       if (!isCoach() || !editStuId) return;
       const s = db.users.find(u => u.id === editStuId); if (!s) return;
       if (!confirm(trText("هل أنت متأكد من حذف الطالب نهائياً مع كل سجلات حضوره؟") + "\n" + s.name)) return;
@@ -1585,7 +1588,7 @@
             <div class="p-3.5 rounded-xl bg-black/80 border border-yellow-500/25 space-y-2">
               <div class="flex justify-between items-center">
                 <span class="text-xs font-bold text-yellow-400">لغز درس #${qIdx + 1}:${esc(qObj.lessonTitle)}</span>
-                <a href="${qObj.url}" target="_blank" class="text-[11px] text-sky-400 hover:underline">معاينة الرقعة ↗</a>
+                <a href="${qObj.url}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-sky-400 hover:underline">معاينة الرقعة ↗</a>
               </div>
               <p class="text-xs text-white font-medium">${esc(qObj.q)}</p>
               <div class="space-y-1.5">

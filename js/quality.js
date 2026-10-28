@@ -23,6 +23,7 @@
     // حذف طالب: بيختفي فوراً، والحذف الحقيقي بعد 8 ثواني لو ما ضغطتش «تراجع»
     window.__pendingDel = window.__pendingDel || new Set();
     deleteStudent = function () {
+      if (!window.isFinanceAdminUnlocked) return toast("حذف الطالب للأدمن بس");
       if (!isCoach() || !editStuId) return;
       const s = db.users.find(u => u.id === editStuId); if (!s) return;
       if (!confirm(trText("هل أنت متأكد من حذف الطالب نهائياً مع كل سجلات حضوره؟") + "\n" + s.name)) return;

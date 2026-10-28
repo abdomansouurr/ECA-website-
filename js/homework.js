@@ -949,7 +949,7 @@ window.ECA_HOMEWORK = {"1-0":{"src":"https://lichess.org/study/jjMNw6GF/wWxeB9BO
 // الجديد في v23: كل نقلة ليها 3 محاولات بس — لو غلط 3 مرات في نفس النقلة بنلعبها له
 // تلقائيًا (بالتمييز) وبيكمّل الباقي بنفسه. التلميح بيتأكد إن القطعة موجودة فعلًا في مربعه.
 let HWChess = null;
-import("https://cdn.jsdelivr.net/npm/chess.js@1.0.0/+esm").then(m => { HWChess = m.Chess; if (tab === "homework") render(); }).catch(() => {});
+loadChessModule().then(m => { HWChess = m.Chess; if (tab === "homework") render(); }).catch(() => {});
 
 const HW = { key: null, entry: null, i: 0, game: null, sol: [], alts: [], idx: 0, color: "w", flip: false,
              sel: null, last: null, flash: null, status: "play", wrongThis: false, firstTry: [], finished: false,

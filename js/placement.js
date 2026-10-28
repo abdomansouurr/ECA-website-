@@ -15,6 +15,13 @@
       if (d.startsWith("0020")) d = "0" + d.slice(4); else if (d.startsWith("20") && d.length === 12) d = "0" + d.slice(2);
       return d;
     }
+    // مفتاح ربط الاختبار بالحساب: SHA-256(رقم الطالب + رقم ولي الأمر) — نفس الحساب في تسجيل الطالب وفي اعتماد الكوتش
+    window.ecaPlKey = async (a, b) => {
+      const x = ptPhoneKey(a), y = ptPhoneKey(b);
+      if (!/^\d{8,15}$/.test(x) || !/^\d{8,15}$/.test(y)) return "";
+      const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("eca-pl1|" + x + "|" + y));
+      return Array.from(new Uint8Array(h)).map(v => v.toString(16).padStart(2, "0")).join("");
+    };
     const ptShuffle = a => { a = a.slice(); for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; };
 
     (function () {
@@ -288,7 +295,8 @@
       PTR.loading = true; PTR.err = ""; render();
       try {
         const r = await window.fbPtList();
-        PTR.list = r.rows || []; if (!r.ok) PTR.err = "تعذّر تحميل النتائج — اتأكد إن قواعد Firebase اتنشرت (firestore.rules).";
+        PTR.list = r.rows || [];
+        if (r.ok && window.fbPlPublish && !PTR.__synced) { PTR.__synced = true; window.fbPlPublish(PTR.list.filter(x => x.levelBy && Number(x.level) >= 1).map(x => ({ phone: x.phone, parentPhone: x.parentPhone, level: Number(x.level) }))).catch(() => {}); } if (!r.ok) PTR.err = "تعذّر تحميل النتائج — اتأكد إن قواعد Firebase اتنشرت (firestore.rules).";
         if (window.fbPtCleanup) window.fbPtCleanup().catch(() => {});
       } catch (e) { PTR.err = "تعذّر تحميل النتائج."; PTR.list = PTR.list || []; }
       PTR.loading = false; render();
@@ -353,14 +361,14 @@
       const r = (PTR.list || []).find(x => x.id === id); lv = Number(lv); if (!r || !(lv >= 1 && lv <= 6)) return;
       const cu = currUser(), nm = String((cu && cu.name) || "").slice(0, 80);
       const res = await window.fbPtUpdate(id, { level: lv, levelBy: "coach", levelCoach: nm, confirmedAt: Date.now() });
-      if (res && res.ok) { r.level = lv; r.levelBy = "coach"; r.levelCoach = nm; toast("تم اعتماد المستوى " + lv); } else toast("تعذّر الحفظ — جرّب تاني.");
+      if (res && res.ok) { r.level = lv; r.levelBy = "coach"; r.levelCoach = nm; if (window.fbPlPublish) window.fbPlPublish([{ phone: r.phone, parentPhone: r.parentPhone, level: lv }]); toast("تم اعتماد المستوى " + lv); } else toast("تعذّر الحفظ — جرّب تاني.");
       render();
     }
     async function ptReopen(id) {
       const r = (PTR.list || []).find(x => x.id === id); if (!r) return;
       if (!confirm("هتفتح الاختبار تاني للطالب «" + r.name + "»؟ نتيجته الحالية هتتمسح وهيقدر يعيده مرة واحدة.")) return;
       const res = await window.fbPtReopen(id, r);
-      if (res && res.ok) { PTR.list = PTR.list.filter(x => x.id !== id); toast("تم فتح الاختبار للطالب."); } else toast("تعذّر فتح الاختبار — جرّب تاني.");
+      if (res && res.ok) { if (window.fbPlRemove) window.fbPlRemove(r.phone, r.parentPhone); PTR.list = PTR.list.filter(x => x.id !== id); toast("تم فتح الاختبار للطالب."); } else toast("تعذّر فتح الاختبار — جرّب تاني.");
       render();
     }
 

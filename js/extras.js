@@ -154,7 +154,7 @@
     function anaEngine() {
       if (anaWorker) return anaWorker;
       try {
-        anaWorker = new Worker(URL.createObjectURL(new Blob([`importScripts("${STOCKFISH_URL}");`], { type: "application/javascript" })));
+        anaWorker = new Worker(URL.createObjectURL(new Blob([stockfishBoot()], { type: "application/javascript" })));
         anaWorker.onmessage = e => anaOnMsg(String(e.data));
         anaWorker.onerror = () => { anaWorker = null; anaRunning = false; };
         anaWorker.postMessage("uci");
@@ -670,7 +670,7 @@
     const EXAM_COUNT = 10, EXAM_SECONDS = 60, EXAM_PASS = 70;   // دقيقة لكل لغز، والحل لازم يكمل لآخر نقلة
     const EXAM_DIFF = { 1: "easiest", 2: "easiest", 3: "easier", 4: "normal", 5: "harder", 6: "hardest" };
     let EX = null;
-    const ensureChess = () => ChessCls ? Promise.resolve(ChessCls) : import(CHESS_JS_URL).then(m => (ChessCls = m.Chess));
+    const ensureChess = () => ChessCls ? Promise.resolve(ChessCls) : loadChessModule().then(m => (ChessCls = m.Chess));
 
     openExamModal = function (lvl) {
       const u = currUser(); if (!u || u.role !== "student") return;
