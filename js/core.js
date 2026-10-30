@@ -660,8 +660,10 @@
                       };
                       // نتيجة الواجب للطالب (كام إجابة صح من أول محاولة)
                       const hwScore = u.role === "student" && u.hwp && u.hwp[hwKey] && hwEntry(hwKey) && (hwEntry(hwKey).puzzles || []).length
-                        ? (() => { const r = u.hwp[hwKey], good = r.ft === r.t;
-                            return `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${good ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300' : 'bg-yellow-500/15 border border-yellow-500/40 text-yellow-300'} shrink-0">${lang === 'en' ? 'First try' : 'أول مرة'} ${r.ft}/${r.t}</span>`; })()
+                        ? (() => { const r = u.hwp[hwKey], hasFirstTry = Number.isFinite(r.ft);
+                            const score = hasFirstTry ? r.ft : (Number(r.solved) || 0), good = score === r.t;
+                            const label = hasFirstTry ? (lang === 'en' ? 'First try' : 'أول مرة') : (lang === 'en' ? 'Solved' : 'محلول');
+                            return `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${good ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300' : 'bg-yellow-500/15 border border-yellow-500/40 text-yellow-300'} shrink-0">${label} ${score}/${r.t}</span>`; })()
                         : '';
                       // فاصل رأسي واضح بين لينكات الشرح (Examples/Study/Exercises) وزر الـ Homework
                       const hwSep = (LV.links.length && LV.hw.length) ? `<span aria-hidden="true" class="w-px self-stretch shrink-0 bg-gradient-to-b from-transparent via-yellow-400/90 to-transparent"></span>` : '';
@@ -753,7 +755,11 @@
                         const h = !!(sel.hw && sel.hw[k]);
                         const HE = hwEntry ? hwEntry(k) : null;
                         const wp = sel.hwp && sel.hwp[k] && HE && (HE.puzzles || []).length ? sel.hwp[k] : null;
-                        const wChip = wp ? `<span class="text-[10px] px-1.5 py-0.5 rounded-md ${wp.ft === wp.t ? 'bg-emerald-500/20 text-emerald-300' : 'bg-yellow-500/15 text-yellow-300'}" title="${lang === 'en' ? 'First-try correct / total' : 'صح من أول محاولة / الإجمالي'}">${wp.ft}/${wp.t}</span>` : '';
+                        const wChip = wp ? (() => {
+                          const hasFirstTry = Number.isFinite(wp.ft), score = hasFirstTry ? wp.ft : (Number(wp.solved) || 0);
+                          const label = hasFirstTry ? (lang === 'en' ? 'First-try correct / total' : 'صح من أول محاولة / الإجمالي') : (lang === 'en' ? 'Solved / total' : 'المحلول / الإجمالي');
+                          return `<span class="text-[10px] px-1.5 py-0.5 rounded-md ${score === wp.t ? 'bg-emerald-500/20 text-emerald-300' : 'bg-yellow-500/15 text-yellow-300'}" title="${label}">${score}/${wp.t}</span>`;
+                        })() : '';
                         return `
                           <div class="px-4 py-2.5 flex justify-between items-center text-xs">
                             <span class="text-white font-medium">${i+1}. ${les.t}</span>
