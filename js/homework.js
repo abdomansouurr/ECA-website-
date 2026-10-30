@@ -1062,6 +1062,10 @@ function hwSolved() {
   else HW.streak = 0;
   HW.status = "solved"; HW.flash = null; HW.sel = null; HW.hint = null;
   render();
+  const game = HW.game, index = HW.i;
+  HW.demoTimer = setTimeout(() => {
+    if (tab === "homework" && HW.status === "solved" && HW.game === game && HW.i === index) hwNext();
+  }, 2000);
 }
 function hwSaveProgress(solved) {
   const u = currUser(), total = HW.entry && HW.entry.puzzles ? HW.entry.puzzles.length : 0;
@@ -1105,7 +1109,7 @@ function hwFinish() {
   HW.finished = true; render();
 }
 function hwRetry() { hwStartAttempt(); }
-function hwExit() { go("lessons"); render(); }
+function hwExit() { clearTimeout(HW.demoTimer); go("lessons"); render(); }
 // ثيم الرقعة جوه اللاعب — نفس الإعدادات العامة (ألوان Lichess + شكل القطع)
 function hwSetTheme(l, d) { setBoardColor("l", l); setBoardColor("d", d); render(); }
 function hwSetPieces(k) { setPieceSet(k); render(); }

@@ -29,7 +29,7 @@
     const arena = {
       sub: "play",
       play: { game: null, level: 0, colorChoice: "w", color: "w", flip: false, sel: null, last: null, thinking: false, over: "" },
-      puz: { game: null, sol: [], idx: 0, color: "w", flip: false, sel: null, last: null, flash: null, hint: null, status: "idle", diff: "easier", info: null, counted: false },
+      puz: { game: null, sol: [], idx: 0, color: "w", flip: false, sel: null, last: null, flash: null, hint: null, status: "idle", diff: "easier", info: null, counted: false, nextTimer: null },
       vis: { active: false, target: "", score: 0, left: VIS_SECONDS, timer: null, attempts: [], coords: true, flip: false, flash: null, best: 0 }
     };
     const arenaRefresh = () => { if (tab === "arena") render(); };
@@ -326,6 +326,7 @@
     async function puzLoad() {
       const Z = arena.puz;
       if (!ChessCls || Z.status === "loading") return;
+      clearTimeout(Z.nextTimer); Z.nextTimer = null;
       Z.status = "loading"; Z.sel = null; Z.hint = null; Z.flash = null; arenaRefresh();
       try {
         const url = Z.diff === "daily" ? "https://lichess.org/api/puzzle/daily" : "https://lichess.org/api/puzzle/next?difficulty=" + encodeURIComponent(Z.diff);
@@ -364,7 +365,14 @@
         else a.puzStreak = 0;
       }).then(r => { if (!r.ok && r.code === "permission-denied") toast("اللغز ده اتحسب قبل كده — النتيجة مش هتتكرر"); });
     }
-    function puzSolved() { const Z = arena.puz; Z.status = "solved"; Z.sel = null; puzCount(true); toast("برافو! اللغز اتحل"); }
+    function puzSolved() {
+      const Z = arena.puz;
+      Z.status = "solved"; Z.sel = null; puzCount(true); toast("برافو! اللغز اتحل");
+      const game = Z.game;
+      Z.nextTimer = setTimeout(() => {
+        if (tab === "arena" && arena.sub === "puzzles" && Z.status === "solved" && Z.game === game) puzLoad();
+      }, 2000);
+    }
     function puzClick(sq) {
       const Z = arena.puz, g = Z.game; if (Z.status !== "play" || !g) return;
       const mv = pickOrMove(Z, sq, Z.color);
