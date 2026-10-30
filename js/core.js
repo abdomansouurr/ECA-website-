@@ -279,7 +279,7 @@
       st.lessons.forEach((_, i) => {
         const k = stu.level + "-" + i;
         if (stu.att && stu.att[k]) attC++; else if (nextIdx === -1) nextIdx = i;
-        if (stu.hw && stu.hw[k]) hwC++;
+        if ((stu.hw && stu.hw[k]) || (typeof hwIsAutoComplete === "function" && hwIsAutoComplete(stu, k))) hwC++;
       });
       const rem = Math.max(0, total - attC);
       const attP = Math.round((attC / total) * 100);
@@ -643,7 +643,8 @@
                       const LV = LESSONS_VIEW.get(st.step + "-" + idx) || { links: les.l.map(x => ({ t: x[0], u: x[1] })), hw: [] };
                       let tCls = "text-white", chip = "";
                       if (u.role === "student") {
-                        const k = u.level + "-" + idx, a = u.att && u.att[k], h = u.hw && u.hw[k];
+                        const k = u.level + "-" + idx, a = u.att && u.att[k];
+                        const h = (u.hw && u.hw[k]) || (typeof hwIsAutoComplete === "function" && hwIsAutoComplete(u, k));
                         if (a && h) { tCls = "text-emerald-400"; chip = `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 shrink-0">درس مكتمل ✓</span>`; }
                         else if (a) { tCls = "text-red-400"; chip = `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 shrink-0">شرح فقط</span>`; }
                       }

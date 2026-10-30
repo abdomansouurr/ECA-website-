@@ -963,6 +963,11 @@ function hwLessonTitle(key) {
   return les ? les.t : "Homework";
 }
 function hwEntry(key) { return (typeof window.ECA_HOMEWORK === "object") ? window.ECA_HOMEWORK[key] : null; }
+function hwIsAutoComplete(u, key) {
+  const record = u && u.hwp && u.hwp[key], entry = hwEntry(key);
+  const total = entry && entry.puzzles ? entry.puzzles.length : 0;
+  return !!(record && total && Number(record.solved) > total / 2);
+}
 
 function openHomework(key) {
   const e = hwEntry(key); if (!e) return;
@@ -1052,10 +1057,24 @@ function hwSolved() {
   clearTimeout(HW.demoTimer);
   const ft = !HW.wrongThis && !HW.hintUsed;
   HW.firstTry[HW.i] = ft;
+  hwSaveProgress(HW.i + 1);
   if (ft) { HW.streak++; HW.maxStreak = Math.max(HW.maxStreak, HW.streak); }
   else HW.streak = 0;
   HW.status = "solved"; HW.flash = null; HW.sel = null; HW.hint = null;
   render();
+}
+function hwSaveProgress(solved) {
+  const u = currUser(), total = HW.entry && HW.entry.puzzles ? HW.entry.puzzles.length : 0;
+  if (!u || u.role !== "student" || !HW.key || !total) return;
+  u.hwp = u.hwp || {};
+  const prev = u.hwp[HW.key] || {};
+  const previousSolved = Number.isInteger(prev.solved) ? prev.solved : 0;
+  u.hwp[HW.key] = Object.assign({}, prev, {
+    solved: Math.min(total, Math.max(previousSolved, solved)),
+    t: total,
+    ts: Date.now()
+  });
+  save();
 }
 // تلميح: بيعلّم على مربع القطعة اللي المفروض تتحرك — 3 مرات بس للواجب كله
 // حماية: لو مربع القطعة فاضي أو القطعة من لون غلط (بيانات بايظ) مننزلش التلميح خالص
@@ -1079,7 +1098,7 @@ function hwFinish() {
   if (u && u.role === "student" && HW.key) {
     u.hwp = u.hwp || {};
     const prev = u.hwp[HW.key];
-    u.hwp[HW.key] = { ft, t, att: ((prev && prev.att) || 0) + 1, ts: Date.now(), bs: HW.maxStreak };
+    u.hwp[HW.key] = { ft, t, solved: t, att: ((prev && prev.att) || 0) + 1, ts: Date.now(), bs: HW.maxStreak };
     if (typeof markActiveDay === "function") markActiveDay(u);
     save();
   }

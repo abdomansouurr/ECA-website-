@@ -1,4 +1,5 @@
 node_modules/
+.vs/
 
 # أسرار ومفاتيح: ما تترفعش على GitHub أبدًا
 .env
