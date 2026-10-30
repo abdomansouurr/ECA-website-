@@ -1,0 +1,27 @@
+# Dependencies & Build
+node_modules/
+package-lock.json
+tailwind.css
+
+# Heavy Chess & Vendor Files (CRITICAL for Token Saving)
+vendor/
+puzzles.js
+
+# Git & Deployment
+.git/
+.vercel/
+.firebase/
+
+# Media & Assets
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.ico
+*.mp3
+*.mp4
+*.woff
+*.woff2
+*.ttf
+*.pdf
+*.zip
