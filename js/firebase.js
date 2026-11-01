@@ -651,14 +651,14 @@
     }
 
     // ===================== واجهات تستدعيها الصفحة =====================
-    window.fbLogin =async (idf, pass) => {
-      try { await signInWithEmailAndPassword(auth, toAuthEmail(idf), pass); return { ok: true }; }
-      catch (error) {
-    // دي هتطلعلك رسالة واضحة فيها سبب الخطأ الحقيقي على الشاشة فوراً
-    alert("خطأ تسجيل الدخول: " + error.code + " -> " + error.message);
-    console.error(error);
-}
-      catch (e) { return { ok: false, code: e && e.code }; }
+    window.fbLogin = async (idf, pass) => {
+      try {
+        await signInWithEmailAndPassword(auth, toAuthEmail(idf), pass);
+        return { ok: true };
+      } catch (e) {
+        console.error("Sign-in failed:", e && e.code);
+        return { ok: false, code: e && e.code };
+      }
     };
     window.fbLogout = async () => { try { await signOut(auth); } catch (_) {} };
 
