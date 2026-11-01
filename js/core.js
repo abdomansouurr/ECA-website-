@@ -245,7 +245,7 @@
     }
     let coachNotificationOpen = false, coachNotificationType = "homework", coachNotificationBusy = false, coachNotificationMessage = "";
     function openCoachNotification(type) {
-      if (!isCoach() || !["homework", "announcement"].includes(type)) return;
+      if (!isStaffUser(currUser()) || !["homework", "announcement"].includes(type)) return;
       coachNotificationType = type; coachNotificationOpen = true; render();
     }
     function closeCoachNotification() { coachNotificationOpen = false; coachNotificationMessage = ""; render(); }
@@ -256,7 +256,7 @@
     }
     async function sendCoachNotification(event, studentId) {
       if (event) event.preventDefault();
-      if (!isCoach() || coachNotificationBusy || !window.fbSendNotifications) return;
+      if (!isStaffUser(currUser()) || coachNotificationBusy || !window.fbSendNotifications) return;
       const body = String((document.getElementById("coachNotifBody") || {}).value || "").trim();
       const target = (document.getElementById("coachNotifTarget") || {}).value || "student";
       const group = (document.getElementById("coachNotifGroup") || {}).value || "";
@@ -279,7 +279,7 @@
       }
     }
     function coachNotificationComposerHTML(student) {
-      if (!student) return "";
+      if (!student || !isStaffUser(currUser())) return "";
       const en = lang === "en";
       const groups = (db.groups || []).filter(g => db.users.some(u => u.role === "student" && u.group === g));
       const typeLabel = coachNotificationType === "homework" ? (en ? "Homework" : "الواجب") : (en ? "Announcement" : "إعلان");
@@ -419,23 +419,22 @@
       const a = document.activeElement, id = a && a.id, s = a && a.selectionStart, e = a && a.selectionEnd;
       render.__skel = false;
       _render(); applyLang();
-      // انيميشن متنوع لكل صفحة: كل تاب ليه حركة دخول مختلفة (data-pg بتختارها من CSS)
-      // + القوائم جوه الصفحة بتدخل واحدة ورا التانية
-      // المفتاح = التاب + هوية المستخدم: كده أول ظهور حقيقي بعد الـ skeleton بيتحرك، والدخول من صفحة اللوجين للهوم بيتحرك،
-      // بس إعادة الرندر العادية (بحث/حفظ/تبديل لغة) مبتحركش
+      // المفتاح = التاب + هوية المستخدم لمنع إعادة الحركة عند إعادة الرندر العادية.
       const pgKey = tab + "|" + ((currUser() || {}).id || "guest");
-      // الـ skeleton مستهلكش انيميشن الدخول — أول رندر بمحتوى حقيقي هو اللي بيتحرك
-      // + نافذة سماح 600ms: أي رندر تابع (بيانات واصلة/تهيئة) القوائم الجديدة فيه تكمل الدخول بانسيابية بدل ما تظهر فجائي
+      // الـ skeleton لا يستهلك حركة الدخول؛ الصفحة الرئيسية مستثناة من حركات الدخول والقوائم.
       const nowMs = Date.now();
       if (render.__pg !== pgKey && !render.__skel) {
         render.__pg = pgKey; render.__pgAt = nowMs; render.__skel = false; winY = 0;
         const mv = document.getElementById("mainView");
         if (mv) {
           mv.dataset.pg = (typeof isInfoTab === "function" && isInfoTab(tab)) ? "info" : tab;
-          mv.classList.remove("page-enter"); void mv.offsetWidth; mv.classList.add("page-enter");
-          staggerLists(mv);
+          mv.classList.remove("page-enter");
+          if (tab !== "home") {
+            void mv.offsetWidth; mv.classList.add("page-enter");
+            staggerLists(mv);
+          }
         }
-      } else if (render.__pgAt && nowMs - render.__pgAt < 600) {
+      } else if (tab !== "home" && render.__pgAt && nowMs - render.__pgAt < 600) {
         staggerLists(document.getElementById("mainView"));
       }
       if (id) { const el = document.getElementById(id); if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); try { el.setSelectionRange(s, e); } catch (_) {} } }
@@ -465,13 +464,13 @@
         return;
       }
 
-      if (u.role === "coach") cSearch.classList.remove("hidden"); else cSearch.classList.add("hidden");
+      if (isStaffUser(u)) cSearch.classList.remove("hidden"); else cSearch.classList.add("hidden");
 
       const T = (id, label, extra) => `<button onclick="switchTab('${id}')" class="nav-tab ${tab === id ? 'active' : ''}" ${tab === id ? 'aria-current="page"' : ''}>${label}${extra || ''}</button>`;
       const certN = (u.certificates || []).length;
       // ===== القائمة الجانبية الرأسية: نفس تابات الدور بتتحط في الدرج (عربي يمين / إنجليزي شمال)
       // وزر ☰ في الهيدر هو اللي بيفتحها ويقفلها — شريط التابات الأفقي بيختفي للمدخلين.
-      const tabsHtml = u.role === "coach"
+      const tabsHtml = isStaffUser(u)
         ? T("home", "الرئيسية") + T("today", "جدول اليوم") + T("attendance", "تسجيل الحضور") + T("tracker", "متابعة الطلاب") + T("finance", "الحسابات")
           + T("lessons", "المنهج") + T("arena", "ساحة التدريب") + T("tournaments", "البطولات") + T("honor", "قائمة الشرف") + T("ranks", "الرتب والشارات") + T("placeresults", "اختبار المستوى")
         : T("home", "الرئيسية") + T("lessons", "دروسي") + T("arena", "ساحة التدريب") + T("tournaments", "البطولات") + T("ranks", "الرتب والشارات")
@@ -521,11 +520,11 @@
 
       if (tab === "lessons") main.innerHTML = renderLessonsView(u);
       else if (tab === "homework" && typeof renderHomeworkPlayer === "function") main.innerHTML = renderHomeworkPlayer(u);
-      else if (tab === "today" && u.role === "coach") main.innerHTML = renderTodayView(u);
-      else if (tab === "tracker" && u.role === "coach") main.innerHTML = renderTrackerView();
-      else if (tab === "attendance" && u.role === "coach") main.innerHTML = renderAttendanceView();
-      else if (tab === "finance" && u.role === "coach") main.innerHTML = renderFinanceDashboardView();
-      else if (tab === "placeresults" && u.role === "coach" && typeof renderPlacementResults === "function") main.innerHTML = renderPlacementResults(u);
+      else if (tab === "today" && isStaffUser(u)) main.innerHTML = renderTodayView(u);
+      else if (tab === "tracker" && isStaffUser(u)) main.innerHTML = renderTrackerView();
+      else if (tab === "attendance" && isStaffUser(u)) main.innerHTML = renderAttendanceView();
+      else if (tab === "finance" && isStaffUser(u)) main.innerHTML = renderFinanceDashboardView();
+      else if (tab === "placeresults" && isStaffUser(u) && typeof renderPlacementResults === "function") main.innerHTML = renderPlacementResults(u);
       else if (tab === "parent" && u.role === "student") main.innerHTML = renderStudentParentView(u);
       else if (tab === "certs" && u.role === "student") main.innerHTML = renderMyCertsView(u);
       else if (tab === "honor") main.innerHTML = renderHonorView(u);
@@ -1092,6 +1091,7 @@
     function todayISO() { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
     function stuMode(s) { return s.mode === "online" ? "online" : "offline"; }
     function isCoach() { const u = currUser(); return !!(u && u.role === "coach"); }
+    function isStaffUser(u) { return !!(u && (u.role === "coach" || u.role === "admin")); }
     function waLink(num) { let d = String(num || "").replace(/\D/g, ""); if (!d) return ""; if (d.startsWith("00")) d = d.slice(2); else if (d.startsWith("0")) d = "20" + d.slice(1); return "https://wa.me/" + d; }
     function dl(name, text, type) { const b = new Blob([text], { type }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
     function keepScroll(fn) { const y = window.scrollY; fn(); window.scrollTo(0, y); }
