@@ -219,6 +219,7 @@ service cloud.firestore {
       match /notifications/{nid} {
         allow get, list: if notAnon() && request.auth.uid == uid;
         allow create: if (isStaff()
+            && exists(/databases/$(database)/documents/users/$(uid))
             && nid.matches('[A-Za-z0-9_-]{1,120}')
             && request.resource.data.keys().hasOnly(['type','titleAr','titleEn','bodyAr','bodyEn','createdAt','read'])
             && request.resource.data.type in ['homework','announcement']

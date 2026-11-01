@@ -255,6 +255,34 @@
         return false;
       }
     };
+    window.fbSendNotifications = async (studentIds, type, text) => {
+      if (!me || !isStaffRole(me.role) || !["homework", "announcement"].includes(type)) return { ok: false, sent: 0 };
+      const body = String(text || "").trim();
+      if (!body || body.length > 400) {
+        if (window.toast) toast("نص الإشعار مطلوب وبحد أقصى 400 حرف");
+        return { ok: false, sent: 0 };
+      }
+      const allowed = new Set((db.users || []).filter(u => u.role === "student").map(u => u.id));
+      const recipients = Array.from(new Set(Array.isArray(studentIds) ? studentIds.filter(id => allowed.has(id)) : []));
+      if (!recipients.length) return { ok: false, sent: 0 };
+      const titleAr = type === "homework" ? "واجب جديد من الكوتش" : "إعلان من الكوتش";
+      const titleEn = type === "homework" ? "New homework from your coach" : "Announcement from your coach";
+      try {
+        for (let offset = 0; offset < recipients.length; offset += 400) {
+          const batch = writeBatch(firestore);
+          recipients.slice(offset, offset + 400).forEach(sid => {
+            const ref = doc(collection(firestore, "users", sid, "notifications"));
+            batch.set(ref, notificationData(type, titleAr, titleEn, body, body));
+          });
+          await batch.commit();
+        }
+        return { ok: true, sent: recipients.length };
+      } catch (e) {
+        console.error("send notifications:", e);
+        if (window.toast) toast("تعذّر إرسال الإشعار");
+        return { ok: false, sent: 0 };
+      }
+    };
     window.fbSaveAnnouncements = async (items, newItem) => {
       if (!me || !isStaffRole(me.role)) return false;
       try {

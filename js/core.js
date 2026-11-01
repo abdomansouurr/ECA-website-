@@ -243,6 +243,75 @@
     function markAllNotificationsRead() {
       if (window.fbMarkAllNotificationsRead) window.fbMarkAllNotificationsRead((window.ecaNotifications || []).filter(n => !n.read).map(n => n.id));
     }
+    let coachNotificationOpen = false, coachNotificationType = "homework", coachNotificationBusy = false, coachNotificationMessage = "";
+    function openCoachNotification(type) {
+      if (!isCoach() || !["homework", "announcement"].includes(type)) return;
+      coachNotificationType = type; coachNotificationOpen = true; render();
+    }
+    function closeCoachNotification() { coachNotificationOpen = false; coachNotificationMessage = ""; render(); }
+    function coachNotificationTargetChanged() {
+      const target = document.getElementById("coachNotifTarget");
+      const groupWrap = document.getElementById("coachNotifGroupWrap");
+      if (target && groupWrap) groupWrap.classList.toggle("hidden", target.value !== "group");
+    }
+    async function sendCoachNotification(event, studentId) {
+      if (event) event.preventDefault();
+      if (!isCoach() || coachNotificationBusy || !window.fbSendNotifications) return;
+      const body = String((document.getElementById("coachNotifBody") || {}).value || "").trim();
+      const target = (document.getElementById("coachNotifTarget") || {}).value || "student";
+      const group = (document.getElementById("coachNotifGroup") || {}).value || "";
+      if (!body) return toast("اكتب نص الإشعار");
+      const recipients = target === "student"
+        ? [studentId]
+        : target === "group" ? db.users.filter(u => u.role === "student" && u.group === group).map(u => u.id)
+          : db.users.filter(u => u.role === "student").map(u => u.id);
+      if (!recipients.length) return toast("مفيش طلاب لإرسال الإشعار لهم");
+      coachNotificationBusy = true; render();
+      try {
+        const result = await window.fbSendNotifications(recipients, coachNotificationType, body);
+        if (!result || !result.ok) return;
+        coachNotificationOpen = false;
+        coachNotificationMessage = "";
+        toast("تم إرسال الإشعار إلى " + result.sent + " طالب");
+      } finally {
+        coachNotificationBusy = false;
+        render();
+      }
+    }
+    function coachNotificationComposerHTML(student) {
+      if (!student) return "";
+      const en = lang === "en";
+      const groups = (db.groups || []).filter(g => db.users.some(u => u.role === "student" && u.group === g));
+      const typeLabel = coachNotificationType === "homework" ? (en ? "Homework" : "الواجب") : (en ? "Announcement" : "إعلان");
+      return `<div class="gold-card rounded-2xl p-4 mt-4 space-y-3">
+        <div class="flex flex-wrap gap-2">
+          <button type="button" onclick="openCoachNotification('homework')" class="tap min-h-[44px] px-3 rounded-xl text-xs ${coachNotificationType === "homework" ? "gold-btn" : "bg-zinc-900 text-gray-300 border border-yellow-500/25"}">${en ? "Send homework" : "إرسال واجب"}</button>
+          <button type="button" onclick="openCoachNotification('announcement')" class="tap min-h-[44px] px-3 rounded-xl text-xs ${coachNotificationType === "announcement" ? "gold-btn" : "bg-zinc-900 text-gray-300 border border-yellow-500/25"}">${en ? "Announcement" : "إعلان"}</button>
+        </div>
+        ${coachNotificationOpen ? `<form onsubmit="sendCoachNotification(event,'${esc(student.id)}')" class="space-y-3">
+          <h3 class="text-sm font-bold text-yellow-300">${en ? `Send ${typeLabel} to ${esc(student.name)}` : `إرسال ${typeLabel} إلى ${esc(student.name)}`}</h3>
+          <label class="block text-xs text-gray-300">${en ? "Recipient" : "المستلم"}
+            <select id="coachNotifTarget" onchange="coachNotificationTargetChanged()" class="mt-1 w-full min-h-[44px] bg-black border border-yellow-500/40 rounded-xl px-3 text-sm text-white">
+              <option value="student">${en ? "Selected student" : "الطالب المحدد"}</option>
+              <option value="group">${en ? "A group" : "مجموعة"}</option>
+              <option value="all">${en ? "All students" : "كل الطلاب"}</option>
+            </select>
+          </label>
+          <label id="coachNotifGroupWrap" class="hidden block text-xs text-gray-300">${en ? "Group" : "المجموعة"}
+            <select id="coachNotifGroup" class="mt-1 w-full min-h-[44px] bg-black border border-yellow-500/40 rounded-xl px-3 text-sm text-white">
+              ${groups.map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join("")}
+            </select>
+          </label>
+          <label class="block text-xs text-gray-300">${en ? "Message" : "نص الإشعار"}
+            <textarea id="coachNotifBody" required maxlength="400" rows="3" oninput="coachNotificationMessage=this.value" class="mt-1 w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" placeholder="${en ? "Write the message to send..." : "اكتب الواجب أو الإعلان الذي سيظهر للطالب..."}">${esc(coachNotificationMessage)}</textarea>
+          </label>
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" ${coachNotificationBusy ? "disabled" : ""} class="tap min-h-[44px] px-4 rounded-xl text-xs gold-btn disabled:opacity-50">${coachNotificationBusy ? (en ? "Sending..." : "جاري الإرسال...") : (en ? "Save and send" : "حفظ وإرسال")}</button>
+            <button type="button" onclick="closeCoachNotification()" ${coachNotificationBusy ? "disabled" : ""} class="tap min-h-[44px] px-4 rounded-xl text-xs bg-zinc-900 text-gray-300 border border-yellow-500/25">${en ? "Cancel" : "إلغاء"}</button>
+          </div>
+        </form>` : ""}
+      </div>`;
+    }
     function notificationBellHTML() {
       const items = Array.isArray(window.ecaNotifications) ? window.ecaNotifications : [];
       const unread = items.filter(n => !n.read).length;
@@ -1610,6 +1679,7 @@
             </div>
             ${certs.length ? `<button onclick="previewAndDownloadCert('${sel.id}',${certs.length - 1}, true)" class="px-3 py-1.5 rounded-xl text-xs gold-btn">إرسال آخر شهادة لولي الأمر PDF</button>` : ""}
           </div>`;
+        extraCoachControls += coachNotificationComposerHTML(sel);
       }
 
       return retryBannerHTML(false) + baseHtml + extraCoachControls;
