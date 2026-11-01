@@ -1709,3 +1709,35 @@ window.sendTestNotification = async function() {
         alert("حصل خطأ، ابص في الـ Console.");
     }
 };
+// اختبار تلقائي للإشعارات أول ما الصفحة تفتح (للتجربة بس)
+async function autoTestNotification() {
+    try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
+
+        // بنبعت إشعار تجريبي أوتوماتيك لو مكنش اتبعت قبل كده
+        const { collection, addDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js");
+        
+        await addDoc(collection(db, `users/${currentUser.uid}/notifications`), {
+            type: "announcement",
+            titleAr: "أهلاً بك يا عبدالرحمن ♟️",
+            titleEn: "Welcome Back",
+            bodyAr: "نظام الإشعارات شغال وزي الفل ومبروك التحديث الجديد!",
+            bodyEn: "Notifications system is working perfectly!",
+            createdAt: serverTimestamp(),
+            read: false
+        });
+        
+        console.log("تم إنشاء إشعار تجريبي تلقائي بنجاح!");
+        if (typeof fetchUserNotifications === 'function') fetchUserNotifications();
+    } catch (e) {
+        console.log("الإشعار التجريبي اتضاف قبل كده أو حصلت مشكلة بسيطة:", e);
+    }
+}
+
+// استدعاء الدالة بعد تسجيل الدخول بثواني
+setTimeout(() => {
+    if (typeof auth !== 'undefined' && auth.currentUser) {
+        autoTestNotification();
+    }
+}, 2000);
