@@ -210,6 +210,7 @@
     const DB_KEY = "ECA_PLATFORM_V2";
     try { localStorage.removeItem(DB_KEY); } catch (_) {}   // مسح النسخة القديمة المخزنة في المتصفح (كانت فيها كلمات سر)
     let db = { users: [], groups: [], groupSched: {}, tournaments: [], announcements: [], currId: null, attendance: {} };   // البيانات الحقيقية بتيجي من Firebase بعد تسجيل الدخول
+    window.ecaNotifications = [];
     let parentStu = null, parentBusy = false;
     window.__authLoading = true;
     setTimeout(() => { if (window.__authLoading) { window.__authLoading = false; render(); } }, 8000);
@@ -233,6 +234,49 @@
     function switchTab(t) { go(t); render(); }
     function logout() { parentStu = null; parentQ = ""; if (window.fbLogout) window.fbLogout(); go("home"); render(); }
     function goHomeRefresh() { go("home"); render(); }
+    let notificationsOpen = false;
+    function toggleNotifications(e) { if (e) e.stopPropagation(); notificationsOpen = !notificationsOpen; render(); }
+    function markNotificationRead(button) {
+      const id = button && button.dataset && button.dataset.notificationId;
+      if (id && window.fbMarkNotificationRead) window.fbMarkNotificationRead(id);
+    }
+    function markAllNotificationsRead() {
+      if (window.fbMarkAllNotificationsRead) window.fbMarkAllNotificationsRead((window.ecaNotifications || []).filter(n => !n.read).map(n => n.id));
+    }
+    function notificationBellHTML() {
+      const items = Array.isArray(window.ecaNotifications) ? window.ecaNotifications : [];
+      const unread = items.filter(n => !n.read).length;
+      const en = lang === "en";
+      return `<div class="relative">
+        <button id="notificationsBtn" onclick="toggleNotifications(event)" aria-label="${en ? "Notifications" : "الإشعارات"}" aria-haspopup="dialog" aria-expanded="${notificationsOpen}" class="icon-btn relative" title="${en ? "Notifications" : "الإشعارات"}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+          ${unread ? `<span class="absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-[18px]">${unread > 99 ? "99+" : unread}</span>` : ""}
+        </button>
+        <div id="notificationsMenu" role="dialog" aria-label="${en ? "Notifications" : "الإشعارات"}" class="${notificationsOpen ? "" : "hidden"} absolute end-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] sm:w-96 gold-card rounded-xl shadow-2xl z-50 overflow-hidden">
+          <div class="flex items-center justify-between gap-2 p-3 border-b border-yellow-500/20">
+            <strong class="text-sm text-yellow-300">${en ? "Notifications" : "الإشعارات"}</strong>
+            ${unread ? `<button onclick="markAllNotificationsRead()" class="min-h-[44px] px-2 text-[11px] text-sky-300 hover:underline">${en ? "Mark all read" : "تحديد الكل كمقروء"}</button>` : ""}
+          </div>
+          <div class="max-h-96 overflow-y-auto divide-y divide-yellow-500/10">
+            ${items.length ? items.map(n => {
+              const title = en ? (n.titleEn || n.titleAr) : (n.titleAr || n.titleEn);
+              const body = en ? (n.bodyEn || n.bodyAr) : (n.bodyAr || n.bodyEn);
+              const time = Number(n.createdAt), at = Number.isFinite(time) && time > 0 ? time : 0;
+              return `<div class="p-3 ${n.read ? "" : "bg-yellow-500/5"}">
+                <div class="flex items-start gap-2 justify-between">
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold ${n.read ? "text-gray-200" : "text-white"} break-words">${esc(title)}</div>
+                    <div class="text-xs text-gray-400 mt-1 whitespace-pre-wrap break-words">${esc(body)}</div>
+                    ${at ? `<time class="block text-[11px] text-gray-500 mt-1" datetime="${new Date(at).toISOString()}">${new Date(at).toLocaleString(en ? "en-GB" : "ar-EG")}</time>` : ""}
+                  </div>
+                  ${!n.read ? `<button type="button" data-notification-id="${esc(n.id)}" onclick="markNotificationRead(this)" aria-label="${en ? "Mark as read" : "تحديد كمقروء"}" title="${en ? "Mark as read" : "تحديد كمقروء"}" class="shrink-0 min-w-[44px] min-h-[44px] rounded-lg text-emerald-300 hover:bg-emerald-500/10 flex items-center justify-center"><span aria-hidden="true">✓</span></button>` : ""}
+                </div>
+              </div>`;
+            }).join("") : `<p class="p-5 text-xs text-gray-400 text-center">${en ? "No notifications yet." : "مفيش إشعارات لسه."}</p>`}
+          </div>
+        </div>
+      </div>`;
+    }
     // قايمة الحساب (الأيقونة فوق يمين): فتح/قفل — كانت ناقصة من النسخة
     function closeAcctMenu() { const m = document.getElementById("acctMenu"), b = document.getElementById("acctBtn"); if (m && !m.classList.contains("hidden")) { if (window.ecaCurtainHide) ecaCurtainHide(m); else m.classList.add("hidden"); } if (b) b.setAttribute("aria-expanded", "false"); }
     function toggleAcctMenu(ev) {
@@ -244,7 +288,15 @@
       if (b) b.setAttribute("aria-expanded", "true");
     }
     document.addEventListener("click", e => { if (!e.target.closest || !e.target.closest("#acctMenu, #acctBtn")) closeAcctMenu(); });
-    document.addEventListener("keydown", e => { if (e.key === "Escape") closeAcctMenu(); });
+    document.addEventListener("click", e => {
+      if (notificationsOpen && (!e.target.closest || !e.target.closest("#notificationsMenu, #notificationsBtn"))) { notificationsOpen = false; render(); }
+    });
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") {
+        closeAcctMenu();
+        if (notificationsOpen) { notificationsOpen = false; render(); }
+      }
+    });
     function isInfoTab(t) { return typeof renderInfoPage === "function" && INFO_TABS.includes(t); }   // صفحات المعلومات (متعرّفة في سكريبت تحت)
 
     // ===== القوائم بتدخل واحدة ورا التانية بانسيابية =====
@@ -323,7 +375,8 @@
     }
    function _render() {
       const u = currUser();
-      const nav = document.getElementById("navButtons");
+     if (!u) notificationsOpen = false;
+     const nav = document.getElementById("navButtons");
       const cSearch = document.getElementById("coachSearchBox");
       const main = document.getElementById("mainView"), acct = document.getElementById("acctButtons");
       if (!u && window.__authLoading) { cSearch.classList.add("hidden"); nav.innerHTML = ""; acct.innerHTML = ""; render.__pg = "loading"; render.__skel = true; main.innerHTML = document.getElementById("ecaSkeleton") ? main.innerHTML : SKELETON_HTML; return; }   // الـ skeleton مستهلكش انيميشن الصفحة — أول رندر حقيقي بيتحرك
@@ -369,7 +422,7 @@
       }
       const ai = window.fbAuthInfo ? window.fbAuthInfo() : { password: true, google: true };
       const mi = (fn, label, icon, cls) => `<button onclick="closeAcctMenu(); ${fn}" role="menuitem" class="w-full flex items-center gap-2.5 px-3 h-11 rounded-lg text-sm text-start hover:bg-yellow-500/10 ${cls || 'text-gray-200'}">${icon}<span>${label}</span></button>`;
-      acct.innerHTML = `<div class="relative">
+      acct.innerHTML = `${u.role === "student" ? notificationBellHTML() : ""}<div class="relative">
         <button id="acctBtn" onclick="toggleAcctMenu(event)" aria-haspopup="menu" aria-expanded="false" aria-label="الحساب" title="${esc(u.name || "")}" class="icon-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
         </button>
@@ -793,7 +846,18 @@
       save(); render(); toast("تم إعادة فتح اللغز");
     }
     function addGroup(e) { e.preventDefault(); const v = document.getElementById("newGrpInp").value.trim(); if (v) { db.groups.push(v); save(); render(); } }
-    function togCheck(id, k, type) { const s = db.users.find(u => u.id === id); s[type] = s[type] || {}; s[type][k] = !s[type][k]; save(); render(); }
+    function togCheck(id, k, type) {
+      const s = db.users.find(u => u.id === id); if (!s) return;
+      s[type] = s[type] || {};
+      const notifyHomework = type === "hw" && !s[type][k];
+      s[type][k] = !s[type][k];
+      if (notifyHomework && window.fbNotifyHomework) {
+        const parts = String(k).split("-"), step = STEPS.find(x => x.step === Number(parts[0]));
+        const lesson = step && step.lessons[Number(parts[1])];
+        window.fbNotifyHomework(id, k, lesson ? lesson.t : "Homework");
+      }
+      save(); render();
+    }
     function selLvl(id, l) { const s = db.users.find(u => u.id === id); s.level = Number(l); save(); render(); }
     function saveNote(id) { const s = db.users.find(u => u.id === id); s.note = document.getElementById("noteInp").value; save(); toast("تم حفظ الملاحظة السرية لولي الأمر"); }
 

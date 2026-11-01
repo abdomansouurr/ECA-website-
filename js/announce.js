@@ -19,7 +19,7 @@
       // بنشيل المنتهي ونحتفظ بأحدث ANN_MAX
       const items = [item].concat(annActive(db.announcements)).slice(0, ANN_MAX);
       db.announcements = items; annDraft = { text: "", days: 7, aud: "ALL", pin: false };
-      if (window.fbSaveAnnouncements) window.fbSaveAnnouncements(items);
+      if (window.fbSaveAnnouncements) window.fbSaveAnnouncements(items, item);
       keepScroll(render); toast("الإعلان اتنشر");
     }
     function annDelete(id) {

@@ -46,9 +46,12 @@
     let synced = {};                     // مفتاح -> آخر JSON اتكتب/اتقرا (عشان نكتب اللي اتغير بس)
     let loaded = { core: false, att: false, groups: false };
     let applyingRemote = false, signingUp = false;
+    let dailyNotificationTimer = null, dailyNotificationAttemptDate = "";
 
     function resetState() {
       unsubs.forEach(u => { try { u(); } catch (_) {} }); unsubs = [];
+      clearInterval(dailyNotificationTimer); dailyNotificationTimer = null; dailyNotificationAttemptDate = "";
+      window.ecaNotifications = [];
       maps = { core: {}, priv: {}, fin: {}, att: {} }; synced = {};
       loaded = { core: false, att: false, groups: false };
     }
@@ -191,10 +194,113 @@
     };
 
     // ===================== إعلانات الأكاديمية (meta/announcements) =====================
-    window.fbSaveAnnouncements = async (items) => {
+    function cairoDayKey() {
+      const parts = new Intl.DateTimeFormat("en", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+      const part = type => parts.find(x => x.type === type).value;
+      return part("year") + "-" + part("month") + "-" + part("day");
+    }
+    function notificationData(type, titleAr, titleEn, bodyAr, bodyEn) {
+      const safe = value => String(value || "").replace(BAD, "").slice(0, 400);
+      return { type, titleAr: safe(titleAr), titleEn: safe(titleEn), bodyAr: safe(bodyAr), bodyEn: safe(bodyEn), createdAt: serverTimestamp(), read: false };
+    }
+    async function createAnnouncementNotifications(item) {
+      if (!item || !/^[A-Za-z0-9_-]{1,60}$/.test(String(item.id || ""))) return false;
+      const text = String(item.text || "").replace(BAD, "").slice(0, 400);
+      if (!text) return false;
+      const recipients = (db.users || []).filter(u => u.role === "student" && (item.aud === "ALL" || u.group === item.aud));
+      for (let offset = 0; offset < recipients.length; offset += 400) {
+        const batch = writeBatch(firestore);
+        recipients.slice(offset, offset + 400).forEach(u => {
+          const ref = doc(firestore, "users", u.id, "notifications", "announcement-" + item.id);
+          batch.set(ref, notificationData("announcement", "إعلان جديد من الأكاديمية", "New academy announcement", text, text));
+        });
+        await batch.commit();
+      }
+      return true;
+    }
+    async function checkDailyPuzzleNotification() {
+      if (!me || me.role !== "student") return;
+      const day = cairoDayKey();
+      if (dailyNotificationAttemptDate === day) return;
+      dailyNotificationAttemptDate = day;
+      const ref = doc(firestore, "users", me.uid, "notifications", "daily-puzzle-" + day);
+      try {
+        const existing = await getDoc(ref);
+        if (!existing.exists()) await setDoc(ref, {
+          type: "daily_puzzle",
+          day,
+          titleAr: "لغز اليوم الجديد جاهز",
+          titleEn: "Today's new puzzle is ready",
+          bodyAr: "افتح الصفحة الرئيسية وحل لغز اليوم.",
+          bodyEn: "Open the home page and solve today's puzzle.",
+          createdAt: serverTimestamp(),
+          read: false
+        });
+      } catch (e) {
+        console.error("daily puzzle notification:", e);
+        if (window.toast) toast("تعذّر حفظ إشعار لغز اليوم");
+      }
+    }
+    window.fbNotifyHomework = async (sid, key, lessonTitle) => {
+      if (!me || !isStaffRole(me.role) || !(db.users || []).some(u => u.id === sid && u.role === "student")) return false;
+      try {
+        await setDoc(doc(collection(firestore, "users", sid, "notifications")), notificationData(
+          "homework", "تم تصحيح الواجب", "Homework checked",
+          "تم تسجيل واجب درس: " + lessonTitle, "Your homework for " + lessonTitle + " was checked."
+        ));
+        return true;
+      } catch (e) {
+        console.error("homework notification:", e);
+        if (window.toast) toast("تعذّر إرسال إشعار الواجب");
+        return false;
+      }
+    };
+    window.fbSaveAnnouncements = async (items, newItem) => {
       if (!me || !isStaffRole(me.role)) return false;
-      try { await setDoc(doc(firestore, "meta", "announcements"), { items: plain(items || []) }); return true; }
+      try {
+        await setDoc(doc(firestore, "meta", "announcements"), { items: plain(items || []) });
+        if (newItem) {
+          try {
+            if (!(await createAnnouncementNotifications(newItem))) {
+              console.error("announcement notification: unable to create notifications");
+              if (window.toast) toast("تعذّر إرسال إشعارات الإعلان");
+            }
+          } catch (e) {
+            console.error("announcement notification:", e);
+            if (window.toast) toast("تعذّر إرسال إشعارات الإعلان");
+          }
+        }
+        return true;
+      }
       catch (e) { console.error("announcements save:", e); if (window.toast) toast("تعذّر حفظ الإعلان"); return false; }
+    };
+    window.fbMarkNotificationRead = async id => {
+      if (!me || me.role !== "student" || !/^[A-Za-z0-9_-]{1,120}$/.test(String(id || ""))) return false;
+      try {
+        await updateDoc(doc(firestore, "users", me.uid, "notifications", id), { read: true, readAt: serverTimestamp() });
+        return true;
+      } catch (e) {
+        console.error("notification read:", e);
+        if (window.toast) toast("تعذّر تحديث الإشعار");
+        return false;
+      }
+    };
+    window.fbMarkAllNotificationsRead = async ids => {
+      if (!me || me.role !== "student") return false;
+      const safeIds = (Array.isArray(ids) ? ids : []).filter(id => /^[A-Za-z0-9_-]{1,120}$/.test(String(id || "")));
+      if (!safeIds.length) return true;
+      try {
+        for (let offset = 0; offset < safeIds.length; offset += 400) {
+          const batch = writeBatch(firestore);
+          safeIds.slice(offset, offset + 400).forEach(id => batch.update(doc(firestore, "users", me.uid, "notifications", id), { read: true, readAt: serverTimestamp() }));
+          await batch.commit();
+        }
+        return true;
+      } catch (e) {
+        console.error("notifications read:", e);
+        if (window.toast) toast("تعذّر تحديث الإشعارات");
+        return false;
+      }
     };
 
     // ===================== تسجيل الأخطاء (errors) =====================
@@ -290,6 +396,25 @@
             signOut(auth);
           }
         }, onErr("users")));
+        window.ecaNotifications = [];
+        unsubs.push(onSnapshot(query(collection(firestore, "users", me.uid, "notifications"), orderBy("createdAt", "desc")), snap => {
+          window.ecaNotifications = snap.docs.map(d => {
+            const data = d.data() || {};
+            return {
+              id: d.id,
+              type: data.type,
+              titleAr: data.titleAr,
+              titleEn: data.titleEn,
+              bodyAr: data.bodyAr,
+              bodyEn: data.bodyEn,
+              read: data.read === true,
+              createdAt: data.createdAt && typeof data.createdAt.toMillis === "function" ? data.createdAt.toMillis() : 0
+            };
+          });
+          render();
+        }, onErr("notifications")));
+        checkDailyPuzzleNotification();
+        dailyNotificationTimer = setInterval(checkDailyPuzzleNotification, 60 * 1000);
       }
       unsubs.push(onSnapshot(doc(firestore, "meta", "groups"), applyGroups, onErr("groups")));
       unsubs.push(onSnapshot(doc(firestore, "meta", "announcements"), snap => {
@@ -313,7 +438,7 @@
     async function initUser(user) {
       resetState();
       if (!user) {
-        me = null; db.users = []; db.currId = null; db.attendance = {}; db.groups = []; db.groupSched = {}; db.tournaments = []; db.announcements = [];
+        me = null; db.users = []; db.currId = null; db.attendance = {}; db.groups = []; db.groupSched = {}; db.tournaments = []; db.announcements = []; window.ecaNotifications = [];
         window.isFinanceAdminUnlocked = false; window.__authLoading = false; render(); return;
       }
       if (user.isAnonymous) {
