@@ -1646,3 +1646,37 @@ window.selectExamAns = function(qIdx, oIdx) {
 
     // تشغيل التوليد اليومي للألغاز فور فتح الموقع
     updateDailyPuzzlesByDate();
+// [كود حماية الأزرار والطلبات المتكررة]
+const activeRequests = {};
+async function executeWithProtection(actionId, asyncFunction, buttonElement = null) {
+    if (activeRequests[actionId]) return;
+    activeRequests[actionId] = true;
+    let originalText = '';
+    if (buttonElement) {
+        buttonElement.disabled = true;
+        originalText = buttonElement.innerText;
+        buttonElement.innerText = 'جاري التنفيذ...';
+    }
+    try {
+        await asyncFunction();
+    } catch (error) {
+        console.error('خطأ:', error);
+    } finally {
+        setTimeout(() => {
+            activeRequests[actionId] = false;
+            if (buttonElement) {
+                buttonElement.disabled = false;
+                buttonElement.innerText = originalText;
+            }
+        }, 1500);
+    }
+}
+// مثال لما الطالب يدوس على زرار إرسال الواجب:
+document.getElementById('submit-hw-btn').addEventListener('click', async (e) => {
+    const btn = e.target;
+    
+    await executeWithProtection('submit_homework', async () => {
+        // حط هنا كود الحفظ القديم بتاعك اللي بيروح للفايربيس
+        await saveHomeworkToFirebase(); 
+    }, btn);
+});
