@@ -813,8 +813,9 @@
                           : lkBtn(x.t, x.u, true);
                       };
                       // نتيجة الواجب للطالب (كام إجابة صح من أول محاولة)
-                      const hwScore = u.role === "student" && u.hwp && u.hwp[hwKey] && hwEntry(hwKey) && (hwEntry(hwKey).puzzles || []).length
-                        ? (() => { const r = u.hwp[hwKey], hasFirstTry = Number.isFinite(r.ft);
+                      const hwRecord = typeof hwProgressRecord === "function" ? hwProgressRecord(u, hwKey) : null;
+                      const hwScore = u.role === "student" && hwRecord && hwEntry(hwKey) && (hwEntry(hwKey).puzzles || []).length
+                        ? (() => { const r = hwRecord, hasFirstTry = Number.isFinite(r.ft);
                             const score = hasFirstTry ? r.ft : (Number(r.solved) || 0), good = score === r.t;
                             const label = hasFirstTry ? (lang === 'en' ? 'First try' : 'أول مرة') : (lang === 'en' ? 'Solved' : 'محلول');
                             return `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${good ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300' : 'bg-yellow-500/15 border border-yellow-500/40 text-yellow-300'} shrink-0">${label} ${score}/${r.t}</span>`; })()
@@ -908,7 +909,7 @@
                         const a = !!(sel.att && sel.att[k]);
                         const h = !!(sel.hw && sel.hw[k]);
                         const HE = hwEntry ? hwEntry(k) : null;
-                        const wp = sel.hwp && sel.hwp[k] && HE && (HE.puzzles || []).length ? sel.hwp[k] : null;
+                        const wp = typeof hwProgressRecord === "function" && HE && (HE.puzzles || []).length ? hwProgressRecord(sel, k) : null;
                         const wChip = wp ? (() => {
                           const hasFirstTry = Number.isFinite(wp.ft), score = hasFirstTry ? wp.ft : (Number(wp.solved) || 0);
                           const label = hasFirstTry ? (lang === 'en' ? 'First-try correct / total' : 'صح من أول محاولة / الإجمالي') : (lang === 'en' ? 'Solved / total' : 'المحلول / الإجمالي');
