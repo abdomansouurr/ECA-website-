@@ -1741,3 +1741,107 @@ setTimeout(() => {
         autoTestNotification();
     }
 }, 2000);
+import { collection, addDoc, getDocs, query, where, orderBy, updateDoc, doc, serverTimestamp } from "firebase/firestore";
+
+// 1. دالة جلب الإشعارات وعرضها في الجرس
+window.fetchUserNotifications = async function() {
+    try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
+
+        const q = query(
+            collection(db, `users/${currentUser.uid}/notifications`),
+            where("read", "==", false),
+            orderBy("createdAt", "desc")
+        );
+
+        const querySnapshot = await getDocs(q);
+        const notifs = [];
+        querySnapshot.forEach((docSnap) => {
+            notifs.push({ id: docSnap.id, ...docSnap.data() });
+        });
+
+        renderNotificationsUI(notifs);
+    } catch (error) {
+        console.error("خطأ في جلب الإشعارات:", error);
+    }
+}
+
+// 2. دالة عرض الإشعارات في الـ UI والبادج
+function renderNotificationsUI(notifs) {
+    const badge = document.getElementById('notif-badge');
+    const listContainer = document.getElementById('notifications-list');
+    
+    if (!badge || !listContainer) return; // لو العناصر مش موجودة في الصفحة اتخطى
+
+    if (notifs.length > 0) {
+        badge.innerText = notifs.length;
+        badge.classList.remove('hidden');
+        
+        let htmlContent = '';
+        notifs.forEach(n => {
+            htmlContent += `
+                <div class="p-2 bg-gray-50 hover:bg-gray-100 rounded-md cursor-pointer transition border-r-4 border-indigo-500 mb-2" onclick="markNotificationAsRead('${n.id}')">
+                    <p class="text-xs font-bold text-gray-800">${n.titleAr || n.title || 'إشعار جديد'}</p>
+                    <p class="text-xs text-gray-600 mt-1">${n.bodyAr || n.body || ''}</p>
+                </div>
+            `;
+        });
+        listContainer.innerHTML = htmlContent;
+    } else {
+        badge.classList.add('hidden');
+        listContainer.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">لا توجد إشعارات جديدة</p>`;
+    }
+}
+
+// 3. دالة تحديد الإشعار كمقروء لما الطالب يضغط عليه
+window.markNotificationAsRead = async function(notifId) {
+    try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
+
+        const notifRef = doc(db, `users/${currentUser.uid}/notifications`, notifId);
+        await updateDoc(notifRef, { read: true });
+        
+        // تحديث الجرس فورا
+        fetchUserNotifications();
+    } catch (error) {
+        console.error("فشل تحديث الإشعار:", error);
+    }
+}
+
+// 4. دالة زر التجربة الفورية (لإرسال إشعار حالا واختبار الجرس)
+window.sendManualTestNotif = async function() {
+    try {
+        const user = auth.currentUser;
+        if (!user) {
+            alert("من فضلك سجل دخول كطالب الأول!");
+            return;
+        }
+
+        await addDoc(collection(db, `users/${user.uid}/notifications`), {
+            type: "announcement",
+            titleAr: "تجربة الجرس 🔔",
+            titleEn: "Bell Test",
+            bodyAr: "يا مسهل، الإشعار وصل وزي الفل!",
+            bodyEn: "Notification received successfully!",
+            createdAt: serverTimestamp(),
+            read: false
+        });
+
+        alert("تم إرسال الإشعار! بص فوق على الجرس.");
+        fetchUserNotifications(); // تحديث الجرس فورا
+    } catch (err) {
+        console.error("خطأ في إرسال الإشعار:", err);
+        alert("حصل خطأ، افتح الـ Console عشان تشوفه.");
+    }
+};
+
+// 5. التشغيل التلقائي أول ما الصفحة تفتح ويكون المستخدم مسجل دخول
+document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+        if (typeof auth !== 'undefined' && auth.currentUser) {
+            fetchUserNotifications();
+        }
+    }, 1500);
+});
