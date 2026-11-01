@@ -1680,3 +1680,32 @@ document.getElementById('submit-hw-btn').addEventListener('click', async (e) => 
         await saveHomeworkToFirebase(); 
     }, btn);
 });
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+
+window.sendTestNotification = async function() {
+    try {
+        const user = auth.currentUser;
+        if (!user) {
+            alert("سجل دخول الأول كطالب!");
+            return;
+        }
+
+        await addDoc(collection(db, `users/${user.uid}/notifications`), {
+            type: "announcement",
+            titleAr: "إشعار تجريبي جديد ♟️",
+            titleEn: "New Test Notification",
+            bodyAr: "يا هلا يا عبدالرحمن، نظام الإشعارات شغال وزي الفل!",
+            bodyEn: "System is working perfectly!",
+            createdAt: serverTimestamp(),
+            read: false
+        });
+
+        alert("تم إرسال الإشعار بنجاح! بص على الجرس فوق 🔔");
+        if (typeof fetchUserNotifications === 'function') {
+            fetchUserNotifications();
+        }
+    } catch (error) {
+        console.error("خطأ في إرسال الإشعار:", error);
+        alert("حصل خطأ، ابص في الـ Console.");
+    }
+};

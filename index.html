@@ -457,6 +457,9 @@
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeSideNav(); });
   </script>
   <script>
+    <button onclick="sendTestNotification()" class="bg-blue-600 text-white p-2 rounded">
+    إرسال إشعار تجريبي لنفسي
+</button>
     // لما يترفع تحديث جديد والسيرفيس ووركر الجديد يتفعّل: نعمل reload مرة واحدة بس
     // عشان الـ HTML والجافاسكريبت يبقوا دايمًا نفس النسخة (ده اللي كان بيخلّي القوائم تختفي بعد رفع تحديث)
     try {
