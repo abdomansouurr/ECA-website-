@@ -5,7 +5,8 @@
     const PT_PLAN = [["easiest", 2], ["easier", 2], ["normal", 2], ["harder", 2], ["hardest", 4]];
     const PT_SECONDS = 60, PT_CUR = "eca_pt_cur";
     const ptSecs = i => (i >= 6 && i < 12) ? 120 : PT_SECONDS;   // الألغاز 7-12 (الصعب والصعب جدًا) = دقيقتين، والباقي دقيقة
-    const ptL = (a, e) => (typeof lang !== "undefined" && lang === "en") ? e : a;
+    const ptIsEnglish = () => typeof lang !== "undefined" && lang === "en";
+    const ptL = (a, e) => ptIsEnglish() ? e : a;
     let PT = null;
 
     // نسبة الإجابات → المستوى المقترح (حدود الشريحة تدخل في الأعلى: 80% = المستوى 5، 60% = 4 ...)
@@ -40,15 +41,15 @@
       return `<div class="max-w-2xl mx-auto gold-card rounded-2xl p-6 space-y-4 mt-4">
         <div class="text-center space-y-1">
           <div class="text-xs font-bold tracking-widest text-yellow-400">PLACEMENT TEST</div>
-          <h2 class="font-display font-extrabold text-2xl gold-gradient-text">${ptL("اختبار تحديد المستوى", "Level Placement Test")}</h2>
-          <p class="text-sm text-gray-300">${ptL("اختبار بسيط عشان نحدد المستوى المناسب ليك في الأكاديمية.", "A short test so we can place you in the right level at the academy.")}</p>
+          <h2 class="font-display font-extrabold text-2xl gold-gradient-text">${ptL("اختبار تحديد المستوى", "Chess Placement Test")}</h2>
+          <p class="text-sm text-gray-300">${ptL("اختبار بسيط عشان نحدد المستوى المناسب ليك في الأكاديمية.", "Take a short test to find the right level for you at the academy.")}</p>
         </div>
         <ul class="text-sm text-gray-300 space-y-2 list-disc ps-5">
-          <li>${ptL("20 سؤال: 12 لغز شطرنج + 8 مواقف على الرقعة بتختار إجابتها من اختيارات.", "20 questions: 12 chess puzzles + 8 board positions with multiple-choice answers.")}</li>
-          <li>${ptL("دقيقة واحدة لكل سؤال، ودقيقتين للألغاز الصعبة والصعبة جدًا — لو الوقت خلص السؤال بيتحسب غلط وينتقل للي بعده.", "One minute per question (two minutes for the hard and very hard puzzles) — when time runs out the question counts as wrong and the next one appears.")}</li>
-          <li>${ptL("مش هيظهرلك الصح والغلط أثناء الاختبار، والنتيجة بيشوفها الكوتش بس.", "You won't see right or wrong during the test; only the coach sees the result.")}</li>
-          <li>${ptL("الاختبار بيتعمل مرة واحدة بس، ومش بيتعاد إلا بموافقة الكوتش.", "The test can be taken once only, and reopened only by the coach.")}</li>
-          <li>${ptL("اقفل أي حاجة تانية وركّز، واستخدم موبايل أو جهاز بشاشة مريحة.", "Close other apps, stay focused, and use a comfortable screen.")}</li>
+          <li>${ptL("20 سؤال: 12 لغز شطرنج + 8 مواقف على الرقعة بتختار إجابتها من اختيارات.", "The test has 20 questions: 12 chess puzzles and 8 board positions with multiple-choice answers.")}</li>
+          <li>${ptL("دقيقة واحدة لكل سؤال، ودقيقتين للألغاز الصعبة والصعبة جدًا — لو الوقت خلص السؤال بيتحسب غلط وينتقل للي بعده.", "You have 1 minute per question, or 2 minutes for the hardest puzzles. If time runs out, your answer is marked incorrect and the test moves on.")}</li>
+          <li>${ptL("مش هيظهرلك الصح والغلط أثناء الاختبار، والنتيجة بيشوفها الكوتش بس.", "You won't see whether your answers are correct during the test. Only your coach can see your results.")}</li>
+          <li>${ptL("الاختبار بيتعمل مرة واحدة بس، ومش بيتعاد إلا بموافقة الكوتش.", "You can take the test only once. Your coach must reopen it if you need another attempt.")}</li>
+          <li>${ptL("اقفل أي حاجة تانية وركّز، واستخدم موبايل أو جهاز بشاشة مريحة.", "Close other apps and focus on the test. Use a phone or device with a screen you can comfortably read.")}</li>
         </ul>
         <div class="text-center pt-2"><button onclick="ptOpen()" class="px-8 py-3 rounded-xl gold-btn font-bold">${ptL("ابدأ الاختبار", "Start the test")}</button></div>
       </div>`;
@@ -79,7 +80,7 @@
       if (!/^\d{8,15}$/.test(pk)) return bad(ptL("رقم ولي الأمر غير صحيح.", "The parent phone number is invalid."));
       if (f.rating.length > 20 || /[<>"'`]/.test(f.rating)) return bad(ptL("التقييم غير صحيح.", "The rating is invalid."));
       if (f.link && !/^https:\/\/[^\s<>"'`]{3,180}$/.test(f.link)) return bad(ptL("اللينك لازم يبدأ بـ https://", "The link must start with https://"));
-      if (f.mode !== "online" && f.mode !== "offline") return bad(ptL("اختار الحضور (أونلاين / أوفلاين).", "Choose attendance (online / offline)."));
+      if (f.mode !== "online" && f.mode !== "offline") return bad(ptL("اختار الحضور (أونلاين / أوفلاين).", "Choose whether you attend online or in person."));
       f.key = key; f.pk = pk;
       ptStart();
     }
@@ -253,11 +254,11 @@
           ${fld("ptParent", ptL("رقم ولي الأمر *", "Parent phone *"), "tel", f.parentPhone, "01xxxxxxxxx", 'dir="ltr" inputmode="tel" maxlength="20"')}
           ${fld("ptRating", ptL("التقييم الحالي (إن وجد)", "Current rating (if any)"), "text", f.rating, "1200", 'maxlength="20" dir="ltr"')}
           ${fld("ptLink", ptL("لينك حسابك على chess.com أو lichess (إن وجد)", "Your chess.com / lichess link (if any)"), "url", f.link, "https://", 'dir="ltr" maxlength="200"')}
-          <p class="text-[11px] text-gray-400">${ptL("بمجرد ما تبدأ الاختبار هيتحسب محاولتك، ومش هتقدر تعيده إلا بموافقة الكوتش.", "Once you start, your attempt is counted and can only be reopened by the coach.")}</p>
+          <p class="text-[11px] text-gray-400">${ptL("بمجرد ما تبدأ الاختبار هيتحسب محاولتك، ومش هتقدر تعيده إلا بموافقة الكوتش.", "Your attempt is recorded as soon as you start. You can retake the test only if your coach reopens it.")}</p>
           <button onclick="ptFormSubmit()" class="w-full py-3 rounded-xl gold-btn font-bold">${ptL("ابدأ الاختبار", "Start the test")}</button>
         </div>`;
       else if (PT.phase === "loading") body = `<div class="gold-card rounded-2xl p-8 text-center space-y-3">${ICON("spinner", "w-9 h-9 mx-auto text-yellow-300 animate-spin")}<div class="font-bold text-yellow-300">${ptL("جاري تجهيز الاختبار...", "Preparing the test...")}</div></div>`;
-      else if (PT.phase === "saving") body = `<div class="gold-card rounded-2xl p-8 text-center space-y-3">${ICON("spinner", "w-9 h-9 mx-auto text-yellow-300 animate-spin")}<div class="font-bold text-yellow-300">${ptL("جاري حفظ إجاباتك... متقفلش الصفحة", "Saving your answers... do not close the page")}</div></div>`;
+      else if (PT.phase === "saving") body = `<div class="gold-card rounded-2xl p-8 text-center space-y-3">${ICON("spinner", "w-9 h-9 mx-auto text-yellow-300 animate-spin")}<div class="font-bold text-yellow-300">${ptL("جاري حفظ إجاباتك... متقفلش الصفحة", "Saving your answers… Please don't close this page.")}</div></div>`;
       else if (PT.phase === "locked") body = `<div class="gold-card rounded-2xl p-8 text-center space-y-4"><div class="font-bold text-red-300 text-lg">${ptL("الاختبار ده اتعمل قبل كده بنفس رقم الموبايل", "This test was already taken with this phone number")}</div><p class="text-sm text-gray-300">${ptL("لإعادة الاختبار لازم تكلّم الكوتش وهو يفتحه ليك.", "To retake it, ask your coach to reopen it for you.")}</p><button onclick="ptClose()" class="px-6 py-2.5 rounded-xl gold-btn text-sm">${ptL("رجوع", "Back")}</button></div>`;
       else {
         const q = PT.qs[PT.i], left = Math.max(0, PT.deadline - Date.now()), n = PT.qs.length;
@@ -265,7 +266,7 @@
         let main = "";
         if (q.kind === "p") {
           const pm = Math.ceil(q.sol.length / 2), dn = Math.floor(q.idx / 2);
-          main = `<div class="text-sm font-bold text-center text-yellow-300">${ptL("لغز", "Puzzle")} — ${q.color === "w" ? ptL("انت بالأبيض", "You are White") : ptL("انت بالأسود", "You are Black")}${pm > 1 ? ` <span class="text-gray-400 font-normal">(${dn + 1}/${pm})</span>` : ""}</div>
+          main = `<div class="text-sm font-bold text-center text-yellow-300">${ptL("لغز", "Puzzle")} — ${q.color === "w" ? ptL("انت بالأبيض", "You play as White") : ptL("انت بالأسود", "You play as Black")}${pm > 1 ? ` <span class="text-gray-400 font-normal">(${dn + 1}/${pm})</span>` : ""}</div>
             <div style="max-width:min(100%, 62vh); margin:0 auto;">${boardHTML({ game: q.game, flip: q.flip, sel: q.sel, targets: PT.busy ? null : targetsOf(q.game, q.sel), last: q.last, onClick: "ptClick" })}</div>`;
         } else {
           main = `<div class="text-sm font-bold text-center text-yellow-300">${ptL(q.q, q.qe || q.q)}</div>
@@ -273,12 +274,12 @@
             <div class="grid gap-2" dir="ltr">${q.opts.map((o, k) => `<button class="pt-opt" onclick="ptPick(${k})"><b>${"ABCDEF"[k]}</b><span>${esc(o)}</span></button>`).join("")}</div>`;
         }
         body = `<div class="gold-card rounded-2xl p-4 space-y-3">
-            <div class="flex flex-wrap justify-between items-center gap-2"><div class="font-display font-bold text-yellow-400">${ptL("اختبار تحديد المستوى", "Placement test")}</div><div class="text-sm text-gray-300" dir="ltr"><b class="text-white">${PT.i + 1}</b> / ${n}</div></div>
+          <div class="flex flex-wrap justify-between items-center gap-2"><div class="font-display font-bold text-yellow-400">${ptL("اختبار تحديد المستوى", "Chess Placement Test")}</div><div class="text-sm text-gray-300" dir="ltr"><b class="text-white">${PT.i + 1}</b> / ${n}</div></div>
             <div class="flex flex-wrap gap-1 justify-center">${dots}</div>
             <div class="flex items-center gap-3"><div class="eval-bar flex-1" style="height:10px"><div id="ptBar" style="width:${left / ((PT.secs || PT_SECONDS) * 10)}%; background:linear-gradient(90deg,#f3d266,#d4af37)"></div></div><div class="text-sm font-extrabold text-yellow-300 w-10 text-center"><span id="ptSec">${Math.ceil(left / 1000)}</span></div></div>
           </div>
           <div class="space-y-3">${main}</div>
-          <div class="text-center"><button onclick="ptQuit()" class="px-4 py-2 rounded-xl text-xs bg-red-500/15 border border-red-500/30 text-red-300">${ptL("إنهاء الاختبار", "End the test")}</button></div>`;
+          <div class="text-center"><button onclick="ptQuit()" class="px-4 py-2 rounded-xl text-xs bg-red-500/15 border border-red-500/30 text-red-300">${ptL("إنهاء الاختبار", "Quit test")}</button></div>`;
       }
       // مهم: النافذة بتتبني مرة واحدة والمحتوى بس هو اللي بيتبدّل — لو اتمسحت كلها مع كل ضغطة السكرول بيرجع لفوق (ده كان سبب الاهتزاز)
       let wrap = el.firstElementChild;
@@ -305,46 +306,47 @@
       try {
         const r = await window.fbPtList();
         PTR.list = r.rows || [];
-        if (r.ok && window.fbPlPublish && !PTR.__synced) { PTR.__synced = true; window.fbPlPublish(PTR.list.filter(x => x.levelBy && Number(x.level) >= 1).map(x => ({ phone: x.phone, parentPhone: x.parentPhone, level: Number(x.level) }))).catch(() => {}); } if (!r.ok) PTR.err = "تعذّر تحميل النتائج — اتأكد إن قواعد Firebase اتنشرت (firestore.rules).";
+        if (r.ok && window.fbPlPublish && !PTR.__synced) { PTR.__synced = true; window.fbPlPublish(PTR.list.filter(x => x.levelBy && Number(x.level) >= 1).map(x => ({ phone: x.phone, parentPhone: x.parentPhone, level: Number(x.level) }))).catch(() => {}); } if (!r.ok) PTR.err = ptL("تعذّر تحميل النتائج — اتأكد إن قواعد Firebase اتنشرت (firestore.rules).", "Could not load results. Make sure the Firebase rules in firestore.rules are deployed.");
         if (window.fbPtCleanup) window.fbPtCleanup().catch(() => {});
-      } catch (e) { PTR.err = "تعذّر تحميل النتائج."; PTR.list = PTR.list || []; }
+      } catch (e) { PTR.err = ptL("تعذّر تحميل النتائج.", "Could not load results."); PTR.list = PTR.list || []; }
       PTR.loading = false; render();
     }
     const ptFinal = r => Number(r.level) || Number(r.suggested) || 0;
+    const ptLevelLabel = level => ptL("المستوى", "Level") + " " + level;
     function ptMatch(r, q) {
       q = String(q || "").trim().toLowerCase(); if (!q) return true;
       const d = ptPhoneKey(q);
       return String(r.name || "").toLowerCase().includes(q) || (d.length >= 3 && (String(r.phone || "").includes(d) || String(r.parentPhone || "").includes(d)));
     }
-    const ptDate = ts => { try { return new Date(ts).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (_) { return ""; } };
+    const ptDate = ts => { try { return new Date(ts).toLocaleString(ptIsEnglish() ? "en-GB" : "ar-EG", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (_) { return ""; } };
 
     // تنبيهات للكوتش: نفس رقم ولي الأمر / نفس حساب الشطرنج / نفس الجهاز / نفس الاسم عند طالب تاني (ممكن إخوات أو محاولة غش)
     function ptDupes(r) {
       const o = (PTR.list || []).filter(x => x.id !== r.id), out = [], nm = x => String(x.name || "").replace(/\s+/g, " ").trim().toLowerCase();
-      const names = a => a.map(x => esc(x.name)).join("، ");
-      let a = o.filter(x => x.parentPhone === r.parentPhone); if (a.length) out.push("نفس رقم ولي الأمر مع: " + names(a));
-      a = o.filter(x => r.lk && x.lk === r.lk); if (a.length) out.push("نفس حساب الشطرنج مع: " + names(a));
-      a = o.filter(x => r.owner && x.owner === r.owner); if (a.length) out.push("نفس الجهاز مع: " + names(a));
-      a = o.filter(x => nm(x) === nm(r)); if (a.length) out.push("نفس الاسم عند طالب تاني");
+      const names = a => a.map(x => esc(x.name)).join(ptL("، ", ", "));
+      let a = o.filter(x => x.parentPhone === r.parentPhone); if (a.length) out.push(ptL("نفس رقم ولي الأمر مع: ", "Same parent phone number as: ") + names(a));
+      a = o.filter(x => r.lk && x.lk === r.lk); if (a.length) out.push(ptL("نفس حساب الشطرنج مع: ", "Same chess account as: ") + names(a));
+      a = o.filter(x => r.owner && x.owner === r.owner); if (a.length) out.push(ptL("نفس الجهاز مع: ", "Same device as: ") + names(a));
+      a = o.filter(x => nm(x) === nm(r)); if (a.length) out.push(ptL("نفس الاسم عند طالب تاني", "Another student has the same name"));
       return out;
     }
     function ptRowCard(r, compact) {
-      const done = r.status === "done", fin = ptFinal(r), by = Number(r.level) ? "كوتش: " + esc(r.levelCoach || "") : "النظام — لسه ما اتعتمدش";
+      const done = r.status === "done", fin = ptFinal(r), by = Number(r.level) ? ptL("اعتمده الكوتش: ", "Set by coach: ") + esc(r.levelCoach || "") : ptL("مقترح النظام — لم يعتمده الكوتش بعد", "Suggested by the system — awaiting coach approval");
       const dup = ptDupes(r);
-      const opts = [1, 2, 3, 4, 5, 6].map(n => `<option value="${n}" ${fin === n ? "selected" : ""}>Level ${n}</option>`).join("");
+      const opts = [1, 2, 3, 4, 5, 6].map(n => `<option value="${n}" ${fin === n ? "selected" : ""}>${ptLevelLabel(n)}</option>`).join("");
       return `<div class="gold-card rounded-2xl p-4 space-y-2.5">
         <div class="flex flex-wrap items-start justify-between gap-2">
-          <div><div class="font-bold text-white text-base">${esc(r.name)} <span class="text-xs text-gray-400 font-normal">(${esc(r.age)} سنة • ${r.mode === "online" ? "Online" : "Offline"})</span></div>
+          <div><div class="font-bold text-white text-base">${esc(r.name)} <span class="text-xs text-gray-400 font-normal">(${esc(r.age)} ${ptL("سنة", "years old")} • ${r.mode === "online" ? ptL("أونلاين", "Online") : ptL("حضوري", "In person")})</span></div>
             <div class="text-xs text-gray-400 mt-0.5" dir="ltr">📱 ${esc(r.phone)} &nbsp;|&nbsp; 👨‍👦 ${esc(r.parentPhone)}</div></div>
-          <span class="text-[11px] px-2 py-1 rounded-lg border ${done ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10" : "border-amber-500/40 text-amber-300 bg-amber-500/10"}">${done ? "خلّص الاختبار" : "لم يكتمل"}</span>
+          <span class="text-[11px] px-2 py-1 rounded-lg border ${done ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10" : "border-amber-500/40 text-amber-300 bg-amber-500/10"}">${done ? ptL("اكتمل الاختبار", "Test completed") : ptL("لم يكتمل", "Incomplete")}</span>
         </div>
         ${dup.length ? `<div class="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg p-2">⚠️ ${dup.join(" • ")}</div>` : ""}
-        <div class="text-xs text-gray-300 flex flex-wrap gap-x-4 gap-y-1"><span>التقييم: ${esc(r.rating) || "—"}</span><span>${r.link ? `<a href="${esc(r.link)}" target="_blank" rel="noopener" class="text-yellow-300 underline">حساب الشطرنج</a>` : "بدون لينك"}</span><span>${esc(ptDate(r.createdAt))}</span></div>
-        ${done ? `<div class="flex flex-wrap items-center gap-2 text-sm"><span class="text-gray-300">النتيجة: <b class="text-white">${r.score}%</b> (${r.correct}/${r.total})</span><span class="text-gray-300">المقترح: <b class="text-yellow-300">Level ${r.suggested}</b></span>
-          <span class="text-gray-300">المعتمد:</span><select onchange="ptSetLevel('${r.id}', this.value)" class="pt-in" style="width:auto;height:34px">${opts}</select><span class="text-[11px] text-gray-400">(${by})</span>
-          ${Number(r.level) ? "" : `<button onclick="ptSetLevel('${r.id}', ${r.suggested})" class="px-3 py-1.5 rounded-lg text-xs gold-btn">اعتماد المقترح</button>`}</div>` : ""}
+        <div class="text-xs text-gray-300 flex flex-wrap gap-x-4 gap-y-1"><span>${ptL("التقييم:", "Rating:")} ${esc(r.rating) || "—"}</span><span>${r.link ? `<a href="${esc(r.link)}" target="_blank" rel="noopener" class="text-yellow-300 underline">${ptL("حساب الشطرنج", "Chess profile")}</a>` : ptL("بدون لينك", "No profile link")}</span><span>${esc(ptDate(r.createdAt))}</span></div>
+        ${done ? `<div class="flex flex-wrap items-center gap-2 text-sm"><span class="text-gray-300">${ptL("النتيجة:", "Score:")} <b class="text-white">${r.score}%</b> (${r.correct}/${r.total})</span><span class="text-gray-300">${ptL("المقترح:", "Suggested:")} <b class="text-yellow-300">${ptLevelLabel(r.suggested)}</b></span>
+          <span class="text-gray-300">${ptL("المعتمد:", "Approved:")}</span><select onchange="ptSetLevel('${r.id}', this.value)" class="pt-in" style="width:auto;height:34px">${opts}</select><span class="text-[11px] text-gray-400">(${by})</span>
+          ${Number(r.level) ? "" : `<button onclick="ptSetLevel('${r.id}', ${r.suggested})" class="px-3 py-1.5 rounded-lg text-xs gold-btn">${ptL("اعتماد المقترح", "Approve suggestion")}</button>`}</div>` : ""}
         ${done ? ptDetBlock(r) : ""}
-        <div class="flex justify-end"><button onclick="ptReopen('${r.id}')" class="px-3 py-1.5 rounded-lg text-xs bg-red-500/15 border border-red-500/30 text-red-300">إعادة فتح الاختبار للطالب</button></div>
+        <div class="flex justify-end"><button onclick="ptReopen('${r.id}')" class="px-3 py-1.5 rounded-lg text-xs bg-red-500/15 border border-red-500/30 text-red-300">${ptL("إعادة فتح الاختبار للطالب", "Reopen test for student")}</button></div>
       </div>`;
     }
 
@@ -353,23 +355,24 @@
       const rows = (PTR.list || []).filter(r => ptMatch(r, PTR.q)), doneRows = rows.filter(r => r.status === "done");
       return `<div class="space-y-4">
         <div class="gold-card rounded-2xl p-4 space-y-3">
-          <div class="flex flex-wrap justify-between items-center gap-2"><h2 class="font-display font-extrabold text-xl gold-gradient-text">نتائج اختبار تحديد المستوى</h2>
-            <button onclick="ptLoad(true)" class="px-3 py-1.5 rounded-lg text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">تحديث</button></div>
-          <p class="text-xs text-gray-400">البحث بالاسم أو رقم الموبايل من خانة البحث فوق. الطالب ما بيشوفش النتيجة. المستوى المعتمد = اللي تختاره أنت، ولو ما عدّلتش بيتعتمد المقترح من النظام.</p>
+          <div class="flex flex-wrap justify-between items-center gap-2"><h2 class="font-display font-extrabold text-xl gold-gradient-text">${ptL("نتائج اختبار تحديد المستوى", "Chess Placement Test Results")}</h2>
+            <button onclick="ptLoad(true)" class="px-3 py-1.5 rounded-lg text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">${ptL("تحديث", "Refresh")}</button></div>
+          <p class="text-xs text-gray-400">${ptL("البحث بالاسم أو رقم الموبايل من خانة البحث فوق. الطالب ما بيشوفش النتيجة. المستوى المعتمد = اللي تختاره أنت، ولو ما عدّلتش بيتعتمد المقترح من النظام.", "Search by name or phone number using the search field above. Students cannot see their results. Choose a level to approve it; otherwise, the system's suggested level will be used.")}</p>
           <div class="flex flex-wrap gap-2">
-            <button onclick="ptExport('xlsx')" class="px-4 py-2 rounded-xl text-xs gold-btn">تحميل Excel (${doneRows.length})</button>
-            <button onclick="ptExport('print')" class="px-4 py-2 rounded-xl text-xs bg-zinc-900 border border-yellow-500/40 text-yellow-300">طباعة</button>
-            <button onclick="ptExport('wa')" class="px-4 py-2 rounded-xl text-xs font-bold" style="background:#059669;color:#fff">إرسال للإدارة واتساب</button>
+            <button onclick="ptExport('xlsx')" class="px-4 py-2 rounded-xl text-xs gold-btn">${ptL("تحميل Excel", "Download Excel")} (${doneRows.length})</button>
+            <button onclick="ptExport('print')" class="px-4 py-2 rounded-xl text-xs bg-zinc-900 border border-yellow-500/40 text-yellow-300">${ptL("طباعة", "Print")}</button>
+            <button onclick="ptExport('wa')" class="px-4 py-2 rounded-xl text-xs font-bold" style="background:#059669;color:#fff">${ptL("إرسال للإدارة واتساب", "Send to management via WhatsApp")}</button>
           </div>
-          <div class="text-[11px] text-gray-500">كل تقرير بتطلّعه بيتحفظ منه نسخة احتياطية في قاعدة البيانات لمدة 30 يوم ثم تتحذف تلقائياً.</div>
+          <div class="text-[11px] text-gray-500">${ptL("كل تقرير بتطلّعه بيتحفظ منه نسخة احتياطية في قاعدة البيانات لمدة 30 يوم ثم تتحذف تلقائياً.", "Each exported report is backed up in the database for 30 days, then deleted automatically.")}</div>
           ${PTR.err ? `<div class="text-sm text-red-300">${PTR.err}</div>` : ""}
         </div>
-        ${PTR.loading && !PTR.list ? `<div class="text-center text-gray-400 py-8">جاري التحميل...</div>` : rows.length ? rows.map(r => ptRowCard(r)).join("") : `<div class="text-center text-gray-400 py-8">${PTR.q ? "مفيش نتايج للبحث ده." : "لسه محدش عمل الاختبار."}</div>`}
+        ${PTR.loading && !PTR.list ? `<div class="text-center text-gray-400 py-8">${ptL("جاري التحميل...", "Loading results…")}</div>` : rows.length ? rows.map(r => ptRowCard(r)).join("") : `<div class="text-center text-gray-400 py-8">${PTR.q ? ptL("مفيش نتايج للبحث ده.", "No results match your search.") : ptL("لسه محدش عمل الاختبار.", "No one has taken the test yet.")}</div>`}
       </div>`;
     }
     // ---------- الكوتش: أخطاء الطالب في الاختبار (السؤال + إجابته + الصح) ----------
-    const PT_DIFF = ["سهل جدًا", "سهل", "متوسط", "صعب", "صعب جدًا"];
-    const ptDiffOf = i => PT_DIFF[i < 2 ? 0 : i < 4 ? 1 : i < 6 ? 2 : i < 8 ? 3 : 4];
+    const PT_DIFF_AR = ["سهل جدًا", "سهل", "متوسط", "صعب", "صعب جدًا"], PT_DIFF_EN = ["Very easy", "Easy", "Intermediate", "Hard", "Very hard"];
+    const ptDiffIndex = i => i < 2 ? 0 : i < 4 ? 1 : i < 6 ? 2 : i < 8 ? 3 : 4;
+    const ptDiffOf = i => (ptIsEnglish() ? PT_DIFF_EN : PT_DIFF_AR)[ptDiffIndex(i)];
     async function ptToggleDet(id) {
       PTR.open[id] = !PTR.open[id];
       const r = (PTR.list || []).find(x => x.id === id);
@@ -388,7 +391,7 @@
       }
       for (let i = 0; i < total; i++) {
         const a = ans[i] || null, it = { i, k: a ? a.k : (i < 12 ? "p" : "s"), ok: !!(a && a.ok), c: a ? String(a.c || "") : "none", s: a ? Number(a.s) || 0 : 0, q: (a && a.q) || "" };
-        if (it.k === "p") it.diff = ptDiffOf(i);
+        if (it.k === "p") it.diff = ptDiffIndex(i);
         if (!it.ok && it.k === "p" && it.q && idx && idx[it.q]) {
           try {
             const mv = idx[it.q].split("|")[2].split(" "), sol = mv.slice(1), x = Math.max(0, Math.min(sol.length - 1, Number(a.x) || 0));
@@ -411,36 +414,36 @@
       const ans = r.answers || {}, total = Number(r.total) || 20; let wrong = 0;
       for (let k = 0; k < total; k++) if (!(ans[k] && ans[k].ok)) wrong++;
       const open = !!PTR.open[r.id];
-      return `<div><button onclick="ptToggleDet('${r.id}')" class="px-3 py-1.5 rounded-lg text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">${open ? "إخفاء" : "عرض"} تفاصيل الأخطاء (${wrong} من ${total})</button></div>${open ? ptDetHtml(r) : ""}`;
+      return `<div><button onclick="ptToggleDet('${r.id}')" class="px-3 py-1.5 rounded-lg text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">${ptL(open ? "إخفاء" : "عرض", open ? "Hide" : "Show")} ${ptL("تفاصيل الأخطاء", "answer details")} (${wrong} ${ptL("من", "of")} ${total})</button></div>${open ? ptDetHtml(r) : ""}`;
     }
     function ptDetHtml(r) {
       const d = PTR.det[r.id];
-      if (!d || d.loading) return `<div class="text-xs text-gray-400 py-2">جاري تحميل التفاصيل…</div>`;
-      if (d.err) return `<div class="text-xs text-red-300 py-2">تعذّر تحميل التفاصيل — جرّب تاني.</div>`;
+      if (!d || d.loading) return `<div class="text-xs text-gray-400 py-2">${ptL("جاري تحميل التفاصيل…", "Loading answer details…")}</div>`;
+      if (d.err) return `<div class="text-xs text-red-300 py-2">${ptL("تعذّر تحميل التفاصيل — جرّب تاني.", "Could not load answer details. Please try again.")}</div>`;
       const its = d.items, P = its.filter(x => x.k === "p"), S = its.filter(x => x.k === "s");
-      const byD = PT_DIFF.map(n => { const a = P.filter(x => x.diff === n); return a.length ? `<span class="px-2 py-0.5 rounded-md border ${a.every(x => x.ok) ? "border-emerald-500/40 text-emerald-300" : "border-red-500/40 text-red-300"}">${n}: ${a.filter(x => x.ok).length}/${a.length}</span>` : ""; }).join("");
+      const byD = (ptIsEnglish() ? PT_DIFF_EN : PT_DIFF_AR).map((n, i) => { const a = P.filter(x => x.diff === i); return a.length ? `<span class="px-2 py-0.5 rounded-md border ${a.every(x => x.ok) ? "border-emerald-500/40 text-emerald-300" : "border-red-500/40 text-red-300"}">${n}: ${a.filter(x => x.ok).length}/${a.length}</span>` : ""; }).join("");
       const quick = its.filter(x => !x.ok && x.c !== "timeout" && x.c !== "none" && x.s > 0 && x.s <= 3).length, slow = its.filter(x => x.c === "timeout").length;
       const wrong = its.filter(x => !x.ok);
       const card = x => {
-        const head = `<div class="flex justify-between items-center text-[12px]"><b class="text-white">${x.k === "p" ? "لغز" : "موقف"} ${x.k === "p" ? x.i + 1 : x.i - 11} ${x.diff ? "• " + x.diff : ""}</b><span class="text-gray-400">${x.c === "none" ? "ما اتجاوبش" : x.c === "timeout" ? "الوقت خلص" : x.s + " ث"}</span></div>`;
+        const head = `<div class="flex justify-between items-center text-[12px]"><b class="text-white">${ptL(x.k === "p" ? "لغز" : "موقف", x.k === "p" ? "Puzzle" : "Position")} ${x.k === "p" ? x.i + 1 : x.i - 11} ${x.diff !== undefined ? "• " + ptDiffOf(x.i) : ""}</b><span class="text-gray-400">${x.c === "none" ? ptL("ما اتجاوبش", "Not answered") : x.c === "timeout" ? ptL("الوقت خلص", "Time expired") : x.s + " " + ptL("ث", "sec")}</span></div>`;
         if (x.k === "p") {
-          if (!x.fen) return `<div class="rounded-xl border border-red-500/20 p-2.5 space-y-1.5">${head}<div class="text-[12px] text-gray-400">${x.q ? "تعذّر عرض اللغز" : "الاختبار ده اتسجّل قبل التحديث — التفاصيل مش متاحة"}</div></div>`;
+          if (!x.fen) return `<div class="rounded-xl border border-red-500/20 p-2.5 space-y-1.5">${head}<div class="text-[12px] text-gray-400">${x.q ? ptL("تعذّر عرض اللغز", "Could not display this puzzle.") : ptL("الاختبار ده اتسجّل قبل التحديث — التفاصيل مش متاحة", "This test was recorded before the update, so its details are unavailable.")}</div></div>`;
           const fl = {}; fl[x.solFrom] = "good"; fl[x.solTo] = "good";
           if (/^[a-h][1-8][a-h][1-8]$/.test(x.c)) { if (x.c.slice(0, 2) !== x.solFrom) fl[x.c.slice(0, 2)] = "bad"; fl[x.c.slice(2, 4)] = "bad"; }
           const g = new ChessCls(x.fen);
           return `<div class="rounded-xl border border-red-500/25 p-2.5 space-y-1.5">${head}<div style="max-width:210px" class="mx-auto pt-mini">${boardHTML({ game: g, flip: g.turn() === "b", flash: fl, onClick: "ptNoop" })}</div>
-            <div class="text-[12px] text-gray-300">الحل: <b class="text-emerald-300" dir="ltr">${esc(x.solSan)}</b> &nbsp; ${x.wrongSan ? `الطالب لعب: <b class="text-red-300" dir="ltr">${esc(x.wrongSan)}</b>` : x.c === "timeout" ? "" : `الطالب لعب: <b class="text-red-300" dir="ltr">${esc(x.c)}</b>`}</div></div>`;
+            <div class="text-[12px] text-gray-300">${ptL("الحل:", "Solution:")} <b class="text-emerald-300" dir="ltr">${esc(x.solSan)}</b> &nbsp; ${x.wrongSan ? `${ptL("الطالب لعب:", "Student played:")} <b class="text-red-300" dir="ltr">${esc(x.wrongSan)}</b>` : x.c === "timeout" ? "" : `${ptL("الطالب لعب:", "Student played:")} <b class="text-red-300" dir="ltr">${esc(x.c)}</b>`}</div></div>`;
         }
-        const pick = x.c === "timeout" || x.c === "none" ? "" : `اختار: <b class="text-red-300" dir="ltr">${esc(x.c)}</b> &nbsp; `;
-        return `<div class="rounded-xl border border-red-500/25 p-2.5 space-y-1.5">${head}${x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy" class="rounded-lg mx-auto" style="max-height:190px">` : `<div class="text-[12px] text-gray-400">${x.q ? "" : "الاختبار ده اتسجّل قبل التحديث — الصورة مش متاحة"}</div>`}
-          <div class="text-[12px] text-gray-300">${pick}${x.right ? `الصح: <b class="text-emerald-300" dir="ltr">${esc(x.right)}</b>` : ""}</div></div>`;
+        const pick = x.c === "timeout" || x.c === "none" ? "" : `${ptL("اختار:", "Selected:")} <b class="text-red-300" dir="ltr">${esc(x.c)}</b> &nbsp; `;
+        return `<div class="rounded-xl border border-red-500/25 p-2.5 space-y-1.5">${head}${x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy" class="rounded-lg mx-auto" style="max-height:190px">` : `<div class="text-[12px] text-gray-400">${x.q ? "" : ptL("الاختبار ده اتسجّل قبل التحديث — الصورة مش متاحة", "This test was recorded before the update, so its image is unavailable.")}</div>`}
+          <div class="text-[12px] text-gray-300">${pick}${x.right ? `${ptL("الصح:", "Correct answer:")} <b class="text-emerald-300" dir="ltr">${esc(x.right)}</b>` : ""}</div></div>`;
       };
       return `<div class="rounded-xl border border-yellow-500/20 bg-black/30 p-3 space-y-3">
-        <div class="flex flex-wrap gap-1.5 text-[11px] items-center"><span class="text-gray-300">ألغاز: <b class="text-white">${P.filter(x => x.ok).length}/${P.length}</b></span>${byD}<span class="text-gray-300 ms-2">مواقف: <b class="text-white">${S.filter(x => x.ok).length}/${S.length}</b></span></div>
-        ${quick || slow ? `<div class="text-[11px] text-amber-300">${quick ? `⚠️ ${quick} إجابات غلط في 3 ثواني أو أقل (ممكن تخمين). ` : ""}${slow ? `${slow} أسئلة الوقت خلص فيها.` : ""}</div>` : ""}
-        ${wrong.length ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">${wrong.map(card).join("")}</div>` : `<div class="text-sm text-emerald-300">جاوب كل الأسئلة صح 👏</div>`}
-        <div class="text-[11px] text-gray-400">على الرقعة: <span class="text-emerald-300">الأخضر = الحل الصح</span> • <span class="text-red-300">الأحمر = الحركة اللي لعبها الطالب</span> (الرقعة من منظور اللاعب اللي عليه الدور).</div>
-        <div class="text-[11px] text-gray-500">الأسئلة الصح: ${its.filter(x => x.ok).map(x => x.i + 1).join("، ") || "—"}</div>
+        <div class="flex flex-wrap gap-1.5 text-[11px] items-center"><span class="text-gray-300">${ptL("الألغاز:", "Puzzles:")} <b class="text-white">${P.filter(x => x.ok).length}/${P.length}</b></span>${byD}<span class="text-gray-300 ms-2">${ptL("المواقف:", "Positions:")} <b class="text-white">${S.filter(x => x.ok).length}/${S.length}</b></span></div>
+        ${quick || slow ? `<div class="text-[11px] text-amber-300">${quick ? `⚠️ ${quick} ${ptL("إجابات غلط في 3 ثواني أو أقل (ممكن تخمين).", "incorrect answers in 3 seconds or less (possibly guesses).")} ` : ""}${slow ? `${slow} ${ptL("أسئلة انتهى وقتها.", "questions timed out.")}` : ""}</div>` : ""}
+        ${wrong.length ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">${wrong.map(card).join("")}</div>` : `<div class="text-sm text-emerald-300">${ptL("جاوب كل الأسئلة صح 👏", "All answers are correct 👏")}</div>`}
+        <div class="text-[11px] text-gray-400">${ptL("على الرقعة:", "On the board:")} <span class="text-emerald-300">${ptL("الأخضر = الحل الصح", "green = correct solution")}</span> • <span class="text-red-300">${ptL("الأحمر = الحركة اللي لعبها الطالب", "red = student's move")}</span> ${ptL("(الرقعة من منظور اللاعب اللي عليه الدور).", "(the board is shown from the side to move).")}</div>
+        <div class="text-[11px] text-gray-500">${ptL("الأسئلة الصح:", "Correct answers:")} ${its.filter(x => x.ok).map(x => x.i + 1).join(ptL("، ", ", ")) || "—"}</div>
       </div>`;
     }
 
@@ -448,28 +451,30 @@
       const r = (PTR.list || []).find(x => x.id === id); lv = Number(lv); if (!r || !(lv >= 1 && lv <= 6)) return;
       const cu = currUser(), nm = String((cu && cu.name) || "").slice(0, 80);
       const res = await window.fbPtUpdate(id, { level: lv, levelBy: "coach", levelCoach: nm, confirmedAt: Date.now() });
-      if (res && res.ok) { r.level = lv; r.levelBy = "coach"; r.levelCoach = nm; if (window.fbPlPublish) window.fbPlPublish([{ phone: r.phone, parentPhone: r.parentPhone, level: lv }]); toast("تم اعتماد المستوى " + lv); } else toast("تعذّر الحفظ — جرّب تاني.");
+      if (res && res.ok) { r.level = lv; r.levelBy = "coach"; r.levelCoach = nm; if (window.fbPlPublish) window.fbPlPublish([{ phone: r.phone, parentPhone: r.parentPhone, level: lv }]); toast(ptL("تم اعتماد المستوى " + lv, "Level " + lv + " approved.")); } else toast(ptL("تعذّر الحفظ — جرّب تاني.", "Could not save the level. Please try again."));
       render();
     }
     async function ptReopen(id) {
       const r = (PTR.list || []).find(x => x.id === id); if (!r) return;
-      if (!confirm("هتفتح الاختبار تاني للطالب «" + r.name + "»؟ نتيجته الحالية هتتمسح وهيقدر يعيده مرة واحدة.")) return;
+      if (!confirm(ptL("هتفتح الاختبار تاني للطالب «" + r.name + "»؟ نتيجته الحالية هتتمسح وهيقدر يعيده مرة واحدة.", "Reopen the test for " + r.name + "? Their current result will be deleted, and they will be able to take the test once more."))) return;
       const res = await window.fbPtReopen(id, r);
-      if (res && res.ok) { if (window.fbPlRemove) window.fbPlRemove(r.phone, r.parentPhone); PTR.list = PTR.list.filter(x => x.id !== id); toast("تم فتح الاختبار للطالب."); } else toast("تعذّر فتح الاختبار — جرّب تاني.");
+      if (res && res.ok) { if (window.fbPlRemove) window.fbPlRemove(r.phone, r.parentPhone); PTR.list = PTR.list.filter(x => x.id !== id); toast(ptL("تم فتح الاختبار للطالب.", "The test has been reopened for the student.")); } else toast(ptL("تعذّر فتح الاختبار — جرّب تاني.", "Could not reopen the test. Please try again."));
       render();
     }
 
     // ---------- التقرير: Excel / طباعة / واتساب ----------
-    const PT_HEAD = ["#", "الاسم", "السن", "رقم الطالب", "رقم ولي الأمر", "التقييم الحالي", "لينك الحساب", "النوع", "المستوى", "اسم الكوتش المعتمد", "تاريخ الاختبار"];
+    const ptReportHead = () => ptIsEnglish()
+      ? ["#", "Name", "Age", "Student phone", "Parent phone", "Current rating", "Chess profile", "Attendance", "Level", "Approved by", "Test date"]
+      : ["#", "الاسم", "السن", "رقم الطالب", "رقم ولي الأمر", "التقييم الحالي", "لينك الحساب", "النوع", "المستوى", "اسم الكوتش المعتمد", "تاريخ الاختبار"];
     function ptReportRows() {
       const rows = (PTR.list || []).filter(r => r.status === "done" && ptMatch(r, PTR.q)).sort((a, b) => (a.finishedAt || a.createdAt || 0) - (b.finishedAt || b.createdAt || 0));
-      return rows.map((r, k) => [k + 1, r.name, r.age, r.phone, r.parentPhone, r.rating || "", r.link || "", r.mode === "online" ? "Online" : "Offline", "Level " + ptFinal(r), Number(r.level) ? (r.levelCoach || "كوتش") : "لم يُعتمد بعد (مقترح النظام)", ptDate(r.finishedAt || r.createdAt)]);
+      return rows.map((r, k) => [k + 1, r.name, r.age, r.phone, r.parentPhone, r.rating || "", r.link || "", r.mode === "online" ? ptL("أونلاين", "Online") : ptL("حضوري", "In person"), ptLevelLabel(ptFinal(r)), Number(r.level) ? (r.levelCoach || ptL("كوتش", "Coach")) : ptL("لم يُعتمد بعد (مقترح النظام)", "Not approved (system suggestion)"), ptDate(r.finishedAt || r.createdAt)]);
     }
     // ملف xlsx بسيط من غير مكتبات (zip بدون ضغط + XML)
     function ptXlsx(rows) {
       const x = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
       const col = n => String.fromCharCode(65 + n);
-      const all = [PT_HEAD].concat(rows);
+      const all = [ptReportHead()].concat(rows);
       const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews><cols>${[5, 26, 7, 16, 16, 12, 34, 10, 11, 26, 18].map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols><sheetData>${all.map((r, ri) => `<row r="${ri + 1}">${r.map((v, ci) => `<c r="${col(ci)}${ri + 1}" t="inlineStr"${ri === 0 ? ' s="1"' : ""}><is><t xml:space="preserve">${x(v)}</t></is></c>`).join("")}</row>`).join("")}</sheetData></worksheet>`;
       const files = [
         ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`],
@@ -495,22 +500,23 @@
       return new Blob([...parts, ...cen, end], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     }
     function ptPrint(rows) {
-      const h = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>ECA — اختبار تحديد المستوى</title><style>body{font-family:Tahoma,Arial,sans-serif;padding:18px}h2{margin:0 0 4px}small{color:#555}table{border-collapse:collapse;width:100%;margin-top:12px;font-size:12px}th,td{border:1px solid #888;padding:5px 6px;text-align:center}th{background:#f3d266}td.l{direction:ltr}</style></head><body><h2>Egypt Chess Academy — نتائج اختبار تحديد المستوى</h2><small>${esc(ptDate(Date.now()))} • ${rows.length} طالب</small><table><tr>${PT_HEAD.map(t => `<th>${t}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((c, i) => `<td${i === 3 || i === 4 ? ' class="l"' : ""}>${esc(c)}</td>`).join("")}</tr>`).join("")}</table></body></html>`;
+      const isEnglish = ptIsEnglish(), head = ptReportHead();
+      const h = `<!doctype html><html dir="${isEnglish ? "ltr" : "rtl"}" lang="${isEnglish ? "en" : "ar"}"><head><meta charset="utf-8"><title>ECA — ${ptL("اختبار تحديد المستوى", "Chess Placement Test")}</title><style>body{font-family:Tahoma,Arial,sans-serif;padding:18px}h2{margin:0 0 4px}small{color:#555}table{border-collapse:collapse;width:100%;margin-top:12px;font-size:12px}th,td{border:1px solid #888;padding:5px 6px;text-align:center}th{background:#f3d266}td.l{direction:ltr}</style></head><body><h2>Egypt Chess Academy — ${ptL("نتائج اختبار تحديد المستوى", "Chess Placement Test Results")}</h2><small>${esc(ptDate(Date.now()))} • ${rows.length} ${ptL("طالب", "students")}</small><table><tr>${head.map(t => `<th>${t}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((c, i) => `<td${i === 3 || i === 4 ? ' class="l"' : ""}>${esc(c)}</td>`).join("")}</tr>`).join("")}</table></body></html>`;
       const f = document.createElement("iframe"); f.style.cssText = "position:fixed;left:-9999px;width:0;height:0;border:0"; document.body.appendChild(f);
       f.contentDocument.open(); f.contentDocument.write(h); f.contentDocument.close();
       setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (_) {} setTimeout(() => f.remove(), 3000); }, 300);
     }
     async function ptExport(kind) {
       const u = currUser(); if (!u || u.role !== "coach") return;
-      const rows = ptReportRows(); if (!rows.length) return toast("مفيش نتايج جاهزة للتصدير.");
-      if (window.fbPtSaveReport) window.fbPtSaveReport(rows).then(r => { if (!(r && r.ok)) toast("تنبيه: النسخة الاحتياطية ما اتحفظتش في قاعدة البيانات."); });
+      const rows = ptReportRows(); if (!rows.length) return toast(ptL("مفيش نتايج جاهزة للتصدير.", "There are no completed results to export."));
+      if (window.fbPtSaveReport) window.fbPtSaveReport(rows).then(r => { if (!(r && r.ok)) toast(ptL("تنبيه: النسخة الاحتياطية ما اتحفظتش في قاعدة البيانات.", "Warning: the report backup could not be saved to the database.")); });
       if (kind === "print") return ptPrint(rows);
       const blob = ptXlsx(rows), name = "ECA-placement-" + todayISO() + ".xlsx", file = new File([blob], name, { type: blob.type });
       if (kind === "wa" && navigator.canShare && navigator.canShare({ files: [file] })) {
-        try { await navigator.share({ files: [file], title: "نتائج اختبار تحديد المستوى", text: "Egypt Chess Academy — نتائج اختبار تحديد المستوى (" + rows.length + " طالب)" }); return; } catch (e) { if (e && e.name === "AbortError") return; }
+        try { await navigator.share({ files: [file], title: ptL("نتائج اختبار تحديد المستوى", "Chess Placement Test Results"), text: "Egypt Chess Academy — " + ptL("نتائج اختبار تحديد المستوى", "Chess Placement Test Results") + " (" + rows.length + " " + ptL("طالب", "students") + ")" }); return; } catch (e) { if (e && e.name === "AbortError") return; }
       }
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-      if (kind === "wa") { toast("اتحمّل ملف Excel — ابعته للإدارة من واتساب."); setTimeout(() => window.open("https://wa.me/?text=" + encodeURIComponent("Egypt Chess Academy — نتائج اختبار تحديد المستوى (" + rows.length + " طالب) — الملف مرفق"), "_blank", "noopener"), 600); }
+      if (kind === "wa") { toast(ptL("اتحمّل ملف Excel — ابعته للإدارة من واتساب.", "The Excel file has been downloaded. Send it to management on WhatsApp.")); setTimeout(() => window.open("https://wa.me/?text=" + encodeURIComponent("Egypt Chess Academy — " + ptL("نتائج اختبار تحديد المستوى", "Chess Placement Test Results") + " (" + rows.length + " " + ptL("طالب", "students") + ") — " + ptL("الملف مرفق", "file attached")), "_blank", "noopener"), 600); }
     }
 
     // البحث في خانة البحث العلوية: بالاسم أو الرقم → نتايج الاختبار (وإعادة الفتح)
@@ -520,7 +526,7 @@
       const _rt = renderTrackerView;
       renderTrackerView = function () {
         const m = searchQ && PTR.list ? PTR.list.filter(r => ptMatch(r, searchQ)).slice(0, 5) : [];
-        const box = m.length ? `<div class="mb-4 space-y-3"><div class="text-sm font-bold text-yellow-300">اختبار تحديد المستوى — نتايج مطابقة للبحث</div>${m.map(r => ptRowCard(r)).join("")}</div>` : "";
+        const box = m.length ? `<div class="mb-4 space-y-3"><div class="text-sm font-bold text-yellow-300">${ptL("اختبار تحديد المستوى — نتايج مطابقة للبحث", "Chess placement test — matching results")}</div>${m.map(r => ptRowCard(r)).join("")}</div>` : "";
         return box + _rt();
       };
     }
