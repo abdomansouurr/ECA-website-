@@ -82,7 +82,7 @@ A bilingual (Arabic / English), installable web platform for **Egypt Chess Acade
 
 ## 🔄 Updating
 1. One time only: `npm install`
-2. After editing: `npm run release` (rebuilds `tailwind.css` and bumps the version in `index.html` + `sw.js`)
+2. After editing: `npm run release` (validates inline JavaScript, rebuilds `tailwind.css`, and bumps the version in `index.html` + `sw.js`)
 3. Commit and push. Vercel serves the folder as static files.
 
-If you only changed text/logic and used no new Tailwind classes, `npm run bump` is enough.
+If you only changed text/logic and used no new Tailwind classes, `npm run bump` is enough; it validates inline JavaScript before changing the version.

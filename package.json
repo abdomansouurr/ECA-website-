@@ -5,6 +5,8 @@
     "build:css": "tailwindcss -c tailwind.config.js -i tailwind.input.css -o tailwind.css --minify",
     "watch:css": "tailwindcss -c tailwind.config.js -i tailwind.input.css -o tailwind.css --watch",
     "bump": "node scripts/bump-version.js",
+    "prebump": "npm run check:inline-scripts",
+    "check:inline-scripts": "node scripts/check-inline-scripts.js",
     "release": "npm run build:css && npm run bump",
     "test:rules": "node scripts/rules-sim.test.js",
     "vendor": "node scripts/vendor.js"
