@@ -179,7 +179,16 @@
       ["دخول الطالب بجوجل", "Student sign-in with Google"], ["دخول الكوتش بجوجل", "Coach sign-in with Google"],
       ["أو باليوزر نيم / الإيميل", "Or use your username / email"],
       ["طالب", "Student"], ["كوتش", "Coach"],
-      ["لو عملت اختبار تحديد المستوى، اكتب رقمك ورقم ولي الأمر زي ما سجّلتهم في الاختبار، وهتبدأ من المستوى اللي اتعتمد. غير كده بتبدأ من Step 1.", "If you took the placement test, enter the same student and parent phone numbers you used there to start at your approved level. Otherwise, you will start at Step 1."]
+      ["لو عملت اختبار تحديد المستوى، اكتب رقمك ورقم ولي الأمر زي ما سجّلتهم في الاختبار، وهتبدأ من المستوى اللي اتعتمد. غير كده بتبدأ من Step 1.", "If you took the placement test, enter the same student and parent phone numbers you used there to start at your approved level. Otherwise, you will start at Step 1."],
+      ["أكواد دعوة الفريق", "Team invitation codes"],
+      ["أنشئ كودًا آمنًا لمرة واحدة لإضافة كوتش أو أدمن.", "Create a secure, single-use code to add a coach or admin."],
+      ["دعوة كوتش جديد", "Invite a new coach"], ["صلاحيات متابعة الطلاب والحصص", "Access to manage students and classes"],
+      ["دعوة أدمن جديد", "Invite a new admin"], ["صلاحيات كاملة على المنصة", "Full platform access"],
+      ["كل كود صالح لاستخدام واحد فقط. امنح كود الأدمن للأشخاص الموثوقين فقط.", "Each code can be used once. Share admin codes only with people you trust."],
+      ["تم إنشاء كود دعوة الأدمن", "Admin invitation code created"], ["تم إنشاء كود دعوة الكوتش", "Coach invitation code created"],
+      ["الكود صالح لاستخدام واحد فقط. أرسله للشخص المطلوب ليُكمل التسجيل.", "This code can be used once. Send it to the intended person to complete registration."],
+      ["كود الدعوة", "Invitation code"], ["نسخ الكود", "Copy code"], ["تم نسخ الكود", "Code copied"],
+      ["تعذّر النسخ تلقائياً — الكود محدد، انسخه يدويًا", "Couldn't copy automatically—the code is selected; copy it manually."]
     );
     const DICT = [["إلغاء", "Cancel"], ["فتح الملاحظات", "Open notes"], ["خانة ولي الأمر السرية", "Parent Secret Box"], ["أدخل الباسورد الموحد لأولياء الأمور", "Enter the shared parents' password"], ["جاري تحميل منصة Egypt Chess Academy...", "Loading Egypt Chess Academy platform..."], ["بوابة ولي الأمر (Parent Dashboard)", "Parent Portal (Parent Dashboard)"], ["بوابة ولي الأمر", "Parent Portal"], ["داشبورد ولي الأمر", "Parent Dashboard"], ["الرئيسية", "Home"], ["كل المستويات (Steps 1-6)", "All Levels (Steps 1-6)"], ["دروس Step ", "Lessons: Step "], ["متابعة الطلاب والجروبات", "Students & Groups Tracker"], ["خروج", "Logout"], ["اضغط على أي حساب تجريبي للدخول فوراً أو أنشئ حساباً جديداً:", "Tap a demo account to enter instantly or create a new account:"], ["دخول سريع كـ مدرب (Coach)", "Quick login as Coach"], ["يفتح كل الـ 6 Steps + متابعة الطلاب والجروبات", "Opens all 6 Steps + student & group tracking"], ["دخول سريع كـ طالب (Omar - Step 2)", "Quick login as Student (Omar - Step 2)"], ["يرى فقط Step 2 + اللغز اليومي + الدرس القادم", "Sees only Step 2 + daily puzzle + next lesson"], ["ابحث عن omar_chess وشاهد التقييم والملاحظة السرية", "Search omar_chess to see the rating and secret note"], ["الدخول السريع للمدرب محمي بكلمة سر", "Coach quick login is password-protected"], ["Login (دخول)", "Login"], ["Sign Up (حساب جديد)", "Sign Up"], ["تسجيل الدخول", "Log in"], ["طالب (Student)", "Student"], ["مدرب (Coach)", "Coach"], ["إنشاء الحساب", "Create account"], ["كود المدرب السري", "Secret coach code"], ["حضرت", "Attended"], ["درس في", "lessons in"], ["متبقي", "remaining"], ["درس للامتحان", "lessons until the exam"], ["دروس", "lessons"], ["درس لإنهاء", "lessons to finish"], ["ملاحظة المدرب السرية لولي الأمر:", "Coach's secret note for parents:"], ["إغلاق", "Close"], ["نسبة الدقة:", "Accuracy:"], ["اختيار ←", "Select →"], ["فتح التمرين على Lichess ↗", "Open exercise on Lichess ↗"], ["الدرس اللي عليه الدور (Next Lesson)", "Your Next Lesson"], ["مكتمل", "complete"], ["اضغط هنا للانتقال تلقائياً لصفحة دروس مستواك (Step", "Tap here to open your level's lessons (Step"], ["فقط).", "only)."], ["أتممت كل دروس Step", "You completed all lessons of Step"], ["اختبار الترقية للمستوى التالي:", "Promotion test for the next level:"], ["بدء اختبار", "Start test"], ["أجبت إجابة صحيحة — اللغز مقفول", "Correct answer — puzzle locked"], ["أجبت إجابة خاطئة — اللغز مقفول ولا يمكن إعادته", "Wrong answer — puzzle locked, cannot be retried"], ["إجابة صحيحة! أحسنت يا بطل", "Correct! Well done, champion"], ["إجابة خاطئة — تم قفل اللغز", "Wrong answer — puzzle locked"], ["اللغز مقفول بالفعل", "Puzzle is already locked"], ["↺ إعادة فتح اللغز", "↺ Reopen puzzle"], ["تم إعادة فتح اللغز", "Puzzle reopened"], ["حساب المدرب", "Coach Account"], ["يمكنك استعراض جميع الـ 6 Steps ومتابعة حضور وواجبات ومجموعات الطلاب.", "You can browse all 6 Steps and track students' attendance, homework and groups."], ["كل الدروس (Steps 1-6)", "All Lessons (Steps 1-6)"], ["جميع المستويات للمدرب (Steps 1 – 6)", "All Levels for Coach (Steps 1 – 6)"], ["دروس مستواك الحالي فقط — Step", "Your current level's lessons only — Step"], ["اضغط على أي Step لعرض قائمة دروسها تحت بعضها.", "Tap any Step to show its lessons list."], ["ممنوع ظهور أي مستوى آخر غير مستواك الحالي.", "No level other than your current one is shown."], ["▲ إخفاء القائمة", "▲ Hide list"], ["▼ عرض الدروس", "▼ Show lessons"], ["متابعة الطلاب والمجموعات", "Students & Groups Tracker"], ["علم (✓) أمام الدرس الذي حضره الطالب والواجب الذي حله واكتب ملاحظة سرية لولي الأمر.", "Tick (✓) the lessons the student attended and the homework solved, and write a secret note for the parent."], ["+ اسم جروب جديد...", "+ New group name..."], ["إضافة جروب", "Add group"], ["كل الجروبات", "All Groups"], ["حضر", "Attended"], ["الواجبات المكتملة", "Completed homework"], ["الواجب", "Homework"], ["اختر طالباً", "Select a student"], ["ملاحظة سرية لولي الأمر...", "Secret note for parent..."], ["حفظ لولي الأمر", "Save for parent"], ["تم حفظ الملاحظة السرية لولي الأمر", "Secret note saved for parent"], ["بوابة متابعة ولي الأمر (Parent Dashboard)", "Parent Follow-Up Portal (Parent Dashboard)"], ["ابحث بالـ Username الخاص بابنك (جرب:", "Search by your child's username (try:"], [" أو ", " or "], ["اكتب يوزرنيم الطالب...", "Type the student's username..."], ["لا يوجد طالب بهذا الاسم. جرب كتابة omar_chess", "No student with this name. Try typing omar_chess"], ["التقييم التلقائي لمستوى الطالب", "Automatic student level rating"], ["الدروس التي حضرها", "Lessons attended"], ["دقة الألغاز اليومية", "Daily puzzle accuracy"], ["ملاحظة المدرب السرية:", "Coach's secret note:"], ["ملاحظات المدرب السرية لولي الأمر (محمية بباسورد موحد)", "Coach's secret notes for parents (protected by a shared password)"], ["فتح بالباسورد", "Unlock with password"], ["ممتاز / عبقري", "Excellent / Genius"], ["رائع", "Great"], ["مقبول", "Fair"], ["مرحباً بك ", "Welcome "], ["بيانات الدخول غير صحيحة", "Incorrect login details"], ["كود المدربين غير صحيح", "Invalid coach code"], ["تم إنشاء الحساب!", "Account created!"], ["تم فتح ملاحظة ولي الأمر", "Parent note unlocked"], ["باسورد غير صحيح", "Incorrect password"], ["مبروك! تمت ترقيتك إلى Step ", "Congrats! You've been promoted to Step "], ["اختبار نهاية Step ", "End-of-Step test "], [": هل أنت جاهز للترقية إلى Step ", ": ready to be promoted to Step "], ["؟", "?"], ["إتمام الاختبار بنجاح والترقية إلى Step ", "Pass the test and promote to Step "], ["دخول المدرب السريع", "Coach Quick Login"], ["أدخل كلمة سر المدرب", "Enter the coach password"], ["فتح", "Open"], ["كلمة السر غير صحيحة", "Wrong password"]].concat(EXTRA_DICT).sort((a, b) => b[0].length - a[0].length);
     // كلمات محمية من الترجمة: بيتحطّ مكانها رمز مؤقت قبل تطبيق القاموس وبيترجّع بعده
@@ -1182,20 +1191,121 @@
       toast(r.ok ? "تم تغيير كلمة السر" : "كلمة السر الحالية غير صحيحة");
     }
     function adminToolsBox() {
-      return `<div class="gold-card rounded-2xl p-4 flex flex-wrap items-center gap-3 text-xs">
-        <span class="text-yellow-300 font-bold">أدوات الإدارة</span>
-        <button onclick="createInvite()" class="px-3 py-2 rounded-xl bg-zinc-900 border border-yellow-500/40 text-yellow-300">كود دعوة كوتش جديد</button>
-        <button onclick="createInvite('admin')" class="px-3 py-2 rounded-xl bg-zinc-900 border border-red-500/50 text-red-300">كود دعوة أدمن جديد</button>
-      </div>`;
+      return `<section class="gold-card rounded-2xl p-4 sm:p-5 space-y-4" aria-labelledby="adminInviteHeading">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h2 id="adminInviteHeading" class="font-display font-bold text-lg text-yellow-300">أكواد دعوة الفريق</h2>
+            <p class="text-xs text-gray-400 mt-1">أنشئ كودًا آمنًا لمرة واحدة لإضافة كوتش أو أدمن.</p>
+          </div>
+          <span class="self-start sm:self-auto px-3 py-1 rounded-full text-xs font-bold border border-yellow-500/30 bg-yellow-500/10 text-yellow-300">أدوات الإدارة</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button type="button" onclick="createInvite('coach', this)" class="group w-full min-h-[76px] flex items-center gap-3 rounded-xl border border-yellow-500/30 bg-zinc-900/70 p-3 sm:p-4 text-start transition hover:border-yellow-400/70 hover:bg-yellow-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400">
+            <span class="grid w-11 h-11 shrink-0 place-items-center rounded-xl bg-yellow-500/10 text-yellow-300" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-6 h-6"><circle cx="9" cy="8" r="4"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M19 8v6m-3-3h6"/></svg>
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-sm font-bold text-yellow-300">دعوة كوتش جديد</span>
+              <span class="block text-xs text-gray-400 mt-1">صلاحيات متابعة الطلاب والحصص</span>
+            </span>
+            <span class="text-gray-500 group-hover:text-yellow-300" aria-hidden="true">←</span>
+          </button>
+          <button type="button" onclick="createInvite('admin', this)" class="group w-full min-h-[76px] flex items-center gap-3 rounded-xl border border-red-500/30 bg-zinc-900/70 p-3 sm:p-4 text-start transition hover:border-red-400/70 hover:bg-red-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400">
+            <span class="grid w-11 h-11 shrink-0 place-items-center rounded-xl bg-red-500/10 text-red-300" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-6 h-6"><path d="M12 3 20 6v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6l8-3Z"/><path d="M9 12h6m-3-3v6"/></svg>
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-sm font-bold text-red-300">دعوة أدمن جديد</span>
+              <span class="block text-xs text-gray-400 mt-1">صلاحيات كاملة على المنصة</span>
+            </span>
+            <span class="text-gray-500 group-hover:text-red-300" aria-hidden="true">←</span>
+          </button>
+        </div>
+        <p class="text-xs text-gray-500 leading-relaxed">كل كود صالح لاستخدام واحد فقط. امنح كود الأدمن للأشخاص الموثوقين فقط.</p>
+      </section>`;
     }
-    async function createInvite(role) {
+    let inviteCreating = false;
+    async function createInvite(role, button) {
+      if (inviteCreating) return;
       if (!window.fbCreateInvite) return toast("الاتصال بالسيرفر لسه ما كملش");
       const isAdm = role === "admin";
       if (isAdm && !await window.ecaConfirm(trText("الأدمن بيشوف الحسابات والداشبورد المالي ويقدر يطلّع أكواد كوتش وأدمن. متأكد إنك عايز تعمل كود أدمن؟"))) return;
-      const c = await window.fbCreateInvite(isAdm ? "admin" : "coach");
-      if (!c) return toast("تعذّر إنشاء الكود");
-      try { await navigator.clipboard.writeText(c); } catch (_) {}
-      alert(trText(isAdm ? "كود دعوة الأدمن (يُستخدم مرة واحدة):" : "كود دعوة الكوتش (يُستخدم مرة واحدة):") + "\n\n" + c + "\n\n" + trText("اتنسخ تلقائياً. ابعته للشخص ده يدخل بـ «دخول الكوتش بجوجل» ويكتب الكود."));
+      inviteCreating = true;
+      if (button) { button.disabled = true; button.setAttribute("aria-busy", "true"); }
+      try {
+        const code = await window.fbCreateInvite(isAdm ? "admin" : "coach");
+        if (!code) return toast("تعذّر إنشاء الكود");
+        showInviteCode(code, isAdm);
+      } finally {
+        inviteCreating = false;
+        if (button) { button.disabled = false; button.removeAttribute("aria-busy"); }
+      }
+    }
+    function showInviteCode(code, isAdminInvite) {
+      const previousFocus = document.activeElement;
+      const previousOverflow = document.body.style.overflow;
+      const backdrop = document.createElement("div");
+      backdrop.className = "fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm";
+      const dialog = document.createElement("section");
+      dialog.className = "gold-card w-full max-w-md rounded-2xl p-4 sm:p-6 space-y-4 shadow-2xl";
+      dialog.setAttribute("role", "dialog");
+      dialog.setAttribute("aria-modal", "true");
+      dialog.setAttribute("aria-labelledby", "inviteDialogTitle");
+      dialog.setAttribute("aria-describedby", "inviteDialogDescription");
+      const title = document.createElement("h2");
+      title.id = "inviteDialogTitle";
+      title.className = "font-display text-lg font-bold text-yellow-300";
+      title.textContent = trText(isAdminInvite ? "تم إنشاء كود دعوة الأدمن" : "تم إنشاء كود دعوة الكوتش");
+      const description = document.createElement("p");
+      description.id = "inviteDialogDescription";
+      description.className = "text-sm text-gray-400 leading-relaxed";
+      description.textContent = trText("الكود صالح لاستخدام واحد فقط. أرسله للشخص المطلوب ليُكمل التسجيل.");
+      const codeInput = document.createElement("input");
+      codeInput.type = "text";
+      codeInput.readOnly = true;
+      codeInput.value = code;
+      codeInput.dir = "ltr";
+      codeInput.setAttribute("aria-label", trText("كود الدعوة"));
+      codeInput.className = "w-full min-h-[52px] rounded-xl border border-yellow-500/30 bg-zinc-900 px-3 text-center font-mono text-lg font-bold tracking-[0.18em] text-white";
+      const actions = document.createElement("div");
+      actions.className = "grid grid-cols-1 sm:grid-cols-2 gap-2";
+      const copyButton = document.createElement("button");
+      copyButton.type = "button";
+      copyButton.className = "min-h-[44px] rounded-xl gold-btn text-sm font-bold";
+      copyButton.textContent = trText("نسخ الكود");
+      const closeButton = document.createElement("button");
+      closeButton.type = "button";
+      closeButton.className = "min-h-[44px] rounded-xl border border-yellow-500/30 bg-zinc-900 px-4 text-sm font-bold text-gray-200";
+      closeButton.textContent = trText("إغلاق");
+      actions.append(copyButton, closeButton);
+      dialog.append(title, description, codeInput, actions);
+      backdrop.appendChild(dialog);
+      document.body.appendChild(backdrop);
+      document.body.style.overflow = "hidden";
+
+      const close = () => {
+        document.removeEventListener("keydown", onKeyDown);
+        document.body.style.overflow = previousOverflow;
+        backdrop.remove();
+        if (previousFocus && previousFocus.isConnected) previousFocus.focus();
+      };
+      const onKeyDown = event => { if (event.key === "Escape") close(); };
+      closeButton.addEventListener("click", close);
+      backdrop.addEventListener("click", event => { if (event.target === backdrop) close(); });
+      document.addEventListener("keydown", onKeyDown);
+      copyButton.addEventListener("click", async () => {
+        try {
+          if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error("Clipboard API unavailable");
+          await navigator.clipboard.writeText(code);
+          toast("تم نسخ الكود");
+          close();
+        } catch (error) {
+          codeInput.focus();
+          codeInput.select();
+          toast("تعذّر النسخ تلقائياً — الكود محدد، انسخه يدويًا");
+        }
+      });
+      copyButton.focus();
     }
     function openExamModal(lvl) {
       document.getElementById("examModal").classList.remove("hidden");
