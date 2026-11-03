@@ -20,13 +20,13 @@
       undoTimer = setTimeout(() => { const c = undoCommit; undoCommit = null; bar.remove(); if (c) c(); }, ms);
     }
 
-    // حذف طالب: بيختفي فوراً، والحذف الحقيقي بعد 8 ثواني لو ما ضغطتش «تراجع»
+    // بيختفي الطالب فوراً، ثم يبدأ احتساب مهلة الاستعادة بعد تأكيد الحذف.
     window.__pendingDel = window.__pendingDel || new Set();
-    deleteStudent = function () {
+    deleteStudent = async function () {
       if (!window.isFinanceAdminUnlocked) return toast("حذف الطالب للأدمن بس");
-      if (!isCoach() || !editStuId) return;
+      if (!editStuId) return;
       const s = db.users.find(u => u.id === editStuId); if (!s) return;
-      if (!confirm(trText("هل أنت متأكد من حذف الطالب نهائياً مع كل سجلات حضوره؟") + "\n" + s.name)) return;
+      if (!await window.ecaConfirm(trText("سيتم إخفاء الطالب ومنع دخوله، مع إمكانية استعادته خلال 30 يومًا.") + "\n" + s.name)) return;
       const id = editStuId, snap = s;
       window.__pendingDel.add(id);
       db.users = db.users.filter(u => u.id !== id);
@@ -36,10 +36,15 @@
         window.__pendingDel.delete(id);
         if (!db.users.some(u => u.id === id)) db.users.push(snap);
         render(); toast("رجّعنا الطالب");
-      }, () => {
+      }, async () => {
         window.__pendingDel.delete(id);
-        if (window.fbOnStudentDeleted) window.fbOnStudentDeleted(id);
-        for (const d in db.attendance) { delete db.attendance[d][id]; if (!Object.keys(db.attendance[d]).length) delete db.attendance[d]; }
+        const result = window.fbOnStudentDeleted ? await window.fbOnStudentDeleted(id, snap.name) : { ok: false };
+        if (!result.ok) {
+          if (!db.users.some(u => u.id === id)) db.users.push(snap);
+          render();
+          toast("تعذّر حذف الطالب؛ لم يتم تغيير بياناته.");
+          return;
+        }
         save(); render();
       }, 8000);
     };
@@ -72,9 +77,45 @@
     {
       const _at = adminToolsBox;
       adminToolsBox = function () {
-        return _at().replace(/<\/div>\s*$/, `<button onclick="openErrorsLog()" class="px-3 py-2 rounded-xl bg-zinc-900 border border-sky-500/40 text-sky-300">${LQ("سجل الأخطاء", "Error log")}</button></div>`);
+        return _at().replace(/<\/div>\s*$/, `<button onclick="openDeletedStudents()" class="px-3 py-2 rounded-xl bg-zinc-900 border border-amber-500/40 text-amber-300">${LQ("الطلاب المحذوفون", "Deleted students")}</button><button onclick="openErrorsLog()" class="px-3 py-2 rounded-xl bg-zinc-900 border border-sky-500/40 text-sky-300">${LQ("سجل الأخطاء", "Error log")}</button></div>`);
       };
     }
+    async function openDeletedStudents() {
+      if (!window.isFinanceAdminUnlocked) return toast("استعادة الطالب للأدمن فقط");
+      let modal = document.getElementById("deletedStudentsModal");
+      if (!modal) { modal = document.createElement("div"); modal.id = "deletedStudentsModal"; modal.className = "fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3"; document.body.appendChild(modal); }
+      modal.innerHTML = `<div class="gold-card rounded-2xl max-w-xl w-full p-5 max-h-[90vh] overflow-y-auto space-y-3"><p class="text-sm text-gray-300">${LQ("جاري تحميل الطلاب المحذوفين...", "Loading deleted students...")}</p></div>`;
+      const result = window.fbListDeletedStudents ? await window.fbListDeletedStudents() : { ok: false, rows: [] };
+      if (!result.ok) {
+        modal.innerHTML = `<div class="gold-card rounded-2xl max-w-xl w-full p-5"><p class="text-sm text-red-300">${LQ("تعذّر تحميل قائمة الطلاب المحذوفين.", "Could not load deleted students.")}</p><button onclick="document.getElementById('deletedStudentsModal').remove()" class="mt-3 tap px-4 py-2 rounded-xl gold-btn">${LQ("إغلاق", "Close")}</button></div>`;
+        return;
+      }
+      const rows = result.rows.sort((a, b) => b.deletedAt - a.deletedAt);
+      modal.innerHTML = `<div class="gold-card rounded-2xl max-w-xl w-full p-5 max-h-[90vh] overflow-y-auto space-y-3">
+        <div class="flex items-center justify-between gap-2"><h3 class="font-bold text-lg text-yellow-400">${LQ("الطلاب المحذوفون", "Deleted students")}</h3><button onclick="document.getElementById('deletedStudentsModal').remove()" aria-label="${LQ("إغلاق", "Close")}" class="tap px-3 py-2 rounded-xl bg-zinc-900 text-gray-300">✕</button></div>
+        <p class="text-xs text-gray-400">${LQ("يمكن استعادة الطالب خلال 30 يومًا من الحذف.", "Students can be restored within 30 days of deletion.")}</p>
+        ${rows.length ? rows.map(s => {
+          const remaining = s.expiresAt - Date.now();
+          const canRestore = remaining > 0 && s.expiresAt > 0;
+          return `<div class="rounded-xl border border-yellow-500/20 bg-black/30 p-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="min-w-0"><div class="font-bold text-sm text-white">${esc(s.name)}</div><div class="text-[11px] text-gray-400">${canRestore ? LQ(`متبقي ${Math.ceil(remaining / 86400000)} يوم`, `${Math.ceil(remaining / 86400000)} days left`) : LQ("انتهت مهلة الاستعادة", "Restore period expired")}</div></div>
+            ${canRestore ? `<button onclick="restoreDeletedStudent('${esc(s.id)}')" class="tap px-4 py-2 rounded-xl text-xs gold-btn">${LQ("استعادة", "Restore")}</button>` : ""}
+          </div>`;
+        }).join("") : `<p class="text-sm text-gray-400">${LQ("لا يوجد طلاب محذوفون.", "No deleted students.")}</p>`}
+      </div>`;
+    }
+    window.openDeletedStudents = openDeletedStudents;
+    window.restoreDeletedStudent = async function (id) {
+      if (!window.isFinanceAdminUnlocked) return toast("استعادة الطالب للأدمن فقط");
+      if (!await window.ecaConfirm(LQ("هل تريد استعادة حساب هذا الطالب؟", "Restore this student's account?"))) return;
+      const result = window.fbRestoreStudent ? await window.fbRestoreStudent(id) : { ok: false };
+      if (!result.ok) {
+        toast(result.code === "expired" ? LQ("انتهت مهلة الاستعادة المحددة بـ30 يومًا.", "The 30-day restore period has expired.") : LQ("تعذّرت استعادة الطالب.", "Could not restore the student."));
+        return;
+      }
+      toast(LQ("تمت استعادة الطالب.", "Student restored."));
+      await openDeletedStudents();
+    };
     let errList = [];
     async function openErrorsLog() {
       let m = document.getElementById("errModal");
@@ -101,7 +142,7 @@
       </div>`;
     }
     async function clearErrorsLog() {
-      if (!confirm(trText("مسح كل الأخطاء المتسجّلة؟"))) return;
+      if (!await window.ecaConfirm(trText("مسح كل الأخطاء المتسجّلة؟"))) return;
       if (window.fbClearErrors && await window.fbClearErrors(errList.map(e => e.id))) { toast("اتمسحت"); openErrorsLog(); }
     }
 

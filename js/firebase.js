@@ -37,12 +37,22 @@
       const local = idf.replace(/\s+/g, "_").replace(/[^a-z0-9._-]/g, c => "_x" + c.charCodeAt(0).toString(16) + "_");
       return (local || "user") + MAIL_SUFFIX;
     }
+    function normalizeStudentPhone(value) {
+      const raw = String(value || "").trim();
+      if (!/^[0-9\u0660-\u0669+() -]+$/.test(raw)) return "";
+      let digits = raw.replace(/[\u0660-\u0669]/g, c => String(c.charCodeAt(0) - 0x660)).replace(/\D/g, "");
+      if (digits.startsWith("0020")) digits = "0" + digits.slice(4);
+      else if (digits.startsWith("20") && digits.length === 12) digits = "0" + digits.slice(2);
+      return /^\d{8,15}$/.test(digits) ? digits : "";
+    }
     const isStaffRole = r => r === "coach" || r === "admin";
 
     // ===================== الحالة =====================
     let me = null;                       // { uid, role: coach|admin|student|parent, name, username, email }
     let unsubs = [];
     let maps = { core: {}, priv: {}, fin: {}, att: {} };
+    let deletedStudentIds = new Set();
+    window.__deletedStudentIds = deletedStudentIds;
     let synced = {};                     // مفتاح -> آخر JSON اتكتب/اتقرا (عشان نكتب اللي اتغير بس)
     let loaded = { core: false, att: false, groups: false };
     let applyingRemote = false, signingUp = false;
@@ -53,6 +63,8 @@
       clearInterval(dailyNotificationTimer); dailyNotificationTimer = null; dailyNotificationAttemptDate = "";
       window.ecaNotifications = [];
       maps = { core: {}, priv: {}, fin: {}, att: {} }; synced = {};
+      deletedStudentIds = new Set();
+      window.__deletedStudentIds = deletedStudentIds;
       loaded = { core: false, att: false, groups: false };
     }
 
@@ -77,7 +89,7 @@
         if (me && isStaffRole(me.role)) users.push({ id: me.uid, name: me.name, username: me.username, email: me.email, role: "coach", isAdmin: me.role === "admin" });
         const pend = window.__pendingDel || new Set();       // طلبة اتحذفوا ولسه في مهلة «تراجع»
         Object.keys(maps.core).forEach(id => {
-          if (pend.has(id)) return;
+          if (pend.has(id) || deletedStudentIds.has(id)) return;
           const u = Object.assign({}, maps.core[id], { id, role: "student" }, maps.priv[id] || {}, maps.fin[id] || {});
           users.push(u);
           const p = split(u);
@@ -105,7 +117,7 @@
         } });
       };
       try {
-        const present = new Set(window.__pendingDel || []);   // مهلة التراجع: مانمسحش لسه
+        const present = new Set([...(window.__pendingDel || []), ...deletedStudentIds]);   // المحذوفون منطقيًا يفضلوا محفوظين
         for (const u of db.users) {
           if (u.role !== "student") continue;
           if (!staff && u.id !== me.uid) continue;
@@ -389,6 +401,11 @@
       if (kind === "core") { loaded.core = true; window.__authLoading = false; }
       rebuild();
     }
+    function applyDeletedStudents(snap) {
+      deletedStudentIds = new Set(snap.docs.map(d => d.id));
+      window.__deletedStudentIds = deletedStudentIds;
+      rebuild();
+    }
     function applyAtt(snap) {
       const att = {};
       snap.forEach(d => { const r = (d.data() || {}).r; if (r && typeof r === "object" && Object.keys(r).length) att[d.id] = cleanDeep(r); });
@@ -410,10 +427,17 @@
       if (!me) return;
       if (isStaffRole(me.role)) {
         unsubs.push(onSnapshot(collection(firestore, "users"), s => applyColl("core", s), onErr("users")));
+        unsubs.push(onSnapshot(collection(firestore, "deleted"), applyDeletedStudents, onErr("deleted students")));
         unsubs.push(onSnapshot(collection(firestore, "private"), s => applyColl("priv", s), onErr("private")));
         if (me.role === "admin") unsubs.push(onSnapshot(collection(firestore, "finance"), s => applyColl("fin", s), onErr("finance")));
         unsubs.push(onSnapshot(collection(firestore, "attendance"), applyAtt, onErr("attendance")));
       } else if (me.role === "student") {
+        unsubs.push(onSnapshot(doc(firestore, "deleted", me.uid), snap => {
+          if (snap.exists()) {
+            toast("هذا الحساب محذوف ولا يمكن الدخول إليه.");
+            signOut(auth);
+          }
+        }, onErr("deleted account")));
         unsubs.push(onSnapshot(doc(firestore, "users", me.uid), snap => {
           if (snap.exists()) {
             maps.core = {}; maps.core[me.uid] = cleanDeep(snap.data());
@@ -480,6 +504,23 @@
       console.info("[ECA] uid:", user.uid, "| staff doc:", staffData);
       if (staffErr) toast("Firebase منع قراءة بيانات الأدمن (" + ((staffErr && staffErr.code) || "error") + ") — راجع قواعد Firestore لـ staff");
       if (staffData) staffData.role = String(staffData.role || "").trim().toLowerCase();   // يقبل "Admin" أو " admin"
+      if (!staffData) {
+        try {
+          const deleted = await getDoc(doc(firestore, "deleted", user.uid));
+          if (deleted.exists()) {
+            window.__authLoading = false;
+            toast("هذا الحساب محذوف ولا يمكن الدخول إليه.");
+            await signOut(auth);
+            return;
+          }
+        } catch (e) {
+          console.error("Deleted-account check failed:", e);
+          window.__authLoading = false;
+          toast("تعذّر التحقق من حالة الحساب. حاول مرة أخرى.");
+          await signOut(auth);
+          return;
+        }
+      }
       if (!staffData && isGoogleUser(user)) {
         // أول دخول بجوجل: لو مفيش بيانات طالب، نطلب منه يختار (طالب / كوتش) مرة واحدة بس
         let hasProfile = false;
@@ -570,8 +611,8 @@
           </div>
           <input id="gName" required value="${esc(gName)}" placeholder="الاسم بالكامل" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white" />
           ${r === "student" ? `
-            <input id="gPhone" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="رقم الطالب (اختياري)" />
-            <input id="gParent" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="رقم ولي الأمر (اختياري)" />
+            <input id="gPhone" required pattern="[0-9٠-٩+() -]{8,20}" title="أدخل رقم هاتف صحيح" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="رقم الطالب (مطلوب)" />
+            <input id="gParent" required pattern="[0-9٠-٩+() -]{8,20}" title="أدخل رقم هاتف صحيح" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="رقم ولي الأمر (مطلوب)" />
             <p class="text-[12px] text-gray-400 leading-relaxed">لو عملت اختبار تحديد المستوى، اكتب رقمك ورقم ولي الأمر زي ما سجّلتهم في الاختبار، وهتبدأ من المستوى اللي اتعتمد. غير كده بتبدأ من Step 1.</p>` : `
             <input id="gCode" required autocomplete="off" autocapitalize="characters" placeholder="كود الأدمن أو كود دعوة الكوتش" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-sm text-white text-center tracking-widest uppercase" />
             <p class="text-[11px] text-gray-400">أول مرة: اكتب كود الأدمن الثابت. بعد كده الأدمن بيطلّع أكواد للكوتشات من زر «كود دعوة كوتش جديد».</p>`}
@@ -596,16 +637,19 @@
       const username = base + "_" + user.uid.slice(0, 4).toLowerCase();   // مميز لكل حساب
       signingUp = true; let madeAdmin = false;
       try {
-        if (!name) throw { code: "no-name" };
+        if (name.length < 2 || name.length > 80) throw { code: "no-name" };
         if (googleRole === "coach") {
           const code = document.getElementById("gCode").value.trim().toUpperCase();
           if (!/^[A-Z0-9]{8,16}$/.test(code)) throw { code: "bad-invite" };
           madeAdmin = (await claimStaff(user.uid, name, base, code)) === "admin";
         } else {
+          const phone = normalizeStudentPhone((document.getElementById("gPhone") || {}).value);
+          const parentPhone = normalizeStudentPhone((document.getElementById("gParent") || {}).value);
+          if (!phone || !parentPhone || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw { code: "invalid-profile" };
           let group = "";
           try { const g = await getDoc(doc(firestore, "meta", "groups")); if (g.exists() && Array.isArray(g.data().list)) group = String(g.data().list[0] || ""); } catch (_) {}
-          const pl = await plLookup((document.getElementById("gPhone") || {}).value, (document.getElementById("gParent") || {}).value);
-          const prof = { name, username, email, role: "student", level: pl ? pl.level : 1, group, mode: "offline", att: {}, hw: {}, puz: { t: 0, c: 0 } };
+          const pl = await plLookup(phone, parentPhone);
+          const prof = { name, username, email, phone, parentPhone, role: "student", level: pl ? pl.level : 1, group, mode: "offline", att: {}, hw: {}, puz: { t: 0, c: 0 } };
           if (pl) prof.plk = pl.key;
           await setDoc(doc(firestore, "users", user.uid), prof);
           if (pl) setTimeout(() => toast("تم تطبيق مستواك من اختبار تحديد المستوى: Step " + pl.level), 400);
@@ -617,7 +661,7 @@
       } catch (e) {
         if (btn) btn.disabled = false;
         const c = e && e.code;
-        toast(c === "no-name" ? "اكتب الاسم" : (c === "bad-invite" || c === "permission-denied" || c === "not-found") ? "كود الدعوة غير صحيح أو مستخدم قبل كده" : "تعذّر إنشاء الحساب");
+        toast(c === "no-name" ? "اكتب الاسم بالكامل بشكل صحيح" : c === "invalid-profile" ? "اكتب بريدًا إلكترونيًا ورقم الطالب ورقم ولي الأمر بشكل صحيح" : (c === "bad-invite" || c === "permission-denied" || c === "not-found") ? "كود الدعوة غير صحيح أو مستخدم قبل كده" : "تعذّر إنشاء الحساب");
         console.error(e);
       } finally { signingUp = false; }
     };
@@ -694,13 +738,22 @@
     };
 
     window.fbSignup = async ({ name, username, email, pass, level, phone, parent }) => {
+      name = String(name || "").trim().replace(BAD, "");
+      username = String(username || "").trim().toLowerCase();
+      email = String(email || "").trim().toLowerCase();
+      phone = normalizeStudentPhone(phone);
+      parent = normalizeStudentPhone(parent);
+      if (name.length < 2 || name.length > 80 || !/^[a-z0-9_]{3,30}$/.test(username)
+        || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || String(pass || "").length < 8 || !phone || !parent) {
+        return { ok: false, code: "invalid-profile" };
+      }
       signingUp = true;
       try {
         const cred = await createUserWithEmailAndPassword(auth, toAuthEmail(username), pass);
         let group = "";
         try { const g = await getDoc(doc(firestore, "meta", "groups")); if (g.exists() && Array.isArray(g.data().list)) group = String(g.data().list[0] || ""); } catch (_) {}
         const pl = await plLookup(phone, parent);
-        const profile = { name, username, email: email || "", role: "student", level: pl ? pl.level : 1, group, mode: "offline", att: {}, hw: {}, puz: { t: 0, c: 0 } };
+        const profile = { name, username, email, phone, parentPhone: parent, role: "student", level: pl ? pl.level : 1, group, mode: "offline", att: {}, hw: {}, puz: { t: 0, c: 0 } };
         if (pl) profile.plk = pl.key;
         await setDoc(doc(firestore, "users", cred.user.uid), profile);
         await initUser(cred.user);
@@ -820,12 +873,70 @@
       for (const d of q.docs) await deleteDoc(d.ref);
     };
 
-    window.fbOnStudentDeleted = async (id) => {
-      try { await setDoc(doc(firestore, "deleted", id), { at: Date.now() }); } catch (e) { console.error(e); }
+    window.fbOnStudentDeleted = async (id, name) => {
+      if (!me || me.role !== "admin" || !/^[A-Za-z0-9_-]{1,128}$/.test(String(id || ""))) return { ok: false };
+      if (deletedStudentIds.has(id)) return { ok: false, code: "already-deleted" };
+      deletedStudentIds.add(id);
+      window.__deletedStudentIds = deletedStudentIds;
+      rebuild();
       try {
-        const q = await getDocs(query(collection(firestore, "parentLinks"), where("sid", "==", id)));
-        for (const d of q.docs) await deleteDoc(d.ref);
-      } catch (e) { console.error(e); }
+        const profile = await getDoc(doc(firestore, "users", id));
+        if (!profile.exists()) {
+          deletedStudentIds.delete(id);
+          rebuild();
+          return { ok: false, code: "missing" };
+        }
+        const deletedAt = Date.now();
+        await setDoc(doc(firestore, "deleted", id), {
+          deletedAt: serverTimestamp(),
+          expiresAt: new Date(deletedAt + 30 * 86400000),
+          name: String(name || profile.data().name || "طالب").slice(0, 80),
+          by: me.uid
+        });
+        rebuild();
+        return { ok: true };
+      } catch (e) {
+        deletedStudentIds.delete(id);
+        window.__deletedStudentIds = deletedStudentIds;
+        rebuild();
+        console.error("Student deletion failed:", e);
+        return { ok: false, code: e && e.code };
+      }
+    };
+    window.fbListDeletedStudents = async () => {
+      if (!me || me.role !== "admin") return { ok: false, rows: [] };
+      try {
+        const snap = await getDocs(collection(firestore, "deleted"));
+        return { ok: true, rows: snap.docs.map(d => {
+          const data = d.data() || {};
+          const millis = v => v && typeof v.toMillis === "function" ? v.toMillis() : (Number(v) || 0);
+          return { id: d.id, name: String(data.name || "طالب"), deletedAt: millis(data.deletedAt || data.at), expiresAt: millis(data.expiresAt) };
+        }) };
+      } catch (e) {
+        console.error("Deleted students list failed:", e);
+        return { ok: false, rows: [] };
+      }
+    };
+    window.fbRestoreStudent = async (id) => {
+      if (!me || me.role !== "admin" || !/^[A-Za-z0-9_-]{1,128}$/.test(String(id || ""))) return { ok: false };
+      try {
+        const ref = doc(firestore, "deleted", id);
+        const archived = await getDoc(ref);
+        if (!archived.exists()) return { ok: false, code: "not-found" };
+        const data = archived.data() || {};
+        const expiresAt = data.expiresAt && typeof data.expiresAt.toMillis === "function" ? data.expiresAt.toMillis() : 0;
+        if (!expiresAt || Date.now() > expiresAt) return { ok: false, code: "expired" };
+        const profile = await getDoc(doc(firestore, "users", archived.id));
+        if (!profile.exists()) return { ok: false, code: "missing" };
+        await deleteDoc(ref);
+        deletedStudentIds.delete(archived.id);
+        window.__deletedStudentIds = deletedStudentIds;
+        rebuild();
+        return { ok: true };
+      } catch (e) {
+        console.error("Student restore failed:", e);
+        return { ok: false, code: e && e.code };
+      }
     };
 
     window.fbChangePassword = async (oldP, newP) => {

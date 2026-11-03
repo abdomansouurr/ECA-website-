@@ -22,10 +22,14 @@ service cloud.firestore {
     }
 
     function validNewStudent(d) {
-      return d.keys().hasOnly(['name','username','email','role','level','group','mode','att','hw','puz','plk'])
+      return d.keys().hasOnly(['name','username','email','phone','parentPhone','role','level','group','mode','att','hw','puz','plk'])
         && d.role == 'student'
-        && safeText(d.name, 80) && safeText(d.username, 40)
-        && safeText(d.get('email', ''), 120) && safeText(d.get('group', ''), 80)
+        && safeText(d.name, 80) && d.name.size() >= 2
+        && d.username is string && d.username.matches('[a-z0-9_]{3,30}')
+        && d.email is string && d.email.matches('[^@ ]+@[^@ ]+\\.[^@ ]+') && safeText(d.email, 120)
+        && d.phone is string && d.phone.matches('[0-9]{8,15}')
+        && d.parentPhone is string && d.parentPhone.matches('[0-9]{8,15}')
+        && safeText(d.get('group', ''), 80)
         && plOk(d)
         // الحضور والواجبات والعدّادات بتبدأ فاضية/صفر (الكوتش بس هو اللي يسجّلها، والعدّادات بتزيد بمحاولات مسجّلة)
         && d.get('att', {}) == {} && d.get('hw', {}) == {}
@@ -34,7 +38,7 @@ service cloud.firestore {
     // الطالب ممنوع يعدّل الحقول دي في ملفه (الكوتش بس)
     function studentUpdateOk() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-          'role','username','group','mode','plk','coachName','stuCode','parentPhone','parentCode','note',
+          'role','username','group','mode','plk','coachName','stuCode','phone','parentPhone','parentCode','note',
           'courseFee','amountPaid','remaining','lastPayDate','lastPayAmount','att','hw'])
         && safeText(request.resource.data.name, 80)
         && safeText(request.resource.data.get('email', ''), 120)
@@ -207,19 +211,24 @@ service cloud.firestore {
 
     // ---------- ملف الطالب ----------
     match /users/{uid} {
-      allow read:   if isStaff() || (notAnon() && request.auth.uid == uid) || hasParentLink(uid);
+      allow read:   if isStaff()
+                    || (notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid)))
+                    || (hasParentLink(uid) && !exists(/databases/$(database)/documents/deleted/$(uid)));
       allow create: if isStaff()
                     || (notAnon() && request.auth.uid == uid
                         && !exists(/databases/$(database)/documents/deleted/$(uid))
                         && validNewStudent(request.resource.data));
-      allow update: if isStaff() || (notAnon() && request.auth.uid == uid && studentUpdateOk());
+      allow update: if isStaff() || (notAnon() && request.auth.uid == uid
+                        && !exists(/databases/$(database)/documents/deleted/$(uid)) && studentUpdateOk());
       allow delete: if isAdmin()   // حذف الطالب للأدمن بس
                     || (isStaff() && request.auth.uid == uid);   // والكوتش يمسح ملف الطالب بتاعه هو لما يتحوّل لحساب كوتش
 
       match /notifications/{nid} {
-        allow get, list: if notAnon() && request.auth.uid == uid;
+        allow get, list: if notAnon() && request.auth.uid == uid
+          && !exists(/databases/$(database)/documents/deleted/$(uid));
         allow create: if (isStaff()
             && exists(/databases/$(database)/documents/users/$(uid))
+            && !exists(/databases/$(database)/documents/deleted/$(uid))
             && nid.matches('[A-Za-z0-9_-]{1,120}')
             && request.resource.data.keys().hasOnly(['type','titleAr','titleEn','bodyAr','bodyEn','createdAt','read'])
             && request.resource.data.type in ['homework','announcement']
@@ -230,6 +239,7 @@ service cloud.firestore {
             && request.resource.data.createdAt == request.time
             && request.resource.data.read == false)
           || (notAnon() && request.auth.uid == uid
+            && !exists(/databases/$(database)/documents/deleted/$(uid))
             && nid.matches('daily-puzzle-[0-9]{4}-[0-9]{2}-[0-9]{2}')
             && request.resource.data.keys().hasOnly(['type','day','titleAr','titleEn','bodyAr','bodyEn','createdAt','read'])
             && request.resource.data.type == 'daily_puzzle'
@@ -243,6 +253,7 @@ service cloud.firestore {
             && request.resource.data.createdAt == request.time
             && request.resource.data.read == false);
         allow update: if notAnon() && request.auth.uid == uid
+          && !exists(/databases/$(database)/documents/deleted/$(uid))
           && resource.data.read == false
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read','readAt'])
           && request.resource.data.read == true
@@ -336,10 +347,23 @@ service cloud.firestore {
       allow delete: if isStaff();
     }
 
-    // ---------- الطلاب المحذوفين (عشان ما يرجعوش ينشئوا ملف) ----------
+    // ---------- حذف منطقي للطلاب مع مهلة استعادة 30 يومًا ----------
     match /deleted/{uid} {
-      allow read: if isStaff();
-      allow write: if isAdmin();
+      allow get: if isAdmin() || (notAnon() && request.auth.uid == uid);
+      allow list: if isStaff();
+      allow create: if isAdmin()
+        && exists(/databases/$(database)/documents/users/$(uid))
+        && request.resource.data.keys().hasOnly(['deletedAt','expiresAt','name','by'])
+        && request.resource.data.keys().hasAll(['deletedAt','expiresAt','name','by'])
+        && request.resource.data.deletedAt == request.time
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.time
+        && request.resource.data.expiresAt <= request.time + duration.value(30, 'd')
+        && safeText(request.resource.data.name, 80)
+        && request.resource.data.by == request.auth.uid;
+      allow update: if false;
+      allow delete: if isAdmin() && resource.data.expiresAt is timestamp
+        && request.time <= resource.data.expiresAt;
     }
 
     // ---------- المستوى المعتمد من اختبار تحديد المستوى ----------

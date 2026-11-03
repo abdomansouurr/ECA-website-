@@ -48,7 +48,7 @@
         u.lichess = j.username || name; progReset(u.id); save(); render(); toast("اتربط حساب Lichess");
       } catch (_) { toast("تعذّر الوصول لـ Lichess — جرّب تاني"); }
     }
-    function liUnlink() { const u = currUser(); if (!u || u.role !== "student") return; if (!confirm(trText("فك ربط حساب Lichess؟"))) return; delete u.lichess; u.lichess = ""; progReset(u.id); save(); render(); }
+    async function liUnlink() { const u = currUser(); if (!u || u.role !== "student") return; if (!await window.ecaConfirm(trText("فك ربط حساب Lichess؟"))) return; delete u.lichess; u.lichess = ""; progReset(u.id); save(); render(); }
 
     function liCardHTML(u, editable) {
       const P = u.lichess ? progLoad(u) : null;

@@ -782,10 +782,10 @@
       }, 900);
     }
 
-    function examQuit() {
+    async function examQuit() {
       if (!EX) return;
       if (EX.phase !== "play") return examClose();
-      if (!confirm(trText("لو خرجت دلوقتي الألغاز اللي فاضلة هتتحسب غلط. متأكد؟"))) return;
+      if (!await window.ecaConfirm(trText("لو خرجت دلوقتي الألغاز اللي فاضلة هتتحسب غلط. متأكد؟"))) return;
       clearInterval(EX.timer);
       while (EX.results.length < EX.list.length) EX.results.push(false);
       examFinish();
@@ -886,7 +886,19 @@
     const HONOR_TOP = 10;
     function computeHonor() {
       const studs = db.users.filter(s => s.role === "student");
-      const row = (s, v, streak) => ({ id: s.id, n: String(s.name || ""), s: Number(s.level) || 1, v, st: streak || 0 });
+      const row = (s, v, streak) => {
+        const a = s.arena || {}, games = a.games || {}, days = streaks(a.days), rank = rankOf(calcXP(s).total);
+        return {
+          id: s.id, n: String(s.name || ""), s: Number(s.level) || 1, v, st: streak || 0,
+          rank: rank.cur ? rank.cur.label : "لسه بدون رتبة",
+          arena: {
+            puzzles: Number(a.puzSolved) || 0, puzzleStreak: Number(a.puzBestStreak) || 0,
+            wins: Number(games.w) || 0, draws: Number(games.d) || 0, losses: Number(games.l) || 0,
+            pawnWins: Number(a.pawnWins) || 0, visionBest: Number(a.visionBest) || 0,
+            bestDays: days.best, currentDays: days.current
+          }
+        };
+      };
       const top = (arr) => arr.filter(r => r.v > 0).sort((a, b) => b.v - a.v || b.st - a.st).slice(0, HONOR_TOP);
       return {
         puzzles: top(studs.map(s => { const a = s.arena || {}; return row(s, (a.puzSolved || 0) + ((s.puz && s.puz.c) || 0), a.puzBestStreak); })),
@@ -906,6 +918,46 @@
     }
     { const _r = render; render = function () { _r(); maybePublishHonor(); }; }
 
+    function openHonorProfile(id) {
+      if (typeof id !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(id)) return;
+      window.ecaHonorProfileId = id;
+      switchTab("honorProfile");
+    }
+    window.openHonorProfile = openHonorProfile;
+
+    function renderHonorProfileView(u) {
+      const H = u.role === "coach" ? computeHonor() : (window.honorData || null);
+      const id = window.ecaHonorProfileId || "";
+      const student = H && ["puzzles", "games", "days"].flatMap(k => H[k] || []).find(r => r.id === id);
+      if (!student) return `<div class="space-y-4"><button onclick="switchTab('honor')" class="tap px-4 py-2 rounded-xl gold-btn">${trText("العودة إلى قائمة الشرف")}</button><div class="gold-card rounded-2xl p-6 text-center text-sm text-gray-400">${trText("إنجازات الطالب غير متاحة من لوحة الشرف.")}</div></div>`;
+      const stats = student.arena || {};
+      const rankLabel = String(student.rank || "لسه بدون رتبة").replace(/^(البيدق|الفيل|الحصان|الطابية|الوزير|الملك)/, piece => trText(piece));
+      const stat = (title, value, icon) => `<div class="gold-card rounded-2xl p-5 text-center space-y-2"><div class="text-xs text-gray-400">${title}</div><div class="text-2xl font-extrabold text-emerald-300">${esc(value)}</div>${icon ? `<div class="text-[11px] text-gray-500">${icon}</div>` : ""}</div>`;
+      return `
+        <div class="space-y-5">
+          <button onclick="switchTab('honor')" class="tap min-h-[44px] px-4 rounded-xl gold-btn">${trText("العودة إلى قائمة الشرف")}</button>
+          <div class="gold-card rounded-2xl p-6 text-center space-y-2 border-2 border-yellow-500/40">
+            ${ICON("trophy", "w-10 h-10 mx-auto text-yellow-300")}
+            <h2 class="font-display font-extrabold text-2xl gold-gradient-text">${esc(student.n)}</h2>
+            <p class="text-xs text-gray-400">${trText("إنجازات ساحة التدريب فقط")}</p>
+            <div class="inline-flex items-center gap-2 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-2">
+              <span class="text-xs text-gray-400">${trText("الرتبة الحالية")}</span>
+              <span class="font-bold text-yellow-300">${esc(trText(rankLabel))}</span>
+            </div>
+          </div>
+          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            ${stat(trText("ألغاز ساحة التدريب المحلولة"), stats.puzzles || 0)}
+            ${stat(trText("أفضل سلسلة ألغاز صحيحة"), stats.puzzleStreak || 0)}
+            ${stat(trText("انتصارات ضد الكمبيوتر"), stats.wins || 0)}
+            ${stat(trText("تعادلات ضد الكمبيوتر"), stats.draws || 0)}
+            ${stat(trText("انتصارات لعبة البيادق"), stats.pawnWins || 0)}
+            ${stat(trText("أفضل نتيجة في تدريب الرؤية"), stats.visionBest || 0)}
+            ${stat(trText("أطول سلسلة أيام تدريب"), stats.bestDays || 0)}
+            ${stat(trText("سلسلة أيام التدريب الحالية"), stats.currentDays || 0)}
+          </div>
+        </div>`;
+    }
+
     function renderHonorView(u) {
       const coach = u.role === "coach";
       const H = coach ? computeHonor() : (window.honorData || null);
@@ -917,7 +969,7 @@
             <thead><tr class="text-yellow-300 border-b border-yellow-500/25 text-xs"><th class="py-2 w-10">#</th><th class="py-2 text-start">اسم الطالب</th><th class="py-2">Step</th><th class="py-2">${valLabel}</th><th class="py-2">${stLabel}</th></tr></thead>
             <tbody>${list.map((r, i) => `<tr class="border-b border-yellow-500/10 ${r.id === u.id ? 'bg-yellow-500/15' : i < 3 ? 'bg-black/40' : ''}">
               <td class="py-2.5 text-center text-lg">${medal(i)}</td>
-              <td class="py-2.5 font-bold ${i === 0 ? 'text-yellow-300' : ''}">${esc(r.n)}${r.id === u.id ? ' <span class="text-[10px] text-yellow-300">(انت)</span>' : ''}</td>
+              <td class="py-2.5 font-bold ${i === 0 ? 'text-yellow-300' : ''}"><button type="button" data-honor-id="${esc(r.id)}" onclick="openHonorProfile(this.dataset.honorId)" class="min-h-[44px] text-start hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-yellow-400">${esc(r.n)}${r.id === u.id ? ' <span class="text-[10px] text-yellow-300">(انت)</span>' : ''}</button></td>
               <td class="py-2.5 text-center text-gray-300">${esc(r.s)}</td>
               <td class="py-2.5 text-center font-extrabold text-emerald-300">${esc(r.v)}</td>
               <td class="py-2.5 text-center font-bold text-amber-300">${esc(r.st)}</td>
@@ -1215,6 +1267,13 @@
       ["أكتر الطلبة حلّاً للألغاز", "Most puzzles solved"], ["ألغاز اتحلّت", "Puzzles solved"], ["أعلى ستريك ألغاز", "Best puzzle streak"], ["لسه محدش حل ألغاز — ادخل ساحة التدريب وابدأ!", "No puzzles solved yet — open the Training Arena and start!"],
       ["أكتر الطلبة كسباً للأدوار", "Most games won"], ["أدوار كسبها", "Games won"], ["أعلى ستريك انتصارات", "Best win streak"], ["لسه محدش كسب دور — العب ضد الكمبيوتر أو لعبة البيادق!", "No games won yet — play the computer or the pawns game!"],
       ["أطول ستريك تمرين", "Longest training streak"], ["أطول سلسلة (يوم)", "Longest streak (days)"], ["السلسلة الحالية", "Current streak"], ["لسه مفيش أيام تمرين متسجلة.", "No training days recorded yet."],
+      ["العودة إلى قائمة الشرف", "Back to honor roll"], ["إنجازات الطالب غير متاحة من لوحة الشرف.", "This student's achievements aren't available from the honor roll."],
+      ["إنجازات ساحة التدريب فقط", "Training Arena achievements only"], ["الرتبة الحالية", "Current rank"],
+      ["ألغاز ساحة التدريب المحلولة", "Training Arena puzzles solved"], ["أفضل سلسلة ألغاز صحيحة", "Best correct puzzle streak"],
+      ["انتصارات ضد الكمبيوتر", "Wins against the computer"], ["تعادلات ضد الكمبيوتر", "Draws against the computer"],
+      ["انتصارات لعبة البيادق", "Pawn game wins"], ["أفضل نتيجة في تدريب الرؤية", "Best vision training score"],
+      ["أطول سلسلة أيام تدريب", "Longest training streak"], ["سلسلة أيام التدريب الحالية", "Current training streak"],
+      ["لسه بدون رتبة", "Unranked"],
       ["آخر تحديث:", "Last updated:"], ["(انت)", "(you)"],
       ["الألغاز = ألغاز ساحة التدريب + اللغز اليومي • الأدوار = ضد الكمبيوتر + لعبة البيادق • بيظهر أول", "Puzzles = Training Arena + daily puzzle • Games = vs computer + pawns game • Showing the top"], ["في كل قائمة.", "in each list."],
       ["شهاداتي", "My certificates"], ["كل شهاداتك محفوظة هنا — تقدر تفتحها وتحمّلها بالعربي أو الإنجليزي في أي وقت.", "All your certificates are saved here — open and download them in Arabic or English any time."],

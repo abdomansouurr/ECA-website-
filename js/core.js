@@ -134,7 +134,7 @@
     };
 
     const ALLOW_SELF_SIGNUP = true; // false = اقفل التسجيل الذاتي (الكوتش بس يضيف الطلاب)
-    let lang = localStorage.getItem("ECA_LANG") || "ar";
+    let lang = localStorage.getItem("ECA_LANG") === "en" ? "en" : "ar";
     // ===== أعلام الدول لأزرار اللغة (SVG مصغّرة مدمجة — بتشتغل أوفلاين ومن غير طلبات صور) =====
     const FLAG_EG = `<svg viewBox="0 0 18 12" aria-hidden="true" style="width:19px;height:13px;flex:none;border-radius:2.5px;box-shadow:0 0 0 1px rgba(128,128,128,.4)"><rect width="18" height="4" fill="#CE1126"/><rect y="4" width="18" height="4" fill="#F5F5F5"/><rect y="8" width="18" height="4" fill="#0A0A0A"/><path fill="#C09300" d="M9 4.5c-.65 0-1.1.42-1.1 1.04 0 .33.13.6.34.78l-.8.36v.34h3.12v-.34l-.8-.36c.21-.18.34-.45.34-.78C10.1 4.92 9.65 4.5 9 4.5z"/></svg>`;
     const FLAG_US = (() => { let d = ""; for (let r = 0; r < 4; r++) for (let c = 0; c < 5; c++) { if ((r + c) % 2) continue; d += `<circle cx="${(1.15 + c * 1.24).toFixed(2)}" cy="${(1.15 + r * 1.32).toFixed(2)}" r=".36"/>`; } return `<svg viewBox="0 0 18 12" aria-hidden="true" style="width:19px;height:13px;flex:none;border-radius:2.5px;box-shadow:0 0 0 1px rgba(128,128,128,.4)"><rect width="18" height="12" fill="#B22234"/><g fill="#fff"><rect y=".92" width="18" height=".92"/><rect y="2.77" width="18" height=".92"/><rect y="4.62" width="18" height=".92"/><rect y="6.46" width="18" height=".92"/><rect y="8.31" width="18" height=".92"/><rect y="10.15" width="18" height=".92"/></g><rect width="7.2" height="6.46" fill="#3C3B6E"/><g fill="#fff">${d}</g></svg>`; })();
@@ -230,6 +230,84 @@
     }
     function currUser() { return db.users.find(u => u.id === db.currId) || null; }
     function toast(m) { const el = document.getElementById("toast"); el.textContent = trText(m); el.classList.remove("hidden"); setTimeout(() => el.classList.add("hidden"), 2800); }
+    let ecaConfirmQueue = Promise.resolve();
+    window.ecaConfirm = message => {
+      const show = () => new Promise(resolve => {
+        let style = document.getElementById("ecaConfirmStyle");
+        if (!style) {
+          style = document.createElement("style");
+          style.id = "ecaConfirmStyle";
+          style.textContent = `.eca-confirm-backdrop{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.72);backdrop-filter:blur(5px)}.eca-confirm-panel{width:100%;max-width:440px;background:rgba(14,14,21,.98);color:#f3f4f6;border:1px solid rgba(212,175,55,.42);box-shadow:0 20px 70px rgba(0,0,0,.6)}.eca-confirm-title{color:#f3d266}.eca-confirm-message{color:#d1d5db;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}.eca-confirm-cancel{min-height:44px;padding:0 18px;border-radius:12px;background:#18181b;color:#e5e7eb;border:1px solid rgba(212,175,55,.3);font-weight:700}.eca-confirm-cancel:hover{background:#27272a}.eca-confirm-accept{min-height:44px;padding:0 18px;border-radius:12px}.eca-confirm-icon{width:40px;height:40px;display:grid;place-items:center;border-radius:14px;background:rgba(212,175,55,.12);color:#f3d266;font-size:21px}html.light .eca-confirm-panel{background:rgba(255,253,247,.99);color:#1f2937;border-color:rgba(122,90,7,.28);box-shadow:0 20px 70px rgba(0,0,0,.24)}html.light .eca-confirm-title{color:#7a5a07}html.light .eca-confirm-message{color:#4b5563}html.light .eca-confirm-cancel{background:#fff;color:#374151;border-color:rgba(122,90,7,.28)}html.light .eca-confirm-cancel:hover{background:#f6f3ea}html.eca .eca-confirm-panel{background:rgba(248,250,255,.99);color:#0b1220;border-color:rgba(10,69,168,.24);box-shadow:0 20px 70px rgba(10,48,122,.18)}html.eca .eca-confirm-title,html.eca .eca-confirm-icon{color:#0a45a8}html.eca .eca-confirm-icon{background:rgba(10,69,168,.1)}html.eca .eca-confirm-message{color:#334155}html.eca .eca-confirm-cancel{background:#e4ecfa;color:#1e293b;border-color:#c9d6ec}html.eca .eca-confirm-cancel:hover{background:#d3e0f5}`;
+          document.head.appendChild(style);
+        }
+        const previousFocus = document.activeElement, previousOverflow = document.body.style.overflow;
+        const backdrop = document.createElement("div");
+        backdrop.className = "eca-confirm-backdrop";
+        const panel = document.createElement("div");
+        panel.className = "eca-confirm-panel gold-card rounded-2xl p-5 space-y-4";
+        panel.setAttribute("role", "alertdialog");
+        panel.setAttribute("aria-modal", "true");
+        panel.tabIndex = -1;
+        const heading = document.createElement("div");
+        heading.className = "flex items-center gap-3";
+        const icon = document.createElement("span");
+        icon.className = "eca-confirm-icon shrink-0";
+        icon.setAttribute("aria-hidden", "true");
+        icon.textContent = "!";
+        const title = document.createElement("h2");
+        title.className = "eca-confirm-title font-bold text-lg";
+        title.id = "ecaConfirmTitle";
+        title.textContent = lang === "en" ? "Please confirm" : "تأكيد";
+        panel.setAttribute("aria-labelledby", title.id);
+        heading.append(icon, title);
+        const text = document.createElement("p");
+        text.className = "eca-confirm-message text-sm";
+        text.id = "ecaConfirmMessage";
+        text.textContent = String(message == null ? "" : message);
+        panel.setAttribute("aria-describedby", text.id);
+        const actions = document.createElement("div");
+        actions.className = "flex justify-end gap-2 pt-1";
+        const cancel = document.createElement("button");
+        cancel.type = "button";
+        cancel.className = "eca-confirm-cancel";
+        cancel.textContent = lang === "en" ? "Cancel" : "إلغاء";
+        const accept = document.createElement("button");
+        accept.type = "button";
+        accept.className = "eca-confirm-accept gold-btn";
+        accept.textContent = lang === "en" ? "Confirm" : "تأكيد";
+        actions.append(cancel, accept);
+        panel.append(heading, text, actions);
+        backdrop.appendChild(panel);
+        document.body.appendChild(backdrop);
+        document.body.style.overflow = "hidden";
+        let settled = false;
+        const finish = answer => {
+          if (settled) return;
+          settled = true;
+          document.removeEventListener("keydown", onKeyDown);
+          backdrop.remove();
+          document.body.style.overflow = previousOverflow;
+          if (previousFocus && previousFocus.isConnected) previousFocus.focus();
+          resolve(answer);
+        };
+        const onKeyDown = event => {
+          if (event.key === "Escape") { event.preventDefault(); finish(false); }
+          else if (event.key === "Tab") {
+            const first = cancel, last = accept;
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+          }
+        };
+        cancel.addEventListener("click", () => finish(false));
+        accept.addEventListener("click", () => finish(true));
+        backdrop.addEventListener("click", event => { if (event.target === backdrop) finish(false); });
+        document.addEventListener("keydown", onKeyDown);
+        cancel.focus();
+      });
+      const result = ecaConfirmQueue.then(show, show);
+      ecaConfirmQueue = result.then(() => undefined, () => undefined);
+      return result;
+    };
     function go(t) { if (tab !== t) history.pushState({ tab: t }, "", "#" + t); tab = t; }
     function switchTab(t) { go(t); render(); }
     function logout() { parentStu = null; parentQ = ""; if (window.fbLogout) window.fbLogout(); go("home"); render(); }
@@ -466,7 +544,7 @@
 
       if (isStaffUser(u)) cSearch.classList.remove("hidden"); else cSearch.classList.add("hidden");
 
-      const T = (id, label, extra) => `<button onclick="switchTab('${id}')" class="nav-tab ${tab === id ? 'active' : ''}" ${tab === id ? 'aria-current="page"' : ''}>${label}${extra || ''}</button>`;
+      const T = (id, label, extra) => { const active = tab === id || (id === "honor" && tab === "honorProfile"); return `<button onclick="switchTab('${id}')" class="nav-tab ${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}>${label}${extra || ''}</button>`; };
       const certN = (u.certificates || []).length;
       // ===== القائمة الجانبية الرأسية: نفس تابات الدور بتتحط في الدرج (عربي يمين / إنجليزي شمال)
       // وزر ☰ في الهيدر هو اللي بيفتحها ويقفلها — شريط التابات الأفقي بيختفي للمدخلين.
@@ -527,6 +605,7 @@
       else if (tab === "placeresults" && isStaffUser(u) && typeof renderPlacementResults === "function") main.innerHTML = renderPlacementResults(u);
       else if (tab === "parent" && u.role === "student") main.innerHTML = renderStudentParentView(u);
       else if (tab === "certs" && u.role === "student") main.innerHTML = renderMyCertsView(u);
+      else if (tab === "honorProfile" && typeof renderHonorProfileView === "function") main.innerHTML = renderHonorProfileView(u);
       else if (tab === "honor") main.innerHTML = renderHonorView(u);
       else if (tab === "tournaments" && typeof renderTournamentsView === "function") main.innerHTML = renderTournamentsView(u);
       else if (tab === "arena") main.innerHTML = renderArenaView(u);
@@ -577,17 +656,17 @@
                   <button type="button" onclick="signupRole='coach'; render();" class="py-2 rounded-xl text-xs font-bold border ${signupRole==='coach'?'border-yellow-400 text-yellow-300 bg-yellow-500/10':'border-zinc-800 text-gray-400'}">كوتش</button>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
-                  <input id="sName" required placeholder="Full Name" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
-                  ${signupRole === "student" ? `<input id="sUser" required placeholder="Username (e.g. ali_chess)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />` : `<input id="sUser" placeholder="Username (optional)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />`}
+                  <input id="sName" required minlength="2" maxlength="80" placeholder="Full Name" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+                  ${signupRole === "student" ? `<input id="sUser" required minlength="3" maxlength="30" pattern="[a-zA-Z0-9_]{3,30}" placeholder="Username (e.g. ali_chess)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />` : `<input id="sUser" placeholder="Username (optional)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />`}
                 </div>
                 <div class="grid grid-cols-2 gap-2">
-                  <input id="sEmail" type="email" ${signupRole === "coach" ? "required" : ""} placeholder="${signupRole === "coach" ? "Email (required)" : "Email"}" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
-                  <input id="sPass" type="password" required placeholder="Password" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+                  <input id="sEmail" type="email" required placeholder="Email (required)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+                  <input id="sPass" type="password" required minlength="8" placeholder="Password (8+ characters)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
                 </div>
                 ${signupRole === "student" ? `
                   <div class="grid grid-cols-2 gap-2">
-                    <input id="sPhone" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="موبايل الطالب" />
-                    <input id="sParent" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="موبايل ولي الأمر" />
+                    <input id="sPhone" required pattern="[0-9٠-٩+() -]{8,20}" title="أدخل رقم هاتف صحيح" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="موبايل الطالب (مطلوب)" />
+                    <input id="sParent" required pattern="[0-9٠-٩+() -]{8,20}" title="أدخل رقم هاتف صحيح" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="موبايل ولي الأمر (مطلوب)" />
                   </div>
                   <p class="text-[12px] text-gray-400 leading-relaxed">لو عملت اختبار تحديد المستوى، اكتب رقمك ورقم ولي الأمر زي ما سجّلتهم في الاختبار، وهتبدأ من المستوى اللي اتعتمد. غير كده بتبدأ من Step 1.</p>
                 ` : `
@@ -682,12 +761,25 @@
         signupRole = "student"; tab = "home"; return toast("تم إنشاء حساب الكوتش!");
       }
       const level = 1;
-      if (!name || !username) return toast("اكتب الاسم واسم المستخدم");
+      const normalizePhone = value => {
+        const raw = String(value || "").trim();
+        if (!/^[0-9\u0660-\u0669+() -]+$/.test(raw)) return "";
+        let digits = raw.replace(/[\u0660-\u0669]/g, c => String(c.charCodeAt(0) - 0x660)).replace(/\D/g, "");
+        if (digits.startsWith("0020")) digits = "0" + digits.slice(4);
+        else if (digits.startsWith("20") && digits.length === 12) digits = "0" + digits.slice(2);
+        return digits;
+      };
+      const phone = normalizePhone(document.getElementById("sPhone").value);
+      const parent = normalizePhone(document.getElementById("sParent").value);
+      if (name.length < 2 || name.length > 80) return toast("اكتب الاسم بالكامل بشكل صحيح");
+      if (!/^[a-z0-9_]{3,30}$/.test(username)) return toast("اسم المستخدم يجب أن يكون 3 إلى 30 حرفًا أو رقمًا أو _");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast("اكتب بريدًا إلكترونيًا صحيحًا");
       if (pass.length < 8) return toast("كلمة السر لازم تكون 8 حروف على الأقل");
+      if (!/^\d{8,15}$/.test(phone) || !/^\d{8,15}$/.test(parent)) return toast("اكتب رقم الطالب ورقم ولي الأمر بشكل صحيح");
       const btn = ev.submitter; if (btn) btn.disabled = true;
-      const r = await window.fbSignup({ name, username, email, pass, level, phone: (document.getElementById("sPhone") || {}).value, parent: (document.getElementById("sParent") || {}).value });
+      const r = await window.fbSignup({ name, username, email, pass, level, phone, parent });
       if (btn) btn.disabled = false;
-      if (!r.ok) return toast(r.code === "auth/email-already-in-use" ? "اسم المستخدم ده مستخدم قبل كده" : (r.code === "auth/weak-password" ? "كلمة السر ضعيفة" : "تعذّر إنشاء الحساب"));
+      if (!r.ok) return toast(r.code === "invalid-profile" ? "راجع الاسم واسم المستخدم والبريد ورقمي الهاتف" : r.code === "auth/email-already-in-use" ? "اسم المستخدم ده مستخدم قبل كده" : (r.code === "auth/weak-password" ? "كلمة السر ضعيفة" : "تعذّر إنشاء الحساب"));
       tab = "home"; toast(r.linked ? "تم إنشاء حسابك — مستواك Step " + r.level + " من اختبار تحديد المستوى" : "تم إنشاء حسابك!");
     }
     function renderStudentHome(stu) {
@@ -1027,7 +1119,7 @@
     async function genParentCode(id) {
       if (!window.fbGenParentCode) return toast("الاتصال بالسيرفر لسه ما كملش");
       const s = db.users.find(u => u.id === id);
-      if (s && s.parentCode && !confirm(trText("تجديد الكود هيلغي الكود القديم وأي جهاز مربوط بيه. متأكد؟"))) return;
+      if (s && s.parentCode && !await window.ecaConfirm(trText("تجديد الكود هيلغي الكود القديم وأي جهاز مربوط بيه. متأكد؟"))) return;
       const c = await window.fbGenParentCode(id);
       render(); toast(c ? "تم إنشاء كود ولي الأمر" : "تعذّر إنشاء الكود");
     }
@@ -1050,7 +1142,7 @@
     async function createInvite(role) {
       if (!window.fbCreateInvite) return toast("الاتصال بالسيرفر لسه ما كملش");
       const isAdm = role === "admin";
-      if (isAdm && !confirm(trText("الأدمن بيشوف الحسابات والداشبورد المالي ويقدر يطلّع أكواد كوتش وأدمن. متأكد إنك عايز تعمل كود أدمن؟"))) return;
+      if (isAdm && !await window.ecaConfirm(trText("الأدمن بيشوف الحسابات والداشبورد المالي ويقدر يطلّع أكواد كوتش وأدمن. متأكد إنك عايز تعمل كود أدمن؟"))) return;
       const c = await window.fbCreateInvite(isAdm ? "admin" : "coach");
       if (!c) return toast("تعذّر إنشاء الكود");
       try { await navigator.clipboard.writeText(c); } catch (_) {}
@@ -1273,7 +1365,7 @@
       let username = g("asUser").toLowerCase().replace(/\s+/g, "_");
       if (!username) username = "eca_" + String(Date.now()).slice(-6);
       if (db.users.some(u => String(u.username || "").toLowerCase() === username && u.id !== editStuId)) return toast("اسم المستخدم ده مستخدم قبل كده");
-      if (db.users.some(u => u.role === "student" && String(u.name || "").trim().toLowerCase() === name.toLowerCase() && u.id !== editStuId) && !confirm(trText("فيه طالب بنفس الاسم. هل تريد المتابعة؟"))) return;
+      if (db.users.some(u => u.role === "student" && String(u.name || "").trim().toLowerCase() === name.toLowerCase() && u.id !== editStuId) && !await window.ecaConfirm(trText("فيه طالب بنفس الاسم. هل تريد المتابعة؟"))) return;
       const data = { name, username, level: Number(g("asLevel")) || 1, group: g("asGroup"), mode: g("asMode") === "online" ? "online" : "offline", age: g("asAge"), phone: g("asPhone"), parentPhone: g("asParent") };
       const pass = document.getElementById("asPass").value.trim();
       if (editStuId) {
@@ -1297,11 +1389,11 @@
         } finally { if (btn) btn.disabled = false; }
       }
     }
-    function deleteStudent() {
+    async function deleteStudent() {
       if (!window.isFinanceAdminUnlocked) return toast("حذف الطالب للأدمن بس");
       if (!isCoach() || !editStuId) return;
       const s = db.users.find(u => u.id === editStuId); if (!s) return;
-      if (!confirm(trText("هل أنت متأكد من حذف الطالب نهائياً مع كل سجلات حضوره؟") + "\n" + s.name)) return;
+      if (!await window.ecaConfirm(trText("هل أنت متأكد من حذف الطالب نهائياً مع كل سجلات حضوره؟") + "\n" + s.name)) return;
       const _delId = editStuId; db.users = db.users.filter(u => u.id !== editStuId); if (window.fbOnStudentDeleted) window.fbOnStudentDeleted(_delId);
       for (const d in db.attendance) { delete db.attendance[d][editStuId]; if (!Object.keys(db.attendance[d]).length) delete db.attendance[d]; }
       if (selStuId === editStuId) selStuId = "";
@@ -1428,7 +1520,7 @@
     }
     requestAnimationFrame(anim);
     const h0 = (location.hash || "#home").slice(1);
-    tab = ["home", "lessons", "arena", "ranks", "certs", "honor", "tracker", "attendance", "finance", "parent", "about", "courses", "private", "faq", "fairplay", "contact", "placement", "placeresults"].includes(h0) ? h0 : "home";
+    tab = ["home", "lessons", "arena", "ranks", "certs", "honor", "honorProfile", "tracker", "attendance", "finance", "parent", "about", "courses", "private", "faq", "fairplay", "contact", "placement", "placeresults"].includes(h0) ? h0 : "home";
     history.replaceState({ tab }, "", "#" + tab);
     window.addEventListener("popstate", e => { tab = (e.state && e.state.tab) || "home"; render(); });
     const _oe = openExamModal; openExamModal = function (l) { _oe(l); applyLang(); };
@@ -1622,10 +1714,10 @@
       save(); render();
       toast("تمت الموافقة على إعادة الاختبار للطالب " + s.name);
     };
-    window.rejectExamRetry = function(stuId, stepNum) {
+    window.rejectExamRetry = async function(stuId, stepNum) {
       if (!isCoach()) return;
       const s = db.users.find(u => u.id === stuId); if (!s || !s.examState || !s.examState[stepNum]) return;
-      if (!confirm(trText("رفض طلب الإعادة؟ الطالب هيقدر يبعت طلب تاني بعد كده.") + "\n" + s.name)) return;
+      if (!await window.ecaConfirm(trText("رفض طلب الإعادة؟ الطالب هيقدر يبعت طلب تاني بعد كده.") + "\n" + s.name)) return;
       Object.assign(s.examState[stepNum], { reqRetry: false, rejected: true });
       save(); render();
       toast("تم رفض طلب الإعادة");

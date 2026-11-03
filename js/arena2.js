@@ -147,9 +147,9 @@
       g.undo(); if (g.turn() !== P.color && g.history().length) g.undo();
       P.over = ""; P.sel = null; P.pre = null; P.promo = null; P.last = lastOf(g); arenaRefresh();
     };
-    playResign = function () {
+    playResign = async function () {
       const P = arena.play; if (!P.game || P.over) return;
-      if (!confirm(trText("متأكد إنك عايز تستسلم؟"))) return;
+      if (!await window.ecaConfirm(trText("متأكد إنك عايز تستسلم؟"))) return;
       playFinish("loss", "resign"); arenaRefresh();
     };
     const _playNew = playNew; playNew = function () { const P = arena.play; P.pre = null; P.promo = null; P.clk = null; _playNew(); };

@@ -196,9 +196,9 @@
     function ptBackup() {
       try { localStorage.setItem(PT_CUR, JSON.stringify({ key: PT.form.key, answers: PT.answers, total: PT.qs.length, ts: Date.now() })); } catch (_) {}
     }
-    function ptQuit() {
+    async function ptQuit() {
       if (!PT || PT.phase !== "play") return ptClose();
-      if (!confirm(ptL("لو خرجت دلوقتي الأسئلة اللي فاضلة هتتحسب غلط ومش هتقدر تعيد الاختبار. متأكد؟", "If you quit now, the remaining questions count as wrong and you cannot retake the test. Sure?"))) return;
+      if (!await window.ecaConfirm(ptL("لو خرجت دلوقتي الأسئلة اللي فاضلة هتتحسب غلط ومش هتقدر تعيد الاختبار. متأكد؟", "If you quit now, the remaining questions count as wrong and you cannot retake the test. Sure?"))) return;
       clearInterval(PT.timer); PT.locked = true; ptFinish();
     }
 
@@ -456,7 +456,7 @@
     }
     async function ptReopen(id) {
       const r = (PTR.list || []).find(x => x.id === id); if (!r) return;
-      if (!confirm(ptL("هتفتح الاختبار تاني للطالب «" + r.name + "»؟ نتيجته الحالية هتتمسح وهيقدر يعيده مرة واحدة.", "Reopen the test for " + r.name + "? Their current result will be deleted, and they will be able to take the test once more."))) return;
+      if (!await window.ecaConfirm(ptL("هتفتح الاختبار تاني للطالب «" + r.name + "»؟ نتيجته الحالية هتتمسح وهيقدر يعيده مرة واحدة.", "Reopen the test for " + r.name + "? Their current result will be deleted, and they will be able to take the test once more."))) return;
       const res = await window.fbPtReopen(id, r);
       if (res && res.ok) { if (window.fbPlRemove) window.fbPlRemove(r.phone, r.parentPhone); PTR.list = PTR.list.filter(x => x.id !== id); toast(ptL("تم فتح الاختبار للطالب.", "The test has been reopened for the student.")); } else toast(ptL("تعذّر فتح الاختبار — جرّب تاني.", "Could not reopen the test. Please try again."));
       render();

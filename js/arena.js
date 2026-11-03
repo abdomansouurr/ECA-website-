@@ -238,9 +238,9 @@
       g.undo(); if (g.turn() !== P.color && g.history().length) g.undo();
       P.over = ""; P.sel = null; P.last = lastOf(g); arenaRefresh();
     }
-    function playResign() {
+    async function playResign() {
       const P = arena.play; if (!P.game || P.over) return;
-      if (!confirm(trText("متأكد إنك عايز تستسلم؟"))) return;
+      if (!await window.ecaConfirm(trText("متأكد إنك عايز تستسلم؟"))) return;
       P.over = "loss"; P.thinking = false;
       recordArena(a => { a.games = a.games || { w: 0, l: 0, d: 0 }; a.games.l++; a.winStreak = 0; });
       arenaRefresh();

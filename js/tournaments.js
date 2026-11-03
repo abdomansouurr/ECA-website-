@@ -137,24 +137,24 @@
       if (t.rounds.length >= t.totalRounds) return toast("كل الجولات خلصت — اضغط «إنهاء البطولة»");
       t.rounds.push(swissNext(t)); trnSave(t); toast(LT(`الجولة ${t.rounds.length} جاهزة`, `Round ${t.rounds.length} is ready`));
     }
-    function trnUndoRound() {
+    async function trnUndoRound() {
       if (!isCoach()) return;
       const t = trnFind(trnSel); if (!t || t.format !== "swiss" || t.rounds.length < 2) return;
       const last = t.rounds[t.rounds.length - 1];
-      if (last.pairs.some(g => g.r) && !confirm(trText("الجولة دي فيها نتايج متسجّلة. تمسحها؟"))) return;
+      if (last.pairs.some(g => g.r) && !await window.ecaConfirm(trText("الجولة دي فيها نتايج متسجّلة. تمسحها؟"))) return;
       t.rounds.pop(); trnSave(t);
     }
-    function trnFinish() {
+    async function trnFinish() {
       if (!isCoach()) return;
       const t = trnFind(trnSel); if (!t) return;
-      if (!t.rounds.every(roundDone) && !confirm(trText("فيه ماتشات من غير نتيجة. تنهي البطولة برضه؟"))) return;
+      if (!t.rounds.every(roundDone) && !await window.ecaConfirm(trText("فيه ماتشات من غير نتيجة. تنهي البطولة برضه؟"))) return;
       t.status = "done"; t.finishedAt = Date.now(); trnSave(t); toast("البطولة خلصت — مبروك للأبطال!");
     }
     function trnReopen() { if (!isCoach()) return; const t = trnFind(trnSel); if (!t) return; t.status = "running"; delete t.finishedAt; trnSave(t); }
     async function trnDelete() {
       if (!isCoach()) return;
       const t = trnFind(trnSel); if (!t) return;
-      if (!confirm(trText("حذف البطولة نهائياً؟") + "\n" + t.name)) return;
+      if (!await window.ecaConfirm(trText("حذف البطولة نهائياً؟") + "\n" + t.name)) return;
       db.tournaments = (db.tournaments || []).filter(x => x.id !== t.id); trnSel = null;
       if (window.fbDeleteTournament) await window.fbDeleteTournament(t.id);
       render(); toast("اتحذفت");
