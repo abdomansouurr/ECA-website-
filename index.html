@@ -7,9 +7,9 @@
   <link rel="manifest" href="manifest.json" />
   <!-- لوجو الأكاديمية على تاب المتصفح: ICO في الجذر (الفولباك الأضمن — المتصفحات بتطلبه من /favicon.ico مباشرة)
        + PNG للتاب الحديث + apple-touch للآيفون — كلهم بنفس اللوجو ومع رقم نسخة يكسر الكاش -->
-  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v43" />
-  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v43" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v43" />
+  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v44" />
+  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v44" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v44" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ECA Chess" />
@@ -267,7 +267,7 @@
     html.eca .vis-target { color: var(--eca-blue); }
     html.eca ::selection { background: rgba(10,69,168,.25); }
 
-    /* ===== eca-v43: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
+    /* ===== eca-v44: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
     @keyframes ecaItemIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     .stagger-in > *, .st-item { animation-duration: .24s; }
     .stagger-in > *:nth-child(1) { animation-delay: 0.045s }
@@ -294,7 +294,7 @@
 
     details.faq.closing .faq-ic { transform: none; }
     details.faq > summary { min-height: 44px; }
-    /* ===== ثيم ECA (eca-v43): أزرق ملكي + حبر + أبيض بدرجات أهدأ. الفاتح والداكن زي ما هم ===== */
+    /* ===== ثيم ECA (eca-v44): أزرق ملكي + حبر + أبيض بدرجات أهدأ. الفاتح والداكن زي ما هم ===== */
     html.eca { --eca-blue: #0a45a8; --eca-blue-d: #06307a; --eca-blue-l: #2f6fe0; --eca-ink: #0b1220; --eca-bg: #eef3fb; --eca-tint: #e4ecfa; --eca-line: #c9d6ec; }
     html.eca .eca-header { border-bottom-color: var(--eca-line); box-shadow: 0 1px 0 rgba(10,69,168,.06); }
     html.eca .gold-card { border-color: rgba(10,69,168,.20); box-shadow: 0 4px 18px rgba(10,48,122,.08); }
@@ -311,8 +311,8 @@
     html.eca .skip-link { background: var(--eca-blue); color: #fff; }
     html.eca img[src*="_classes"], html.eca img[src*="_courses"], html.eca img[src*="footer_knight"] { filter: hue-rotate(185deg) saturate(1.1); }
   </style>
-  <script>window.ECA_VERSION = "eca-v43";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v43" />
+  <script>window.ECA_VERSION = "eca-v44";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v44" />
 </head>
 <body class="min-h-screen flex flex-col relative">
   <a href="#mainView" class="skip-link">تخطّي إلى المحتوى</a>
@@ -387,10 +387,10 @@
     <div class="max-w-7xl mx-auto px-3 sm:px-5">
       <div class="hdr-row py-2.5">
         <div class="hdr-brand flex items-center gap-2.5 select-none min-w-0">
-          <a href="#about" onclick="switchTab('about'); return false;" aria-label="عن الأكاديمية / About Egypt Chess Academy" title="عن الأكاديمية / About us">
-            <img src="img/eca-mark.png" alt="شعار الأكاديمية / Academy logo" width="40" height="40" class="w-10 h-10 rounded-lg bg-white border border-yellow-500/60 object-contain shrink-0" />
+          <a href="#about" onclick="switchTab('about'); return false;" aria-label="عن الأكاديمية" title="عن الأكاديمية">
+            <img src="img/eca-mark.png" alt="شعار الأكاديمية" width="40" height="40" class="w-10 h-10 rounded-lg bg-white border border-yellow-500/60 object-contain shrink-0" />
           </a>
-          <a href="#home" onclick="switchTab('home'); return false;" class="min-w-0 leading-tight" aria-label="الصفحة الرئيسية / Home" title="الصفحة الرئيسية / Home">
+          <a href="#home" onclick="switchTab('home'); return false;" class="min-w-0 leading-tight" aria-label="الصفحة الرئيسية" title="الصفحة الرئيسية">
             <span class="block font-display font-extrabold text-[15px] sm:text-lg gold-gradient-text truncate">EGYPT CHESS ACADEMY</span>
             <span dir="ltr" class="hidden sm:block text-[10px] text-gray-400 tracking-[.2em]">WHERE MINDS GROW STRONGER</span>
           </a>
@@ -400,15 +400,15 @@
         <div id="coachSearchBox" class="hdr-search hidden">
           <div class="relative flex items-center">
             <input id="coachTopSearch" oninput="coachSearchStudent(this.value)" type="search" placeholder="ابحث بالاسم / الموبايل" aria-label="بحث عن طالب" class="w-full h-10 bg-black/80 border border-yellow-500/30 rounded-lg ps-3 pe-24 text-sm text-white" />
-            <button onclick="switchTab('tracker')" class="absolute end-1 h-8 gold-btn text-xs px-3 rounded-md">Follow Up</button>
+            <button onclick="switchTab('tracker')" class="absolute end-1 h-8 gold-btn text-xs px-3 rounded-md">متابعة</button>
           </div>
         </div>
 
         <div class="hdr-tools flex items-center gap-1.5">
-          <button id="navToggle" onclick="toggleSideNav(event)" aria-label="القائمة الرئيسية" aria-expanded="false" aria-controls="sideNav" class="icon-btn hidden" title="القائمة / Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+          <button id="navToggle" onclick="toggleSideNav(event)" aria-label="القائمة الرئيسية" aria-expanded="false" aria-controls="sideNav" class="icon-btn hidden" title="القائمة الرئيسية"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
           <button id="installBtn" onclick="installApp()" aria-label="تثبيت التطبيق" class="hidden icon-btn" title="تثبيت التطبيق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg></button>
-          <button id="themeBtn" onclick="toggleTheme(event)" aria-label="Choose theme" aria-haspopup="menu" aria-expanded="false" class="icon-btn" title="شكل الموقع / Theme"></button>
-          <button id="langBtn" onclick="toggleLang()" aria-label="تغيير اللغة / Change language" class="icon-btn wide text-xs font-bold">EN</button>
+          <button id="themeBtn" onclick="toggleTheme(event)" aria-label="اختيار المظهر" aria-haspopup="menu" aria-expanded="false" class="icon-btn" title="شكل الموقع"></button>
+          <button id="langBtn" onclick="toggleLang()" aria-label="تغيير اللغة" class="icon-btn wide text-xs font-bold">EN</button>
           <div id="acctButtons" class="flex items-center gap-1.5"></div>
         </div>
       </div>
@@ -477,30 +477,30 @@
       });
     } catch (_) {}
   </script>
-  <script src="js/core.js?v=eca-v43"></script>
+  <script src="js/core.js?v=eca-v44"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v43"></script>
+  <script src="js/arena.js?v=eca-v44"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v43"></script>
-  <script src="js/streaks.js?v=eca-v43"></script>
-  <script src="js/today.js?v=eca-v43"></script>
-  <script src="js/reports.js?v=eca-v43"></script>
-  <script src="js/tournaments.js?v=eca-v43"></script>
-  <script src="js/review.js?v=eca-v43"></script>
-  <script src="js/quality.js?v=eca-v43"></script>
-  <script src="js/announce.js?v=eca-v43"></script>
-  <script src="js/progress.js?v=eca-v43"></script>
-  <script src="js/arena2.js?v=eca-v43"></script>
-  <script src="js/homework.js?v=eca-v43"></script>
-  <script src="js/placement-data.js?v=eca-v43"></script>
-  <script src="js/placement.js?v=eca-v43"></script>
-  <script src="js/ux.js?v=eca-v43"></script>
-  <script src="js/annotate.js?v=eca-v43"></script>
+  <script src="js/extras.js?v=eca-v44"></script>
+  <script src="js/streaks.js?v=eca-v44"></script>
+  <script src="js/today.js?v=eca-v44"></script>
+  <script src="js/reports.js?v=eca-v44"></script>
+  <script src="js/tournaments.js?v=eca-v44"></script>
+  <script src="js/review.js?v=eca-v44"></script>
+  <script src="js/quality.js?v=eca-v44"></script>
+  <script src="js/announce.js?v=eca-v44"></script>
+  <script src="js/progress.js?v=eca-v44"></script>
+  <script src="js/arena2.js?v=eca-v44"></script>
+  <script src="js/homework.js?v=eca-v44"></script>
+  <script src="js/placement-data.js?v=eca-v44"></script>
+  <script src="js/placement.js?v=eca-v44"></script>
+  <script src="js/ux.js?v=eca-v44"></script>
+  <script src="js/annotate.js?v=eca-v44"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v43"></script>
+  <script type="module" src="js/firebase.js?v=eca-v44"></script>
 </body>
 </html>

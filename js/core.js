@@ -139,6 +139,48 @@
     const FLAG_EG = `<svg viewBox="0 0 18 12" aria-hidden="true" style="width:19px;height:13px;flex:none;border-radius:2.5px;box-shadow:0 0 0 1px rgba(128,128,128,.4)"><rect width="18" height="4" fill="#CE1126"/><rect y="4" width="18" height="4" fill="#F5F5F5"/><rect y="8" width="18" height="4" fill="#0A0A0A"/><path fill="#C09300" d="M9 4.5c-.65 0-1.1.42-1.1 1.04 0 .33.13.6.34.78l-.8.36v.34h3.12v-.34l-.8-.36c.21-.18.34-.45.34-.78C10.1 4.92 9.65 4.5 9 4.5z"/></svg>`;
     const FLAG_US = (() => { let d = ""; for (let r = 0; r < 4; r++) for (let c = 0; c < 5; c++) { if ((r + c) % 2) continue; d += `<circle cx="${(1.15 + c * 1.24).toFixed(2)}" cy="${(1.15 + r * 1.32).toFixed(2)}" r=".36"/>`; } return `<svg viewBox="0 0 18 12" aria-hidden="true" style="width:19px;height:13px;flex:none;border-radius:2.5px;box-shadow:0 0 0 1px rgba(128,128,128,.4)"><rect width="18" height="12" fill="#B22234"/><g fill="#fff"><rect y=".92" width="18" height=".92"/><rect y="2.77" width="18" height=".92"/><rect y="4.62" width="18" height=".92"/><rect y="6.46" width="18" height=".92"/><rect y="8.31" width="18" height=".92"/><rect y="10.15" width="18" height=".92"/></g><rect width="7.2" height="6.46" fill="#3C3B6E"/><g fill="#fff">${d}</g></svg>`; })();
     const EXTRA_DICT = [["شرح فقط — الواجب لسه", "Explained only — homework pending"], ["مكتمل (حضور + واجب)", "Completed (attended + homework)"], ["شرح فقط", "Explained only"], ["درس مكتمل ✓", "Completed ✓"], ["تسجيل الحضور", "Attendance"], ["تسجيل الحضور", "Attendance"], ["سجّل حضور الطلاب الأونلاين والأوفلاين كل واحد في قسمه.", "Record attendance for online and offline students, each in their own section."], ["إضافة طالب جديد", "Add new student"], ["إضافة طالب جديد", "Add new student"], ["تعديل بيانات الطالب", "Edit student"], ["نسخة احتياطية", "Backup"], ["استرجاع نسخة", "Restore backup"], ["طلبة الأوفلاين", "Offline students"], ["طلبة الأونلاين", "Online students"], ["ابحث باسم الطالب...", "Search student name..."], ["اليوم السابق", "Previous day"], ["اليوم التالي", "Next day"], ["النهاردة", "Today"], ["تحديد الكل حاضر", "Mark all present"], ["مسح تسجيل اليوم", "Clear today's records"], ["لم يُسجَّل", "Not recorded"], ["✓ حاضر", "✓ Present"], ["متأخر", "Late"], ["✗ غايب", "✗ Absent"], ["حاضر", "Present"], ["متأخر", "Late"], ["غايب", "Absent"], ["لا يوجد سجل بعد", "No records yet"], ["نسبة الحضور", "Attendance rate"], ["حصة", "sessions"], ["نقل للأوفلاين", "Move to offline"], ["نقل للأونلاين", "Move to online"], ["لا يوجد طلاب في هذا القسم بعد. أضف طالباً جديداً أو انقل طالباً من القسم الآخر.", "No students in this section yet. Add a new student or move one from the other section."], ["لا توجد نتائج لهذا البحث.", "No results for this search."], ["لا يوجد طلاب بعد. اضغط «إضافة طالب جديد».", "No students yet. Tap \"Add new student\"."], ["لا يوجد طلاب في هذا القسم بعد.", "No students in this section yet."], ["تقرير الشهر —", "Monthly report —"], ["طلبة الأونلاين", "Online students"], ["طلبة الأوفلاين", "Offline students"], ["⬇ تصدير CSV", "⬇ Export CSV"], ["اسم الطالب", "Student name"], ["اسم الطالب بالكامل", "Student full name"], ["اليوزر نيم بالإنجليزي (اختياري)", "Username in English (optional)"], ["الباسورد (الافتراضي 123456)", "Password (default 123456)"], ["السن", "Age"], ["موبايل الطالب", "Student mobile"], ["موبايل ولي الأمر (واتساب)", "Parent mobile (WhatsApp)"], ["طالب أوفلاين (حضوري)", "Offline student (in-person)"], ["طالب أونلاين", "Online student"], ["اترك الباسورد فارغاً لو مش عايز تغيّره.", "Leave the password empty to keep it unchanged."], ["حذف الطالب", "Delete student"], ["إضافة الطالب", "Add student"], ["حفظ التعديلات", "Save changes"], ["تثبيت التطبيق", "Install app"], ["تم نقل الطالب إلى الأونلاين", "Student moved to online"], ["تم نقل الطالب إلى الأوفلاين", "Student moved to offline"], ["لا توجد سجلات حضور في هذا الشهر", "No attendance records this month"], ["تم تنزيل النسخة الاحتياطية", "Backup downloaded"], ["تم استرجاع النسخة الاحتياطية", "Backup restored"], ["ملف النسخة الاحتياطية غير صالح", "Invalid backup file"], ["سيتم استبدال كل البيانات الحالية بالنسخة الاحتياطية. متابعة؟", "All current data will be replaced by the backup. Continue?"], ["اكتب اسم الطالب", "Enter the student's name"], ["اليوزر نيم ده مستخدم بالفعل", "This username is already taken"], ["يوجد طالب بنفس الاسم بالفعل. هل تريد المتابعة؟", "A student with the same name already exists. Continue?"], ["تم حفظ بيانات الطالب", "Student saved"], ["تمت إضافة الطالب — اليوزر: ", "Student added — username: "], [" / الباسورد: ", " / password: "], ["هل أنت متأكد من حذف الطالب نهائياً مع كل سجلات حضوره؟", "Delete this student permanently with all attendance records?"], ["تم حذف الطالب", "Student deleted"], ["على الآيفون: اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»", "On iPhone: tap Share, then \"Add to Home Screen\""], ["لا يوجد إنترنت — الموقع يعمل والبيانات محفوظة على جهازك", "No internet — the site still works and data is saved on your device"], ["عاد الاتصال بالإنترنت", "Back online"], ["نتائج اختبار تحديد المستوى", "Placement Test Results"], ["اختبار تحديد المستوى", "Placement Test"], ["اختبار المستوى", "Level Test"], ["أدوات الإدارة", "Manager Tools"]];
+    EXTRA_DICT.push(
+      ["ابحث بالاسم / الموبايل", "Search by name / mobile"], ["بحث عن طالب", "Search for a student"],
+      ["رقم الطالب (مطلوب)", "Student phone (required)"], ["رقم ولي الأمر (مطلوب)", "Parent/guardian phone (required)"],
+      ["رقم هاتف صحيح", "Enter a valid phone number"], ["الاسم بالكامل", "Full name"],
+      ["أدخل رقم هاتف صحيح", "Enter a valid phone number"],
+      ["اسم المستخدم (مثال: ali_chess)", "Username (e.g. ali_chess)"], ["اسم المستخدم (اختياري)", "Username (optional)"],
+      ["البريد الإلكتروني (مطلوب)", "Email (required)"], ["كلمة المرور (8 أحرف على الأقل)", "Password (at least 8 characters)"],
+      ["كود دعوة الكوتش (من الأدمن)", "Coach invitation code (from the admin)"],
+      ["كود الأدمن أو كود دعوة الكوتش", "Admin or coach invitation code"],
+      ["ابحث بالكود (ECA-0001) أو الاسم أو الموبايل...", "Search by code (ECA-0001), name, or mobile..."],
+      ["ابحث بالكود أو الاسم أو رقم الهاتف...", "Search by code, name, or phone..."],
+      ["إغلاق القائمة", "Close menu"], ["القائمة الرئيسية", "Main menu"], ["أقسام المنصة", "Platform sections"],
+      ["عن الأكاديمية", "About the academy"], ["الصفحة الرئيسية", "Home"],
+      ["اسمك", "Your name"], ["رقمك أو إيميلك (اختياري)", "Your phone or email (optional)"],
+      ["اكتب رسالتك...", "Write your message..."], ["مثلاً: بطولة أكتوبر للناشئين", "e.g. October junior championship"],
+      ["شكل الموقع / Theme", "Appearance / Theme"], ["تغيير اللغة / Change language", "Change language"],
+      ["اختيار المظهر", "Choose theme"], ["متابعة", "Follow Up"], ["حساب جديد", "Sign up"],
+      ["البريد الإلكتروني أو اسم المستخدم", "Email or username"],
+      ["كلمة المرور", "Password"],
+      ["شكل الموقع", "Appearance"], ["شعار الأكاديمية", "Academy logo"],
+      ["تغيير اللغة", "Change language"],
+      ["اسم الطالب بالكامل", "Student full name"],
+      ["اليوزر نيم بالإنجليزي (اختياري)", "Username in English (optional)"],
+      ["كلمة السر (6+ حروف) — سيبها فاضية لتوليد تلقائي", "Password (6+ characters)—leave blank to generate one automatically"],
+      ["السن", "Age"], ["موبايل الطالب", "Student mobile"],
+      ["موبايل ولي الأمر (واتساب)", "Parent mobile (WhatsApp)"],
+      ["كود المتابعة اللي استلمته من الأكاديمية", "Enter the follow-up code provided by the academy"],
+      ["اكتب كود المتابعة اللي استلمته من الأكاديمية", "Enter the follow-up code provided by the academy"],
+      ["اكتب كود المتابعة لعرض تقدّم الطالب.", "Enter the follow-up code to view the student's progress."],
+      ["اكتب كود المتابعة الأول", "Enter the follow-up code first"],
+      ["لا يوجد طالب بهذا الاسم.", "No student found with this name."],
+      ["واتساب ولي أمر ", "Parent WhatsApp "],
+      ["نسخ الـ FEN الحالي", "Copy current FEN"],
+      ["سجّل دخولك بحسابك. ولي الأمر يتابع ابنه من «داشبورد ولي الأمر» جوه حساب الطالب.", "Sign in to your account. Parents can follow their child from the Parent Dashboard inside the student's account."],
+      ["دخول بضغطة واحدة بحساب Google", "One-tap sign-in with Google"],
+      ["أول مرة بتختار طالب أو كوتش، وبعد كده بتدخل بضغطة واحدة من غير باسورد.", "Choose Student or Coach the first time, then sign in with one tap—no password needed."],
+      ["الدخول بحساب شخصي لكل مستخدم — مفيش كلمات سر مشتركة", "Every user has a personal account—no shared passwords."],
+      ["دخول الطالب بجوجل", "Student sign-in with Google"], ["دخول الكوتش بجوجل", "Coach sign-in with Google"],
+      ["أو باليوزر نيم / الإيميل", "Or use your username / email"],
+      ["طالب", "Student"], ["كوتش", "Coach"],
+      ["لو عملت اختبار تحديد المستوى، اكتب رقمك ورقم ولي الأمر زي ما سجّلتهم في الاختبار، وهتبدأ من المستوى اللي اتعتمد. غير كده بتبدأ من Step 1.", "If you took the placement test, enter the same student and parent phone numbers you used there to start at your approved level. Otherwise, you will start at Step 1."]
+    );
     const DICT = [["إلغاء", "Cancel"], ["فتح الملاحظات", "Open notes"], ["خانة ولي الأمر السرية", "Parent Secret Box"], ["أدخل الباسورد الموحد لأولياء الأمور", "Enter the shared parents' password"], ["جاري تحميل منصة Egypt Chess Academy...", "Loading Egypt Chess Academy platform..."], ["بوابة ولي الأمر (Parent Dashboard)", "Parent Portal (Parent Dashboard)"], ["بوابة ولي الأمر", "Parent Portal"], ["داشبورد ولي الأمر", "Parent Dashboard"], ["الرئيسية", "Home"], ["كل المستويات (Steps 1-6)", "All Levels (Steps 1-6)"], ["دروس Step ", "Lessons: Step "], ["متابعة الطلاب والجروبات", "Students & Groups Tracker"], ["خروج", "Logout"], ["اضغط على أي حساب تجريبي للدخول فوراً أو أنشئ حساباً جديداً:", "Tap a demo account to enter instantly or create a new account:"], ["دخول سريع كـ مدرب (Coach)", "Quick login as Coach"], ["يفتح كل الـ 6 Steps + متابعة الطلاب والجروبات", "Opens all 6 Steps + student & group tracking"], ["دخول سريع كـ طالب (Omar - Step 2)", "Quick login as Student (Omar - Step 2)"], ["يرى فقط Step 2 + اللغز اليومي + الدرس القادم", "Sees only Step 2 + daily puzzle + next lesson"], ["ابحث عن omar_chess وشاهد التقييم والملاحظة السرية", "Search omar_chess to see the rating and secret note"], ["الدخول السريع للمدرب محمي بكلمة سر", "Coach quick login is password-protected"], ["Login (دخول)", "Login"], ["Sign Up (حساب جديد)", "Sign Up"], ["تسجيل الدخول", "Log in"], ["طالب (Student)", "Student"], ["مدرب (Coach)", "Coach"], ["إنشاء الحساب", "Create account"], ["كود المدرب السري", "Secret coach code"], ["حضرت", "Attended"], ["درس في", "lessons in"], ["متبقي", "remaining"], ["درس للامتحان", "lessons until the exam"], ["دروس", "lessons"], ["درس لإنهاء", "lessons to finish"], ["ملاحظة المدرب السرية لولي الأمر:", "Coach's secret note for parents:"], ["إغلاق", "Close"], ["نسبة الدقة:", "Accuracy:"], ["اختيار ←", "Select →"], ["فتح التمرين على Lichess ↗", "Open exercise on Lichess ↗"], ["الدرس اللي عليه الدور (Next Lesson)", "Your Next Lesson"], ["مكتمل", "complete"], ["اضغط هنا للانتقال تلقائياً لصفحة دروس مستواك (Step", "Tap here to open your level's lessons (Step"], ["فقط).", "only)."], ["أتممت كل دروس Step", "You completed all lessons of Step"], ["اختبار الترقية للمستوى التالي:", "Promotion test for the next level:"], ["بدء اختبار", "Start test"], ["أجبت إجابة صحيحة — اللغز مقفول", "Correct answer — puzzle locked"], ["أجبت إجابة خاطئة — اللغز مقفول ولا يمكن إعادته", "Wrong answer — puzzle locked, cannot be retried"], ["إجابة صحيحة! أحسنت يا بطل", "Correct! Well done, champion"], ["إجابة خاطئة — تم قفل اللغز", "Wrong answer — puzzle locked"], ["اللغز مقفول بالفعل", "Puzzle is already locked"], ["↺ إعادة فتح اللغز", "↺ Reopen puzzle"], ["تم إعادة فتح اللغز", "Puzzle reopened"], ["حساب المدرب", "Coach Account"], ["يمكنك استعراض جميع الـ 6 Steps ومتابعة حضور وواجبات ومجموعات الطلاب.", "You can browse all 6 Steps and track students' attendance, homework and groups."], ["كل الدروس (Steps 1-6)", "All Lessons (Steps 1-6)"], ["جميع المستويات للمدرب (Steps 1 – 6)", "All Levels for Coach (Steps 1 – 6)"], ["دروس مستواك الحالي فقط — Step", "Your current level's lessons only — Step"], ["اضغط على أي Step لعرض قائمة دروسها تحت بعضها.", "Tap any Step to show its lessons list."], ["ممنوع ظهور أي مستوى آخر غير مستواك الحالي.", "No level other than your current one is shown."], ["▲ إخفاء القائمة", "▲ Hide list"], ["▼ عرض الدروس", "▼ Show lessons"], ["متابعة الطلاب والمجموعات", "Students & Groups Tracker"], ["علم (✓) أمام الدرس الذي حضره الطالب والواجب الذي حله واكتب ملاحظة سرية لولي الأمر.", "Tick (✓) the lessons the student attended and the homework solved, and write a secret note for the parent."], ["+ اسم جروب جديد...", "+ New group name..."], ["إضافة جروب", "Add group"], ["كل الجروبات", "All Groups"], ["حضر", "Attended"], ["الواجبات المكتملة", "Completed homework"], ["الواجب", "Homework"], ["اختر طالباً", "Select a student"], ["ملاحظة سرية لولي الأمر...", "Secret note for parent..."], ["حفظ لولي الأمر", "Save for parent"], ["تم حفظ الملاحظة السرية لولي الأمر", "Secret note saved for parent"], ["بوابة متابعة ولي الأمر (Parent Dashboard)", "Parent Follow-Up Portal (Parent Dashboard)"], ["ابحث بالـ Username الخاص بابنك (جرب:", "Search by your child's username (try:"], [" أو ", " or "], ["اكتب يوزرنيم الطالب...", "Type the student's username..."], ["لا يوجد طالب بهذا الاسم. جرب كتابة omar_chess", "No student with this name. Try typing omar_chess"], ["التقييم التلقائي لمستوى الطالب", "Automatic student level rating"], ["الدروس التي حضرها", "Lessons attended"], ["دقة الألغاز اليومية", "Daily puzzle accuracy"], ["ملاحظة المدرب السرية:", "Coach's secret note:"], ["ملاحظات المدرب السرية لولي الأمر (محمية بباسورد موحد)", "Coach's secret notes for parents (protected by a shared password)"], ["فتح بالباسورد", "Unlock with password"], ["ممتاز / عبقري", "Excellent / Genius"], ["رائع", "Great"], ["مقبول", "Fair"], ["مرحباً بك ", "Welcome "], ["بيانات الدخول غير صحيحة", "Incorrect login details"], ["كود المدربين غير صحيح", "Invalid coach code"], ["تم إنشاء الحساب!", "Account created!"], ["تم فتح ملاحظة ولي الأمر", "Parent note unlocked"], ["باسورد غير صحيح", "Incorrect password"], ["مبروك! تمت ترقيتك إلى Step ", "Congrats! You've been promoted to Step "], ["اختبار نهاية Step ", "End-of-Step test "], [": هل أنت جاهز للترقية إلى Step ", ": ready to be promoted to Step "], ["؟", "?"], ["إتمام الاختبار بنجاح والترقية إلى Step ", "Pass the test and promote to Step "], ["دخول المدرب السريع", "Coach Quick Login"], ["أدخل كلمة سر المدرب", "Enter the coach password"], ["فتح", "Open"], ["كلمة السر غير صحيحة", "Wrong password"]].concat(EXTRA_DICT).sort((a, b) => b[0].length - a[0].length);
     // كلمات محمية من الترجمة: بيتحطّ مكانها رمز مؤقت قبل تطبيق القاموس وبيترجّع بعده
     // (عشان كلمة أقصر زي «عربي» ماتكسّرش الكلمة الأطول «العربية»)
@@ -161,9 +203,16 @@
         if (n.__o === undefined) n.__o = n.nodeValue;
         const v = lang === "en" ? trText(n.__o) : n.__o; if (n.nodeValue !== v) n.nodeValue = v;
       });
-      document.querySelectorAll("[placeholder]").forEach(e => {
-        if (e.__p === undefined) e.__p = e.getAttribute("placeholder");
-        e.setAttribute("placeholder", lang === "en" ? trText(e.__p) : e.__p);
+      document.querySelectorAll("[placeholder], [title], [aria-label], [alt]").forEach(e => {
+        e.__ecaAttrs = e.__ecaAttrs || {};
+        ["placeholder", "title", "aria-label", "alt"].forEach(attr => {
+          if (!e.hasAttribute(attr)) return;
+          if (attr === "title" && e.id === "acctBtn") return;
+          if (e.__ecaAttrs[attr] === undefined) e.__ecaAttrs[attr] = e.getAttribute(attr);
+          const original = e.__ecaAttrs[attr];
+          const value = lang === "en" ? trText(original) : original;
+          if (e.getAttribute(attr) !== value) e.setAttribute(attr, value);
+        });
       });
       scheduleBidi();
     }
@@ -635,8 +684,8 @@
 
           <div class="md:col-span-3 gold-card rounded-2xl p-6 order-first md:order-none">
             <div class="flex gap-2 mb-5 bg-black p-1 rounded-xl border border-yellow-500/20">
-              <button onclick="authMode='login'; render();" class="flex-1 py-2 rounded-lg text-xs font-bold ${authMode==='login'?'gold-btn':'text-gray-400'}">Login (دخول)</button>
-              ${ALLOW_SELF_SIGNUP ? `<button onclick="authMode='signup'; render();" class="flex-1 py-2 rounded-lg text-xs font-bold ${authMode==='signup'?'gold-btn':'text-gray-400'}">Sign Up (حساب جديد)</button>` : ''}
+              <button onclick="authMode='login'; render();" class="flex-1 py-2 rounded-lg text-xs font-bold ${authMode==='login'?'gold-btn':'text-gray-400'}">تسجيل الدخول</button>
+              ${ALLOW_SELF_SIGNUP ? `<button onclick="authMode='signup'; render();" class="flex-1 py-2 rounded-lg text-xs font-bold ${authMode==='signup'?'gold-btn':'text-gray-400'}">حساب جديد</button>` : ''}
             </div>
             <div class="grid sm:grid-cols-2 gap-2">
               <button type="button" onclick="googleLogin('student')" class="g-btn">${G_ICON}<span>دخول الطالب بجوجل</span></button>
@@ -645,8 +694,8 @@
             <div class="flex items-center gap-3 my-4 text-[11px] text-gray-500"><span class="flex-1 h-px bg-yellow-500/20"></span><span>أو باليوزر نيم / الإيميل</span><span class="flex-1 h-px bg-yellow-500/20"></span></div>
             ${authMode === "login" ? `
               <form onsubmit="doLogin(event)" class="space-y-4">
-                <input id="lEmail" required placeholder="Email or Username" class="w-full bg-black border border-yellow-500/30 rounded-xl px-4 py-2.5 text-sm text-white" />
-                <input id="lPass" type="password" required placeholder="Password" class="w-full bg-black border border-yellow-500/30 rounded-xl px-4 py-2.5 text-sm text-white" />
+                <input id="lEmail" required placeholder="البريد الإلكتروني أو اسم المستخدم" class="w-full bg-black border border-yellow-500/30 rounded-xl px-4 py-2.5 text-sm text-white" />
+                <input id="lPass" type="password" required placeholder="كلمة المرور" class="w-full bg-black border border-yellow-500/30 rounded-xl px-4 py-2.5 text-sm text-white" />
                 <button class="w-full py-3 rounded-xl text-sm gold-btn">تسجيل الدخول</button>
               </form>
             ` : `
@@ -656,17 +705,17 @@
                   <button type="button" onclick="signupRole='coach'; render();" class="py-2 rounded-xl text-xs font-bold border ${signupRole==='coach'?'border-yellow-400 text-yellow-300 bg-yellow-500/10':'border-zinc-800 text-gray-400'}">كوتش</button>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
-                  <input id="sName" required minlength="2" maxlength="80" placeholder="Full Name" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
-                  ${signupRole === "student" ? `<input id="sUser" required minlength="3" maxlength="30" pattern="[a-zA-Z0-9_]{3,30}" placeholder="Username (e.g. ali_chess)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />` : `<input id="sUser" placeholder="Username (optional)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />`}
+                  <input id="sName" required minlength="2" maxlength="80" placeholder="الاسم بالكامل" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+                  ${signupRole === "student" ? `<input id="sUser" required minlength="3" maxlength="30" pattern="[a-zA-Z0-9_]{3,30}" placeholder="اسم المستخدم (مثال: ali_chess)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />` : `<input id="sUser" placeholder="اسم المستخدم (اختياري)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />`}
                 </div>
                 <div class="grid grid-cols-2 gap-2">
-                  <input id="sEmail" type="email" required placeholder="Email (required)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
-                  <input id="sPass" type="password" required minlength="8" placeholder="Password (8+ characters)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+                  <input id="sEmail" type="email" required placeholder="البريد الإلكتروني (مطلوب)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
+                  <input id="sPass" type="password" required minlength="8" placeholder="كلمة المرور (8 أحرف على الأقل)" class="bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" />
                 </div>
                 ${signupRole === "student" ? `
                   <div class="grid grid-cols-2 gap-2">
-                    <input id="sPhone" required pattern="[0-9٠-٩+() -]{8,20}" title="أدخل رقم هاتف صحيح" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="موبايل الطالب (مطلوب)" />
-                    <input id="sParent" required pattern="[0-9٠-٩+() -]{8,20}" title="أدخل رقم هاتف صحيح" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="موبايل ولي الأمر (مطلوب)" />
+                    <input id="sPhone" required pattern="[0-9٠-٩+() -]{8,20}" title="أدخل رقم هاتف صحيح" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="رقم الطالب (مطلوب)" />
+                    <input id="sParent" required pattern="[0-9٠-٩+() -]{8,20}" title="أدخل رقم هاتف صحيح" class="w-full bg-black border border-yellow-500/30 rounded-xl px-3 py-2 text-xs text-white" dir="ltr" inputmode="tel" maxlength="20" placeholder="رقم ولي الأمر (مطلوب)" />
                   </div>
                   <p class="text-[12px] text-gray-400 leading-relaxed">لو عملت اختبار تحديد المستوى، اكتب رقمك ورقم ولي الأمر زي ما سجّلتهم في الاختبار، وهتبدأ من المستوى اللي اتعتمد. غير كده بتبدأ من Step 1.</p>
                 ` : `
