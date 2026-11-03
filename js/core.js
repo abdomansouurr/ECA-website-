@@ -1204,7 +1204,7 @@
           <span class="self-start sm:self-auto px-3 py-1 rounded-full text-xs font-bold border border-yellow-500/30 bg-yellow-500/10 text-yellow-300">أدوات الإدارة</span>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button type="button" onclick="createInvite('coach', this)" class="group w-full min-h-[76px] flex items-center gap-3 rounded-xl border border-yellow-500/30 bg-zinc-900/70 p-3 sm:p-4 text-start transition hover:border-yellow-400/70 hover:bg-yellow-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400">
+          <button type="button" onclick="createInvite('coach', this)" class="group w-full min-h-[76px] flex items-center gap-3 rounded-xl border border-yellow-500/30 bg-zinc-900 p-3 sm:p-4 text-start transition hover:border-yellow-400/70 hover:bg-yellow-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400">
             <span class="grid w-11 h-11 shrink-0 place-items-center rounded-xl bg-yellow-500/10 text-yellow-300" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-6 h-6"><circle cx="9" cy="8" r="4"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M19 8v6m-3-3h6"/></svg>
             </span>
@@ -1214,7 +1214,7 @@
             </span>
             <span class="text-gray-500 group-hover:text-yellow-300" aria-hidden="true">←</span>
           </button>
-          <button type="button" onclick="createInvite('admin', this)" class="group w-full min-h-[76px] flex items-center gap-3 rounded-xl border border-red-500/30 bg-zinc-900/70 p-3 sm:p-4 text-start transition hover:border-red-400/70 hover:bg-red-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400">
+          <button type="button" onclick="createInvite('admin', this)" class="group w-full min-h-[76px] flex items-center gap-3 rounded-xl border border-red-500/30 bg-zinc-900 p-3 sm:p-4 text-start transition hover:border-red-400/70 hover:bg-red-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400">
             <span class="grid w-11 h-11 shrink-0 place-items-center rounded-xl bg-red-500/10 text-red-300" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-6 h-6"><path d="M12 3 20 6v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6l8-3Z"/><path d="M9 12h6m-3-3v6"/></svg>
             </span>
