@@ -461,7 +461,8 @@
     }
 
     // ================= 3) تدريب الرؤية (اعرف المربع) =================
-    const randSq = () => FILES[Math.floor(Math.random() * 8)] + (1 + Math.floor(Math.random() * 8));
+    const VIS_FILES = FILES.replace("g", "");
+    const randSq = () => VIS_FILES[Math.floor(Math.random() * VIS_FILES.length)] + (1 + Math.floor(Math.random() * 8));
     function visStart() {
       const V = arena.vis;
       clearInterval(V.timer);
