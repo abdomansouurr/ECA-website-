@@ -151,7 +151,11 @@
       ["ابحث بالكود (ECA-0001) أو الاسم أو الموبايل...", "Search by code (ECA-0001), name, or mobile..."],
       ["ابحث بالكود أو الاسم أو رقم الهاتف...", "Search by code, name, or phone..."],
       ["إغلاق القائمة", "Close menu"], ["القائمة الرئيسية", "Main menu"], ["أقسام المنصة", "Platform sections"],
-      ["عن الأكاديمية", "About the academy"], ["الصفحة الرئيسية", "Home"],
+      ["عن الأكاديمية", "About the academy"],       ["الصفحة الرئيسية", "Home"],
+      ["لوحة المتصدرين", "Leaderboard"],
+      ["العودة إلى لوحة المتصدرين", "Back to leaderboard"],
+      ["لوحة المتصدرين لسه بتتجهّز — بتتحدّث لما الكوتش يفتح المنصة.", "The leaderboard is being prepared — it updates when the coach opens the platform."],
+      ["إنجازات الطالب غير متاحة من لوحة المتصدرين.", "This student's achievements aren't available from the leaderboard."],
       ["اسمك", "Your name"], ["رقمك أو إيميلك (اختياري)", "Your phone or email (optional)"],
       ["اكتب رسالتك...", "Write your message..."], ["مثلاً: بطولة أكتوبر للناشئين", "e.g. October junior championship"],
       ["شكل الموقع / Theme", "Appearance / Theme"], ["تغيير اللغة / Change language", "Change language"],
@@ -608,9 +612,9 @@
       // وزر ☰ في الهيدر هو اللي بيفتحها ويقفلها — شريط التابات الأفقي بيختفي للمدخلين.
       const tabsHtml = isStaffUser(u)
         ? T("home", "الرئيسية") + T("today", "جدول اليوم") + T("attendance", "تسجيل الحضور") + T("tracker", "متابعة الطلاب") + T("finance", "الحسابات")
-          + T("lessons", "المنهج") + T("arena", "ساحة التدريب") + T("tournaments", "البطولات") + T("honor", "قائمة الشرف") + T("ranks", "الرتب والشارات") + T("placeresults", "اختبار المستوى")
+          + T("lessons", "المنهج") + T("arena", "ساحة التدريب") + T("tournaments", "البطولات") + T("honor", "لوحة المتصدرين") + T("ranks", "الرتب والشارات") + T("placeresults", "اختبار المستوى")
         : T("home", "الرئيسية") + T("lessons", "دروسي") + T("arena", "ساحة التدريب") + T("tournaments", "البطولات") + T("ranks", "الرتب والشارات")
-          + T("honor", "قائمة الشرف") + T("certs", "شهاداتي", certN ? `<span class="badge">${certN}</span>` : "") + T("parent", "تقرير ولي الأمر");
+          + T("honor", "لوحة المتصدرين") + T("certs", "شهاداتي", certN ? `<span class="badge">${certN}</span>` : "") + T("parent", "تقرير ولي الأمر");
       // الدرج الجانبي هو القايمة الأساسية للمدخلين. ولو كاش المتصفح فيه HTML نسخة قديمة (مفيهوش #sideNav)
       // نرجّع شريط التابات الأفقي تلقائيًا — ممنوع المستخدم يفضل من غير أي قايمة مهما كانت نسخة الملفات.
       const sideEl = document.getElementById("sideNav"), sideItems = document.getElementById("sideNavItems"), navTg = document.getElementById("navToggle");
@@ -1251,7 +1255,7 @@
       dialog.setAttribute("role", "dialog");
       dialog.setAttribute("aria-modal", "true");
       dialog.setAttribute("aria-labelledby", "inviteDialogTitle");
-      dialog.setAttribute("aria-describedby", "inviteDialogDescription");
+      dialog.setAttribute("aria-describedby", "inviteDialogDescription inviteCode");
       const title = document.createElement("h2");
       title.id = "inviteDialogTitle";
       title.className = "font-display text-lg font-bold text-yellow-300";
@@ -1260,25 +1264,16 @@
       description.id = "inviteDialogDescription";
       description.className = "text-sm text-gray-400 leading-relaxed";
       description.textContent = trText("الكود صالح لاستخدام واحد فقط. أرسله للشخص المطلوب ليُكمل التسجيل.");
-      const codeInput = document.createElement("input");
-      codeInput.type = "text";
-      codeInput.readOnly = true;
-      codeInput.value = code;
-      codeInput.dir = "ltr";
-      codeInput.setAttribute("aria-label", trText("كود الدعوة"));
-      codeInput.className = "w-full min-h-[52px] rounded-xl border border-yellow-500/30 bg-zinc-900 px-3 text-center font-mono text-lg font-bold tracking-[0.18em] text-white";
-      const actions = document.createElement("div");
-      actions.className = "grid grid-cols-1 sm:grid-cols-2 gap-2";
+      const codeText = document.createElement("p");
+      codeText.id = "inviteCode";
+      codeText.dir = "ltr";
+      codeText.className = "select-all break-all text-center font-mono text-xl font-bold tracking-[0.18em] text-white";
+      codeText.textContent = code;
       const copyButton = document.createElement("button");
       copyButton.type = "button";
-      copyButton.className = "min-h-[44px] rounded-xl gold-btn text-sm font-bold";
+      copyButton.className = "w-full min-h-[48px] rounded-xl gold-btn text-sm font-bold";
       copyButton.textContent = trText("نسخ الكود");
-      const closeButton = document.createElement("button");
-      closeButton.type = "button";
-      closeButton.className = "min-h-[44px] rounded-xl border border-yellow-500/30 bg-zinc-900 px-4 text-sm font-bold text-gray-200";
-      closeButton.textContent = trText("إغلاق");
-      actions.append(copyButton, closeButton);
-      dialog.append(title, description, codeInput, actions);
+      dialog.append(title, description, codeText, copyButton);
       backdrop.appendChild(dialog);
       document.body.appendChild(backdrop);
       document.body.style.overflow = "hidden";
@@ -1290,7 +1285,6 @@
         if (previousFocus && previousFocus.isConnected) previousFocus.focus();
       };
       const onKeyDown = event => { if (event.key === "Escape") close(); };
-      closeButton.addEventListener("click", close);
       backdrop.addEventListener("click", event => { if (event.target === backdrop) close(); });
       document.addEventListener("keydown", onKeyDown);
       copyButton.addEventListener("click", async () => {
@@ -1300,8 +1294,13 @@
           toast("تم نسخ الكود");
           close();
         } catch (error) {
-          codeInput.focus();
-          codeInput.select();
+          const selection = window.getSelection();
+          if (selection) {
+            const range = document.createRange();
+            range.selectNodeContents(codeText);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
           toast("تعذّر النسخ تلقائياً — الكود محدد، انسخه يدويًا");
         }
       });

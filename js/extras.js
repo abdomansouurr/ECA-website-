@@ -929,13 +929,13 @@
       const H = u.role === "coach" ? computeHonor() : (window.honorData || null);
       const id = window.ecaHonorProfileId || "";
       const student = H && ["puzzles", "games", "days"].flatMap(k => H[k] || []).find(r => r.id === id);
-      if (!student) return `<div class="space-y-4"><button onclick="switchTab('honor')" class="tap px-4 py-2 rounded-xl gold-btn">${trText("العودة إلى قائمة الشرف")}</button><div class="gold-card rounded-2xl p-6 text-center text-sm text-gray-400">${trText("إنجازات الطالب غير متاحة من لوحة الشرف.")}</div></div>`;
+      if (!student) return `<div class="space-y-4"><button onclick="switchTab('honor')" class="tap px-4 py-2 rounded-xl gold-btn">${trText("العودة إلى لوحة المتصدرين")}</button><div class="gold-card rounded-2xl p-6 text-center text-sm text-gray-400">${trText("إنجازات الطالب غير متاحة من لوحة المتصدرين.")}</div></div>`;
       const stats = student.arena || {};
       const rankLabel = String(student.rank || "لسه بدون رتبة").replace(/^(البيدق|الفيل|الحصان|الطابية|الوزير|الملك)/, piece => trText(piece));
       const stat = (title, value, icon) => `<div class="gold-card rounded-2xl p-5 text-center space-y-2"><div class="text-xs text-gray-400">${title}</div><div class="text-2xl font-extrabold text-emerald-300">${esc(value)}</div>${icon ? `<div class="text-[11px] text-gray-500">${icon}</div>` : ""}</div>`;
       return `
         <div class="space-y-5">
-          <button onclick="switchTab('honor')" class="tap min-h-[44px] px-4 rounded-xl gold-btn">${trText("العودة إلى قائمة الشرف")}</button>
+          <button onclick="switchTab('honor')" class="tap min-h-[44px] px-4 rounded-xl gold-btn">${trText("العودة إلى لوحة المتصدرين")}</button>
           <div class="gold-card rounded-2xl p-6 text-center space-y-2 border-2 border-yellow-500/40">
             ${ICON("trophy", "w-10 h-10 mx-auto text-yellow-300")}
             <h2 class="font-display font-extrabold text-2xl gold-gradient-text">${esc(student.n)}</h2>
@@ -981,14 +981,14 @@
         <div class="space-y-5">
           <div class="gold-card rounded-2xl p-6 text-center space-y-2 border-2 border-yellow-500/40">
             ${ICON("trophy", "w-10 h-10 mx-auto text-yellow-300")}
-            <h2 class="font-display font-extrabold text-2xl gold-gradient-text">قائمة الشرف</h2>
+            <h2 class="font-display font-extrabold text-2xl gold-gradient-text">لوحة المتصدرين</h2>
             <p class="text-xs text-gray-400">أكتر الطلبة حلّاً للألغاز وكسباً للأدوار في ECA — وأعلى ستريك وصل له كل واحد.</p>
             ${!coach && H ? `<div class="flex flex-wrap justify-center gap-2 pt-1 text-[11px]">
               ${myRank(H.puzzles) ? `<span class="px-2.5 py-1 rounded-lg bg-yellow-500/15 text-yellow-300 border border-yellow-500/30">ترتيبك: ${myRank(H.puzzles)}</span>` : ''}
               ${myRank(H.games) ? `<span class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">ترتيبك: ${myRank(H.games)}</span>` : ''}
             </div>` : ''}
           </div>
-          ${!H ? `<div class="gold-card rounded-2xl p-8 text-center text-sm text-gray-400">قائمة الشرف لسه بتتجهّز — بتتحدّث لما الكوتش يفتح المنصة.</div>` : `
+          ${!H ? `<div class="gold-card rounded-2xl p-8 text-center text-sm text-gray-400">لوحة المتصدرين لسه بتتجهّز — بتتحدّث لما الكوتش يفتح المنصة.</div>` : `
             ${board("أكتر الطلبة حلّاً للألغاز", "", H.puzzles, "ألغاز اتحلّت", "أعلى ستريك ألغاز", "لسه محدش حل ألغاز — ادخل ساحة التدريب وابدأ!")}
             ${board("أكتر الطلبة كسباً للأدوار", "", H.games, "أدوار كسبها", "أعلى ستريك انتصارات", "لسه محدش كسب دور — العب ضد الكمبيوتر أو لعبة البيادق!")}
             ${board("أطول ستريك تمرين", "", H.days, "أطول سلسلة (يوم)", "السلسلة الحالية", "لسه مفيش أيام تمرين متسجلة.")}
@@ -1262,12 +1262,12 @@
       ["عرض الشهادة", "View certificate"], ["رجوع للرئيسية", "Back to home"], ["اختبار ترقية Step", "Promotion exam: Step"],
       ["نقلة صحيحة!", "Correct move!"], ["نقلة غلط", "Wrong move"], ["خلص الوقت", "Time's up"], ["إنهاء الاختبار", "End exam"],
       ["لو خرجت دلوقتي الألغاز اللي فاضلة هتتحسب غلط. متأكد؟", "If you leave now, the remaining puzzles count as wrong. Are you sure?"],
-      ["قائمة الشرف", "Honor roll"], ["قائمة الشرف", "Honor roll"], ["أكتر الطلبة حلّاً للألغاز وكسباً للأدوار في ECA — وأعلى ستريك وصل له كل واحد.", "ECA's top students in puzzles solved and games won — with each one's best streak."],
-      ["ترتيبك:", "Your rank:"], ["ترتيبك:", "Your rank:"], ["قائمة الشرف لسه بتتجهّز — بتتحدّث لما الكوتش يفتح المنصة.", "The honor roll is being prepared — it updates when the coach opens the platform."],
+      ["لوحة المتصدرين", "Leaderboard"], ["لوحة المتصدرين", "Leaderboard"], ["أكتر الطلبة حلّاً للألغاز وكسباً للأدوار في ECA — وأعلى ستريك وصل له كل واحد.", "ECA's top students in puzzles solved and games won — with each one's best streak."],
+      ["ترتيبك:", "Your rank:"], ["ترتيبك:", "Your rank:"], ["لوحة المتصدرين لسه بتتجهّز — بتتحدّث لما الكوتش يفتح المنصة.", "The leaderboard is being prepared — it updates when the coach opens the platform."],
       ["أكتر الطلبة حلّاً للألغاز", "Most puzzles solved"], ["ألغاز اتحلّت", "Puzzles solved"], ["أعلى ستريك ألغاز", "Best puzzle streak"], ["لسه محدش حل ألغاز — ادخل ساحة التدريب وابدأ!", "No puzzles solved yet — open the Training Arena and start!"],
       ["أكتر الطلبة كسباً للأدوار", "Most games won"], ["أدوار كسبها", "Games won"], ["أعلى ستريك انتصارات", "Best win streak"], ["لسه محدش كسب دور — العب ضد الكمبيوتر أو لعبة البيادق!", "No games won yet — play the computer or the pawns game!"],
       ["أطول ستريك تمرين", "Longest training streak"], ["أطول سلسلة (يوم)", "Longest streak (days)"], ["السلسلة الحالية", "Current streak"], ["لسه مفيش أيام تمرين متسجلة.", "No training days recorded yet."],
-      ["العودة إلى قائمة الشرف", "Back to honor roll"], ["إنجازات الطالب غير متاحة من لوحة الشرف.", "This student's achievements aren't available from the honor roll."],
+      ["العودة إلى لوحة المتصدرين", "Back to leaderboard"], ["إنجازات الطالب غير متاحة من لوحة المتصدرين.", "This student's achievements aren't available from the leaderboard."],
       ["إنجازات ساحة التدريب فقط", "Training Arena achievements only"], ["الرتبة الحالية", "Current rank"],
       ["ألغاز ساحة التدريب المحلولة", "Training Arena puzzles solved"], ["أفضل سلسلة ألغاز صحيحة", "Best correct puzzle streak"],
       ["انتصارات ضد الكمبيوتر", "Wins against the computer"], ["تعادلات ضد الكمبيوتر", "Draws against the computer"],

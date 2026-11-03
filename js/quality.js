@@ -148,7 +148,7 @@
 
     // أسماء التاسك بار
     DICT.push(["جدول اليوم", "Today"], ["متابعة الطلاب", "Students"], ["تسجيل الحضور", "Attendance"], ["الحسابات", "Finance"], ["المنهج", "Curriculum"],
-      ["دروسي", "My lessons"], ["ساحة التدريب", "Training arena"], ["البطولات", "Tournaments"], ["قائمة الشرف", "Honor roll"], ["الرتب والشارات", "Ranks & badges"],
+      ["دروسي", "My lessons"], ["ساحة التدريب", "Training arena"], ["البطولات", "Tournaments"], ["لوحة المتصدرين", "Leaderboard"], ["الرتب والشارات", "Ranks & badges"],
       ["شهاداتي", "Certificates"], ["تقرير ولي الأمر", "Parent report"], ["عن الأكاديمية", "About"], ["تسجيل الدخول", "Sign in"], ["الرئيسية", "Home"],
       ["ربط حساب Google", "Link Google account"], ["تغيير كلمة السر", "Change password"], ["تسجيل الخروج", "Sign out"], ["البطل:", "Champion:"], ["المتصدر:", "Leader:"], ["مثبّت", "Pinned"], ["نسخ FEN", "Copy FEN"], ["تعديل", "Edit"], ["كمّل الحل", "Continue the solution"],
       ["نقلة صحيحة — استنى رد الخصم", "Correct — wait for the reply"], ["اللغز اتحل صح", "Puzzle solved"], ["لاقي أحسن نقلة", "Find the best move"]);
