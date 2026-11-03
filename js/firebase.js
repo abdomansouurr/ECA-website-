@@ -438,11 +438,11 @@
             signOut(auth);
           }
         }, onErr("deleted account")));
-        unsubs.push(onSnapshot(doc(firestore, "users", me.uid), snap => {
+        unsubs.push(onSnapshot(doc(firestore, "users", me.uid), { includeMetadataChanges: true }, snap => {
           if (snap.exists()) {
             maps.core = {}; maps.core[me.uid] = cleanDeep(snap.data());
             loaded.core = true; window.__authLoading = false; rebuild();
-          } else if (!signingUp) {
+          } else if (!signingUp && !snap.metadata.fromCache) {
             window.__authLoading = false;
             if (window.toast) toast("الحساب ده مش مربوط ببيانات طالب. كلّم الكوتش.");
             signOut(auth);
@@ -502,7 +502,12 @@
       try { const s = await getDoc(doc(firestore, "staff", user.uid)); if (s.exists()) staffData = s.data(); }
       catch (e) { staffErr = e; console.error("staff read failed for uid " + user.uid, e); }
       console.info("[ECA] uid:", user.uid, "| staff doc:", staffData);
-      if (staffErr) toast("Firebase منع قراءة بيانات الأدمن (" + ((staffErr && staffErr.code) || "error") + ") — راجع قواعد Firestore لـ staff");
+      if (staffErr) {
+        me = null; db.users = []; db.currId = null;
+        window.__authLoading = false; render();
+        toast("تعذّر تحميل بيانات الحساب من Firebase. تأكد من الاتصال وحاول مرة أخرى.");
+        return;
+      }
       if (staffData) staffData.role = String(staffData.role || "").trim().toLowerCase();   // يقبل "Admin" أو " admin"
       if (!staffData) {
         try {
@@ -524,7 +529,14 @@
       if (!staffData && isGoogleUser(user)) {
         // أول دخول بجوجل: لو مفيش بيانات طالب، نطلب منه يختار (طالب / كوتش) مرة واحدة بس
         let hasProfile = false;
-        try { hasProfile = (await getDoc(doc(firestore, "users", user.uid))).exists(); } catch (_) {}
+        try { hasProfile = (await getDoc(doc(firestore, "users", user.uid))).exists(); }
+        catch (e) {
+          console.error("Student profile read failed:", e);
+          me = null; db.users = []; db.currId = null;
+          window.__authLoading = false; render();
+          toast("تعذّر التحقق من بيانات الحساب. تأكد من الاتصال وحاول مرة أخرى.");
+          return;
+        }
         if (!hasProfile) {
           takeGoogleClick();
           me = null; db.users = []; db.currId = null; pendingGoogle = user;

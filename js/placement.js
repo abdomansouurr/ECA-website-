@@ -32,7 +32,19 @@
       .pt-in:focus{outline:none;border-color:#facc15}.pt-lb{display:block;font-size:12px;font-weight:700;color:#fde68a;margin-bottom:4px}
       .pt-opt{width:100%;display:flex;align-items:center;gap:10px;text-align:start;padding:12px 14px;border-radius:12px;background:rgba(24,24,27,.95);border:1px solid rgba(234,179,8,.3);color:#fff;font-weight:700;font-size:15px;transition:transform .08s,border-color .1s}
       .pt-opt:hover{border-color:#facc15}.pt-opt:active{transform:scale(.98)}.pt-opt b{width:26px;height:26px;border-radius:8px;background:#d4af37;color:#000;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex:none}
-      .pt-mini .eca-board{grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));border-radius:10px}.pt-mini .eca-sq{min-width:0;min-height:0;overflow:hidden}.pt-mini .eca-pc{font-size:20px}.pt-mini .eca-pimg{width:100%;height:100%}.pt-mini .eca-co{font-size:7px}`;
+      .pt-mini .eca-board{grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));border-radius:10px}.pt-mini .eca-sq{min-width:0;min-height:0;overflow:hidden}.pt-mini .eca-pc{font-size:20px}.pt-mini .eca-pimg{width:100%;height:100%}.pt-mini .eca-co{font-size:7px}
+      html.light .pt-wrap .pt-in{background:#fff;color:#1f2937;border-color:rgba(122,90,7,.35);color-scheme:light}
+      html.light .pt-wrap .pt-in::placeholder{color:#6b7280}
+      html.light .pt-wrap .pt-in:focus{border-color:#b8860b}
+      html.light .pt-wrap .pt-lb{color:#7a5a07}
+      html.light .pt-wrap .pt-opt{background:#fff;color:#1f2937;border-color:rgba(122,90,7,.25)}
+      html.light .pt-wrap .pt-opt:hover{border-color:#b8860b}
+      html.eca .pt-wrap .pt-in{border-color:rgba(10,69,168,.3)}
+      html.eca .pt-wrap .pt-in:focus{border-color:#0a45a8}
+      html.eca .pt-wrap .pt-lb{color:#0a45a8}
+      html.eca .pt-wrap .pt-opt{border-color:rgba(10,69,168,.25)}
+      html.eca .pt-wrap .pt-opt:hover{border-color:#0a45a8}
+      html.eca .pt-wrap .pt-opt b{background:#0a45a8;color:#fff}`;
       document.head.appendChild(st);
     })();
 
