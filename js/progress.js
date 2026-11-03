@@ -141,7 +141,7 @@
       const _sh = renderStudentHome;
       renderStudentHome = function (s) { return `<div class="space-y-6">${_sh(s)}${liCardHTML(s, true)}</div>`; };
       const _pv = renderStudentParentView;
-      renderStudentParentView = function (u) { return `<div class="space-y-5">${_pv(u)}${progressChartHTML(u)}${liCardHTML(u, false)}</div>`; };
+      renderStudentParentView = function (u) { return `<div class="space-y-5">${_pv(u)}${liCardHTML(u, false)}</div>`; };
     }
 
     DICT.push(
