@@ -68,7 +68,7 @@
         puzAllNote: "الألغاز (من البداية)", footer: "أكاديمية مصر للشطرنج (ECA) — Where minds grow stronger", issued: "تاريخ الإصدار", group: "المجموعة", step: "المستوى",
         dayU: "يوم", noNote: "استمر في التمرين كل يوم — إحنا فخورين بتقدّمك!"
       };
-      const FONT = EN ? "Inter, Cairo, sans-serif" : "Cairo, Inter, sans-serif";
+      const FONT = "Cairo, sans-serif";
       try { await Promise.all(["400", "700", "800"].map(w => document.fonts.load(`${w} 30px Cairo`))); } catch (_) {}
       const cv = document.createElement("canvas"); cv.width = REP_W; cv.height = REP_H;
       const ctx = cv.getContext("2d");

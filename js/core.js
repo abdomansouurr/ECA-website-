@@ -1706,7 +1706,7 @@
       const fl = document.createElement("link");
       fl.id = "cairoFontLink";
       fl.rel = "stylesheet";
-      fl.href = "https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;900&display=swap";
+      fl.href = "https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap";
       document.head.appendChild(fl);
     }
 
@@ -2109,10 +2109,10 @@ window.selectExamAns = function(qIdx, oIdx) {
       // نصوص الشهادة بالعربي أو الإنجليزي
       const EN = certLang === "en";
       const T = EN ? {
-        title: "Certificate of Achievement", titleFont: "800 76px Cinzel, serif",
+        title: "Certificate of Achievement", titleFont: "800 76px Cairo, serif",
         given: "This certificate is proudly presented to",
         lines: ["In recognition of outstanding performance and dedication in chess training,", `and for successfully completing (Step ${cert.step}) with a score of ${cert.score}%.`, "We wish them continued progress and success in their chess journey."],
-        coach: "Coach", mgmt: "Academy Management", dir: "ltr", font: "Inter, Cairo, sans-serif"
+        coach: "Coach", mgmt: "Academy Management", dir: "ltr", font: "Cairo, sans-serif"
       } : {
         title: "شهادة تقدير", titleFont: "900 90px Cairo, sans-serif",
         given: "تمنح هذه الشهادة للمتدرب",
@@ -2151,7 +2151,7 @@ window.selectExamAns = function(qIdx, oIdx) {
         c.globalAlpha = 0.07; c.globalCompositeOperation = "multiply";
         c.drawImage(logoMark, canvas.width / 2 - 300, canvas.height / 2 - 300, 600, 600);
       } else {
-        c.globalAlpha = 0.05; c.fillStyle = "#1b2420"; c.font = "900 160px Cinzel, serif";
+        c.globalAlpha = 0.05; c.fillStyle = "#1b2420"; c.font = "800 160px Cairo, serif";
         c.fillText("ECA CHESS", canvas.width / 2, canvas.height / 2 + 40);
       }
       c.restore();
@@ -2166,7 +2166,7 @@ window.selectExamAns = function(qIdx, oIdx) {
 
       // العنوان العلوي: EGYPT CHESS ACADEMY (ECA)
       c.fillStyle = "#9a7418";
-      c.font = "800 32px Cinzel, serif";
+      c.font = "800 32px Cairo, serif";
       c.textAlign = "center";
       c.fillText("EGYPT CHESS ACADEMY (ECA)", canvas.width / 2, 145);
 
@@ -2223,7 +2223,7 @@ window.selectExamAns = function(qIdx, oIdx) {
         c.restore();
       } else {
         c.fillStyle = "#18221f";
-        c.font = "800 34px Cinzel, serif";
+        c.font = "800 34px Cairo, serif";
         c.fillText("ECA", canvas.width / 2, 890);
       }
       c.beginPath();
@@ -2234,7 +2234,7 @@ window.selectExamAns = function(qIdx, oIdx) {
 
       // إدارة الأكاديمية
       c.fillStyle = "#18221f";
-      c.font = "800 24px Cinzel, serif";
+      c.font = "800 24px Cairo, serif";
       c.fillText("EGYPT CHESS ACADEMY (ECA)", 380, 855);
       c.beginPath(); c.moveTo(200, 880); c.lineTo(560, 880); c.stroke();
       c.fillStyle = "#6b7280";
@@ -2243,7 +2243,7 @@ window.selectExamAns = function(qIdx, oIdx) {
 
       // التاريخ
       c.fillStyle = "#9ca3af";
-      c.font = "600 20px Inter, sans-serif";
+      c.font = "400 20px Cairo, sans-serif";
       c.fillText(`Issued on: ${cert.date} • Official ECA Certificate`, canvas.width / 2, 1035);
 
       return canvas.toDataURL("image/png");

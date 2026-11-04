@@ -454,7 +454,7 @@
           <button onclick="switchTab('contact')" class="px-5 py-2.5 rounded-xl text-xs gold-btn">Ask about schedules</button>
         </div>` : ''}
         <div class="gold-card rounded-2xl p-6 grid md:grid-cols-2 gap-6 items-center">
-          <img src="img/chess-pieces-aboutUs.jpeg" alt="" loading="lazy" class="w-full rounded-2xl border border-yellow-500/30 object-cover max-h-72 md:order-none order-last" />
+          <img src="img/chess-pieces-aboutUs.webp?v=eca-v50" alt="" loading="lazy" width="900" height="514" class="w-full rounded-2xl border border-yellow-500/30 object-cover max-h-72 md:order-none order-last" />
           <div class="space-y-3">
             <h3 class="font-display font-bold text-xl text-yellow-400">ليه الشطرنج لابنك؟</h3>
             <p class="text-sm text-gray-300 leading-7">الملعب ورقعة الشطرنج عالمين مختلفين، بس التفكير بيجمع بينهم. الشطرنج مش مجرد لعبة — ده تمرين للعقل بيبان أثره في المذاكرة وفي الحياة.</p>
@@ -471,7 +471,7 @@
             <p class="text-sm text-gray-300 leading-7">متابعة شخصية لكل طالب بتساعده يتفوق في كل مرحلة: يتعلم، يحلل، ويكسب. وبأدوات حديثة بنساعد اللاعبين يطلّعوا كل إمكانياتهم.</p>
             <button onclick="switchTab('contact')" class="px-5 py-2.5 rounded-xl text-xs bg-zinc-900 border border-yellow-500/40 text-yellow-300">ساعدنا نتحسن</button>
           </div>
-          <img src="img/123_steps.webp" alt="" loading="lazy" class="w-full max-w-sm mx-auto rounded-2xl border border-yellow-500/30" />
+          <img src="img/123_steps.webp?v=eca-v50" alt="" loading="lazy" width="768" height="768" class="w-full max-w-sm mx-auto rounded-2xl border border-yellow-500/30" />
         </div>
         ${joinCTA()}`;
     }

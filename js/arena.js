@@ -8,19 +8,19 @@
     // بوتات ساحة التدريب (من الأسهل للأصعب). ms = أقصى وقت تفكير بالملّي ثانية، rnd = نسبة النقلات العشوائية
     // التقييم تقريبي للتوضيح بس. الاسم والوصف والصورة تقدر تغيّرهم من هنا (img = مسار صورة اختياري)
     const LEVELS = [
-      { name: "مبتدئ", elo: "~300", piece: "p", color: "#94a3b8", img: "img/bots/1.png", desc: "أنا مش شاطر أوي، مناسب جداً للمبتدئين. يلا نلعب!", skill: 0, depth: 1, ms: 60, rnd: .6 },
-      { name: "متعلّم", elo: "~500", piece: "p", color: "#22c55e", img: "img/bots/2.png", desc: "بلعب نقلات لطيفة ومناسبة للمبتدئين.", skill: 1, depth: 2, ms: 100, rnd: .35 },
-      { name: "متدرّب", elo: "~700", piece: "n", color: "#ec4899", img: "img/bots/3.png", desc: "بحب المفاجآت وممكن أوقعك وانت مش واخد بالك!", skill: 3, depth: 3, ms: 160, rnd: .15 },
-      { name: "منافس", elo: "~900", piece: "n", color: "#f97316", img: "img/bots/4.png", desc: "متوازن — مش سهل أوي ومش صعب أوي.", skill: 5, depth: 4, ms: 220, rnd: .07 },
-      { name: "استراتيجي", elo: "~1150", piece: "b", color: "#06b6d4", img: "img/bots/5.png", desc: "نقلاتي ممكن تفاجئ حتى اللاعبين اللي عندهم خبرة!", skill: 8, depth: 6, ms: 350, rnd: .02 },
-      { name: "خبير", elo: "~1400", piece: "r", color: "#6366f1", img: "img/bots/6.png", desc: "بعرف استراتيجيات معقدة، جهّز نفسك!", skill: 11, depth: 9, ms: 550, rnd: 0 },
-      { name: "أستاذ", elo: "~1700", piece: "q", color: "#d946ef", img: "img/bots/7.png", desc: "صعب جداً وبنصب فخاخ لخصومي.", skill: 15, depth: 12, ms: 800, rnd: 0 },
-      { name: "جراند ماستر", elo: "2000+", piece: "k", color: "#d4af37", img: "img/bots/8.png", desc: "لاعب محترف — الأقوى بس هو اللي يقدر يكسبني.", skill: 20, depth: 18, ms: 1200, rnd: 0 }
+      { name: "مبتدئ", elo: "~300", piece: "p", color: "#94a3b8", img: "img/bots/1.webp?v=eca-v50", desc: "أنا مش شاطر أوي، مناسب جداً للمبتدئين. يلا نلعب!", skill: 0, depth: 1, ms: 60, rnd: .6 },
+      { name: "متعلّم", elo: "~500", piece: "p", color: "#22c55e", img: "img/bots/2.webp?v=eca-v50", desc: "بلعب نقلات لطيفة ومناسبة للمبتدئين.", skill: 1, depth: 2, ms: 100, rnd: .35 },
+      { name: "متدرّب", elo: "~700", piece: "n", color: "#ec4899", img: "img/bots/3.webp?v=eca-v50", desc: "بحب المفاجآت وممكن أوقعك وانت مش واخد بالك!", skill: 3, depth: 3, ms: 160, rnd: .15 },
+      { name: "منافس", elo: "~900", piece: "n", color: "#f97316", img: "img/bots/4.webp?v=eca-v50", desc: "متوازن — مش سهل أوي ومش صعب أوي.", skill: 5, depth: 4, ms: 220, rnd: .07 },
+      { name: "استراتيجي", elo: "~1150", piece: "b", color: "#06b6d4", img: "img/bots/5.webp?v=eca-v50", desc: "نقلاتي ممكن تفاجئ حتى اللاعبين اللي عندهم خبرة!", skill: 8, depth: 6, ms: 350, rnd: .02 },
+      { name: "خبير", elo: "~1400", piece: "r", color: "#6366f1", img: "img/bots/6.webp?v=eca-v50", desc: "بعرف استراتيجيات معقدة، جهّز نفسك!", skill: 11, depth: 9, ms: 550, rnd: 0 },
+      { name: "أستاذ", elo: "~1700", piece: "q", color: "#d946ef", img: "img/bots/7.webp?v=eca-v50", desc: "صعب جداً وبنصب فخاخ لخصومي.", skill: 15, depth: 12, ms: 800, rnd: 0 },
+      { name: "جراند ماستر", elo: "2000+", piece: "k", color: "#d4af37", img: "img/bots/8.webp?v=eca-v50", desc: "لاعب محترف — الأقوى بس هو اللي يقدر يكسبني.", skill: 20, depth: 18, ms: 1200, rnd: 0 }
     ];
     // صورة البوت: لو له صورة بنعرضها، غير كده دايرة بلونه وفيها قطعته
     function botAvatar(b, size) {
       size = size || 48;
-      if (b.img) return `<img src="${esc(b.img)}" alt="" loading="lazy" class="rounded-full object-cover shrink-0 border-[3px] bg-white shadow-lg" style="width:${size}px;height:${size}px;border-color:${b.color}" />`;
+      if (b.img) return `<img src="${esc(b.img)}" alt="" loading="lazy" width="${size}" height="${size}" class="rounded-full object-cover shrink-0 border-[3px] bg-white shadow-lg" style="width:${size}px;height:${size}px;border-color:${b.color}" />`;
       return `<div class="rounded-full shrink-0 flex items-center justify-center border-2 border-white/30 shadow-lg" style="width:${size}px;height:${size}px;background:radial-gradient(circle at 30% 30%, ${b.color}ee, ${b.color}88 60%, #050507)"><span style="font-size:${Math.round(size * .58)}px;line-height:1;color:#fff;text-shadow:0 1px 3px #000;font-family:'Segoe UI Symbol','DejaVu Sans',sans-serif">${PIECE[b.piece]}&#xFE0E;</span></div>`;
     }
     const PUZ_DIFF = [["daily", "لغز اليوم من Lichess"], ["easiest", "سهل جداً"],["easier", "سهل"], ["normal", "متوسط"], ["harder", "صعب"], ["hardest", "صعب جداً"]];
@@ -70,8 +70,12 @@
       // حد أقصى للوقت: المحرك بيرد في وقت قصير ثابت بدل ما يقعد يحسب للعمق كله (ده اللي كان مخلّيه بطيء)
       w.postMessage("go depth " + lvl.depth + (lvl.ms ? " movetime " + lvl.ms : ""));
     }
-    // تسخين المحرك أول ما الطالب يفتح «العب ضد الكمبيوتر» عشان أول نقلة ماتستناش تحميله
+    // تسخين المحرك بعد هدوء تحميل الصفحة حتى تكون أول نقلة أسرع
     function warmEngine() { const w = engine(); if (w && !w.__warm) { w.__warm = true; w.postMessage("isready"); } }
+    window.addEventListener("load", () => {
+      if ("requestIdleCallback" in window) requestIdleCallback(warmEngine, { timeout: 3000 });
+      else setTimeout(warmEngine, 1500);
+    }, { once: true });
 
     // ---------- الرقعة ----------
     function targetsOf(g, sel) {
