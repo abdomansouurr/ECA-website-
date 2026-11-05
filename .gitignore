@@ -9,3 +9,5 @@ node_modules/
 *.key
 serviceAccount*.json
 *-adminsdk-*.json
+.vercel
+.env*
