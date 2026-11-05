@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" class="light eca">
+<html lang="ar" class="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#f2f6fd" />
+  <meta name="theme-color" content="#f6f9ff" />
   <link rel="manifest" href="manifest.json" />
   <!-- لوجو الأكاديمية على تاب المتصفح: ICO في الجذر (الفولباك الأضمن — المتصفحات بتطلبه من /favicon.ico مباشرة)
        + PNG للتاب الحديث + apple-touch للآيفون — كلهم بنفس اللوجو ومع رقم نسخة يكسر الكاش -->
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ECA Chess" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <script>(function(){try{var v=localStorage.getItem("ECA_THEME"),t=["dark","light","eca","kids"].indexOf(v)>=0?v:"eca";var d=document.documentElement;d.classList.remove("dark","light","eca","kids");d.classList.add(t==="eca"||t==="kids"?"light":t);if(t==="eca"||t==="kids")d.classList.add(t);}catch(e){}})();</script>
+  <script>(function(){try{var v=localStorage.getItem("ECA_THEME"),t=v==="dark"?"dark":"light";var d=document.documentElement;d.classList.remove("dark","light","eca","kids");d.classList.add(t);if(v!==t)localStorage.setItem("ECA_THEME",t);}catch(e){document.documentElement.classList.remove("dark","eca","kids");document.documentElement.classList.add("light");}})();</script>
   <title>Egypt Chess Academy (ECA) — Full Platform</title>
   <script>/* التقاط الأخطاء من أول لحظة — firebase.js بيبعتها لـ errors */window.__ecaErr=[];addEventListener("error",function(e){if(window.__ecaErr.length<30)window.__ecaErr.push({msg:String(e.message||"").slice(0,500),src:String(e.filename||"").slice(0,300),line:e.lineno||0})});addEventListener("unhandledrejection",function(e){var r=e.reason;if(window.__ecaErr.length<30)window.__ecaErr.push({msg:String((r&&(r.message||r))||"unhandled rejection").slice(0,500),src:"promise",line:0})});</script>
   <meta name="description" content="أكاديمية مصر للشطرنج (ECA): منهج تدريبي من 6 مراحل، ألغاز يومية، لعب ضد بوتات بمستويات مختلفة، امتحانات ترقية وشهادات، ومتابعة كاملة لولي الأمر." />
@@ -383,6 +383,11 @@
     html.light .bg-zinc-800 { background-color: #d7e2f5 !important; }
     html.light .border-zinc-800 { border-color: #c9d6ec !important; }
     html.light .att-btn { background: #e8eef9; }
+    html.light .gold-gradient-text { background: none; color: #0a45a8; -webkit-text-fill-color: #0a45a8; }
+    html.light .text-white { color: #172b4d !important; }
+    html.light .gold-btn, html.light .gold-btn * { color: #fff !important; }
+    html.light input, html.light select, html.light textarea { color: #172b4d; }
+    html.light input::placeholder, html.light textarea::placeholder { color: #64748b; opacity: 1; }
   </style>
   <script>window.ECA_VERSION = "eca-v50";</script>
   <link rel="stylesheet" href="tailwind.css?v=eca-v50" />
@@ -548,7 +553,7 @@
     } catch (_) {}
   </script>
   <script type="application/json" id="ecaLazyModules">{"finance":"js/finance.js"}</script>
-  <script src="js/core.js?v=eca-v51"></script>
+  <script src="js/core.js?v=eca-v52"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
   <script src="js/arena.js?v=eca-v50"></script>
 
