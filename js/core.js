@@ -830,7 +830,7 @@
             <div class="flex items-center justify-between gap-2 px-2 pt-0.5">
               <span class="text-[11px] text-gray-400">${lang === "en" ? "Theme" : "شكل الموقع"}</span>
               <span class="flex gap-1.5">
-                ${THEMES.map(x => `<button type="button" class="thm-chip w-6 h-6 rounded-full border-2 shrink-0" data-t="${x[0]}" onclick="menuTheme('${x[0]}')" aria-label="${lang === "en" ? x[2] : x[1]}" aria-pressed="${currentTheme() === x[0]}" style="border-color:${currentTheme() === x[0] ? "#d4af37" : "rgba(128,128,128,.4)"};background:${THEME_SWATCH[x[0]]}"></button>`).join("")}
+                ${THEMES.map(x => `<button type="button" class="thm-chip w-6 h-6 rounded-full border-2 shrink-0" data-t="${x[0]}" onclick="menuTheme('${x[0]}')" aria-label="${lang === "en" ? x[2] : x[1]}" aria-pressed="${currentTheme() === x[0]}" style="border-color:${currentTheme() === x[0] ? "#0a45a8" : "rgba(128,128,128,.4)"};background:${THEME_SWATCH[x[0]]}"></button>`).join("")}
               </span>
             </div>
             <button onclick="toggleLang()" role="menuitem" class="w-full flex items-center gap-2.5 px-3 h-10 rounded-lg text-sm text-start hover:bg-yellow-500/10 ${menuText}">${lang === "en" ? FLAG_EG + "<span>Arabic</span>" : FLAG_US + "<span>English</span>"}</button>
@@ -1158,8 +1158,8 @@
                       const lkBtn = (t, url, isHw) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="px-3 py-1 rounded-lg text-xs bg-zinc-900 border ${isHw ? 'border-dashed border-yellow-500/60' : 'border-yellow-500/35'} text-yellow-300 hover:bg-yellow-500 hover:text-black">${t} ↗</a>`;
                       // زر الواجب: لو الموقف قابل للحل يفتح لاعب الألغاز جوه المنصة، غير كده لينك Lichess
                       const hwKey = st.step + "-" + idx;
+                      const HE = typeof hwEntry === "function" ? hwEntry(hwKey) : null;
                       const hwBtn = x => {
-                        const HE = typeof hwEntry === "function" ? hwEntry(hwKey) : null;
                         const cls = 'px-3 py-1 rounded-lg text-xs bg-zinc-900 border border-dashed border-yellow-500/60 text-yellow-300 hover:bg-yellow-500 hover:text-black';
                         return HE && HE.puzzles && HE.puzzles.length
                           ? `<button onclick="openHomework('${hwKey}')" class="${cls}">Homework ↗</button>`
@@ -1806,8 +1806,8 @@
     // ---------- Theme (dark / light / eca / kids) ----------
     // "eca" = ثيم بألوان لوجو الأكاديمية (أزرق ملكي + أسود + أبيض). بيشتغل فوق الفاتح: html بياخد class "light" و "eca" مع بعض.
     const THEMES = [["dark", "داكن", "Dark"], ["light", "فاتح", "Light"], ["eca", "ألوان الأكاديمية", "ECA colours"], ["kids", "الأبطال الصغار", "Young champions"]];
-    const THEME_META = { dark: "#050507", light: "#f6f3ea", eca: "#f2f6fd", kids: "#f1f8ff" };
-    const THEME_SWATCH = { dark: "linear-gradient(135deg,#050507 50%,#d4af37 50%)", light: "linear-gradient(135deg,#f6f3ea 50%,#b8860b 50%)", eca: "linear-gradient(135deg,#ffffff 45%,#0a45a8 45%)", kids: "linear-gradient(135deg,#fff7cc 50%,#1769aa 50%)" };
+    const THEME_META = { dark: "#050507", light: "#f6f9ff", eca: "#f2f6fd", kids: "#f1f8ff" };
+    const THEME_SWATCH = { dark: "linear-gradient(135deg,#050507 50%,#0a45a8 50%)", light: "linear-gradient(135deg,#f6f9ff 50%,#0a45a8 50%)", eca: "linear-gradient(135deg,#ffffff 45%,#0a45a8 45%)", kids: "linear-gradient(135deg,#e4ecfa 50%,#1769aa 50%)" };
     const THEME_ICON = {
       light: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
       dark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
@@ -1839,7 +1839,7 @@
       saveThemePreference(t);
       document.querySelectorAll("#acctMenu .thm-chip").forEach(b => {
         const on = b.dataset.t === t;
-        b.style.borderColor = on ? "#d4af37" : "rgba(128,128,128,.4)";
+        b.style.borderColor = on ? "#0a45a8" : "rgba(128,128,128,.4)";
         b.setAttribute("aria-pressed", on ? "true" : "false");
       });
     }
@@ -1853,7 +1853,7 @@
       m.id = "themeMenu"; m.setAttribute("role", "menu"); m.setAttribute("dir", en ? "ltr" : "rtl");
       m.className = "gold-card rounded-xl p-1.5 shadow-2xl";
       m.style.cssText = "position:fixed;z-index:60;min-width:190px;top:" + Math.round(r.bottom + 8) + "px;" + (r.left > innerWidth / 2 ? "right:" + Math.max(8, Math.round(innerWidth - r.right)) + "px;" : "left:" + Math.max(8, Math.round(r.left)) + "px;");
-      m.innerHTML = THEMES.map(x => `<button type="button" role="menuitemradio" aria-checked="${cur === x[0]}" onclick="pickTheme('${x[0]}')" class="w-full flex items-center gap-2.5 px-3 h-11 rounded-lg text-sm text-start hover:bg-yellow-500/10 ${cur === x[0] ? 'font-bold' : ''}"><span style="width:22px;height:22px;border-radius:50%;flex:none;border:2px solid ${cur === x[0] ? '#d4af37' : 'rgba(128,128,128,.5)'};background:${THEME_SWATCH[x[0]]}"></span><span class="text-white">${en ? x[2] : x[1]}</span>${cur === x[0] ? '<span class="ms-auto text-yellow-300">✓</span>' : ''}</button>`).join("");
+      m.innerHTML = THEMES.map(x => `<button type="button" role="menuitemradio" aria-checked="${cur === x[0]}" onclick="pickTheme('${x[0]}')" class="w-full flex items-center gap-2.5 px-3 h-11 rounded-lg text-sm text-start hover:bg-yellow-500/10 ${cur === x[0] ? 'font-bold' : ''}"><span style="width:22px;height:22px;border-radius:50%;flex:none;border:2px solid ${cur === x[0] ? '#0a45a8' : 'rgba(128,128,128,.5)'};background:${THEME_SWATCH[x[0]]}"></span><span class="text-white">${en ? x[2] : x[1]}</span>${cur === x[0] ? '<span class="ms-auto text-yellow-300">✓</span>' : ''}</button>`).join("");
       document.body.appendChild(m); b.setAttribute("aria-expanded", "true");
     }
     document.addEventListener("click", e => { if (!e.target.closest || !e.target.closest("#themeMenu, #themeBtn")) closeThemeMenu(); });
@@ -1886,7 +1886,7 @@
     function rsz() { cv.width = window.innerWidth; cv.height = window.innerHeight; }
     window.addEventListener("resize", rsz); rsz();
     const bgRoot = document.documentElement;
-    const bgRGB = () => bgRoot.classList.contains("eca") ? "10,69,168" : bgRoot.classList.contains("light") ? "153,116,21" : "212,175,55";
+    const bgRGB = () => bgRoot.classList.contains("kids") ? "23,105,170" : "10,69,168";
     const bgStill = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);   // لو الجهاز طالب تقليل الحركة: ثابتة
     const pts = Array.from({ length: 35 }, () => ({ x: Math.random() * cv.width, y: Math.random() * cv.height, r: Math.random() * 1.8 + 0.5, vx: (Math.random() - 0.5) * 0.25, vy: (Math.random() - 0.5) * 0.25 }));
     const BG_TYPES = ["K", "Q", "R", "B", "N", "P"], bgImgs = {}; let bgTint = {};
@@ -1919,7 +1919,7 @@
       });
       pts.forEach(p => {
         p.x = (p.x + p.vx * mv + cv.width) % cv.width; p.y = (p.y + p.vy * mv + cv.height) % cv.height;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = "rgba(" + rgb + "," + (rgb === "10,69,168" ? 0.5 : rgb === "153,116,21" ? 0.5 : 0.3) + ")"; ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = "rgba(" + rgb + "," + (lite ? 0.5 : 0.3) + ")"; ctx.fill();
       });
       // خطوط خفيفة بين النقط القريبة (شبكة) في الفاتح وECA
       if (lite) {
@@ -2480,7 +2480,7 @@ window.selectExamAns = function(qIdx, oIdx) {
       c.beginPath();
       c.arc(canvas.width / 2, 880, 96, 0, Math.PI * 2);
       c.lineWidth = 6;
-      c.strokeStyle = "#d4af37";
+      c.strokeStyle = "#0a45a8";
       c.stroke();
 
       // إدارة الأكاديمية

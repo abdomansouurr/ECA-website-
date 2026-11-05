@@ -327,7 +327,7 @@
 
     details.faq.closing .faq-ic { transform: none; }
     details.faq > summary { min-height: 44px; }
-    /* ===== ثيم ECA (eca-v50): أزرق ملكي + حبر + أبيض بدرجات أهدأ. الفاتح والداكن زي ما هم ===== */
+    /* ===== ألوان الأكاديمية: أزرق بدل الذهبي في جميع المظاهر ===== */
     html.eca { --eca-blue: #0a45a8; --eca-blue-d: #06307a; --eca-blue-l: #2f6fe0; --eca-ink: #0b1220; --eca-bg: #eef3fb; --eca-tint: #e4ecfa; --eca-line: #c9d6ec; }
     html.eca .eca-header { border-bottom-color: var(--eca-line); box-shadow: 0 1px 0 rgba(10,69,168,.06); }
     html.eca .gold-card { border-color: rgba(10,69,168,.20); box-shadow: 0 4px 18px rgba(10,48,122,.08); }
@@ -343,6 +343,46 @@
     html.eca [class*="border-amber-"] { border-color: rgba(180,83,9,.35) !important; }
     html.eca .skip-link { background: var(--eca-blue); color: #fff; }
     html.eca img[src*="_classes"], html.eca img[src*="_courses"], html.eca img[src*="footer_knight"] { filter: hue-rotate(185deg) saturate(1.1); }
+
+    :root { --eca-brand: #0a45a8; --eca-brand-light: #2f6fe0; --eca-brand-soft: rgba(10,69,168,.12); --eca-brand-line: rgba(10,69,168,.32); }
+    html[class] :focus-visible { outline-color: var(--eca-brand) !important; }
+    html[class] .gold-gradient-text { background: linear-gradient(135deg,#06307a 0%,#0a45a8 50%,#2f6fe0 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    html[class] .gold-card { border-color: var(--eca-brand-line); }
+    html[class] .gold-btn, html[class] .nav-tab.active { background: linear-gradient(135deg,#0a45a8,#06307a); color: #fff; }
+    html[class] .gold-btn *, html[class] .nav-tab.active * { color: #fff !important; }
+    html[class] .gold-btn:hover { background: linear-gradient(135deg,#2f6fe0,#0a45a8); }
+    html[class] .nav-tab:hover { background: var(--eca-brand-soft); color: var(--eca-brand); }
+    html[class] .icon-btn { border-color: var(--eca-brand-line); color: var(--eca-brand); }
+    html[class] .eca-header { border-bottom-color: var(--eca-brand-line); }
+    html[class] #sideNav { border-color: var(--eca-brand-line); }
+    html[class] .att-btn { border-color: var(--eca-brand-line); }
+    html[class] .eca-board { border-color: var(--eca-brand-line); }
+    html[class] .eca-promo-pc { box-shadow: inset 0 0 0 2px var(--eca-brand-line); }
+    html[class] .eca-promo-pc:hover { box-shadow: inset 0 0 0 3px var(--eca-brand); }
+    html[class] .eca-sq.last::before { background: rgba(47,111,224,.35); }
+    html[class] .eca-sq.sel::before { background: rgba(47,111,224,.5); }
+    html[class] .eval-bar { border-color: var(--eca-brand-line); }
+    html[class] .eca-tile:hover { border-color: var(--eca-brand-light); }
+    html[class] .skip-link { background: var(--eca-brand); color: #fff; }
+    html[class] .eca-reward-pop { background: #e4ecfa; color: #06307a; }
+    html[class] .eca-confirm-panel { border-color: var(--eca-brand-line); }
+    html[class] .eca-confirm-title, html[class] .eca-confirm-icon { color: var(--eca-brand); }
+    html[class] .eca-confirm-icon { background: var(--eca-brand-soft); }
+    html[class] .eca-confirm-cancel { border-color: var(--eca-brand-line); }
+    html[class] [class*="text-yellow-"] { color: var(--eca-brand) !important; }
+    html[class] [class*="border-yellow-"] { border-color: var(--eca-brand-line) !important; }
+    html[class] [class*="divide-yellow-"] > :not([hidden]) ~ :not([hidden]) { border-color: var(--eca-brand-line) !important; }
+    html[class] [class*="bg-yellow-500/"], html[class] [class*="bg-yellow-400/"] { background-color: var(--eca-brand-soft) !important; }
+    html[class] [class~="bg-yellow-500"], html[class] [class~="bg-yellow-400"] { background-color: var(--eca-brand) !important; color: #fff !important; }
+    html[class] [class~="hover:bg-yellow-500"]:hover, html[class] [class~="hover:bg-yellow-400"]:hover { background-color: var(--eca-brand-light) !important; color: #fff !important; }
+    html[class] [class~="hover:text-yellow-300"]:hover { color: var(--eca-brand) !important; }
+    html.light body { background-color: #f6f9ff; }
+    html.light .eca-header, html.light #sideNav { background-color: rgba(248,251,255,.97); }
+    html.light .gold-card { box-shadow: 0 6px 22px rgba(10,48,122,.08); }
+    html.light .bg-zinc-900 { background-color: #e8eef9 !important; }
+    html.light .bg-zinc-800 { background-color: #d7e2f5 !important; }
+    html.light .border-zinc-800 { border-color: #c9d6ec !important; }
+    html.light .att-btn { background: #e8eef9; }
   </style>
   <script>window.ECA_VERSION = "eca-v50";</script>
   <link rel="stylesheet" href="tailwind.css?v=eca-v50" />
@@ -350,7 +390,7 @@
 <body class="min-h-screen flex flex-col relative">
   <a href="#mainView" class="skip-link">تخطّي إلى المحتوى</a>
 
-  <!-- Animated Gold Particles Background -->
+  <!-- Animated blue chess-piece background -->
   <canvas id="bgCanvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
 
   <!-- Toast -->
@@ -508,7 +548,7 @@
     } catch (_) {}
   </script>
   <script type="application/json" id="ecaLazyModules">{"finance":"js/finance.js"}</script>
-  <script src="js/core.js?v=eca-v50"></script>
+  <script src="js/core.js?v=eca-v51"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
   <script src="js/arena.js?v=eca-v50"></script>
 
