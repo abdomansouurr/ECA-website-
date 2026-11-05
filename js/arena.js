@@ -180,7 +180,7 @@
     // إحصائيات الطالب بتتحفظ في حسابه (الكوتش بيشوفها في المتابعة)
     function recordArena(fn) {
       const u = currUser(); if (!u || u.role !== "student") return;
-      u.arena = u.arena || {}; markActiveDay(u); fn(u.arena); save();
+      u.arena = u.arena || {}; markActiveDay(u); fn(u.arena); return save();
     }
     // أيام التمرين (لشارات الاستمرارية): بنسجّل النهاردة مرة واحدة
     function markActiveDay(u) {
@@ -193,6 +193,7 @@
     function playStart() {
       if (!ChessCls) return;
       const P = arena.play;
+      if (!botIsUnlocked(P.level)) return toast("افتح البوت من متجر النجوم أولاً");
       P.game = new ChessCls(); P.over = ""; P.sel = null; P.last = null; P.thinking = false; P.lastComment = "";
       P.color = P.colorChoice === "r" ? (Math.random() < .5 ? "w" : "b") : P.colorChoice;
       P.flip = P.color === "b";
@@ -227,22 +228,20 @@
       const later = uci => setTimeout(() => apply(uci), Math.max(0, 350 - (Date.now() - t0)));   // أقل وقت عشان النقلة تبان طبيعية
       if (Math.random() < lvl.rnd) later(randomUci()); else engineMove(fen, lvl, later);
     }
-    function playCheckEnd() {
+    async function playCheckEnd() {
       const P = arena.play, g = P.game;
       if (!g.isGameOver()) return;
       P.over = g.isCheckmate() ? (g.turn() === P.color ? "loss" : "win") : "draw";
       P.thinking = false;
-      let reward = null;
-      recordArena(a => {
+      await recordArena(a => {
         a.games = a.games || { w: 0, l: 0, d: 0 }; a.games[P.over[0] === "w" ? "w" : P.over[0] === "l" ? "l" : "d"]++;
         if (P.over === "win") a.bestWin = Math.max(a.bestWin || 0, P.level + 1);
         // ستريك الانتصارات ورا بعض (التعادل مابيقطعهوش، الخسارة بتصفّره)
         if (P.over === "win") { a.winStreak = (a.winStreak || 0) + 1; a.bestWinStreak = Math.max(a.bestWinStreak || 0, a.winStreak); }
         else if (P.over === "loss") a.winStreak = 0;
-        if (P.over === "win" && window.ecaAddStudentStar) reward = window.ecaAddStudentStar(currUser(), false);
       });
       toast(P.over === "win" ? "كسبت ضد " + LEVELS[P.level].name + "! برافو عليك" : P.over === "loss" ? "" + LEVELS[P.level].name + " كسب — جرّب تاني" : "تعادل");
-      if (reward && window.ecaShowStudentReward) window.ecaShowStudentReward(reward);
+      if (P.over === "win" && window.ecaAwardStudentActivity) await window.ecaAwardStudentActivity("bot", P.level);
     }
     function playUndo() {
       const P = arena.play, g = P.game; if (!g || P.thinking || !g.history().length) return;
@@ -257,6 +256,16 @@
       arenaRefresh();
     }
     function playNew() { const P = arena.play; P.game = null; P.over = ""; P.sel = null; P.last = null; P.thinking = false; P.lastComment = ""; render(); }
+    function botIsUnlocked(level) {
+      const u = currUser();
+      return !u || u.role !== "student" || level === 0 || (u.shop && (u.shop.bots || []).includes(level));
+    }
+    function setBotLevel(level) {
+      if (!Number.isInteger(level) || level < 0 || level >= LEVELS.length) return;
+      if (!botIsUnlocked(level)) return toast("افتح البوت من متجر النجوم أولاً");
+      arena.play.level = level; render();
+    }
+    window.setBotLevel = setBotLevel;
     function moveBotComment(move, playerMove) {
       if (move.san && move.san.includes("#")) return playerMove ? "كش مات! نقلة رائعة." : "كش مات — انتهى الدور.";
       if (move.san && move.san.includes("+")) return playerMove ? "كش! راقب ملك الخصم." : "كش! لازم ترد على تهديد الملك.";
@@ -284,12 +293,15 @@
             <p class="text-xs text-gray-400 mt-1">8 بوتات من الأسهل للأصعب — ابدأ من الأول وكل ما تكسب بوت جرّب اللي بعده.</p>
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            ${LEVELS.map((b, i) => `
-              <button onclick="arena.play.level=${i}; render();" class="eca-tile p-3 rounded-2xl text-center border-2 ${P.level === i ? 'bg-yellow-500/10' : 'bg-black/70 border-zinc-800'}" style="${P.level === i ? 'border-color:' + b.color : ''}">
+            ${LEVELS.map((b, i) => {
+              const unlocked = botIsUnlocked(i);
+              return `
+              <button onclick="setBotLevel(${i})" ${unlocked ? "" : "disabled"} class="eca-tile p-3 rounded-2xl text-center border-2 ${P.level === i ? 'bg-yellow-500/10' : 'bg-black/70 border-zinc-800'} ${unlocked ? "" : "disabled:opacity-40"}" style="${P.level === i ? 'border-color:' + b.color : ''}">
                 <div class="flex justify-center">${botAvatar(b, 56)}</div>
                 <div class="text-sm font-bold text-white mt-2">${esc(b.name)}</div>
                 <div class="text-[11px] font-bold" style="color:${b.color}" dir="ltr">${i + 1} • ${esc(b.elo)}</div>
-              </button>`).join("")}
+                ${unlocked ? "" : `<div class="text-[11px] text-yellow-300 mt-1">🔒 ${lang === "en" ? "Unlock in shop" : "افتحه من المتجر"}</div>`}
+              </button>`; }).join("")}
           </div>
           <div class="flex flex-wrap items-center gap-4 p-4 rounded-2xl bg-black/70 border border-yellow-500/20">
             ${botAvatar(bot, 64)}
@@ -330,7 +342,7 @@
                 <button onclick="playStart()" class="tap rounded-xl text-xs gold-btn">دور تاني مع ${esc(bot.name)}</button>
                 <button onclick="playNew()" class="tap rounded-xl text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">اختار بوت تاني</button>
               </div>
-              ${P.over === "win" && P.level < LEVELS.length - 1 ? `<button onclick="arena.play.level=${P.level + 1}; playStart();" class="w-full py-2.5 rounded-xl text-xs font-bold bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">العب ضد البوت اللي بعده: ${esc(LEVELS[P.level + 1].name)}</button>` : ''}
+              ${P.over === "win" && P.level < LEVELS.length - 1 && botIsUnlocked(P.level + 1) ? `<button onclick="setBotLevel(${P.level + 1}); playStart();" class="w-full py-2.5 rounded-xl text-xs font-bold bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">العب ضد البوت اللي بعده: ${esc(LEVELS[P.level + 1].name)}</button>` : ''}
             </div>
             <div class="gold-card rounded-2xl p-4">
               <div class="text-xs font-bold text-yellow-400 mb-2">النقلات</div>
@@ -375,18 +387,17 @@
       const id = Z.info && Z.info.id; if (!id) return;          // من غير رقم لغز مانقدرش نسجّل محاولة
       // مفتاح فريد لكل حل: لو Lichess رجّعت نفس اللغز تاني بيتحسب تاني في العداد (بدل «اتحسب قبل كده»)
       const key = id + "-" + Date.now().toString(36);
-      let reward = null;
+      const diff = Z.diff;
       recordAttempt("arena", key, solved, u => {
         const a = u.arena = u.arena || {}; markActiveDay(u);
         if (!solved && typeof reviewAdd === "function") reviewAdd(u, id, Z.info.rating);     // اللغز الغلط يدخل المراجعة
         a.puzTried = (a.puzTried || 0) + 1;
         if (solved) {
           a.puzSolved = (a.puzSolved || 0) + 1; a.puzStreak = (a.puzStreak || 0) + 1; a.puzBestStreak = Math.max(a.puzBestStreak || 0, a.puzStreak);
-          if (window.ecaAddStudentStar) reward = window.ecaAddStudentStar(u, true);
         }
         else a.puzStreak = 0;
       }).then(r => {
-        if (r.ok) { if (reward && window.ecaShowStudentReward) window.ecaShowStudentReward(reward); }
+        if (r.ok && solved && window.ecaAwardStudentActivity) window.ecaAwardStudentActivity("puzzle", diff);
         else if (r.code === "permission-denied") toast("اللغز ده اتحسب قبل كده — النتيجة مش هتتكرر");
       });
     }
@@ -499,12 +510,13 @@
       }, 1000);
       arenaRefresh();
     }
-    function visEnd() {
+    async function visEnd() {
       const V = arena.vis; clearInterval(V.timer); V.timer = null;
       if (!V.active) return;
       V.active = false; V.target = ""; V.best = Math.max(V.best, V.score);
-      recordArena(a => { if (V.score > (a.visionBest || 0)) a.visionBest = V.score; });
+      await recordArena(a => { if (V.score > (a.visionBest || 0)) a.visionBest = V.score; });
       toast("خلص الوقت — نتيجتك: " + V.score);
+      if (V.score >= 3 && window.ecaAwardStudentActivity) await window.ecaAwardStudentActivity("vision", todayISO(), V.score);
       arenaRefresh();
     }
     function visClick(sq) {

@@ -53,5 +53,52 @@ T('exam start again (attempt exists)', false, { old: base, neu: started, before:
 { const neu = C(base); neu.level = 3; T('level edited directly', false, { old: base, neu }); }
 { const neu = C(base); neu.name = 'New Name'; neu.puzDone = { 1: { i: 0, ok: true } }; T('ordinary profile save', true, { old: base, neu }); }
 { const neu = C(base); neu.nickname = 'star-knight'; T('preset student nickname', true, { old: base, neu }); }
-{ const neu = C(base); neu.nickname = 'Mona real name'; T('free-form student nickname', false, { old: base, neu }); }
+{ const neu = C(base); neu.nickname = 'Mona real name'; T('free-form student nickname', true, { old: base, neu }); }
+{ const neu = C(base); neu.nickname = ' <img>'; T('unsafe nickname rejected', false, { old: base, neu }); }
+{ const neu = C(base); neu.arena.stars = 10; neu.arena.xp = 200; T('stars and XP cannot be edited without a receipt', false, { old: base, neu }); }
+{
+  const old = C(base); old.att['1-0'] = true; old.arena.stars = 0; old.arena.xp = 0;
+  const neu = C(old); neu.arena.stars = 1; neu.arena.xp = 20; neu.lastEconomy = 'lesson-1-0';
+  const receipt = { uid, kind: 'earn', source: 'lesson', key: '1-0', day: today, item: '', score: 0, starsDelta: 1, xpDelta: 20, missionBonus: false, at: now };
+  T('attended interactive lesson reward', true, { old, neu, after: { ['econ:' + neu.lastEconomy]: receipt } });
+  const noAttendance = C(old); delete noAttendance.att['1-0'];
+  const noAttendanceNeu = C(noAttendance); noAttendanceNeu.arena.stars = 1; noAttendanceNeu.arena.xp = 20; noAttendanceNeu.lastEconomy = neu.lastEconomy;
+  T('interactive lesson reward requires attendance', false, { old: noAttendance, neu: noAttendanceNeu, after: { ['econ:' + neu.lastEconomy]: receipt } });
+  T('interactive lesson reward cannot be collected twice', false, { old, neu, before: { ['econ:' + neu.lastEconomy]: receipt }, after: { ['econ:' + neu.lastEconomy]: receipt } });
+}
+{
+  const old = C(base); old.arena.stars = 0; old.arena.xp = 0;
+  const neu = C(old); neu.arena.stars = 2; neu.arena.xp = 20; neu.arena.missionDate = today; neu.arena.missionDone = true;
+  neu.lastEconomy = `puzzle-${today}-easiest`;
+  const receipt = { uid, kind: 'earn', source: 'puzzle', key: 'easiest', day: today, item: '', score: 0, starsDelta: 2, xpDelta: 20, missionBonus: true, at: now };
+  T('puzzle reward includes one-time mission bonus', true, { old, neu, after: { ['econ:' + neu.lastEconomy]: receipt } });
+}
+{
+  const old = C(base); old.arena.stars = 100; old.arena.xp = 0;
+  const neu = C(old); neu.arena.stars = 50; neu.shop = { titles: ['title-tactics'], bots: [], hints: 0, activeTitle: '' };
+  neu.lastEconomy = 'buy-title-tactics-abcd1234';
+  const receipt = { uid, kind: 'purchase', source: '', key: '', day: today, item: 'title-tactics', score: 0, starsDelta: -50, xpDelta: 0, missionBonus: false, at: now };
+  T('shop purchase spends stars atomically', true, { old, neu, after: { ['econ:' + neu.lastEconomy]: receipt } });
+  const direct = C(old); direct.shop = { titles: ['title-tactics'], bots: [], hints: 0, activeTitle: '' };
+  T('shop item cannot be granted without a receipt', false, { old, neu: direct });
+}
+{
+  const old = C(base); old.shop = { titles: ['title-tactics'], bots: [], hints: 0, activeTitle: '' };
+  const neu = C(old); neu.shop.activeTitle = 'title-tactics';
+  T('owned title can be equipped', true, { old, neu });
+}
+{
+  const old = C(base); old.arena.stars = 0; old.arena.xp = 0;
+  const neu = C(old); neu.arena.stars = 8; neu.arena.xp = 160; neu.lastEconomy = `bot-${today}-7`;
+  const receipt = { uid, kind: 'earn', source: 'bot', key: '7', day: today, item: '', score: 0, starsDelta: 8, xpDelta: 160, missionBonus: false, at: now };
+  T('locked bot reward rejected', false, { old, neu, after: { ['econ:' + neu.lastEconomy]: receipt } });
+}
+{
+  const old = C(base); old.shop = { titles: [], bots: [], hints: 1, activeTitle: '' };
+  const neu = C(old); neu.shop.hints = 0; neu.lastEconomy = 'hint-use-abcd1234';
+  const receipt = { uid, kind: 'spend-hint', source: '', key: '', day: today, item: '', score: 0, starsDelta: 0, xpDelta: 0, missionBonus: false, at: now };
+  T('purchased homework hint is consumed once', true, { old, neu, after: { ['econ:' + neu.lastEconomy]: receipt } });
+  const noStock = C(base); const forged = C(noStock); forged.shop = { titles: [], bots: [], hints: -1, activeTitle: '' }; forged.lastEconomy = neu.lastEconomy;
+  T('hint balance cannot be overspent', false, { old: noStock, neu: forged, after: { ['econ:' + forged.lastEconomy]: receipt } });
+}
 console.log(`\n${pass} passed, ${fail} failed`);

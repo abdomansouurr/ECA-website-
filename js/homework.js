@@ -1179,7 +1179,7 @@ loadChessModule().then(m => { HWChess = m.Chess; if (tab === "homework") render(
 
 const HW = { key: null, entry: null, i: 0, game: null, sol: [], alts: [], idx: 0, color: "w", flip: false,
              sel: null, last: null, flash: null, status: "play", wrongThis: false, firstTry: [], finished: false,
-             hintsLeft: 3, hintUsed: false, hint: null, streak: 0, maxStreak: 0, demoTimer: null,
+             hintsLeft: 3, freeHintsLeft: 3, bonusHintsLeft: 0, hintSaving: false, hintUsed: false, hint: null, streak: 0, maxStreak: 0, demoTimer: null,
              miss: 0, autoMsg: false };
 const hwT = (ar, en) => lang === "en" ? en : ar;   // ترجمة محلية آمنة (من غير DICT عشان ما ندوش نصوص تانية)
 
@@ -1200,13 +1200,16 @@ function hwIsAutoComplete(u, key) {
 }
 
 function openHomework(key) {
+  if (HW.hintSaving) return toast(hwT("جارٍ تسجيل التلميح، انتظر لحظة.", "Saving the hint—please wait."));
   const e = hwEntry(key); if (!e) return;
   HW.key = key; HW.entry = e; HW.finished = false;
   go("homework"); hwStartAttempt();
 }
 function hwStartAttempt() {
+  if (HW.hintSaving) return toast(hwT("جارٍ تسجيل التلميح، انتظر لحظة.", "Saving the hint—please wait."));
   clearTimeout(HW.demoTimer);
-  HW.i = 0; HW.finished = false; HW.hintsLeft = 3; HW.streak = 0; HW.maxStreak = 0;
+  const u = currUser(), purchasedHints = Math.max(0, Math.floor(Number(u && u.shop && u.shop.hints) || 0));
+  HW.i = 0; HW.finished = false; HW.freeHintsLeft = 3; HW.bonusHintsLeft = purchasedHints; HW.hintSaving = false; HW.hintsLeft = 3 + purchasedHints; HW.streak = 0; HW.maxStreak = 0;
   const ps = (HW.entry && HW.entry.puzzles) || [];
   HW.firstTry = ps.map(() => true);
   if (ps.length) hwLoadPuzzle(); else HW.game = null;
@@ -1311,12 +1314,28 @@ function hwSaveProgress(solved) {
   });
   save();
 }
-// تلميح: بيعلّم على مربع القطعة اللي المفروض تتحرك — 3 مرات بس للواجب كله
+// التلميحات الإضافية تُستهلك من رصيد المتجر بعد التلميحات المجانية.
 // حماية: لو مربع القطعة فاضي أو القطعة من لون غلط (بيانات بايظ) مننزلش التلميح خالص
-function hwHint() {
-  if (!HW.game || HW.status !== "play" || HW.hintsLeft <= 0 || HW.idx % 2 === 1 || HW.idx >= HW.sol.length) return;
+async function hwHint() {
+  if (!HW.game || HW.status !== "play" || HW.hintSaving || HW.hintsLeft <= 0 || HW.idx % 2 === 1 || HW.idx >= HW.sol.length) return;
   const pc = HW.game.get((HW.sol[HW.idx] || "").slice(0, 2));
   if (!pc || pc.color !== HW.color) { HW.status = "wrong"; render(); setTimeout(() => { if (HW.status === "wrong") { HW.status = "play"; render(); } }, 900); return; }
+  if (HW.freeHintsLeft > 0) HW.freeHintsLeft--;
+  else if (HW.bonusHintsLeft > 0) {
+    if (!window.fbEconomy) return toast(hwT("الاتصال غير جاهز لاستخدام التلميح.", "Connection is not ready to use this hint."));
+    let result;
+    HW.hintSaving = true; render();
+    try { result = await window.fbEconomy({ op: "spend-hint" }); }
+    catch (error) {
+      console.error("Homework hint use failed:", error);
+      HW.hintSaving = false;
+      render();
+      return toast(hwT("تعذّر استخدام التلميح الإضافي.", "Could not use the extra hint."));
+    }
+    HW.hintSaving = false;
+    if (!result.ok) { render(); return toast(hwT("لا توجد تلميحات إضافية متاحة.", "No extra hints are available.")); }
+    HW.bonusHintsLeft--;
+  } else return;
   HW.hintsLeft--; HW.hintUsed = true;
   HW.hint = (HW.sol[HW.idx] || "").slice(0, 2);
   render();
@@ -1421,7 +1440,7 @@ function renderHomeworkPlayer(u) {
   const solvedAll = HW.status === "solved";
   // عدّادات حيّة: 🔥 السلسلة (حل ورا بعض من أول محاولة) + ✓ إجمالي المحلول
   const liveStreak = (HW.wrongThis || HW.hintUsed) ? 0 : HW.streak;
-  const hwHintBtn = `<button onclick="hwHint()" ${solvedAll || HW.hintsLeft <= 0 || (HW.idx % 2 === 1) ? "disabled" : ""} title="${hwT("3 تلميحات بس للواجب كله", "Only 3 hints for the whole homework")}" class="tap rounded-xl text-xs bg-zinc-900 border border-sky-500/40 text-sky-300 disabled:opacity-40">💡 ${hwT("تلميح", "Hint")} (${HW.hintsLeft})</button>`;
+  const hwHintBtn = `<button onclick="hwHint()" ${solvedAll || HW.hintSaving || HW.hintsLeft <= 0 || (HW.idx % 2 === 1) ? "disabled" : ""} title="${hwT("تشمل الرصيد المجاني والتلميحات التي اشتريتها من المتجر", "Includes free hints and hints bought from the shop")}" class="tap rounded-xl text-xs bg-zinc-900 border border-sky-500/40 text-sky-300 disabled:opacity-40">💡 ${hwT("تلميح", "Hint")} (${HW.hintsLeft})</button>`;
   return `
     <div class="max-w-5xl mx-auto grid lg:grid-cols-5 gap-5 mt-2">
       <div class="min-w-0 lg:col-span-3 space-y-3">

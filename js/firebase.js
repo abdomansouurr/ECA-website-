@@ -1,7 +1,7 @@
 // ECA — firebase.js (اتفصل من index.html في eca-v3)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, linkWithPopup, deleteUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { initializeFirestore, writeBatch, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot, serverTimestamp, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { initializeFirestore, writeBatch, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot, serverTimestamp, orderBy, limit, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDofyiWsg2HmOQgigWeqUpOaSupoMQ1GKc",
@@ -194,6 +194,88 @@
         await resyncSelf();
         return { ok: false, code: e && e.code };
       }
+    };
+    window.fbHasEconomyReceipt = async id => {
+      if (!me || me.role !== "student" || !/^[A-Za-z0-9-]{1,100}$/.test(String(id || ""))) throw new Error("Economy receipt lookup is unavailable");
+      const snap = await getDoc(doc(firestore, "users", me.uid, "economy", id));
+      return snap.exists();
+    };
+    window.fbEconomy = async request => {
+      if (!me || me.role !== "student" || !request || typeof request !== "object") return { ok: false };
+      const uid = me.uid, userRef = doc(firestore, "users", uid), op = request.op;
+      const dayOk = day => typeof day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(day);
+      const nonce = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+      let id = "", source = "", key = "", day = "", item = "", score = 0, starsDelta = 0, xpDelta = 0;
+      if (op === "earn") {
+        source = String(request.source || ""); key = String(request.key || ""); day = String(request.day || "");
+        if (!dayOk(day)) return { ok: false };
+        if (source === "lesson" && /^[1-6]-[0-9]{1,2}$/.test(key)) id = "lesson-" + key;
+        else if (source === "puzzle" && ["daily","easiest","easier","normal","harder","hardest"].includes(key)) id = "puzzle-" + day + "-" + key;
+        else if (source === "bot" && /^(0|[1-7])$/.test(key)) id = "bot-" + day + "-" + key;
+        else if (source === "pawn") id = "pawn-" + day;
+        else if (source === "vision") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "vision-" + day; }
+        else return { ok: false };
+      } else if (op === "purchase") {
+        item = String(request.item || "");
+        if (!window.ecaShopCatalog || !window.ecaShopCatalog.some(x => x.id === item)) return { ok: false };
+        id = "buy-" + item + "-" + nonce();
+        day = cairoDayKey();
+      } else if (op === "spend-hint") {
+        id = "hint-use-" + nonce();
+        day = cairoDayKey();
+      } else return { ok: false };
+      const receiptRef = doc(firestore, "users", uid, "economy", id);
+      const result = await runTransaction(firestore, async tx => {
+        const [userSnap, receiptSnap] = await Promise.all([tx.get(userRef), tx.get(receiptRef)]);
+        if (!userSnap.exists()) return { ok: false };
+        if (receiptSnap.exists()) return { ok: true, duplicate: true };
+        const profile = userSnap.data(), arena = Object.assign({}, profile.arena || {}), shop = Object.assign({ titles: [], bots: [], hints: 0, activeTitle: "" }, profile.shop || {});
+        const oldStars = Number(arena.stars) || 0;
+        let nextShop = Object.assign({}, shop), missionBonus = false, receiptKind = op;
+        if (op === "earn") {
+          if (source === "lesson" && (!profile.att || profile.att[key] !== true)) return { ok: false, code: "not-attended" };
+          if (source === "lesson") starsDelta = 1;
+          else if (source === "puzzle") {
+            starsDelta = { daily: 1, easiest: 1, easier: 2, normal: 3, harder: 4, hardest: 5 }[key];
+            missionBonus = arena.missionDate !== day;
+            if (missionBonus) { starsDelta++; arena.missionDate = day; arena.missionDone = true; }
+          } else if (source === "bot") starsDelta = Number(key) + 1;
+          else if (source === "pawn") starsDelta = 2;
+          else if (source === "vision") starsDelta = Math.min(10, Math.floor(score / 3));
+          xpDelta = (source === "puzzle" && missionBonus ? starsDelta - 1 : starsDelta) * 20;
+        } else if (op === "purchase") {
+          const catalogItem = window.ecaShopCatalog.find(x => x.id === item);
+          if (!catalogItem) return { ok: false };
+          if (catalogItem.type === "title") {
+            if ((shop.titles || []).includes(item)) return { ok: false, code: "already-owned" };
+            nextShop.titles = [...(shop.titles || []), item];
+          } else if (catalogItem.type === "bot") {
+            const level = Number(item.slice(4));
+            if ((shop.bots || []).includes(level)) return { ok: false, code: "already-owned" };
+            nextShop.bots = [...(shop.bots || []), level];
+          } else if (catalogItem.type === "hint") nextShop.hints = (Number(shop.hints) || 0) + 1;
+          else return { ok: false };
+          if (oldStars < catalogItem.cost) return { ok: false, code: "insufficient-stars" };
+          starsDelta = -catalogItem.cost;
+        } else {
+          if ((Number(shop.hints) || 0) < 1) return { ok: false, code: "no-hints" };
+          nextShop.hints = Number(shop.hints) - 1;
+          receiptKind = "spend-hint";
+        }
+        arena.stars = oldStars + starsDelta;
+        arena.xp = (Number(arena.xp) || 0) + xpDelta;
+        tx.update(userRef, { arena, shop: nextShop, lastEconomy: id });
+        tx.set(receiptRef, {
+          uid, kind: receiptKind, source, key, day, item, score, starsDelta, xpDelta, missionBonus, at: serverTimestamp()
+        });
+        return { ok: true, duplicate: false, starsDelta, xpDelta, missionBonus, profile: Object.assign({}, profile, { arena, shop: nextShop, lastEconomy: id }) };
+      });
+      if (result.ok && !result.duplicate && result.profile) {
+        maps.core[uid] = cleanDeep(result.profile);
+        synced["c:" + uid] = JSON.stringify(split(Object.assign({ id: uid }, result.profile)).core);
+        rebuild();
+      }
+      return result;
     };
     // محاولات طالب (للتقرير الشهري) — الكوتش بس. كاش 5 دقايق عشان مانكررش القراءة
     const attCache = {};

@@ -43,9 +43,53 @@ function makeCtx({ uid, old, neu, before, after, now }) {
   const certsOk = () => { const oc = get(old,'certificates',[]), nc = get(neu,'certificates',[]), ol = get(old,'level',1);
     return eq(nc, oc) || (nc.length === oc.length + 1 && eq(nc.slice(0, oc.length), oc) && passedNow(ol) && get(nc[oc.length],'step',0) === ol
       && get(nc[oc.length],'score',-1) === neu.examState[String(ol)].score); };
+  const economyOk = () => {
+    const oa = get(old, 'arena', {}), na = get(neu, 'arena', {}), os = get(old, 'shop', {}), ns = get(neu, 'shop', {});
+    const sameProtected = ['stars','xp','missionDate','missionDone'].every(k => get(oa,k,k === 'missionDate' ? '' : k === 'missionDone' ? false : 0) === get(na,k,k === 'missionDate' ? '' : k === 'missionDone' ? false : 0));
+    const sameShopCore = ['titles','bots','hints'].every(k => eq(get(os,k,k === 'hints' ? 0 : []), get(ns,k,k === 'hints' ? 0 : [])));
+    const active = get(ns,'activeTitle','');
+    const equipOk = sameShopCore && (active === get(os,'activeTitle','') || active === '' || (get(os,'titles',[]).includes(active)));
+    const id = get(neu,'lastEconomy','');
+    if (sameProtected && equipOk && id === get(old,'lastEconomy','')) return true;
+    if (!id || id === get(old,'lastEconomy','') || before['econ:' + id] || !after['econ:' + id]) return false;
+    const r = after['econ:' + id], deltaStars = num(na,'stars') - num(oa,'stars'), deltaXp = num(na,'xp') - num(oa,'xp');
+    if (r.uid !== uid || r.at !== now || r.starsDelta !== deltaStars || r.xpDelta !== deltaXp || num(na,'stars') < 0 || num(na,'xp') < 0) return false;
+    const titles = get(os,'titles',[]), newTitles = get(ns,'titles',[]), bots = get(os,'bots',[]), newBots = get(ns,'bots',[]);
+    const hints = num(os,'hints'), newHints = num(ns,'hints'), activeSame = get(os,'activeTitle','') === get(ns,'activeTitle','');
+    const changedBy = source => r.kind === 'earn' && source === 'earn' && sameShopCore && activeSame;
+    if (r.kind === 'earn') {
+      if (!changedBy('earn') || r.item !== '' || r.score && r.source !== 'vision') return false;
+      if (r.source === 'lesson') return id === 'lesson-' + r.key && old.att && old.att[r.key] === true && r.starsDelta === 1 && r.xpDelta === 20;
+      if (r.source === 'puzzle') {
+        const values = { daily: 1, easiest: 1, easier: 2, normal: 3, harder: 4, hardest: 5 }, baseStars = values[r.key] || 0;
+        const bonus = r.missionBonus === true;
+        return baseStars > 0 && id === 'puzzle-' + r.day + '-' + r.key && r.starsDelta === baseStars + (bonus ? 1 : 0)
+          && r.xpDelta === baseStars * 20 && (bonus
+            ? get(oa,'missionDate','') !== r.day && get(na,'missionDate','') === r.day && get(na,'missionDone',false) === true
+            : get(oa,'missionDate','') === get(na,'missionDate','') && get(oa,'missionDone',false) === get(na,'missionDone',false));
+      }
+      if (r.source === 'bot') return /^[0-7]$/.test(r.key) && id === 'bot-' + r.day + '-' + r.key
+        && (r.key === '0' || (get(os,'bots',[]).includes(Number(r.key))))
+        && r.starsDelta === Number(r.key) + 1 && r.xpDelta === r.starsDelta * 20;
+      if (r.source === 'pawn') return id === 'pawn-' + r.day && r.starsDelta === 2 && r.xpDelta === 40;
+      if (r.source === 'vision') return Number.isInteger(r.score) && r.score >= 3 && id === 'vision-' + r.day && r.starsDelta === Math.min(10, Math.floor(r.score / 3)) && r.xpDelta === r.starsDelta * 20;
+      return false;
+    }
+    if (r.kind === 'purchase') {
+      if (r.xpDelta !== 0 || r.source !== '' || r.key !== '' || r.score !== 0 || r.missionBonus !== false || !activeSame) return false;
+      const costs = { 'title-tactics': 50, 'title-knight': 120, 'title-master': 250, hint: 20, 'bot-1': 20, 'bot-2': 40, 'bot-3': 70, 'bot-4': 100, 'bot-5': 150, 'bot-6': 220, 'bot-7': 300 };
+      if (costs[r.item] !== -r.starsDelta) return false;
+      if (r.item.startsWith('title-')) return !titles.includes(r.item) && newTitles.length === titles.length + 1 && newTitles.includes(r.item) && titles.every(x => newTitles.includes(x)) && eq(bots,newBots) && hints === newHints;
+      if (r.item === 'hint') return newHints === hints + 1 && eq(titles,newTitles) && eq(bots,newBots);
+      if (r.item.startsWith('bot-')) { const level = Number(r.item.slice(4)); return !bots.includes(level) && newBots.length === bots.length + 1 && newBots.includes(level) && bots.every(x => newBots.includes(x)) && eq(titles,newTitles) && hints === newHints; }
+      return false;
+    }
+    return r.kind === 'spend-hint' && id.startsWith('hint-use-') && r.starsDelta === 0 && r.xpDelta === 0 && hints > 0 && newHints === hints - 1
+      && eq(titles,newTitles) && eq(bots,newBots) && activeSame && r.source === '' && r.key === '' && r.item === '' && r.score === 0 && r.missionBonus === false;
+  };
   const blocked = ['role','username','group','mode','coachName','stuCode','parentPhone','parentCode','note','courseFee','amountPaid','remaining','lastPayDate','lastPayAmount','att','hw'];
-  const nicknames = ['', 'star-knight','silver-bishop','brave-rook','clever-pawn','golden-queen','swift-horse','bright-king','kind-castle'];
-  const r = { blocked: !diffKeys(neu, old).some(k => blocked.includes(k)), nicknameOk: nicknames.includes(get(neu, 'nickname', '')), countersOk: countersOk(), daysOk: daysOk(), examOk: examOk(), levelOk: levelOk(), certsOk: certsOk() };
+  const nickname = get(neu, 'nickname', '');
+  const r = { blocked: !diffKeys(neu, old).some(k => blocked.includes(k)), nicknameOk: nickname === '' || (typeof nickname === 'string' && nickname.length >= 2 && nickname.length <= 24 && !/[<>"'`]/.test(nickname)), countersOk: countersOk(), daysOk: daysOk(), examOk: examOk(), levelOk: levelOk(), certsOk: certsOk(), economyOk: economyOk() };
   r.allow = Object.values(r).every(Boolean); return r;
 }
 module.exports = { makeCtx };

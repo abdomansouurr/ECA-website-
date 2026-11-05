@@ -76,14 +76,15 @@
       P.color = P.color === "w" ? "b" : "w"; P.flip = P.color === "b";
       if (P.color === "b") pawnEngine(); else arenaRefresh();
     }
-    function pawnCheck(r) {
+    async function pawnCheck(r) {
       const P = arena.pawn, g = P.game;
       let res = "";
       if (r && (r.promotion || g.isCheckmate())) res = r.color === P.color ? "win" : "loss";   // أول بيدق يوصل للصف الأخير بيكسب
       else if (g.isGameOver()) res = "draw";
       if (!res) return;
       P.over = res; P.thinking = false; P.sel = null;
-      recordArena(a => { if (res === "win") a.pawnWins = (a.pawnWins || 0) + 1; else if (res === "loss") a.pawnLosses = (a.pawnLosses || 0) + 1; });
+      await recordArena(a => { if (res === "win") a.pawnWins = (a.pawnWins || 0) + 1; else if (res === "loss") a.pawnLosses = (a.pawnLosses || 0) + 1; });
+      if (res === "win" && window.ecaAwardStudentActivity) await window.ecaAwardStudentActivity("pawn", todayISO());
       toast(res === "win" ? "بيدقك وصل الأول — كسبت!" : res === "loss" ? "بيدق الكمبيوتر وصل الأول" : "مفيش نقلات — تعادل");
     }
     function pawnClick(sq) {
@@ -270,15 +271,12 @@
     const ROMAN = ["I", "II", "III"];
     function calcXP(s) {
       const cnt = o => Object.values(o || {}).filter(Boolean).length;
-      const a = s.arena || {}, g = a.games || {};
+      const a = s.arena || {};
       const parts = [
         ["الدروس اللي حضرها", cnt(s.att) * 150],
         ["الواجبات", cnt(s.hw) * 150],
         ["اللغز اليومي", ((s.puz && s.puz.c) || 0) * 50],
-        ["ألغاز الساحة", (a.puzSolved || 0) * 60],
-        ["أدوار ضد الكمبيوتر", (g.w || 0) * 200 + (g.d || 0) * 60],
-        ["لعبة البيادق", (a.pawnWins || 0) * 120],
-        ["تدريب الرؤية", (a.visionBest || 0) * 25],
+        ["مكافآت الألعاب", Number(a.xp) || 0],
         ["الشهادات", (s.certificates || []).length * 1500]
       ];
       return { total: parts.reduce((t, p) => t + p[1], 0), parts };

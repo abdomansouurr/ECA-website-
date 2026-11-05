@@ -13,7 +13,88 @@ service cloud.firestore {
     // نص آمن: بدون < > " ' ` (حماية من حقن HTML)
     function safeText(v, max) { return v is string && v.size() <= max && v.matches('[^<>"\'`]*'); }
     function nicknameOk(v) {
-      return v == '' || v in ['star-knight','silver-bishop','brave-rook','clever-pawn','golden-queen','swift-horse','bright-king','kind-castle'];
+      return v == '' || (safeText(v, 24) && v.size() >= 2);
+    }
+    function economyDoc(uid, id) { return /databases/$(database)/documents/users/$(uid)/economy/$(id); }
+    function shopCoreSame(o, n) {
+      return o.get('titles', []) == n.get('titles', [])
+        && o.get('bots', []) == n.get('bots', [])
+        && o.get('hints', 0) == n.get('hints', 0);
+    }
+    function shopValid(s) {
+      let titles = s.get('titles', []);
+      let bots = s.get('bots', []);
+      let hints = s.get('hints', 0);
+      return s.keys().hasOnly(['titles','bots','hints','activeTitle'])
+        && titles is list && titles.size() <= 3 && titles.hasOnly(['title-tactics','title-knight','title-master'])
+        && bots is list && bots.size() <= 7 && bots.hasOnly([1,2,3,4,5,6,7])
+        && hints is int && hints >= 0 && hints <= 5000
+        && s.get('activeTitle', '') is string
+        && (s.get('activeTitle', '') == '' || s.get('activeTitle', '') in titles);
+    }
+    function protectedEconomySame(o, n) {
+      return num(o, 'stars') == num(n, 'stars') && num(o, 'xp') == num(n, 'xp')
+        && o.get('missionDate', '') == n.get('missionDate', '')
+        && o.get('missionDone', false) == n.get('missionDone', false);
+    }
+    function shopEquipOk(o, n) {
+      return shopValid(n) && shopCoreSame(o, n)
+        && (o.get('activeTitle', '') == n.get('activeTitle', '')
+          || n.get('activeTitle', '') == ''
+          || n.get('activeTitle', '') in o.get('titles', []));
+    }
+    function puzzleStars(key) {
+      return key == 'daily' || key == 'easiest' ? 1
+        : key == 'easier' ? 2 : key == 'normal' ? 3 : key == 'harder' ? 4 : key == 'hardest' ? 5 : 0;
+    }
+    function visionStars(score) {
+      return score >= 30 ? 10 : score >= 27 ? 9 : score >= 24 ? 8 : score >= 21 ? 7
+        : score >= 18 ? 6 : score >= 15 ? 5 : score >= 12 ? 4 : score >= 9 ? 3
+        : score >= 6 ? 2 : score >= 3 ? 1 : 0;
+    }
+    function economyShopChangeOk(o, n, r) {
+      let item = r.get('item', '');
+      let titles = o.get('titles', []);
+      let newTitles = n.get('titles', []);
+      let bots = o.get('bots', []);
+      let newBots = n.get('bots', []);
+      let hints = o.get('hints', 0);
+      let newHints = n.get('hints', 0);
+      return shopValid(n) && ((r.kind == 'earn' && shopCoreSame(o, n) && o.get('activeTitle', '') == n.get('activeTitle', ''))
+        || (r.kind == 'purchase' && r.starsDelta == -50 && r.xpDelta == 0 && item == 'title-tactics'
+            && !(item in titles) && newTitles.size() == titles.size() + 1 && newTitles.hasAll(titles) && item in newTitles
+            && newBots == bots && newHints == hints && o.get('activeTitle', '') == n.get('activeTitle', ''))
+        || (r.kind == 'purchase' && r.starsDelta == -120 && r.xpDelta == 0 && item == 'title-knight'
+            && !(item in titles) && newTitles.size() == titles.size() + 1 && newTitles.hasAll(titles) && item in newTitles
+            && newBots == bots && newHints == hints && o.get('activeTitle', '') == n.get('activeTitle', ''))
+        || (r.kind == 'purchase' && r.starsDelta == -250 && r.xpDelta == 0 && item == 'title-master'
+            && !(item in titles) && newTitles.size() == titles.size() + 1 && newTitles.hasAll(titles) && item in newTitles
+            && newBots == bots && newHints == hints && o.get('activeTitle', '') == n.get('activeTitle', ''))
+        || (r.kind == 'purchase' && item == 'hint' && r.starsDelta == -20 && r.xpDelta == 0
+            && newHints == hints + 1 && newTitles == titles && newBots == bots && o.get('activeTitle', '') == n.get('activeTitle', ''))
+        || (r.kind == 'purchase' && r.xpDelta == 0 && r.starsDelta == -20 && item == 'bot-1'
+            && !(1 in bots) && newBots.size() == bots.size() + 1 && newBots.hasAll(bots) && 1 in newBots
+            && newTitles == titles && newHints == hints && o.get('activeTitle', '') == n.get('activeTitle', ''))
+        || (r.kind == 'purchase' && r.xpDelta == 0 && r.starsDelta == -40 && item == 'bot-2'
+            && !(2 in bots) && newBots.size() == bots.size() + 1 && newBots.hasAll(bots) && 2 in newBots
+            && newTitles == titles && newHints == hints && o.get('activeTitle', '') == n.get('activeTitle', ''))
+        || (r.kind == 'purchase' && r.xpDelta == 0 && r.starsDelta == -70 && item == 'bot-3'
+            && !(3 in bots) && newBots.size() == bots.size() + 1 && newBots.hasAll(bots) && 3 in newBots
+            && newTitles == titles && newHints == hints && o.get('activeTitle', '') == n.get('activeTitle', ''))
+        || (r.kind == 'purchase' && r.xpDelta == 0 && r.starsDelta == -100 && item == 'bot-4'
+            && !(4 in bots) && newBots.size() == bots.size() + 1 && newBots.hasAll(bots) && 4 in newBots
+            && newTitles == titles && newHints == hints && o.get('activeTitle', '') == n.get('activeTitle', ''))
+        || (r.kind == 'purchase' && r.xpDelta == 0 && r.starsDelta == -150 && item == 'bot-5'
+            && !(5 in bots) && newBots.size() == bots.size() + 1 && newBots.hasAll(bots) && 5 in newBots
+            && newTitles == titles && newHints == hints && o.get('activeTitle', '') == n.get('activeTitle', ''))
+        || (r.kind == 'purchase' && r.xpDelta == 0 && r.starsDelta == -220 && item == 'bot-6'
+            && !(6 in bots) && newBots.size() == bots.size() + 1 && newBots.hasAll(bots) && 6 in newBots
+            && newTitles == titles && newHints == hints && o.get('activeTitle', '') == n.get('activeTitle', ''))
+        || (r.kind == 'purchase' && r.xpDelta == 0 && r.starsDelta == -300 && item == 'bot-7'
+            && !(7 in bots) && newBots.size() == bots.size() + 1 && newBots.hasAll(bots) && 7 in newBots
+            && newTitles == titles && newHints == hints && o.get('activeTitle', '') == n.get('activeTitle', ''))
+        || (r.kind == 'spend-hint' && hints >= 1 && r.starsDelta == 0 && r.xpDelta == 0 && newHints == hints - 1
+            && newTitles == titles && newBots == bots && o.get('activeTitle', '') == n.get('activeTitle', '')));
     }
 
     // المستوى الابتدائي: Step 1، إلا لو الطالب ربط حسابه بنتيجة اختبار تحديد مستوى معتمدة (plk = مفتاح placementLevels)
@@ -47,7 +128,94 @@ service cloud.firestore {
         && safeText(request.resource.data.name, 80)
         && safeText(request.resource.data.get('email', ''), 120)
         && nicknameOk(request.resource.data.get('nickname', ''))
-        && countersOk() && daysOk() && examOk() && levelOk() && certsOk();
+        && countersOk() && daysOk() && examOk() && levelOk() && certsOk() && economyUpdateOk();
+    }
+
+    function botStars(key) {
+      return key == '0' ? 1 : key == '1' ? 2 : key == '2' ? 3 : key == '3' ? 4
+        : key == '4' ? 5 : key == '5' ? 6 : key == '6' ? 7 : key == '7' ? 8 : 0;
+    }
+    function botOwned(key) {
+      let bots = resource.data.get('shop', {}).get('bots', []);
+      return key == '0' || (key == '1' && 1 in bots) || (key == '2' && 2 in bots)
+        || (key == '3' && 3 in bots) || (key == '4' && 4 in bots)
+        || (key == '5' && 5 in bots) || (key == '6' && 6 in bots) || (key == '7' && 7 in bots);
+    }
+    function economyEarnOk(id, r) {
+      let a = resource.data.get('arena', {});
+      let newA = request.resource.data.get('arena', {});
+      return (r.source == 'lesson' && r.key.matches('[1-6]-[0-9]{1,2}')
+          && id == 'lesson-' + r.key && resource.data.get('att', {}).get(r.key, false) == true
+          && r.starsDelta == 1 && r.xpDelta == 20 && r.missionBonus == false)
+        || (r.source == 'puzzle' && r.key in ['daily','easiest','easier','normal','harder','hardest']
+          && r.day is string && dateNear(r.day.split('-')) && id == 'puzzle-' + r.day + '-' + r.key
+          && r.starsDelta == puzzleStars(r.key) + (r.missionBonus ? 1 : 0)
+          && r.xpDelta == puzzleStars(r.key) * 20
+          && (r.missionBonus
+            ? (a.get('missionDate', '') != r.day && newA.get('missionDate', '') == r.day && newA.get('missionDone', false) == true)
+            : (a.get('missionDate', '') == newA.get('missionDate', '') && a.get('missionDone', false) == newA.get('missionDone', false))))
+        || (r.source == 'bot' && r.key in ['0','1','2','3','4','5','6','7']
+          && r.day is string && dateNear(r.day.split('-')) && id == 'bot-' + r.day + '-' + r.key
+          && botOwned(r.key) && r.starsDelta == botStars(r.key) && r.xpDelta == botStars(r.key) * 20 && r.missionBonus == false)
+        || (r.source == 'pawn' && r.day is string && r.key == r.day && dateNear(r.day.split('-')) && id == 'pawn-' + r.day
+          && r.starsDelta == 2 && r.xpDelta == 40 && r.missionBonus == false)
+        || (r.source == 'vision' && r.day is string && r.key == r.day && dateNear(r.day.split('-')) && id == 'vision-' + r.day
+          && r.score is int && r.score >= 3 && r.score <= 1000 && r.starsDelta == visionStars(r.score)
+          && r.xpDelta == visionStars(r.score) * 20 && r.missionBonus == false);
+    }
+    function economyUpdateOk() {
+      let oldA = resource.data.get('arena', {});
+      let newA = request.resource.data.get('arena', {});
+      let oldShop = resource.data.get('shop', {});
+      let newShop = request.resource.data.get('shop', {});
+      let id = request.resource.data.get('lastEconomy', '');
+      return (protectedEconomySame(oldA, newA) && shopEquipOk(oldShop, newShop)
+          && id == resource.data.get('lastEconomy', ''))
+        || (id is string && id.size() > 0 && id != resource.data.get('lastEconomy', '')
+          && !exists(economyDoc(request.auth.uid, id)) && existsAfter(economyDoc(request.auth.uid, id))
+          && getAfter(economyDoc(request.auth.uid, id)).data.uid == request.auth.uid
+          && getAfter(economyDoc(request.auth.uid, id)).data.at == request.time
+          && getAfter(economyDoc(request.auth.uid, id)).data.day is string
+          && dateNear(getAfter(economyDoc(request.auth.uid, id)).data.day.split('-'))
+          && getAfter(economyDoc(request.auth.uid, id)).data.starsDelta is int
+          && getAfter(economyDoc(request.auth.uid, id)).data.xpDelta is int
+          && num(newA, 'stars') >= 0 && num(newA, 'xp') >= 0
+          && num(newA, 'stars') == num(oldA, 'stars') + getAfter(economyDoc(request.auth.uid, id)).data.starsDelta
+          && num(newA, 'xp') == num(oldA, 'xp') + getAfter(economyDoc(request.auth.uid, id)).data.xpDelta
+          && economyShopChangeOk(oldShop, newShop, getAfter(economyDoc(request.auth.uid, id)).data)
+          && (getAfter(economyDoc(request.auth.uid, id)).data.kind == 'earn'
+              ? (getAfter(economyDoc(request.auth.uid, id)).data.item == ''
+                  && (getAfter(economyDoc(request.auth.uid, id)).data.source == 'vision'
+                    || getAfter(economyDoc(request.auth.uid, id)).data.score == 0)
+                  && economyEarnOk(id, getAfter(economyDoc(request.auth.uid, id)).data))
+              : getAfter(economyDoc(request.auth.uid, id)).data.kind == 'purchase'
+                ? (id.matches('buy-' + getAfter(economyDoc(request.auth.uid, id)).data.item + '-[A-Za-z0-9]{8,40}')
+                    && getAfter(economyDoc(request.auth.uid, id)).data.source == ''
+                    && getAfter(economyDoc(request.auth.uid, id)).data.key == ''
+                    && getAfter(economyDoc(request.auth.uid, id)).data.score == 0
+                    && getAfter(economyDoc(request.auth.uid, id)).data.missionBonus == false
+                    && getAfter(economyDoc(request.auth.uid, id)).data.item in ['title-tactics','title-knight','title-master','hint','bot-1','bot-2','bot-3','bot-4','bot-5','bot-6','bot-7'])
+                : (getAfter(economyDoc(request.auth.uid, id)).data.kind == 'spend-hint'
+                    && id.matches('hint-use-[A-Za-z0-9]{8,40}')
+                    && getAfter(economyDoc(request.auth.uid, id)).data.source == ''
+                    && getAfter(economyDoc(request.auth.uid, id)).data.key == ''
+                    && getAfter(economyDoc(request.auth.uid, id)).data.item == ''
+                    && getAfter(economyDoc(request.auth.uid, id)).data.score == 0
+                    && getAfter(economyDoc(request.auth.uid, id)).data.missionBonus == false)));
+    }
+    function economyReceiptCreateOk(uid, id) {
+      let userPath = /databases/$(database)/documents/users/$(uid);
+      let beforeA = get(userPath).data.get('arena', {});
+      let afterA = getAfter(userPath).data.get('arena', {});
+      let r = request.resource.data;
+      return notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))
+        && r.keys().hasOnly(['uid','kind','source','key','day','item','score','starsDelta','xpDelta','missionBonus','at'])
+        && r.uid == uid && r.kind in ['earn','purchase','spend-hint']
+        && r.source is string && r.key is string && r.day is string && r.item is string
+        && r.score is int && r.starsDelta is int && r.xpDelta is int && r.missionBonus is bool
+        && r.at == request.time && getAfter(userPath).data.get('lastEconomy', '') == id
+        && num(afterA, 'stars') == num(beforeA, 'stars') + r.starsDelta
+        && num(afterA, 'xp') == num(beforeA, 'xp') + r.xpDelta;
     }
 
     // ================= حماية الألغاز والامتحانات (من غير Cloud Functions) =================
@@ -227,6 +395,13 @@ service cloud.firestore {
                         && !exists(/databases/$(database)/documents/deleted/$(uid)) && studentUpdateOk());
       allow delete: if isAdmin()   // حذف الطالب للأدمن بس
                     || (isStaff() && request.auth.uid == uid);   // والكوتش يمسح ملف الطالب بتاعه هو لما يتحوّل لحساب كوتش
+
+      match /economy/{eid} {
+        allow read: if notAnon() && request.auth.uid == uid
+          && !exists(/databases/$(database)/documents/deleted/$(uid));
+        allow create: if economyReceiptCreateOk(uid, eid);
+        allow update, delete: if false;
+      }
 
       match /notifications/{nid} {
         allow get, list: if notAnon() && request.auth.uid == uid

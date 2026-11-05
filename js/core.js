@@ -309,7 +309,7 @@
     setTimeout(() => { if (window.__authLoading) { window.__authLoading = false; render(); } }, 8000);
     let tab = "home", authMode = "login", signupRole = "student", selStuId = "", grpFilter = "ALL", searchQ = "", parentQ = "", unlockedStuId = null, interactiveLesson = null, openSteps = { 1: true, 2: true, 3: false, 4: false, 5: false, 6: false };
 
-    function save() { if (window.syncToCloud) window.syncToCloud(); }
+    function save() { if (window.syncToCloud) return window.syncToCloud(); }
     // محاولة لغز/امتحان: بتتسجّل في دفتر المحاولات (attempts) وملف الطالب في عملية واحدة.
     // قواعد Firestore بترفض أي زيادة في العدّادات من غير محاولة جديدة → مفيش إعادة ولا تزوير أرقام.
     function attemptKey(v) { return String(v || "").replace(/[^A-Za-z0-9-]/g, "").slice(0, 40); }
@@ -342,6 +342,8 @@
       return ECA_ALIAS_OPTIONS[(hash >>> 0) % ECA_ALIAS_OPTIONS.length].id;
     }
     function ecaStudentAlias(user) {
+      const nickname = String(user && user.nickname || "").trim();
+      if (nickname && !ECA_ALIAS_OPTIONS.some(x => x.id === nickname)) return nickname;
       const selected = ECA_ALIAS_OPTIONS.find(x => x.id === aliasIdFor(user)) || ECA_ALIAS_OPTIONS[0];
       return lang === "en" ? selected.en : selected.ar;
     }
@@ -350,22 +352,89 @@
     window.ecaAliasIdFor = aliasIdFor;
     function setStudentAlias(value) {
       const u = currUser();
-      if (!u || u.role !== "student" || !ECA_ALIAS_OPTIONS.some(x => x.id === value)) return;
-      u.nickname = value;
+      const nickname = String(value || "").trim();
+      if (!u || u.role !== "student" || (nickname.length > 0 && nickname.length < 2) || nickname.length > 24 || /[<>"'`]/.test(nickname)) {
+        return toast(lang === "en" ? "Nickname must be 2–24 safe characters" : "الاسم المستعار يجب أن يكون من 2 إلى 24 حرفًا");
+      }
+      u.nickname = nickname;
       save();
       render();
       toast(lang === "en" ? "Nickname updated" : "تم تحديث اسمك المستعار");
     }
     window.setStudentAlias = setStudentAlias;
+    const ECA_SHOP_ITEMS = [
+      { id: "title-tactics", type: "title", title: "عبقري التكتيك", en: "Tactics Genius", cost: 50 },
+      { id: "title-knight", type: "title", title: "بطل الحصان", en: "Knight Champion", cost: 120 },
+      { id: "title-master", type: "title", title: "بطل الشطرنج", en: "Chess Champion", cost: 250 },
+      { id: "hint", type: "hint", title: "تلميح واجب إضافي", en: "Extra homework hint", cost: 20 },
+      ...[1, 2, 3, 4, 5, 6, 7].map((level, index) => ({
+        id: "bot-" + level, type: "bot", title: "فتح البوت " + (level + 1), en: "Unlock bot " + (level + 1), cost: [20, 40, 70, 100, 150, 220, 300][index]
+      }))
+    ];
+    window.ecaShopCatalog = ECA_SHOP_ITEMS;
+    function buyShopItem(id) {
+      const item = ECA_SHOP_ITEMS.find(x => x.id === id), u = currUser();
+      if (!item || !u || u.role !== "student") return;
+      if (!window.fbEconomy) return toast(lang === "en" ? "Shop service is not ready. Try again." : "المتجر غير جاهز الآن. حاول مرة أخرى.");
+      window.fbEconomy({ op: "purchase", item: item.id }).then(result => {
+        if (!result.ok) return toast(result.code === "insufficient-stars"
+          ? (lang === "en" ? "You need more stars" : "تحتاج نجومًا أكثر")
+          : result.code === "already-owned"
+            ? (lang === "en" ? "You already own this item" : "هذا العنصر لديك بالفعل")
+            : (lang === "en" ? "Purchase could not be completed. Try again." : "تعذّر إتمام الشراء. حاول مرة أخرى."));
+        toast(lang === "en" ? "Purchase complete!" : "تم الشراء بنجاح!");
+        render();
+      }).catch(error => {
+        console.error("Shop purchase failed:", error);
+        toast(lang === "en" ? "Purchase failed. Check your connection." : "فشل الشراء. تحقق من الاتصال.");
+      });
+    }
+    window.buyShopItem = buyShopItem;
+    function setStudentTitle(value) {
+      const u = currUser(), shop = u && u.shop || {};
+      if (!u || u.role !== "student" || (value && !(shop.titles || []).includes(value))) return;
+      u.shop = Object.assign({}, shop, { activeTitle: value });
+      save(); render();
+    }
+    window.setStudentTitle = setStudentTitle;
+    function studentShopCard(user) {
+      const a = user.arena || {}, shop = user.shop || {}, stars = Number(a.stars) || 0;
+      const ownedTitles = shop.titles || [], ownedBots = shop.bots || [], hints = Number(shop.hints) || 0;
+      const itemCard = item => {
+        const owned = item.type === "title" ? ownedTitles.includes(item.id)
+          : item.type === "bot" ? ownedBots.includes(Number(item.id.slice(4)))
+          : false;
+        const label = lang === "en" ? item.en : item.title;
+        return `<div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-black/30 border border-yellow-500/15">
+          <div class="min-w-0"><div class="text-sm font-bold text-white">${esc(label)}</div>
+            <div class="text-[11px] text-gray-400">${owned ? (lang === "en" ? "Owned" : "تم الفتح") : "⭐ " + item.cost}</div></div>
+          ${owned ? `<span class="text-emerald-400 text-xs font-bold">✓</span>` : `<button type="button" onclick="buyShopItem('${item.id}')" ${stars < item.cost ? "disabled" : ""} class="tap rounded-lg px-3 text-xs gold-btn disabled:opacity-40">${lang === "en" ? "Buy" : "شراء"}</button>`}
+        </div>`;
+      };
+      return `<section class="gold-card rounded-2xl p-5 space-y-3">
+        <div class="flex items-center justify-between gap-3">
+          <div><h3 class="font-bold text-lg text-yellow-300">${lang === "en" ? "Star shop" : "متجر النجوم"} 🛍️</h3>
+            <p class="text-xs text-gray-400">${lang === "en" ? "Balance" : "رصيدك"}: ⭐ ${esc(String(stars))} • ${lang === "en" ? "Homework hints" : "تلميحات الواجب"}: ${esc(String(hints))}</p></div>
+        </div>
+        <label class="flex items-center gap-2 text-xs text-gray-300">
+          <span>${lang === "en" ? "Your title" : "لقبك"}</span>
+          <select aria-label="${lang === "en" ? "Choose an owned title" : "اختر لقبًا مفتوحًا"}" onchange="setStudentTitle(this.value)" class="tap min-h-[44px] rounded-xl bg-black border border-yellow-500/40 px-3 text-sm text-white">
+            <option value="">${lang === "en" ? "No title" : "بدون لقب"}</option>
+            ${ownedTitles.map(id => { const item = ECA_SHOP_ITEMS.find(x => x.id === id); return item ? `<option value="${item.id}" ${shop.activeTitle === item.id ? "selected" : ""}>${esc(lang === "en" ? item.en : item.title)}</option>` : ""; }).join("")}
+          </select>
+        </label>
+        <div class="grid sm:grid-cols-2 gap-2">${ECA_SHOP_ITEMS.map(itemCard).join("")}</div>
+      </section>`;
+    }
     function dailyMissionDone(user) {
       const a = (user && user.arena) || {};
       return a.missionDate === todayISO() && a.missionDone === true;
     }
-    function celebrateStudentStar() {
+    function celebrateStudentStar(count) {
       const pop = document.createElement("div");
       pop.className = "eca-reward-pop";
       pop.setAttribute("role", "status");
-      pop.textContent = "⭐ +1";
+      pop.textContent = "⭐ +" + (Number(count) || 1);
       document.body.appendChild(pop);
       setTimeout(() => pop.remove(), 1000);
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -384,30 +453,48 @@
         setTimeout(() => audio.close().catch(() => {}), 500);
       } catch (e) { console.warn("Reward sound unavailable:", e); }
     }
-    function addStudentStar(user, qualifiesForMission) {
-      const u = user || currUser();
-      if (!u || u.role !== "student") return null;
-      const a = u.arena = u.arena || {}, today = todayISO(), firstMission = qualifiesForMission && !dailyMissionDone(u);
-      a.stars = (Number(a.stars) || 0) + 1;
-      if (firstMission) { a.missionDate = today; a.missionDone = true; }
-      return { firstMission, stars: a.stars };
-    }
     function showStudentReward(reward) {
       if (!reward) return;
-      celebrateStudentStar();
+      const gained = Number(reward.starsDelta) || 1, xp = Number(reward.xpDelta) || 0;
+      celebrateStudentStar(gained);
       toast(lang === "en"
-        ? (reward.firstMission ? "Daily mission complete! You earned a star." : "You earned a star. Great job!")
-        : (reward.firstMission ? "مهمة اليوم تمت! نجمة جديدة" : "نجمة جديدة! برافو عليك"));
+        ? (reward.missionBonus ? `Daily mission complete! +${gained} stars and ${xp} XP.` : `+${gained} stars and ${xp} XP. Great job!`)
+        : (reward.missionBonus ? `مهمة اليوم تمت! +${gained} نجوم و${xp} خبرة` : `+${gained} نجوم و${xp} خبرة. برافو عليك`));
       if (tab === "home") render();
     }
-    function awardStudentStar(qualifiesForMission) {
-      const reward = addStudentStar(currUser(), qualifiesForMission);
-      if (!reward) return;
-      save();
-      showStudentReward(reward);
+    async function awardStudentActivity(source, key, score) {
+      const u = currUser();
+      if (!u || u.role !== "student") return { ok: false };
+      if (!window.fbEconomy) {
+        toast(lang === "en" ? "Rewards are not ready yet. Try again." : "المكافآت غير جاهزة الآن. حاول مرة أخرى.");
+        return { ok: false };
+      }
+      const day = todayISO();
+      let stars = 1, xp = 20;
+      if (source === "puzzle") {
+        stars = { daily: 1, easiest: 1, easier: 2, normal: 3, harder: 4, hardest: 5 }[key] || 0;
+      } else if (source === "bot") {
+        const level = Number(key);
+        if (!Number.isInteger(level) || level < 0 || level > 7) return { ok: false };
+        stars = level + 1;
+      } else if (source === "pawn") stars = 2;
+      else if (source === "vision") {
+        score = Math.floor(Number(score) || 0);
+        stars = Math.min(10, Math.floor(score / 3));
+      } else if (source !== "lesson") return { ok: false };
+      if (!stars) return { ok: false };
+      xp = stars * 20;
+      try {
+        const result = await window.fbEconomy({ op: "earn", source, key: String(key), day, score: score || 0, stars, xp });
+        if (result.ok && !result.duplicate) showStudentReward(result);
+        return result;
+      } catch (error) {
+        console.error("Student reward failed:", error);
+        toast(lang === "en" ? "Reward could not be saved. Check your connection." : "تعذّر حفظ المكافأة. تحقق من الاتصال.");
+        return { ok: false };
+      }
     }
-    window.ecaAwardStudentStar = awardStudentStar;
-    window.ecaAddStudentStar = addStudentStar;
+    window.ecaAwardStudentActivity = awardStudentActivity;
     window.ecaShowStudentReward = showStudentReward;
     function studentMissionCard(user) {
       const arenaData = user.arena || {}, done = dailyMissionDone(user), stars = Number(arenaData.stars) || 0;
@@ -1033,6 +1120,8 @@
     }
     function renderStudentHome(stu) {
       const s = calcStats(stu);
+      const xp = calcXP(stu).total, studentLevel = Math.floor(xp / 500) + 1;
+      const activeTitle = ECA_SHOP_ITEMS.find(x => x.id === (stu.shop || {}).activeTitle);
       const puz = PUZZLES[stu.level] || PUZZLES[1];
       const done = (stu.puzDone || {})[puzDayKey(stu.level)];   // القفل اليومي: بيفتح تاني كل يوم (كان بيتقفل للأبد)
       return `
@@ -1041,16 +1130,16 @@
           <div class="gold-card rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <span class="px-2.5 py-1 rounded-full text-xs gold-btn">STEP ${stu.level} STUDENT</span>
-              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">${lang === "en" ? "Welcome, " : "أهلاً يا "}${esc(ecaStudentAlias(stu))}</h2>
+              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">${lang === "en" ? "Welcome, " : "أهلاً يا "}${esc(ecaStudentAlias(stu))}${activeTitle ? ` <span class="text-sm text-yellow-300">${esc(lang === "en" ? activeTitle.en : activeTitle.title)}</span>` : ""}</h2>
+              <p class="text-xs text-sky-300 mt-1">${lang === "en" ? "Level" : "المستوى"} ${studentLevel} • ${xp} XP</p>
               <p class="text-xs text-gray-400 mt-1">حضرت ${s.attC}/${s.total} درس في Step ${stu.level} • متبقي ${s.rem} درس للامتحان</p>
               <label class="inline-flex flex-wrap items-center gap-2 mt-3 text-xs text-gray-400">
                 <span>${lang === "en" ? "Your student nickname" : "اسمك المستعار للطلاب"}</span>
-                <select aria-label="${lang === "en" ? "Choose your nickname" : "اختر اسمك المستعار"}" onchange="setStudentAlias(this.value)" class="tap rounded-xl bg-black border border-yellow-500/40 px-3 text-sm text-white">
-                  ${ECA_ALIAS_OPTIONS.map(x => `<option value="${x.id}" ${aliasIdFor(stu) === x.id ? "selected" : ""}>${lang === "en" ? x.en : x.ar}</option>`).join("")}
-                </select>
+                <input aria-label="${lang === "en" ? "Choose your nickname" : "اكتب اسمك المستعار"}" value="${esc(stu.nickname || "")}" placeholder="${esc(ecaStudentAlias(stu))}" maxlength="24" onchange="setStudentAlias(this.value)" class="tap min-h-[44px] w-48 rounded-xl bg-black border border-yellow-500/40 px-3 text-sm text-white" />
               </label>
             </div>
           </div>
+          ${studentShopCard(stu)}
 
           <div class="grid gap-6">
             <!-- 2. Next Lesson Up -->
@@ -1089,14 +1178,12 @@
       u.puzDone = u.puzDone || {};
       if (u.puzDone[puzDayKey(u.level)]) return toast("اللغز مقفول بالفعل");
       const ok = i === ans;
-      let reward = null;
       recordAttempt("daily", todayISO() + "-L" + u.level, ok, s => {
         s.puz = s.puz || { t: 0, c: 0 }; s.puz.t = (s.puz.t || 0) + 1; if (ok) s.puz.c = (s.puz.c || 0) + 1;
         s.puzDone = s.puzDone || {}; s.puzDone[puzDayKey(s.level)] = { i, ok };
-        if (ok) reward = addStudentStar(s, true);
         if (typeof markActiveDay === "function") markActiveDay(s);   // اللغز اليومي بيحسب في سلسلة أيام التمرين
       }).then(r => {
-        if (r.ok) showStudentReward(reward);
+        if (r.ok && ok) awardStudentActivity("puzzle", "daily");
         else if (r.code === "permission-denied") { toast("لغز النهاردة اتحسب قبل كده"); render(); }
       });
       toast(ok ? "إجابة صحيحة! أحسنت يا بطل" : "إجابة خاطئة — تم قفل اللغز");
@@ -1175,6 +1262,7 @@
                         : '';
                       // فاصل رأسي واضح بين لينكات الشرح (Examples/Study/Exercises) وزر الـ Homework
                       const hwSep = (LV.links.length && LV.hw.length) ? `<span aria-hidden="true" class="w-px self-stretch shrink-0 bg-gradient-to-b from-transparent via-yellow-400/90 to-transparent"></span>` : '';
+                      const interactiveDone = !!(u.att && u.att[st.step + "-" + idx]);
                       return `
                       <div class="px-6 py-3 flex flex-wrap justify-between items-center gap-2 hover:bg-yellow-500/5">
                         <span class="flex items-center gap-2 min-w-0">
@@ -1182,7 +1270,7 @@
                           ${chip}
                         </span>
                         <div class="flex flex-wrap items-stretch gap-2">
-                          ${u.role === "student" ? `<button type="button" onclick="openInteractiveLesson(${st.step},${idx})" class="tap px-3 rounded-xl text-xs font-bold bg-sky-500/15 border border-sky-500/35 text-sky-400">${lang === "en" ? "Quick lesson" : "درس تفاعلي"}</button>` : ""}
+                          ${u.role === "student" ? `<button type="button" onclick="openInteractiveLesson(${st.step},${idx})" ${interactiveDone ? "" : "title=\"" + (lang === "en" ? "Attend this lesson first" : "يجب حضور الدرس أولاً") + "\""} class="tap px-3 rounded-xl text-xs font-bold ${interactiveDone ? "bg-sky-500/15 border border-sky-500/35 text-sky-400" : "bg-zinc-900 border border-zinc-700 text-gray-500"}">${lang === "en" ? "Quick lesson" : "درس تفاعلي"}${interactiveDone ? "" : " 🔒"}</button>` : ""}
                           ${LV.links.map(x => lkBtn(x.t, x.u, false)).join('')}
                           ${hwSep}
                           ${LV.hw.map(x => hwBtn(x)).join('')}
@@ -1200,10 +1288,36 @@
       `;
     }
 
-    function openInteractiveLesson(step, index) {
+    async function openInteractiveLesson(step, index) {
       const stepData = STEPS.find(x => x.step === Number(step)), lesson = stepData && stepData.lessons[Number(index)];
       const user = currUser();
       if (!lesson || !user || user.role !== "student") return;
+      const key = `${Number(step)}-${Number(index)}`, receiptId = `lesson-${key}`;
+      if (!user.att || user.att[key] !== true) {
+        toast(lang === "en" ? "Attend this lesson before opening its practice question." : "يجب حضور هذا الدرس قبل فتح سؤاله التفاعلي.");
+        return;
+      }
+      if (!window.fbHasEconomyReceipt) {
+        toast(lang === "en" ? "Lesson progress is still loading. Try again." : "بيانات الدرس لم تكتمل. حاول مرة أخرى.");
+        return;
+      }
+      interactiveLesson = { loading: true };
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      let completed;
+      try { completed = await window.fbHasEconomyReceipt(receiptId); }
+      catch (error) {
+        console.error("Interactive lesson status failed:", error);
+        interactiveLesson = null;
+        render();
+        toast(lang === "en" ? "Could not check lesson progress. Try again." : "تعذّر التحقق من إنجاز الدرس. حاول مرة أخرى.");
+        return;
+      }
+      if (completed) {
+        interactiveLesson = null; render();
+        toast(lang === "en" ? "You already completed this lesson question." : "لقد أجبت عن سؤال هذا الدرس من قبل.");
+        return;
+      }
       const title = lesson.t;
       let question;
       if (lang === "en") question = buildLessonQuestion(lesson, Number(index), Number(todayISO().replace(/-/g, "")) % 10000);
@@ -1211,34 +1325,57 @@
       else if (/pin/i.test(title)) question = { lessonTitle: title, q: `كيف تستفيد من تثبيت قطعة الخصم في درس «${title}»؟`, opts: ["زيادة الضغط عليها مع حساب رد الخصم", "إبعاد قطعك عنها فورًا", "تجاهلها واللعب عشوائيًا"], ans: 0 };
       else if (/double attack|twofold|fork/i.test(title)) question = { lessonTitle: title, q: `ما الذي يجعل الهجوم المزدوج قويًا في درس «${title}»؟`, opts: ["تهديد هدفين في الوقت نفسه", "تحريك القطعة نفسها مرتين", "إخراج الملك إلى الوسط"], ans: 0 };
       else question = { lessonTitle: title, q: `أي طريقة تساعدك على تطبيق فكرة درس «${title}»؟`, opts: ["أحسب نقلتي وتهديدات الخصم قبل اللعب", "أحرك قطعة عشوائيًا", "أتجاهل سلامة الملك"], ans: 0 };
-      interactiveLesson = { step: Number(step), index: Number(index), question, choice: null, correct: false };
+      interactiveLesson = { step: Number(step), index: Number(index), question, choice: null, correct: false, saving: false, receiptId };
       render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
     window.openInteractiveLesson = openInteractiveLesson;
-    function answerInteractiveLesson(choice) {
-      if (!interactiveLesson || interactiveLesson.choice !== null || !Number.isInteger(choice)) return;
+    function retryInteractiveLesson() {
+      if (!interactiveLesson || interactiveLesson.correct || interactiveLesson.saving) return;
+      interactiveLesson.choice = null;
+      render();
+    }
+    window.retryInteractiveLesson = retryInteractiveLesson;
+    async function answerInteractiveLesson(choice) {
+      if (!interactiveLesson || interactiveLesson.loading || interactiveLesson.saving || interactiveLesson.choice !== null || !Number.isInteger(choice)) return;
       interactiveLesson.choice = choice;
       interactiveLesson.correct = choice === interactiveLesson.question.ans;
-      if (interactiveLesson.correct) awardStudentStar(false);
       render();
+      if (!interactiveLesson.correct) return;
+      const lesson = interactiveLesson, key = `${lesson.step}-${lesson.index}`;
+      lesson.saving = true; render();
+      const result = await awardStudentActivity("lesson", key);
+      if (!interactiveLesson || interactiveLesson !== lesson) return;
+      lesson.saving = false;
+      if (!result.ok && !result.duplicate) {
+        lesson.choice = null; lesson.correct = false;
+        render();
+        return;
+      }
+      if (result.duplicate) toast(lang === "en" ? "This lesson reward was already collected." : "سبق الحصول على مكافأة هذا الدرس.");
+      render();
+      setTimeout(() => { if (interactiveLesson === lesson) closeInteractiveLesson(); }, 1400);
     }
     window.answerInteractiveLesson = answerInteractiveLesson;
     function closeInteractiveLesson() { interactiveLesson = null; render(); }
     window.closeInteractiveLesson = closeInteractiveLesson;
     function renderInteractiveLessonCard() {
-      const p = interactiveLesson, q = p.question;
+      const p = interactiveLesson;
+      if (p.loading) return `<div class="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4" role="dialog" aria-modal="true"><div class="gold-card rounded-2xl p-6 text-center text-sm text-white">${lang === "en" ? "Checking lesson progress…" : "جارٍ التحقق من إنجاز الدرس…"}</div></div>`;
+      const q = p.question;
       const feedback = p.choice === null ? "" : p.correct
-        ? `<p role="status" class="text-center text-sm font-bold text-emerald-300">${lang === "en" ? "Correct! Great thinking." : "إجابة صحيحة! تفكير ممتاز."}</p>`
-        : `<p role="status" class="text-center text-sm font-bold text-amber-300">${lang === "en" ? "Try again next time. The key idea is to calculate before moving." : "حاول مرة أخرى. الفكرة المهمة: احسب قبل أن تحرك."}</p>`;
-      return `<div class="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="interactiveLessonTitle">
+        ? `<p role="status" class="eca-lesson-feedback text-center text-sm font-bold">${p.saving ? (lang === "en" ? "Saving your reward…" : "جارٍ حفظ المكافأة…") : (lang === "en" ? "Correct! Great thinking." : "إجابة صحيحة! تفكير ممتاز.")}</p>`
+        : `<p role="status" class="eca-lesson-feedback text-center text-sm font-bold">${lang === "en" ? "Not quite. Try another answer." : "ليست الإجابة الصحيحة، جرّب إجابة أخرى."}</p>`;
+      return `<div id="interactiveLessonDialog" class="eca-interactive-lesson fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="interactiveLessonTitle">
         <div class="gold-card rounded-2xl max-w-xl w-full p-5 space-y-4">
           <div class="flex items-center justify-between gap-3">
             <h3 id="interactiveLessonTitle" class="font-bold text-lg text-yellow-300">${lang === "en" ? "Quick interactive lesson" : "درس تفاعلي سريع"} • ${esc(q.lessonTitle)}</h3>
             <button type="button" onclick="closeInteractiveLesson()" aria-label="${lang === "en" ? "Close lesson" : "إغلاق الدرس"}" class="tap px-3 rounded-xl text-lg bg-zinc-900 text-gray-300">×</button>
           </div>
-          <p class="text-sm text-white">${esc(q.q)}</p>
-          <div class="grid gap-2">${q.opts.map((option, i) => `<button id="lessonPracticeAnswer${i}" type="button" onclick="answerInteractiveLesson(${i})" ${p.choice !== null ? "disabled" : ""} class="tap w-full rounded-xl px-4 text-start text-sm border ${p.choice === i ? (p.correct ? "border-emerald-500 bg-emerald-500/15 text-emerald-300" : "border-red-500 bg-red-500/15 text-red-300") : "border-yellow-500/30 bg-black/60 text-gray-200"} disabled:opacity-80">${esc(option)}</button>`).join("")}</div>
+          <p class="eca-lesson-question text-sm">${esc(q.q)}</p>
+          <div class="grid gap-2">${q.opts.map((option, i) => `<button id="lessonPracticeAnswer${i}" type="button" onclick="answerInteractiveLesson(${i})" ${p.saving || (p.correct && p.choice !== null) ? "disabled" : ""} class="eca-lesson-answer tap w-full rounded-xl px-4 text-start text-sm border ${p.choice === i ? (p.correct ? "border-emerald-500 bg-emerald-500/15 text-emerald-300" : "border-red-500 bg-red-500/15 text-red-300") : "border-yellow-500/30 bg-black/60 text-gray-200"} disabled:opacity-80">${esc(option)}</button>`).join("")}</div>
           ${feedback}
+          ${p.choice !== null && !p.correct ? `<button type="button" onclick="retryInteractiveLesson()" class="tap w-full rounded-xl px-4 text-sm gold-btn">${lang === "en" ? "Try again" : "حاول مرة أخرى"}</button>` : ""}
           <p class="text-xs text-gray-400">${lang === "en" ? "Practice stays on this page; your usual lesson links are still available." : "التدريب هنا داخل الموقع، وروابط الشرح المعتادة ما زالت متاحة."}</p>
         </div>
       </div>`;
