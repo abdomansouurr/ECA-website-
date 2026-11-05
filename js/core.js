@@ -495,7 +495,16 @@
         return result;
       } catch (error) {
         console.error("Student reward failed:", error);
-        toast(lang === "en" ? "Reward could not be saved. Check your connection." : "تعذّر حفظ المكافأة. تحقق من الاتصال.");
+        const code = error && error.code || "";
+        if (code === "permission-denied") {
+          toast(lang === "en"
+            ? "Firestore rules rejected the reward. Publish the latest firestore.rules, then try again."
+            : "قواعد Firestore رفضت حفظ المكافأة. انشر آخر تحديث لقواعد firestore.rules ثم حاول مرة أخرى.");
+        } else if (code === "unavailable" || code === "deadline-exceeded") {
+          toast(lang === "en" ? "Reward could not be saved. Check your connection and try again." : "تعذّر حفظ المكافأة بسبب الاتصال. تحقق من الإنترنت وحاول مرة أخرى.");
+        } else {
+          toast(lang === "en" ? `Reward could not be saved${code ? ` (${code})` : ""}. Try again later.` : `تعذّر حفظ المكافأة${code ? ` (${code})` : ""}. حاول مرة أخرى لاحقًا.`);
+        }
         return { ok: false };
       }
     }
