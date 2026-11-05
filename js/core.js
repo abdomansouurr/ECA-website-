@@ -487,6 +487,11 @@
       try {
         const result = await window.fbEconomy({ op: "earn", source, key: String(key), day, score: score || 0, stars, xp });
         if (result.ok && !result.duplicate) showStudentReward(result);
+        else if (result.duplicate && source !== "lesson") {
+          toast(lang === "en" ? "You already collected today's reward for this activity." : "سبق الحصول على مكافأة هذا النشاط اليوم.");
+        } else if (result.code === "not-attended") {
+          toast(lang === "en" ? "Attend this lesson before collecting its reward." : "يجب حضور هذا الدرس قبل الحصول على مكافأته.");
+        }
         return result;
       } catch (error) {
         console.error("Student reward failed:", error);

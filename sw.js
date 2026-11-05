@@ -1,5 +1,5 @@
 // ECA service worker — offline support. Bump VERSION to force clients to refresh the cache.
-const VERSION = "eca-v52";
+const VERSION = "eca-v53";
 const SHELL = [
   "./", "./index.html", "./manifest.json",
   "./favicon.ico", "./img/favicon.png", "./apple-touch-icon.png",   // لوجو الأكاديمية على التاب والأيفون — أوفلاين برضه
@@ -9,9 +9,9 @@ const SHELL = [
   "./img/pieces/lichess/bK.svg", "./img/pieces/lichess/bQ.svg", "./img/pieces/lichess/bR.svg", "./img/pieces/lichess/bB.svg", "./img/pieces/lichess/bN.svg", "./img/pieces/lichess/bP.svg",
   "./vendor/chess.js", "./vendor/stockfish.js",
   // ملفات الكود (لازم نفس ?v= اللي في index.html)
-  "./tailwind.css?v=eca-v52",
-  "./js/core.js?v=eca-v52", "./js/arena.js?v=eca-v52", "./js/extras.js?v=eca-v52", "./js/streaks.js?v=eca-v52", "./js/review.js?v=eca-v52", "./js/quality.js?v=eca-v52", "./js/announce.js?v=eca-v52", "./js/progress.js?v=eca-v52", "./js/arena2.js?v=eca-v52", "./js/ux.js?v=eca-v52", "./js/annotate.js?v=eca-v52", "./js/firebase.js?v=eca-v52", "./js/finance.js?v=eca-v52",
-  "./puzzles.js?v=eca-v52"   // عشان الامتحان يشتغل أوفلاين
+  "./tailwind.css?v=eca-v53",
+  "./js/core.js?v=eca-v53", "./js/arena.js?v=eca-v53", "./js/extras.js?v=eca-v53", "./js/streaks.js?v=eca-v53", "./js/review.js?v=eca-v53", "./js/quality.js?v=eca-v53", "./js/announce.js?v=eca-v53", "./js/progress.js?v=eca-v53", "./js/arena2.js?v=eca-v53", "./js/ux.js?v=eca-v53", "./js/annotate.js?v=eca-v53", "./js/firebase.js?v=eca-v53", "./js/finance.js?v=eca-v53",
+  "./puzzles.js?v=eca-v53"   // عشان الامتحان يشتغل أوفلاين
 ];
 const CDN = [
   "https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap"

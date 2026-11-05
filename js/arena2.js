@@ -62,17 +62,19 @@
       for (const row of g.board()) for (const p of row) { if (p && p.color === color && p.type !== "k") { if (p.type === "n" || p.type === "b") minors++; else return false; } }
       return minors <= 1;
     }
-    function playFinish(over, reason) {
+    async function playFinish(over, reason) {
       const P = arena.play; if (P.over) return;
+      const level = P.level;
       P.over = over; P.reason = reason || ""; P.thinking = false; P.pre = null; P.sel = null; P.promo = null;
-      recordArena(a => {
+      await recordArena(a => {
         a.games = a.games || { w: 0, l: 0, d: 0 }; a.games[over === "win" ? "w" : over === "loss" ? "l" : "d"]++;
-        if (over === "win") a.bestWin = Math.max(a.bestWin || 0, P.level + 1);
+        if (over === "win") a.bestWin = Math.max(a.bestWin || 0, level + 1);
         if (over === "win") { a.winStreak = (a.winStreak || 0) + 1; a.bestWinStreak = Math.max(a.bestWinStreak || 0, a.winStreak); }
         else if (over === "loss") a.winStreak = 0;
       });
       toast(reason === "left" ? aL("خرجت من الدور — اتحسب خسارة", "You left the game — counted as a loss")
-        : over === "win" ? aL("كسبت ضد " + LEVELS[P.level].name + "! برافو عليك", "You won! Well done") : over === "loss" ? aL(LEVELS[P.level].name + " كسب — جرّب تاني", "You lost — try again") : aL("تعادل", "Draw"));
+        : over === "win" ? aL("كسبت ضد " + LEVELS[level].name + "! برافو عليك", "You won! Well done") : over === "loss" ? aL(LEVELS[level].name + " كسب — جرّب تاني", "You lost — try again") : aL("تعادل", "Draw"));
+      if (over === "win" && window.ecaAwardStudentActivity) await window.ecaAwardStudentActivity("bot", level);
     }
     playCheckEnd = function () {
       const P = arena.play, g = P.game;
