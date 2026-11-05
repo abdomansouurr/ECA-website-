@@ -1293,34 +1293,13 @@
       `;
     }
 
-    async function openInteractiveLesson(step, index) {
+    function openInteractiveLesson(step, index) {
       const stepData = STEPS.find(x => x.step === Number(step)), lesson = stepData && stepData.lessons[Number(index)];
       const user = currUser();
       if (!lesson || !user || user.role !== "student") return;
-      const key = `${Number(step)}-${Number(index)}`, receiptId = `lesson-${key}`;
+      const key = `${Number(step)}-${Number(index)}`;
       if (!user.att || user.att[key] !== true) {
         toast(lang === "en" ? "Attend this lesson before opening its practice question." : "يجب حضور هذا الدرس قبل فتح سؤاله التفاعلي.");
-        return;
-      }
-      if (!window.fbHasEconomyReceipt) {
-        toast(lang === "en" ? "Lesson progress is still loading. Try again." : "بيانات الدرس لم تكتمل. حاول مرة أخرى.");
-        return;
-      }
-      interactiveLesson = { loading: true };
-      render();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      let completed;
-      try { completed = await window.fbHasEconomyReceipt(receiptId); }
-      catch (error) {
-        console.error("Interactive lesson status failed:", error);
-        interactiveLesson = null;
-        render();
-        toast(lang === "en" ? "Could not check lesson progress. Try again." : "تعذّر التحقق من إنجاز الدرس. حاول مرة أخرى.");
-        return;
-      }
-      if (completed) {
-        interactiveLesson = null; render();
-        toast(lang === "en" ? "You already completed this lesson question." : "لقد أجبت عن سؤال هذا الدرس من قبل.");
         return;
       }
       const title = lesson.t;
@@ -1330,7 +1309,7 @@
       else if (/pin/i.test(title)) question = { lessonTitle: title, q: `كيف تستفيد من تثبيت قطعة الخصم في درس «${title}»؟`, opts: ["زيادة الضغط عليها مع حساب رد الخصم", "إبعاد قطعك عنها فورًا", "تجاهلها واللعب عشوائيًا"], ans: 0 };
       else if (/double attack|twofold|fork/i.test(title)) question = { lessonTitle: title, q: `ما الذي يجعل الهجوم المزدوج قويًا في درس «${title}»؟`, opts: ["تهديد هدفين في الوقت نفسه", "تحريك القطعة نفسها مرتين", "إخراج الملك إلى الوسط"], ans: 0 };
       else question = { lessonTitle: title, q: `أي طريقة تساعدك على تطبيق فكرة درس «${title}»؟`, opts: ["أحسب نقلتي وتهديدات الخصم قبل اللعب", "أحرك قطعة عشوائيًا", "أتجاهل سلامة الملك"], ans: 0 };
-      interactiveLesson = { step: Number(step), index: Number(index), question, choice: null, correct: false, saving: false, receiptId };
+      interactiveLesson = { step: Number(step), index: Number(index), question, choice: null, correct: false, saving: false };
       render();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -1342,7 +1321,7 @@
     }
     window.retryInteractiveLesson = retryInteractiveLesson;
     async function answerInteractiveLesson(choice) {
-      if (!interactiveLesson || interactiveLesson.loading || interactiveLesson.saving || interactiveLesson.choice !== null || !Number.isInteger(choice)) return;
+      if (!interactiveLesson || interactiveLesson.saving || interactiveLesson.choice !== null || !Number.isInteger(choice)) return;
       interactiveLesson.choice = choice;
       interactiveLesson.correct = choice === interactiveLesson.question.ans;
       render();
@@ -1366,7 +1345,6 @@
     window.closeInteractiveLesson = closeInteractiveLesson;
     function renderInteractiveLessonCard() {
       const p = interactiveLesson;
-      if (p.loading) return `<div class="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4" role="dialog" aria-modal="true"><div class="gold-card rounded-2xl p-6 text-center text-sm text-white">${lang === "en" ? "Checking lesson progress…" : "جارٍ التحقق من إنجاز الدرس…"}</div></div>`;
       const q = p.question;
       const feedback = p.choice === null ? "" : p.correct
         ? `<p role="status" class="eca-lesson-feedback text-center text-sm font-bold">${p.saving ? (lang === "en" ? "Saving your reward…" : "جارٍ حفظ المكافأة…") : (lang === "en" ? "Correct! Great thinking." : "إجابة صحيحة! تفكير ممتاز.")}</p>`
