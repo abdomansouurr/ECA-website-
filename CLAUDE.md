@@ -12,7 +12,7 @@ Roles: `admin`, `coach` (`staff/`), `student` (`users/`), parents (`parentLinks`
 - Deploy Firestore rules manually via Console or `firebase deploy --only firestore:rules`.
 
 ## Architecture
-- `index.html`: Shell + theme CSS (dark default, `html.light`, `html.eca` blue theme in `eca-v29` block).
+- `index.html`: Shell + theme CSS (`html.dark`, `html.light`, `html.eca`, and student-default `html.kids` theme).
 - `js/*.js`: Classic scripts sharing ONE global scope, loaded in `index.html` order. `js/firebase.js` is the ONLY ES module (exposes `window.fb*`). NEVER wrap other files in modules.
 - UI & State: String-templated HTML rendered via `render()` (`innerHTML`). State lives in `db`, `tab`, and module vars.
 - Function Patching: Later files override earlier ones (`quality.js` overrides `deleteStudent`, `extras.js` wraps `renderStudentHome`). Always grep for re-definitions before editing a function.
@@ -30,6 +30,7 @@ Roles: `admin`, `coach` (`staff/`), `student` (`users/`), parents (`parentLinks`
 - **XSS Prevention:** EVERY interpolated dynamic value in HTML templates MUST pass through `esc()`. Inline `onclick` handlers may ONLY receive static keys or IDs, never raw user strings.
 - **Zero-Trust Client:** Never rely on client-side checks for security. `firestore.rules` is the single source of truth for authorization (deny by default, verify ownership/roles explicitly).
 - **Role Boundaries:** Coaches can read/update students; deleting students or attempts is strictly `admin`-only. Students self-register at Step 1 (or placement-approved level).
+- **Student Privacy:** Shared leaderboard and tournament views use preset nicknames; keep legal names in staff/parent-only views. Parent access is linked through `parentLinks`; there is no public chat.
 - **Secrets & Dependencies:** Never hardcode sensitive keys or log auth tokens. Do not install unverified npm packages without explicit user confirmation.
 
 ## Strict Agent Constraints (Token & Code Protection)

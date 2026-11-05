@@ -1,16 +1,44 @@
 // ECA — core.js (اتفصل من index.html في eca-v3)
+    const MODULE_SOURCES = Object.assign({
+      puzzles: "puzzles.js",
+      homework: "js/homework.js",
+      today: "js/today.js",
+      reports: "js/reports.js",
+      tournaments: "js/tournaments.js",
+      "placement-data": "js/placement-data.js",
+      placement: "js/placement.js"
+    }, JSON.parse(document.getElementById("ecaLazyModules").textContent));
+    const modulePromises = new Map(), loadedModules = new Set();
+    function loadModule(name) {
+      if (!Object.prototype.hasOwnProperty.call(MODULE_SOURCES, name)) return Promise.reject(new Error("Unknown module: " + name));
+      if (loadedModules.has(name)) return Promise.resolve();
+      if (modulePromises.has(name)) return modulePromises.get(name);
+      const script = document.createElement("script");
+      script.async = false;
+      script.src = MODULE_SOURCES[name] + "?v=" + encodeURIComponent(window.ECA_VERSION || "1");
+      const pending = new Promise((resolve, reject) => {
+        script.onload = () => { loadedModules.add(name); resolve(); };
+        script.onerror = () => { script.remove(); reject(new Error("Failed to load module: " + name)); };
+        document.head.appendChild(script);
+      });
+      modulePromises.set(name, pending);
+      pending.catch(() => { if (modulePromises.get(name) === pending) modulePromises.delete(name); });
+      return pending;
+    }
+    window.loadModule = loadModule;
+    function loadModules(names) {
+      return names.reduce((pending, name) => pending.then(() => loadModule(name)), Promise.resolve());
+    }
+
     // تحميل بنك الألغاز عند الحاجة فقط (الامتحان أو ألغاز الـ Arena لما Lichess يرفض)
     let _puzBankP = null;
     function loadPuzzleBank() {
       if (window.ECA_PUZZLE_BANK) return Promise.resolve(window.ECA_PUZZLE_BANK);
       if (_puzBankP) return _puzBankP;
-      _puzBankP = new Promise((res, rej) => {
-        const sc = document.createElement("script");
-        sc.src = "puzzles.js?v=" + (window.ECA_VERSION || "1");
-        sc.onload = () => window.ECA_PUZZLE_BANK ? res(window.ECA_PUZZLE_BANK) : rej(new Error("bank empty"));
-        sc.onerror = () => { _puzBankP = null; sc.remove(); rej(new Error("bank load failed")); };
-        document.head.appendChild(sc);
-      });
+      _puzBankP = loadModule("puzzles").then(() => {
+        if (!window.ECA_PUZZLE_BANK) throw new Error("Puzzle bank is empty");
+        return window.ECA_PUZZLE_BANK;
+      }).catch(e => { _puzBankP = null; throw e; });
       return _puzBankP;
     }
 
@@ -279,7 +307,7 @@
     let parentStu = null, parentBusy = false;
     window.__authLoading = true;
     setTimeout(() => { if (window.__authLoading) { window.__authLoading = false; render(); } }, 8000);
-    let tab = "home", authMode = "login", signupRole = "student", selStuId = "", grpFilter = "ALL", searchQ = "", parentQ = "", unlockedStuId = null, openSteps = { 1: true, 2: true, 3: false, 4: false, 5: false, 6: false };
+    let tab = "home", authMode = "login", signupRole = "student", selStuId = "", grpFilter = "ALL", searchQ = "", parentQ = "", unlockedStuId = null, interactiveLesson = null, openSteps = { 1: true, 2: true, 3: false, 4: false, 5: false, 6: false };
 
     function save() { if (window.syncToCloud) window.syncToCloud(); }
     // محاولة لغز/امتحان: بتتسجّل في دفتر المحاولات (attempts) وملف الطالب في عملية واحدة.
@@ -295,6 +323,107 @@
     }
     function currUser() { return db.users.find(u => u.id === db.currId) || null; }
     function toast(m) { const el = document.getElementById("toast"); el.textContent = trText(m); el.classList.remove("hidden"); setTimeout(() => el.classList.add("hidden"), 2800); }
+    const ECA_ALIAS_OPTIONS = [
+      { id: "star-knight", ar: "فارس النجوم", en: "Star Knight" },
+      { id: "silver-bishop", ar: "الفيل الفضي", en: "Silver Bishop" },
+      { id: "brave-rook", ar: "القلعة الشجاعة", en: "Brave Rook" },
+      { id: "clever-pawn", ar: "البيدق الذكي", en: "Clever Pawn" },
+      { id: "golden-queen", ar: "الملكة الذهبية", en: "Golden Queen" },
+      { id: "swift-horse", ar: "الحصان السريع", en: "Swift Knight" },
+      { id: "bright-king", ar: "الملك اللامع", en: "Bright King" },
+      { id: "kind-castle", ar: "القلعة اللطيفة", en: "Kind Castle" }
+    ];
+    function aliasIdFor(user) {
+      const selected = ECA_ALIAS_OPTIONS.find(x => x.id === (user && user.nickname));
+      if (selected) return selected.id;
+      const id = String((user && (user.id || user.username)) || "eca-student");
+      let hash = 5381;
+      for (let i = 0; i < id.length; i++) hash = ((hash << 5) + hash) ^ id.charCodeAt(i);
+      return ECA_ALIAS_OPTIONS[(hash >>> 0) % ECA_ALIAS_OPTIONS.length].id;
+    }
+    function ecaStudentAlias(user) {
+      const selected = ECA_ALIAS_OPTIONS.find(x => x.id === aliasIdFor(user)) || ECA_ALIAS_OPTIONS[0];
+      return lang === "en" ? selected.en : selected.ar;
+    }
+    window.ecaStudentAlias = ecaStudentAlias;
+    window.ecaAliasForId = id => ecaStudentAlias({ id });
+    window.ecaAliasIdFor = aliasIdFor;
+    function setStudentAlias(value) {
+      const u = currUser();
+      if (!u || u.role !== "student" || !ECA_ALIAS_OPTIONS.some(x => x.id === value)) return;
+      u.nickname = value;
+      save();
+      render();
+      toast(lang === "en" ? "Nickname updated" : "تم تحديث اسمك المستعار");
+    }
+    window.setStudentAlias = setStudentAlias;
+    function dailyMissionDone(user) {
+      const a = (user && user.arena) || {};
+      return a.missionDate === todayISO() && a.missionDone === true;
+    }
+    function celebrateStudentStar() {
+      const pop = document.createElement("div");
+      pop.className = "eca-reward-pop";
+      pop.setAttribute("role", "status");
+      pop.textContent = "⭐ +1";
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1000);
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      try {
+        const audio = new AudioContextClass();
+        [880, 1174, 1568].forEach((frequency, index) => {
+          const oscillator = audio.createOscillator(), gain = audio.createGain(), start = audio.currentTime + index * 0.09;
+          oscillator.type = "sine"; oscillator.frequency.value = frequency;
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.exponentialRampToValueAtTime(0.12, start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.14);
+          oscillator.connect(gain); gain.connect(audio.destination);
+          oscillator.start(start); oscillator.stop(start + 0.15);
+        });
+        setTimeout(() => audio.close().catch(() => {}), 500);
+      } catch (e) { console.warn("Reward sound unavailable:", e); }
+    }
+    function addStudentStar(user, qualifiesForMission) {
+      const u = user || currUser();
+      if (!u || u.role !== "student") return null;
+      const a = u.arena = u.arena || {}, today = todayISO(), firstMission = qualifiesForMission && !dailyMissionDone(u);
+      a.stars = (Number(a.stars) || 0) + 1;
+      if (firstMission) { a.missionDate = today; a.missionDone = true; }
+      return { firstMission, stars: a.stars };
+    }
+    function showStudentReward(reward) {
+      if (!reward) return;
+      celebrateStudentStar();
+      toast(lang === "en"
+        ? (reward.firstMission ? "Daily mission complete! You earned a star." : "You earned a star. Great job!")
+        : (reward.firstMission ? "مهمة اليوم تمت! نجمة جديدة" : "نجمة جديدة! برافو عليك"));
+      if (tab === "home") render();
+    }
+    function awardStudentStar(qualifiesForMission) {
+      const reward = addStudentStar(currUser(), qualifiesForMission);
+      if (!reward) return;
+      save();
+      showStudentReward(reward);
+    }
+    window.ecaAwardStudentStar = awardStudentStar;
+    window.ecaAddStudentStar = addStudentStar;
+    window.ecaShowStudentReward = showStudentReward;
+    function studentMissionCard(user) {
+      const arenaData = user.arena || {}, done = dailyMissionDone(user), stars = Number(arenaData.stars) || 0;
+      return `<div class="gold-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div class="font-bold text-yellow-300">${lang === "en" ? "Today's mission" : "مهمة اليوم"} ⭐</div>
+          <p class="text-xs text-gray-400 mt-1">${done
+            ? (lang === "en" ? "Puzzle solved — mission complete!" : "حلّيت لغزًا — المهمة اكتملت!")
+            : (lang === "en" ? "Solve one chess puzzle to earn a star." : "حل لغز شطرنج واحد واكسب نجمة.")}</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="px-3 py-2 rounded-xl bg-amber-100 text-amber-900 font-extrabold" aria-label="${lang === "en" ? "Stars" : "النجوم"}">⭐ ${esc(String(stars))}</span>
+          ${done ? "" : `<button onclick="arena.sub='puzzles'; switchTab('arena')" class="tap px-4 rounded-xl text-xs gold-btn">${lang === "en" ? "Solve a puzzle" : "حل لغز"}</button>`}
+        </div>
+      </div>`;
+    }
     let ecaConfirmQueue = Promise.resolve();
     window.ecaConfirm = message => {
       const show = () => new Promise(resolve => {
@@ -374,7 +503,7 @@
       return result;
     };
     function go(t) { if (tab !== t) history.pushState({ tab: t }, "", "#" + t); tab = t; }
-    function switchTab(t) { go(t); render(); }
+    function switchTab(t) { if (t !== "lessons") interactiveLesson = null; go(t); render(); }
     function logout() { parentStu = null; parentQ = ""; if (window.fbLogout) window.fbLogout(); go("home"); render(); }
     function goHomeRefresh() { go("home"); render(); }
     let notificationsOpen = false;
@@ -489,6 +618,23 @@
         </div>
       </div>`;
     }
+    function updateNotificationBell() {
+      const button = document.getElementById("notificationsBtn"); if (!button) return;
+      const unread = (window.ecaNotifications || []).filter(n => !n.read).length;
+      let badge = button.querySelector(":scope > span");
+      if (!unread) { if (badge) badge.remove(); }
+      else {
+        if (!badge) {
+          badge = document.createElement("span");
+          badge.className = "absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-[18px]";
+          button.appendChild(badge);
+        }
+        badge.textContent = unread > 99 ? "99+" : String(unread);
+      }
+      const label = lang === "en" ? "Notifications" : "الإشعارات";
+      button.setAttribute("aria-label", unread ? label + " (" + unread + ")" : label);
+    }
+    window.ecaUpdateNotificationBell = updateNotificationBell;
     // قايمة الحساب (الأيقونة فوق يمين): فتح/قفل — كانت ناقصة من النسخة
     function closeAcctMenu() { const m = document.getElementById("acctMenu"), b = document.getElementById("acctBtn"); if (m && !m.classList.contains("hidden")) { if (window.ecaCurtainHide) ecaCurtainHide(m); else m.classList.add("hidden"); } if (b) b.setAttribute("aria-expanded", "false"); }
     function toggleAcctMenu(ev) {
@@ -510,6 +656,21 @@
       }
     });
     function isInfoTab(t) { return typeof renderInfoPage === "function" && INFO_TABS.includes(t); }   // صفحات المعلومات (متعرّفة في سكريبت تحت)
+
+    function modulesForCurrentView() {
+      const u = currUser(), staff = isStaffUser(u);
+      if (!u) return tab === "placement" ? ["placement-data", "placement"] : [];
+      if (tab === "lessons" || (tab === "homework" && u.role === "student")) return ["homework"];
+      if (u.role === "student" && ["home", "parent"].includes(tab) && Object.keys(u.hwp || {}).length) return ["homework"];
+      if (tab === "placement") return ["placement-data", "placement"];
+      if (staff && tab === "placeresults") return ["placement-data", "placement"];
+      if (staff && tab === "tracker") return ["homework", "reports", "placement-data", "placement"];
+      if (staff && tab === "today") return ["today"];
+      if (staff && tab === "finance") return ["finance"];
+      if (tab === "tournaments" || (u.role === "student" && ["ranks", "parent"].includes(tab))) return ["tournaments"];
+      if (u.role === "student" && tab === "home" && (db.tournaments || []).some(t => (t.players || []).some(p => p.id === u.id))) return ["tournaments"];
+      return [];
+    }
 
     // ===== القوائم بتدخل واحدة ورا التانية بانسيابية =====
     // بنعلّم أكبر حايمة قايمة في الصفحة (جريد/ليستة/سكاشن/جدول) بـ .stagger-in
@@ -556,7 +717,29 @@
       return { st, total, attC, hwC, rem, attP, hwP, puzP, overall, evalText, evalCls, nextLesson: nextIdx !== -1 ? st.lessons[nextIdx] : null, nextIdx };
     }
 
- function render() {
+    let pendingViewLoad = null;
+    function render() {
+      applyRoleDefaultTheme();
+      const required = modulesForCurrentView(), missing = required.filter(name => !loadedModules.has(name));
+      if (missing.length) {
+        const u = currUser(), key = tab + "|" + (u ? u.id : "guest");
+        if (!pendingViewLoad || pendingViewLoad.key !== key) {
+          const request = { key };
+          pendingViewLoad = request;
+          loadModules(missing).then(() => {
+            if (pendingViewLoad !== request) return;
+            pendingViewLoad = null;
+            const current = currUser();
+            if (key === tab + "|" + (current ? current.id : "guest")) { render.__pg = null; render(); }
+          }).catch(e => {
+            if (pendingViewLoad !== request) return;
+            pendingViewLoad = null;
+            console.error(e);
+            toast("تعذّر تحميل الصفحة — اتأكد من الإنترنت وحاول تاني");
+          });
+        }
+        return;
+      }
       let winY = window.scrollY;
       const innerScrolls = Array.from(document.querySelectorAll("#mainView .overflow-y-auto")).map(el => el.scrollTop);
       const a = document.activeElement, id = a && a.id, s = a && a.selectionStart, e = a && a.selectionEnd;
@@ -854,11 +1037,18 @@
       const done = (stu.puzDone || {})[puzDayKey(stu.level)];   // القفل اليومي: بيفتح تاني كل يوم (كان بيتقفل للأبد)
       return `
         <div class="space-y-6">
+          ${studentMissionCard(stu)}
           <div class="gold-card rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <span class="px-2.5 py-1 rounded-full text-xs gold-btn">STEP ${stu.level} STUDENT</span>
-              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">Welcome, ${esc(stu.name)} (@${esc(stu.username)})</h2>
+              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">${lang === "en" ? "Welcome, " : "أهلاً يا "}${esc(ecaStudentAlias(stu))}</h2>
               <p class="text-xs text-gray-400 mt-1">حضرت ${s.attC}/${s.total} درس في Step ${stu.level} • متبقي ${s.rem} درس للامتحان</p>
+              <label class="inline-flex flex-wrap items-center gap-2 mt-3 text-xs text-gray-400">
+                <span>${lang === "en" ? "Your student nickname" : "اسمك المستعار للطلاب"}</span>
+                <select aria-label="${lang === "en" ? "Choose your nickname" : "اختر اسمك المستعار"}" onchange="setStudentAlias(this.value)" class="tap rounded-xl bg-black border border-yellow-500/40 px-3 text-sm text-white">
+                  ${ECA_ALIAS_OPTIONS.map(x => `<option value="${x.id}" ${aliasIdFor(stu) === x.id ? "selected" : ""}>${lang === "en" ? x.en : x.ar}</option>`).join("")}
+                </select>
+              </label>
             </div>
           </div>
 
@@ -899,11 +1089,16 @@
       u.puzDone = u.puzDone || {};
       if (u.puzDone[puzDayKey(u.level)]) return toast("اللغز مقفول بالفعل");
       const ok = i === ans;
+      let reward = null;
       recordAttempt("daily", todayISO() + "-L" + u.level, ok, s => {
         s.puz = s.puz || { t: 0, c: 0 }; s.puz.t = (s.puz.t || 0) + 1; if (ok) s.puz.c = (s.puz.c || 0) + 1;
         s.puzDone = s.puzDone || {}; s.puzDone[puzDayKey(s.level)] = { i, ok };
+        if (ok) reward = addStudentStar(s, true);
         if (typeof markActiveDay === "function") markActiveDay(s);   // اللغز اليومي بيحسب في سلسلة أيام التمرين
-      }).then(r => { if (!r.ok && r.code === "permission-denied") { toast("لغز النهاردة اتحسب قبل كده"); render(); } });
+      }).then(r => {
+        if (r.ok) showStudentReward(reward);
+        else if (r.code === "permission-denied") { toast("لغز النهاردة اتحسب قبل كده"); render(); }
+      });
       toast(ok ? "إجابة صحيحة! أحسنت يا بطل" : "إجابة خاطئة — تم قفل اللغز");
       render();
     }
@@ -964,7 +1159,7 @@
                       // زر الواجب: لو الموقف قابل للحل يفتح لاعب الألغاز جوه المنصة، غير كده لينك Lichess
                       const hwKey = st.step + "-" + idx;
                       const hwBtn = x => {
-                        const HE = hwEntry(hwKey);
+                        const HE = typeof hwEntry === "function" ? hwEntry(hwKey) : null;
                         const cls = 'px-3 py-1 rounded-lg text-xs bg-zinc-900 border border-dashed border-yellow-500/60 text-yellow-300 hover:bg-yellow-500 hover:text-black';
                         return HE && HE.puzzles && HE.puzzles.length
                           ? `<button onclick="openHomework('${hwKey}')" class="${cls}">Homework ↗</button>`
@@ -972,7 +1167,7 @@
                       };
                       // نتيجة الواجب للطالب (كام إجابة صح من أول محاولة)
                       const hwRecord = typeof hwProgressRecord === "function" ? hwProgressRecord(u, hwKey) : null;
-                      const hwScore = u.role === "student" && hwRecord && hwEntry(hwKey) && (hwEntry(hwKey).puzzles || []).length
+                      const hwScore = u.role === "student" && hwRecord && HE && (HE.puzzles || []).length
                         ? (() => { const r = hwRecord, hasFirstTry = Number.isFinite(r.ft);
                             const score = hasFirstTry ? r.ft : (Number(r.solved) || 0), good = score === r.t;
                             const label = hasFirstTry ? (lang === 'en' ? 'First try' : 'أول مرة') : (lang === 'en' ? 'Solved' : 'محلول');
@@ -987,6 +1182,7 @@
                           ${chip}
                         </span>
                         <div class="flex flex-wrap items-stretch gap-2">
+                          ${u.role === "student" ? `<button type="button" onclick="openInteractiveLesson(${st.step},${idx})" class="tap px-3 rounded-xl text-xs font-bold bg-sky-500/15 border border-sky-500/35 text-sky-400">${lang === "en" ? "Quick lesson" : "درس تفاعلي"}</button>` : ""}
                           ${LV.links.map(x => lkBtn(x.t, x.u, false)).join('')}
                           ${hwSep}
                           ${LV.hw.map(x => hwBtn(x)).join('')}
@@ -999,8 +1195,53 @@
               </div>
             `;
           }).join('')}
+          ${u.role === "student" && interactiveLesson ? renderInteractiveLessonCard() : ""}
         </div>
       `;
+    }
+
+    function openInteractiveLesson(step, index) {
+      const stepData = STEPS.find(x => x.step === Number(step)), lesson = stepData && stepData.lessons[Number(index)];
+      const user = currUser();
+      if (!lesson || !user || user.role !== "student") return;
+      const title = lesson.t;
+      let question;
+      if (lang === "en") question = buildLessonQuestion(lesson, Number(index), Number(todayISO().replace(/-/g, "")) % 10000);
+      else if (/mate|mating/i.test(title)) question = { lessonTitle: title, q: `ما الهدف من الكش مات في درس «${title}»؟`, opts: ["إنهاء المباراة بحيث لا يستطيع الملك الهروب من الكش", "أخذ كل بيادق الخصم", "تحريك الملك إلى الوسط"], ans: 0 };
+      else if (/pin/i.test(title)) question = { lessonTitle: title, q: `كيف تستفيد من تثبيت قطعة الخصم في درس «${title}»؟`, opts: ["زيادة الضغط عليها مع حساب رد الخصم", "إبعاد قطعك عنها فورًا", "تجاهلها واللعب عشوائيًا"], ans: 0 };
+      else if (/double attack|twofold|fork/i.test(title)) question = { lessonTitle: title, q: `ما الذي يجعل الهجوم المزدوج قويًا في درس «${title}»؟`, opts: ["تهديد هدفين في الوقت نفسه", "تحريك القطعة نفسها مرتين", "إخراج الملك إلى الوسط"], ans: 0 };
+      else question = { lessonTitle: title, q: `أي طريقة تساعدك على تطبيق فكرة درس «${title}»؟`, opts: ["أحسب نقلتي وتهديدات الخصم قبل اللعب", "أحرك قطعة عشوائيًا", "أتجاهل سلامة الملك"], ans: 0 };
+      interactiveLesson = { step: Number(step), index: Number(index), question, choice: null, correct: false };
+      render();
+    }
+    window.openInteractiveLesson = openInteractiveLesson;
+    function answerInteractiveLesson(choice) {
+      if (!interactiveLesson || interactiveLesson.choice !== null || !Number.isInteger(choice)) return;
+      interactiveLesson.choice = choice;
+      interactiveLesson.correct = choice === interactiveLesson.question.ans;
+      if (interactiveLesson.correct) awardStudentStar(false);
+      render();
+    }
+    window.answerInteractiveLesson = answerInteractiveLesson;
+    function closeInteractiveLesson() { interactiveLesson = null; render(); }
+    window.closeInteractiveLesson = closeInteractiveLesson;
+    function renderInteractiveLessonCard() {
+      const p = interactiveLesson, q = p.question;
+      const feedback = p.choice === null ? "" : p.correct
+        ? `<p role="status" class="text-center text-sm font-bold text-emerald-300">${lang === "en" ? "Correct! Great thinking." : "إجابة صحيحة! تفكير ممتاز."}</p>`
+        : `<p role="status" class="text-center text-sm font-bold text-amber-300">${lang === "en" ? "Try again next time. The key idea is to calculate before moving." : "حاول مرة أخرى. الفكرة المهمة: احسب قبل أن تحرك."}</p>`;
+      return `<div class="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="interactiveLessonTitle">
+        <div class="gold-card rounded-2xl max-w-xl w-full p-5 space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <h3 id="interactiveLessonTitle" class="font-bold text-lg text-yellow-300">${lang === "en" ? "Quick interactive lesson" : "درس تفاعلي سريع"} • ${esc(q.lessonTitle)}</h3>
+            <button type="button" onclick="closeInteractiveLesson()" aria-label="${lang === "en" ? "Close lesson" : "إغلاق الدرس"}" class="tap px-3 rounded-xl text-lg bg-zinc-900 text-gray-300">×</button>
+          </div>
+          <p class="text-sm text-white">${esc(q.q)}</p>
+          <div class="grid gap-2">${q.opts.map((option, i) => `<button id="lessonPracticeAnswer${i}" type="button" onclick="answerInteractiveLesson(${i})" ${p.choice !== null ? "disabled" : ""} class="tap w-full rounded-xl px-4 text-start text-sm border ${p.choice === i ? (p.correct ? "border-emerald-500 bg-emerald-500/15 text-emerald-300" : "border-red-500 bg-red-500/15 text-red-300") : "border-yellow-500/30 bg-black/60 text-gray-200"} disabled:opacity-80">${esc(option)}</button>`).join("")}</div>
+          ${feedback}
+          <p class="text-xs text-gray-400">${lang === "en" ? "Practice stays on this page; your usual lesson links are still available." : "التدريب هنا داخل الموقع، وروابط الشرح المعتادة ما زالت متاحة."}</p>
+        </div>
+      </div>`;
     }
 
     function coachSearchStudent(val) { searchQ = val; go("tracker"); render(); }
@@ -1066,7 +1307,7 @@
                         const k = sel.level + "-" + i;
                         const a = !!(sel.att && sel.att[k]);
                         const h = !!(sel.hw && sel.hw[k]);
-                        const HE = hwEntry ? hwEntry(k) : null;
+                        const HE = typeof hwEntry === "function" ? hwEntry(k) : null;
                         const wp = typeof hwProgressRecord === "function" && HE && (HE.puzzles || []).length ? hwProgressRecord(sel, k) : null;
                         const wChip = wp ? (() => {
                           const hasFirstTry = Number.isFinite(wp.ft), score = hasFirstTry ? wp.ft : (Number(wp.solved) || 0);
@@ -1562,30 +1803,40 @@
       save(); closeAddStu(); render(); toast("تم حذف الطالب");
     }
 
-    // ---------- Theme (dark / light / eca) ----------
+    // ---------- Theme (dark / light / eca / kids) ----------
     // "eca" = ثيم بألوان لوجو الأكاديمية (أزرق ملكي + أسود + أبيض). بيشتغل فوق الفاتح: html بياخد class "light" و "eca" مع بعض.
-    const THEMES = [["dark", "داكن", "Dark"], ["light", "فاتح", "Light"], ["eca", "ألوان الأكاديمية", "ECA colours"]];
-    const THEME_META = { dark: "#050507", light: "#f6f3ea", eca: "#f2f6fd" };
-    const THEME_SWATCH = { dark: "linear-gradient(135deg,#050507 50%,#d4af37 50%)", light: "linear-gradient(135deg,#f6f3ea 50%,#b8860b 50%)", eca: "linear-gradient(135deg,#ffffff 45%,#0a45a8 45%)" };
+    const THEMES = [["dark", "داكن", "Dark"], ["light", "فاتح", "Light"], ["eca", "ألوان الأكاديمية", "ECA colours"], ["kids", "الأبطال الصغار", "Young champions"]];
+    const THEME_META = { dark: "#050507", light: "#f6f3ea", eca: "#f2f6fd", kids: "#f1f8ff" };
+    const THEME_SWATCH = { dark: "linear-gradient(135deg,#050507 50%,#d4af37 50%)", light: "linear-gradient(135deg,#f6f3ea 50%,#b8860b 50%)", eca: "linear-gradient(135deg,#ffffff 45%,#0a45a8 45%)", kids: "linear-gradient(135deg,#fff7cc 50%,#1769aa 50%)" };
     const THEME_ICON = {
       light: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
       dark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
-      eca: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18 5 7l4.5 4L12 5l2.5 6L19 7l2 11z"/><path d="M4 21h16"/></svg>'
+      eca: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18 5 7l4.5 4L12 5l2.5 6L19 7l2 11z"/><path d="M4 21h16"/></svg>',
+      kids: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 14.8 8.7l6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3z"/></svg>'
     };
-    function currentTheme() { const c = document.documentElement.classList; return c.contains("eca") ? "eca" : c.contains("light") ? "light" : "dark"; }
+    function currentTheme() { const c = document.documentElement.classList; return c.contains("kids") ? "kids" : c.contains("eca") ? "eca" : c.contains("light") ? "light" : "dark"; }
     function applyTheme(t) {
       if (!THEMES.some(x => x[0] === t)) t = "dark";
-      const d = document.documentElement; d.classList.remove("dark", "light", "eca");
-      d.classList.add(t === "eca" ? "light" : t); if (t === "eca") d.classList.add("eca");
-      try { localStorage.setItem("ECA_THEME", t); } catch (_) {}
+      const d = document.documentElement; d.classList.remove("dark", "light", "eca", "kids");
+      d.classList.add(t === "eca" || t === "kids" ? "light" : t);
+      if (t === "eca" || t === "kids") d.classList.add(t);
       const b = document.getElementById("themeBtn"); if (b) b.innerHTML = THEME_ICON[t];
       const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", THEME_META[t]);
     }
+    function saveThemePreference(t) { try { localStorage.setItem("ECA_THEME", t); } catch (_) {} }
+    function applyRoleDefaultTheme() {
+      let saved = "";
+      try { saved = localStorage.getItem("ECA_THEME") || ""; } catch (_) {}
+      if (!THEMES.some(x => x[0] === saved)) saved = "";
+      const u = currUser(), desired = saved || (u && u.role === "student" ? "kids" : "eca");
+      if (currentTheme() !== desired) applyTheme(desired);
+    }
     function closeThemeMenu() { const m = document.getElementById("themeMenu"); if (m) m.remove(); const b = document.getElementById("themeBtn"); if (b) b.setAttribute("aria-expanded", "false"); }
-    function pickTheme(t) { applyTheme(t); closeThemeMenu(); }
+    function pickTheme(t) { applyTheme(t); saveThemePreference(t); closeThemeMenu(); }
     // اختيار الشكل من جوه قايمة الحساب: بيفضل القايمة مفتوحة ويحدّث الشارة النشطة
     function menuTheme(t) {
       applyTheme(t);
+      saveThemePreference(t);
       document.querySelectorAll("#acctMenu .thm-chip").forEach(b => {
         const on = b.dataset.t === t;
         b.style.borderColor = on ? "#d4af37" : "rgba(128,128,128,.4)";

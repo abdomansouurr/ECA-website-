@@ -12,6 +12,9 @@ service cloud.firestore {
     }
     // نص آمن: بدون < > " ' ` (حماية من حقن HTML)
     function safeText(v, max) { return v is string && v.size() <= max && v.matches('[^<>"\'`]*'); }
+    function nicknameOk(v) {
+      return v == '' || v in ['star-knight','silver-bishop','brave-rook','clever-pawn','golden-queen','swift-horse','bright-king','kind-castle'];
+    }
 
     // المستوى الابتدائي: Step 1، إلا لو الطالب ربط حسابه بنتيجة اختبار تحديد مستوى معتمدة (plk = مفتاح placementLevels)
     function plOk(d) {
@@ -22,9 +25,10 @@ service cloud.firestore {
     }
 
     function validNewStudent(d) {
-      return d.keys().hasOnly(['name','username','email','phone','parentPhone','role','level','group','mode','att','hw','puz','plk'])
+      return d.keys().hasOnly(['name','username','email','phone','parentPhone','role','level','group','mode','att','hw','puz','plk','nickname'])
         && d.role == 'student'
         && safeText(d.name, 80) && d.name.size() >= 2
+        && nicknameOk(d.get('nickname', ''))
         && d.username is string && d.username.matches('[a-z0-9_]{3,30}')
         && d.email is string && d.email.matches('[^@ ]+@[^@ ]+\\.[^@ ]+') && safeText(d.email, 120)
         && d.phone is string && d.phone.matches('[0-9]{8,15}')
@@ -42,6 +46,7 @@ service cloud.firestore {
           'courseFee','amountPaid','remaining','lastPayDate','lastPayAmount','att','hw'])
         && safeText(request.resource.data.name, 80)
         && safeText(request.resource.data.get('email', ''), 120)
+        && nicknameOk(request.resource.data.get('nickname', ''))
         && countersOk() && daysOk() && examOk() && levelOk() && certsOk();
     }
 

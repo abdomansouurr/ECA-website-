@@ -217,6 +217,7 @@
       box.textContent = trText("جاري تجهيز التقرير...");
       try {
         const note = (document.getElementById("repNote") || {}).value || "";
+        await window.loadModule("tournaments");
         const D = await reportData(s, repMonth);
         const cv = await buildReportCanvas(s, D, repMonth, repLang, note);
         repCache = { stuId, month: repMonth, lang: repLang, cv, D };

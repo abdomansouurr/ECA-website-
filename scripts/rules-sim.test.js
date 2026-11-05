@@ -52,4 +52,6 @@ T('exam start again (attempt exists)', false, { old: base, neu: started, before:
   T('start after coach approved retry', true, { old: retry, neu: s2, before: { [exId]: { at: now - 864e5 } }, after: { [`${uid}_exam_1-2`]: { ok: false, key: '1-2', at: now }, [exId]: { at: now - 864e5 } } }); }
 { const neu = C(base); neu.level = 3; T('level edited directly', false, { old: base, neu }); }
 { const neu = C(base); neu.name = 'New Name'; neu.puzDone = { 1: { i: 0, ok: true } }; T('ordinary profile save', true, { old: base, neu }); }
+{ const neu = C(base); neu.nickname = 'star-knight'; T('preset student nickname', true, { old: base, neu }); }
+{ const neu = C(base); neu.nickname = 'Mona real name'; T('free-form student nickname', false, { old: base, neu }); }
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -1,0 +1,41 @@
+ announce.js                   |   79 [31m--[m
+ arena.js                      |  616 [31m--------------[m
+ core.js                       | 1847 [31m-----------------------------------------[m
+ extras.js                     | 1228 [31m---------------------------[m
+ firebase.js                   | 1120 [31m-------------------------[m
+ img/123_steps.webp            |  Bin [31m67466[m -> [32m60012[m bytes
+ img/bots/1.png                |  Bin [31m75664[m -> [32m0[m bytes
+ img/bots/1.webp               |  Bin [31m0[m -> [32m8122[m bytes
+ img/bots/2.png                |  Bin [31m65801[m -> [32m0[m bytes
+ img/bots/2.webp               |  Bin [31m0[m -> [32m6924[m bytes
+ img/bots/3.png                |  Bin [31m90384[m -> [32m0[m bytes
+ img/bots/3.webp               |  Bin [31m0[m -> [32m8642[m bytes
+ img/bots/4.png                |  Bin [31m66912[m -> [32m0[m bytes
+ img/bots/4.webp               |  Bin [31m0[m -> [32m7282[m bytes
+ img/bots/5.png                |  Bin [31m69691[m -> [32m0[m bytes
+ img/bots/5.webp               |  Bin [31m0[m -> [32m7674[m bytes
+ img/bots/6.png                |  Bin [31m97176[m -> [32m0[m bytes
+ img/bots/6.webp               |  Bin [31m0[m -> [32m9102[m bytes
+ img/bots/7.png                |  Bin [31m147689[m -> [32m0[m bytes
+ img/bots/7.webp               |  Bin [31m0[m -> [32m14456[m bytes
+ img/bots/8.png                |  Bin [31m83955[m -> [32m0[m bytes
+ img/bots/8.webp               |  Bin [31m0[m -> [32m8848[m bytes
+ img/chess-board-aboutUs.jpeg  |  Bin [31m108414[m -> [32m0[m bytes
+ img/chess-board-aboutUs.webp  |  Bin [31m0[m -> [32m45862[m bytes
+ img/chess-pieces-aboutUs.jpeg |  Bin [31m85996[m -> [32m0[m bytes
+ img/chess-pieces-aboutUs.webp |  Bin [31m0[m -> [32m30332[m bytes
+ index.html                    |    6 [32m+[m[31m-[m
+ js/arena.js                   |   24 [32m+[m[31m-[m
+ js/core.js                    |   16 [32m+[m[31m-[m
+ js/extras.js                  |    4 [32m+[m[31m-[m
+ js/reports.js                 |    2 [32m+[m[31m-[m
+ progress.js                   |  152 [31m----[m
+ quality.js                    |  115 [31m---[m
+ reports.js                    |  304 [31m-------[m
+ review.js                     |   96 [31m---[m
+ streaks.js                    |   93 [31m---[m
+ sw.js                         |    3 [32m+[m[31m-[m
+ today.js                      |  286 [31m-------[m
+ tournaments.js                |  362 [31m--------[m
+ vercel.json                   |   27 [32m+[m
+ 40 files changed, 57 insertions(+), 6323 deletions(-)

@@ -7,13 +7,21 @@
     const fmtPts = n => (Math.round(n * 2) / 2).toString().replace(".5", "½").replace(/^0½$/, "½");
     function trnId() { return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
     function trnFind(id) { return (db.tournaments || []).find(t => t.id === id) || null; }
-    function pName(t, pid) { const p = (t.players || []).find(x => x.id === pid); return p ? p.name : "—"; }
+    function tournamentPlayerName(t, player) {
+      if (!player) return "—";
+      if (player.guest) return player.name || "—";
+      const student = db.users.find(u => u.role === "student" && u.id === player.id);
+      if (student && window.ecaStudentAlias) return window.ecaStudentAlias(student);
+      if (window.ecaStudentAlias) return window.ecaStudentAlias({ id: player.id, nickname: player.nickname });
+      return "ECA Student";
+    }
+    function pName(t, pid) { return tournamentPlayerName(t, (t.players || []).find(x => x.id === pid)); }
     function trnSave(t) { if (window.fbSaveTournament) window.fbSaveTournament(t); keepScroll(render); }
 
     // ---------- الترتيب ----------
     function standings(t) {
       const S = {};
-      (t.players || []).forEach((p, i) => { S[p.id] = { id: p.id, name: p.name, seed: i, pts: 0, w: 0, d: 0, l: 0, played: 0, opp: [], res: {}, byes: 0, whites: 0 }; });
+      (t.players || []).forEach((p, i) => { S[p.id] = { id: p.id, name: tournamentPlayerName(t, p), seed: i, pts: 0, w: 0, d: 0, l: 0, played: 0, opp: [], res: {}, byes: 0, whites: 0 }; });
       (t.rounds || []).forEach(r => {
         (r.pairs || []).forEach(g => {
           const sc = T_RES[g.r]; if (!sc || !S[g.w] || !S[g.b]) return;
@@ -105,7 +113,10 @@
       if (!isCoach() || !trnForm) return;
       const name = String((document.getElementById("trnName") || {}).value || trnForm.name || "").replace(/[<>"'`]/g, "").trim().slice(0, 80);
       if (!name) return toast("اكتب اسم البطولة");
-      const studs = db.users.filter(u => u.role === "student" && trnForm.players[u.id]).map(u => ({ id: u.id, name: String(u.name || "").slice(0, 60), lvl: Number(u.level) || 1 }));
+      const studs = db.users.filter(u => u.role === "student" && trnForm.players[u.id]).map(u => ({
+        id: u.id, name: window.ecaStudentAlias ? window.ecaStudentAlias(u) : "ECA Student",
+        nickname: window.ecaAliasIdFor ? window.ecaAliasIdFor(u) : "", lvl: Number(u.level) || 1
+      }));
       const guests = String((document.getElementById("trnGuests") || {}).value || "").split(/\n/).map(x => x.replace(/[<>"'`]/g, "").trim()).filter(Boolean).slice(0, 40)
         .map(n => ({ id: "g" + Math.random().toString(36).slice(2, 9), name: n.slice(0, 60), lvl: 0, guest: true }));
       const players = studs.concat(guests);

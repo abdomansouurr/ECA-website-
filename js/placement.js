@@ -18,12 +18,6 @@
       return d;
     }
     // مفتاح ربط الاختبار بالحساب: SHA-256(رقم الطالب + رقم ولي الأمر) — نفس الحساب في تسجيل الطالب وفي اعتماد الكوتش
-    window.ecaPlKey = async (a, b) => {
-      const x = ptPhoneKey(a), y = ptPhoneKey(b);
-      if (!/^\d{8,15}$/.test(x) || !/^\d{8,15}$/.test(y)) return "";
-      const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("eca-pl1|" + x + "|" + y));
-      return Array.from(new Uint8Array(h)).map(v => v.toString(16).padStart(2, "0")).join("");
-    };
     const ptShuffle = a => { a = a.slice(); for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; };
 
     (function () {

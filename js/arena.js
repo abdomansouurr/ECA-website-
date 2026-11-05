@@ -28,7 +28,7 @@
 
     const arena = {
       sub: "play",
-      play: { game: null, level: 0, colorChoice: "w", color: "w", flip: false, sel: null, last: null, thinking: false, over: "" },
+      play: { game: null, level: 0, colorChoice: "w", color: "w", flip: false, sel: null, last: null, thinking: false, over: "", lastComment: "" },
       puz: { game: null, sol: [], idx: 0, color: "w", flip: false, sel: null, last: null, flash: null, hint: null, status: "idle", diff: "easier", info: null, counted: false, nextTimer: null },
       vis: { active: false, target: "", score: 0, left: VIS_SECONDS, timer: null, attempts: [], coords: true, flip: false, flash: null, best: 0 }
     };
@@ -193,7 +193,7 @@
     function playStart() {
       if (!ChessCls) return;
       const P = arena.play;
-      P.game = new ChessCls(); P.over = ""; P.sel = null; P.last = null; P.thinking = false;
+      P.game = new ChessCls(); P.over = ""; P.sel = null; P.last = null; P.thinking = false; P.lastComment = "";
       P.color = P.colorChoice === "r" ? (Math.random() < .5 ? "w" : "b") : P.colorChoice;
       P.flip = P.color === "b";
       render();
@@ -203,7 +203,10 @@
       const P = arena.play; if (!P.game || P.over || P.thinking) return;
       const mv = pickOrMove(P, sq, P.color);
       if (mv) {
-        const play = m => { let r = null; try { r = P.game.move(m); } catch (_) {} if (r) { P.last = [r.from, r.to]; playCheckEnd(); if (!P.over) playEngine(); } };
+        const play = m => {
+          let r = null; try { r = P.game.move(m); } catch (_) {}
+          if (r) { P.last = [r.from, r.to]; P.lastComment = moveBotComment(r, true); playCheckEnd(); if (!P.over) playEngine(); }
+        };
         if (mv.promotion && promoNeeded(P, mv.from, mv.to)) return promoShow(P, mv.from, mv.to, pc => play(Object.assign(mv, { promotion: pc })));
         play(mv);
       }
@@ -217,7 +220,8 @@
         if (P.game !== g || g.fen() !== fen) return;                 // دور جديد أو تراجع
         let r = null; try { r = uciMove(g, uci || randomUci()); } catch (_) {}
         if (!r) try { r = uciMove(g, randomUci()); } catch (_) {}
-        P.thinking = false; if (r) P.last = [r.from, r.to];
+        P.thinking = false;
+        if (r) { P.last = [r.from, r.to]; P.lastComment = moveBotComment(r, false); }
         playCheckEnd(); arenaRefresh();
       };
       const later = uci => setTimeout(() => apply(uci), Math.max(0, 350 - (Date.now() - t0)));   // أقل وقت عشان النقلة تبان طبيعية
@@ -228,19 +232,22 @@
       if (!g.isGameOver()) return;
       P.over = g.isCheckmate() ? (g.turn() === P.color ? "loss" : "win") : "draw";
       P.thinking = false;
+      let reward = null;
       recordArena(a => {
         a.games = a.games || { w: 0, l: 0, d: 0 }; a.games[P.over[0] === "w" ? "w" : P.over[0] === "l" ? "l" : "d"]++;
         if (P.over === "win") a.bestWin = Math.max(a.bestWin || 0, P.level + 1);
         // ستريك الانتصارات ورا بعض (التعادل مابيقطعهوش، الخسارة بتصفّره)
         if (P.over === "win") { a.winStreak = (a.winStreak || 0) + 1; a.bestWinStreak = Math.max(a.bestWinStreak || 0, a.winStreak); }
         else if (P.over === "loss") a.winStreak = 0;
+        if (P.over === "win" && window.ecaAddStudentStar) reward = window.ecaAddStudentStar(currUser(), false);
       });
       toast(P.over === "win" ? "كسبت ضد " + LEVELS[P.level].name + "! برافو عليك" : P.over === "loss" ? "" + LEVELS[P.level].name + " كسب — جرّب تاني" : "تعادل");
+      if (reward && window.ecaShowStudentReward) window.ecaShowStudentReward(reward);
     }
     function playUndo() {
       const P = arena.play, g = P.game; if (!g || P.thinking || !g.history().length) return;
       g.undo(); if (g.turn() !== P.color && g.history().length) g.undo();
-      P.over = ""; P.sel = null; P.last = lastOf(g); arenaRefresh();
+      P.over = ""; P.sel = null; P.last = lastOf(g); P.lastComment = ""; arenaRefresh();
     }
     async function playResign() {
       const P = arena.play; if (!P.game || P.over) return;
@@ -249,12 +256,19 @@
       recordArena(a => { a.games = a.games || { w: 0, l: 0, d: 0 }; a.games.l++; a.winStreak = 0; });
       arenaRefresh();
     }
-    function playNew() { const P = arena.play; P.game = null; P.over = ""; P.sel = null; P.last = null; P.thinking = false; render(); }
+    function playNew() { const P = arena.play; P.game = null; P.over = ""; P.sel = null; P.last = null; P.thinking = false; P.lastComment = ""; render(); }
+    function moveBotComment(move, playerMove) {
+      if (move.san && move.san.includes("#")) return playerMove ? "كش مات! نقلة رائعة." : "كش مات — انتهى الدور.";
+      if (move.san && move.san.includes("+")) return playerMove ? "كش! راقب ملك الخصم." : "كش! لازم ترد على تهديد الملك.";
+      if (move.captured) return playerMove ? "أخذت قطعة! افحص القطع المهددة كمان." : "أخذت قطعة — لسه تقدر ترد وتغيّر الموقف.";
+      return playerMove ? "نقلة كويسة! فكّر في رد الخصم." : "دوري خلص. دورك: شوف التهديدات قبل ما تلعب.";
+    }
     function botLine(b, P) {
       if (P.over === "win") return "أحسنت! كسبتني المرة دي";
       if (P.over === "loss") return "كسبت المرة دي — جرّب تاني!";
       if (P.over === "draw") return "تعادل! ماتش حلو";
       if (P.thinking) return "بفكّر...";
+      if (P.lastComment) return P.lastComment;
       if (P.game && P.game.inCheck() && P.game.turn() === P.color) return "كش!";
       return P.game && P.game.history().length ? "دورك" : "يلا نلعب!";
     }
@@ -361,13 +375,20 @@
       const id = Z.info && Z.info.id; if (!id) return;          // من غير رقم لغز مانقدرش نسجّل محاولة
       // مفتاح فريد لكل حل: لو Lichess رجّعت نفس اللغز تاني بيتحسب تاني في العداد (بدل «اتحسب قبل كده»)
       const key = id + "-" + Date.now().toString(36);
+      let reward = null;
       recordAttempt("arena", key, solved, u => {
         const a = u.arena = u.arena || {}; markActiveDay(u);
         if (!solved && typeof reviewAdd === "function") reviewAdd(u, id, Z.info.rating);     // اللغز الغلط يدخل المراجعة
         a.puzTried = (a.puzTried || 0) + 1;
-        if (solved) { a.puzSolved = (a.puzSolved || 0) + 1; a.puzStreak = (a.puzStreak || 0) + 1; a.puzBestStreak = Math.max(a.puzBestStreak || 0, a.puzStreak); }
+        if (solved) {
+          a.puzSolved = (a.puzSolved || 0) + 1; a.puzStreak = (a.puzStreak || 0) + 1; a.puzBestStreak = Math.max(a.puzBestStreak || 0, a.puzStreak);
+          if (window.ecaAddStudentStar) reward = window.ecaAddStudentStar(u, true);
+        }
         else a.puzStreak = 0;
-      }).then(r => { if (!r.ok && r.code === "permission-denied") toast("اللغز ده اتحسب قبل كده — النتيجة مش هتتكرر"); });
+      }).then(r => {
+        if (r.ok) { if (reward && window.ecaShowStudentReward) window.ecaShowStudentReward(reward); }
+        else if (r.code === "permission-denied") toast("اللغز ده اتحسب قبل كده — النتيجة مش هتتكرر");
+      });
     }
     function puzSolved() {
       const Z = arena.puz;
@@ -621,6 +642,10 @@
       ["هيظهرلك اسم مربع (زي", "A square name will appear (like"], ["— اضغط عليه على الرقعة. عندك", "— tap it on the board. You have"],
       ["آخر نتيجة:", "Last score:"], ["أفضل نتيجة:", "Best score:"], ["من ناحية الأسود", "Black's side"], ["من ناحية الأبيض", "White's side"],
       ["اخفي الإحداثيات", "Hide coordinates"], ["اظهر الإحداثيات", "Show coordinates"],
+      ["كش مات! نقلة رائعة.", "Checkmate! A brilliant move."], ["كش مات — انتهى الدور.", "Checkmate — the game is over."],
+      ["كش! راقب ملك الخصم.", "Check! Watch the opponent's king."], ["كش! لازم ترد على تهديد الملك.", "Check! You must answer the threat to your king."],
+      ["أخذت قطعة! افحص القطع المهددة كمان.", "You captured a piece! Check for other threats too."], ["أخذت قطعة — لسه تقدر ترد وتغيّر الموقف.", "I captured a piece — you can still respond and change the position."],
+      ["نقلة كويسة! فكّر في رد الخصم.", "Nice move! Think about the opponent's reply."], ["دوري خلص. دورك: شوف التهديدات قبل ما تلعب.", "My turn is over. Your move: look for threats before playing."],
       ["خلص الوقت — نتيجتك: ", "Time's up — your score: "],
       ["نشاط", "Activity:"], ["في ساحة التدريب", "in the Training Arena"], ["فوز / تعادل / خسارة", "Win / Draw / Loss"], ["أعلى مستوى كسبه", "Highest level beaten"],
       ["ألغاز اتحلّت / جرّبها", "Puzzles solved / tried"], ["أفضل نتيجة رؤية", "Best vision score"],

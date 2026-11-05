@@ -315,7 +315,7 @@
           ["أول انتصار", "اكسب أول دور ضد الكمبيوتر", "chess-knight-icon.svg", (g.w || 0) >= 1],
           ["قاهر الجراند ماستر", "اكسب ضد البوت «جراند ماستر»", "chess-king-icon.svg", (a.bestWin || 0) >= LEVELS.length],
           ["ملك البيادق", "اكسب 5 أدوار في لعبة البيادق", "chess-pawn-icon.svg", (a.pawnWins || 0) >= 5],
-          ["عين الصقر", "جيب 20 نقطة أو أكتر في تدريب الرؤية", "chess_aim_target.jpg", (a.visionBest || 0) >= 20],
+          ["عين الصقر", "جيب 20 نقطة أو أكتر في تدريب الرؤية", "chess_aim_target.webp", (a.visionBest || 0) >= 20],
           ["أول شهادة", "اجتاز امتحان أول Step", "chess-queen-icon.svg", (s.certificates || []).length >= 1]] }
       ];
     }
@@ -395,7 +395,7 @@
     const sectionTitle = (small, big, desc) => `<div class="text-center max-w-2xl mx-auto space-y-2"><div class="text-xs font-bold tracking-widest text-yellow-400">${small}</div><h2 class="font-display font-extrabold text-2xl md:text-3xl gold-gradient-text">${big}</h2>${desc ? `<p class="text-sm text-gray-400">${desc}</p>` : ''}</div>`;
     const joinCTA = () => `
       <div class="gold-card rounded-2xl p-6 grid md:grid-cols-3 gap-6 items-center">
-        <img src="img/chess_set.png" alt="" loading="lazy" class="w-full max-w-[240px] mx-auto opacity-90" />
+        <img src="img/chess_set.webp" alt="" loading="lazy" class="w-full max-w-[240px] mx-auto opacity-90" />
         <div class="md:col-span-2 space-y-3 text-center md:text-start">
           <h3 class="font-display font-bold text-2xl gold-gradient-text">انضم وابقى لاعب أقوى!</h3>
           <p class="text-sm text-gray-300">احجز مكانك دلوقتي واكتشف إمكانياتك.</p>
@@ -501,7 +501,7 @@
         ${sectionTitle("الحصص الخاصة", "اتعلم شطرنج من بيتك", "سنين خبرة في التدريس خلّتنا نعمل منهج مخصص لكل طالب حسب مستواه.")}
         <div class="grid lg:grid-cols-2 gap-5">
           <div class="gold-card rounded-2xl p-5 space-y-4">
-            <img src="img/chess_private_lesson.jpg" alt="" loading="lazy" class="w-full rounded-2xl border border-yellow-500/30 object-cover max-h-80" />
+            <img src="img/chess_private_lesson.webp" alt="" loading="lazy" class="w-full rounded-2xl border border-yellow-500/30 object-cover max-h-80" />
             <p class="text-sm italic text-gray-300 text-center">«ممكن تتعلم من دور خسرته أكتر بكتير من دور كسبته» — خوسيه راؤول كابابلانكا</p>
           </div>
           <div class="gold-card rounded-2xl p-6 space-y-4">
@@ -889,7 +889,7 @@
       const row = (s, v, streak) => {
         const a = s.arena || {}, games = a.games || {}, days = streaks(a.days), rank = rankOf(calcXP(s).total);
         return {
-          id: s.id, n: String(s.name || ""), s: Number(s.level) || 1, v, st: streak || 0,
+          id: s.id, n: window.ecaStudentAlias ? window.ecaStudentAlias(s) : "ECA Student", s: Number(s.level) || 1, v, st: streak || 0,
           rank: rank.cur ? rank.cur.label : "لسه بدون رتبة",
           arena: {
             puzzles: Number(a.puzSolved) || 0, puzzleStreak: Number(a.puzBestStreak) || 0,
@@ -901,10 +901,21 @@
       };
       const top = (arr) => arr.filter(r => r.v > 0).sort((a, b) => b.v - a.v || b.st - a.st).slice(0, HONOR_TOP);
       return {
+        aliasVersion: 1,
         puzzles: top(studs.map(s => { const a = s.arena || {}; return row(s, (a.puzSolved || 0) + ((s.puz && s.puz.c) || 0), a.puzBestStreak); })),
         games: top(studs.map(s => { const a = s.arena || {}; return row(s, ((a.games && a.games.w) || 0) + (a.pawnWins || 0), a.bestWinStreak); })),
         days: top(studs.map(s => { const a = s.arena || {}; const st = streaks(a.days); return row(s, st.best, st.current); }))
       };
+    }
+    function safeHonorData(data) {
+      if (!data || data.aliasVersion === 1) return data;
+      const safe = Object.assign({}, data);
+      ["puzzles", "games", "days"].forEach(key => {
+        safe[key] = (Array.isArray(data[key]) ? data[key] : []).map(row => Object.assign({}, row, {
+          n: window.ecaAliasForId ? window.ecaAliasForId(row.id) : "ECA Student"
+        }));
+      });
+      return safe;
     }
     let honorTimer = null, honorLast = "";
     function maybePublishHonor() {
@@ -926,7 +937,7 @@
     window.openHonorProfile = openHonorProfile;
 
     function renderHonorProfileView(u) {
-      const H = u.role === "coach" ? computeHonor() : (window.honorData || null);
+      const H = u.role === "coach" ? computeHonor() : safeHonorData(window.honorData || null);
       const id = window.ecaHonorProfileId || "";
       const student = H && ["puzzles", "games", "days"].flatMap(k => H[k] || []).find(r => r.id === id);
       if (!student) return `<div class="space-y-4"><button onclick="switchTab('honor')" class="tap px-4 py-2 rounded-xl gold-btn">${trText("العودة إلى لوحة المتصدرين")}</button><div class="gold-card rounded-2xl p-6 text-center text-sm text-gray-400">${trText("إنجازات الطالب غير متاحة من لوحة المتصدرين.")}</div></div>`;
@@ -960,7 +971,7 @@
 
     function renderHonorView(u) {
       const coach = u.role === "coach";
-      const H = coach ? computeHonor() : (window.honorData || null);
+      const H = coach ? computeHonor() : safeHonorData(window.honorData || null);
       const medal = i => i < 3 ? ["", "", ""][i] : `<span class="text-gray-400">${i + 1}</span>`;
       const board = (title, icon, list, valLabel, stLabel, emptyMsg) => `
         <div class="gold-card rounded-2xl p-5">

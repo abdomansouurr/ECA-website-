@@ -10,7 +10,7 @@ const SHELL = [
   "./vendor/chess.js", "./vendor/stockfish.js",
   // ملفات الكود (لازم نفس ?v= اللي في index.html)
   "./tailwind.css?v=eca-v50",
-  "./js/core.js?v=eca-v50", "./js/arena.js?v=eca-v50", "./js/extras.js?v=eca-v50", "./js/streaks.js?v=eca-v50", "./js/today.js?v=eca-v50", "./js/reports.js?v=eca-v50", "./js/tournaments.js?v=eca-v50", "./js/review.js?v=eca-v50", "./js/quality.js?v=eca-v50", "./js/announce.js?v=eca-v50", "./js/progress.js?v=eca-v50", "./js/arena2.js?v=eca-v50", "./js/homework.js?v=eca-v50", "./img/placement/s1.jpg", "./img/placement/s2.jpg", "./img/placement/s3.jpg", "./img/placement/s4.jpg", "./img/placement/s5.jpg", "./img/placement/s6.jpg", "./img/placement/s7.jpg", "./img/placement/s8.jpg", "./js/placement-data.js?v=eca-v50", "./js/placement.js?v=eca-v50", "./js/ux.js?v=eca-v50", "./js/annotate.js?v=eca-v50", "./js/firebase.js?v=eca-v50",
+  "./js/core.js?v=eca-v50", "./js/arena.js?v=eca-v50", "./js/extras.js?v=eca-v50", "./js/streaks.js?v=eca-v50", "./js/review.js?v=eca-v50", "./js/quality.js?v=eca-v50", "./js/announce.js?v=eca-v50", "./js/progress.js?v=eca-v50", "./js/arena2.js?v=eca-v50", "./js/ux.js?v=eca-v50", "./js/annotate.js?v=eca-v50", "./js/firebase.js?v=eca-v50", "./js/finance.js?v=eca-v50",
   "./puzzles.js?v=eca-v50"   // عشان الامتحان يشتغل أوفلاين
 ];
 const CDN = [
@@ -75,8 +75,8 @@ self.addEventListener("fetch", e => {
   e.respondWith((async () => {
     const cached = await caches.match(req);
     const immutable = /(?:^|&)v=eca-/.test(url.search);
-    const net = immutable ? Promise.resolve(null) : fetch(req).then(async res => {
-      if (res && (res.ok || res.type === "opaque")) { const c = await caches.open(VERSION); c.put(req, res.clone()); }
+    const net = immutable && cached ? Promise.resolve(null) : fetch(req).then(async res => {
+      if (res && (res.ok || res.type === "opaque") && (!immutable || !cached)) { const c = await caches.open(VERSION); c.put(req, res.clone()); }
       return res;
     }).catch(() => null);
     return cached || (await net) || Response.error();

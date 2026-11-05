@@ -44,7 +44,8 @@ function makeCtx({ uid, old, neu, before, after, now }) {
     return eq(nc, oc) || (nc.length === oc.length + 1 && eq(nc.slice(0, oc.length), oc) && passedNow(ol) && get(nc[oc.length],'step',0) === ol
       && get(nc[oc.length],'score',-1) === neu.examState[String(ol)].score); };
   const blocked = ['role','username','group','mode','coachName','stuCode','parentPhone','parentCode','note','courseFee','amountPaid','remaining','lastPayDate','lastPayAmount','att','hw'];
-  const r = { blocked: !diffKeys(neu, old).some(k => blocked.includes(k)), countersOk: countersOk(), daysOk: daysOk(), examOk: examOk(), levelOk: levelOk(), certsOk: certsOk() };
+  const nicknames = ['', 'star-knight','silver-bishop','brave-rook','clever-pawn','golden-queen','swift-horse','bright-king','kind-castle'];
+  const r = { blocked: !diffKeys(neu, old).some(k => blocked.includes(k)), nicknameOk: nicknames.includes(get(neu, 'nickname', '')), countersOk: countersOk(), daysOk: daysOk(), examOk: examOk(), levelOk: levelOk(), certsOk: certsOk() };
   r.allow = Object.values(r).every(Boolean); return r;
 }
 module.exports = { makeCtx };
