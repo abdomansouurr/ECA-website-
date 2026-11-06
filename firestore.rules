@@ -7,7 +7,7 @@ service cloud.firestore {
     function notAnon()   { return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous'; }
     function isStaff()   { return notAnon() && exists(/databases/$(database)/documents/staff/$(request.auth.uid)); }
     function isAdmin()   { return isStaff() && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role == 'admin'; }
-    // مسح نهائي: السيرفر هو اللي بيتأكد إن مهلة الـ 30 يوم خلصت (مش ساعة جهاز الأدمن)
+    // مسح نهائي بضغطة من الأدمن: السيرفر هو اللي بيتأكد إن الـ 30 يوم عدّوا (مش ساعة جهاز الأدمن)
     function purgeable(uid) {
       return isAdmin()
         && exists(/databases/$(database)/documents/deleted/$(uid))
@@ -537,7 +537,7 @@ service cloud.firestore {
       allow delete: if isStaff();
     }
 
-    // ---------- حذف منطقي للطلاب مع مهلة استعادة 30 يومًا ----------
+    // ---------- حذف منطقي للطلاب: الاستعادة متاحة لحد المسح النهائي، والمسح النهائي بيتفتح بعد 30 يومًا ----------
     match /deleted/{uid} {
       allow get: if isAdmin() || (notAnon() && request.auth.uid == uid);
       allow list: if isStaff();
@@ -557,8 +557,7 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','purgedAt'])
         && request.resource.data.name == ''
         && request.resource.data.purgedAt == request.time;
-      allow delete: if isAdmin() && resource.data.expiresAt is timestamp
-        && request.time <= resource.data.expiresAt;
+      allow delete: if isAdmin() && resource.data.get('purgedAt', null) == null;
     }
 
     // ---------- المستوى المعتمد من اختبار تحديد المستوى ----------

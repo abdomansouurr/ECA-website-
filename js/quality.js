@@ -93,24 +93,31 @@
       const rows = result.rows.sort((a, b) => b.deletedAt - a.deletedAt);
       modal.innerHTML = `<div class="gold-card rounded-2xl max-w-xl w-full p-5 max-h-[90vh] overflow-y-auto space-y-3">
         <div class="flex items-center justify-between gap-2"><h3 class="font-bold text-lg text-yellow-400">${LQ("الطلاب المحذوفون", "Deleted students")}</h3><button onclick="document.getElementById('deletedStudentsModal').remove()" aria-label="${LQ("إغلاق", "Close")}" class="tap px-3 py-2 rounded-xl bg-zinc-900 text-gray-300">✕</button></div>
-        <p class="text-xs text-gray-400">${LQ("يمكن استعادة الطالب خلال 30 يومًا من الحذف، وبعدها تُمسح بياناته نهائيًا.", "Students can be restored within 30 days of deletion. After that, their data is permanently erased.")}</p>
+        <p class="text-xs text-gray-400">${LQ("يمكن استعادة الطالب في أي وقت. بعد 30 يومًا من الحذف يظهر زر المسح النهائي، ولا تُمسح البيانات إلا لو ضغطت عليه.", "Students can be restored at any time. A permanent erase button appears 30 days after deletion, and data is erased only if you press it.")}</p>
         ${rows.length ? rows.map(s => {
           const remaining = s.expiresAt - Date.now();
-          const canRestore = remaining > 0 && s.expiresAt > 0;
+          const canPurge = s.expiresAt > 0 && remaining <= 0;
           return `<div class="rounded-xl border border-yellow-500/20 bg-black/30 p-3 flex flex-wrap items-center justify-between gap-3">
-            <div class="min-w-0"><div class="font-bold text-sm text-white">${esc(s.name)}</div><div class="text-[11px] text-gray-400">${canRestore ? LQ(`متبقي ${Math.ceil(remaining / 86400000)} يوم`, `${Math.ceil(remaining / 86400000)} days left`) : LQ("انتهت مهلة الاستعادة", "Restore period expired")}</div></div>
-            ${canRestore ? `<button onclick="restoreDeletedStudent('${esc(s.id)}')" class="tap px-4 py-2 rounded-xl text-xs gold-btn">${LQ("استعادة", "Restore")}</button>` : ""}
+            <div class="min-w-0"><div class="font-bold text-sm text-white">${esc(s.name)}</div><div class="text-[11px] text-gray-400">${canPurge ? LQ("عدّت 30 يومًا: يمكن استعادته أو مسحه نهائيًا", "30 days have passed: restore or permanently erase") : s.expiresAt > 0 ? LQ(`المسح النهائي يتاح بعد ${Math.ceil(remaining / 86400000)} يوم`, `Permanent erase available in ${Math.ceil(remaining / 86400000)} days`) : ""}</div></div>
+            <div class="flex flex-wrap gap-2"><button onclick="restoreDeletedStudent('${esc(s.id)}')" class="tap px-4 py-2 rounded-xl text-xs gold-btn">${LQ("استعادة", "Restore")}</button>${canPurge ? `<button onclick="purgeDeletedStudent('${esc(s.id)}')" class="tap px-4 py-2 rounded-xl text-xs bg-red-500/15 text-red-300 border border-red-500/40">${LQ("مسح نهائي", "Erase permanently")}</button>` : ""}</div>
           </div>`;
         }).join("") : `<p class="text-sm text-gray-400">${LQ("لا يوجد طلاب محذوفون.", "No deleted students.")}</p>`}
       </div>`;
     }
     window.openDeletedStudents = openDeletedStudents;
+    window.purgeDeletedStudent = async function (id) {
+      if (!window.isFinanceAdminUnlocked) return toast("المسح النهائي للأدمن فقط");
+      if (!await window.ecaConfirm(LQ("هتتمسح كل بيانات الطالب ده نهائيًا ومش هينفع ترجعه بعد كده. متأكد؟", "All of this student's data will be permanently erased and cannot be restored. Are you sure?"))) return;
+      const result = window.fbPurgeStudent ? await window.fbPurgeStudent(id) : { ok: false };
+      toast(result.ok ? LQ("اتمسحت بيانات الطالب نهائيًا.", "Student data permanently erased.") : LQ("تعذّر المسح النهائي. حاول مرة أخرى.", "Could not erase the data. Please try again."));
+      await openDeletedStudents();
+    };
     window.restoreDeletedStudent = async function (id) {
       if (!window.isFinanceAdminUnlocked) return toast("استعادة الطالب للأدمن فقط");
       if (!await window.ecaConfirm(LQ("هل تريد استعادة حساب هذا الطالب؟", "Restore this student's account?"))) return;
       const result = window.fbRestoreStudent ? await window.fbRestoreStudent(id) : { ok: false };
       if (!result.ok) {
-        toast(result.code === "expired" ? LQ("انتهت مهلة الاستعادة المحددة بـ30 يومًا.", "The 30-day restore period has expired.") : LQ("تعذّرت استعادة الطالب.", "Could not restore the student."));
+        toast(result.code === "purged" ? LQ("بيانات الطالب اتمسحت نهائيًا ولا يمكن استعادتها.", "This student's data was permanently erased and cannot be restored.") : LQ("تعذّرت استعادة الطالب.", "Could not restore the student."));
         return;
       }
       toast(LQ("تمت استعادة الطالب.", "Student restored."));

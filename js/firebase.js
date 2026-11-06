@@ -547,10 +547,7 @@
         unsubs.push(onSnapshot(collection(firestore, "users"), s => applyColl("core", s), onErr("users")));
         unsubs.push(onSnapshot(collection(firestore, "deleted"), applyDeletedStudents, onErr("deleted students")));
         unsubs.push(onSnapshot(collection(firestore, "private"), s => applyColl("priv", s), onErr("private")));
-        if (me.role === "admin") {
-          unsubs.push(onSnapshot(collection(firestore, "finance"), s => applyColl("fin", s), onErr("finance")));
-          setTimeout(purgeExpiredStudents, 20000);
-        }
+        if (me.role === "admin") unsubs.push(onSnapshot(collection(firestore, "finance"), s => applyColl("fin", s), onErr("finance")));
         unsubs.push(onSnapshot(collection(firestore, "attendance"), applyAtt, onErr("attendance")));
       } else if (me.role === "student") {
         unsubs.push(onSnapshot(doc(firestore, "deleted", me.uid), snap => {
@@ -1075,8 +1072,7 @@
         const archived = await getDoc(ref);
         if (!archived.exists()) return { ok: false, code: "not-found" };
         const data = archived.data() || {};
-        const expiresAt = data.expiresAt && typeof data.expiresAt.toMillis === "function" ? data.expiresAt.toMillis() : 0;
-        if (!expiresAt || Date.now() > expiresAt) return { ok: false, code: "expired" };
+        if (data.purgedAt) return { ok: false, code: "purged" };
         const profile = await getDoc(doc(firestore, "users", archived.id));
         if (!profile.exists()) return { ok: false, code: "missing" };
         await deleteDoc(ref);
@@ -1090,8 +1086,8 @@
       }
     };
 
-    // المسح النهائي بعد مهلة الـ 30 يوم. أول قراءة من السيرفر هي البوابة: القواعد بترفضها لو المهلة لسه ما خلصتش،
-    // فساعة جهاز غلط مش ممكن تمسح طالب بدري. لو حصل فشل في النص، بنكمّل في دخول الأدمن الجاي.
+    // المسح النهائي بضغطة من الأدمن بعد الـ 30 يوم. أول قراءة من السيرفر هي البوابة: القواعد بترفضها لو الـ 30 يوم ما عدّوش،
+    // فساعة جهاز غلط مش ممكن تمسح طالب بدري. لو حصل فشل في النص، الأدمن يقدر يضغط تاني ويكمّل.
     async function purgeStudentData(uid) {
       const economy = await getDocsFromServer(collection(firestore, "users", uid, "economy"));
       const [notes, attempts, links, profile, priv] = await Promise.all([
@@ -1119,17 +1115,16 @@
       await deleteDoc(doc(firestore, "users", uid));
       await updateDoc(doc(firestore, "deleted", uid), { name: "", purgedAt: serverTimestamp() });
     }
-    async function purgeExpiredStudents() {
-      if (!me || me.role !== "admin" || !navigator.onLine) return;
+    window.fbPurgeStudent = async (id) => {
+      if (!me || me.role !== "admin" || !/^[A-Za-z0-9_-]{1,128}$/.test(String(id || ""))) return { ok: false };
       try {
-        const snap = await getDocsFromServer(query(collection(firestore, "deleted"), where("expiresAt", "<", new Date())));
-        for (const d of snap.docs) {
-          if ((d.data() || {}).purgedAt) continue;
-          try { await purgeStudentData(d.id); }
-          catch (e) { console.error("Student purge failed:", d.id, e && e.code); }
-        }
-      } catch (e) { console.error("Expired students lookup failed:", e && e.code); }
-    }
+        await purgeStudentData(id);
+        return { ok: true };
+      } catch (e) {
+        console.error("Student purge failed:", id, e && e.code);
+        return { ok: false, code: e && e.code };
+      }
+    };
 
     window.fbChangePassword = async (oldP, newP) => {
       try {
