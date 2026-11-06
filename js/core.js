@@ -437,6 +437,7 @@
       pop.textContent = "⭐ +" + (Number(count) || 1);
       document.body.appendChild(pop);
       setTimeout(() => pop.remove(), 1000);
+      if (window.ecaSfxMuted) return;
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioContextClass) return;
       try {
@@ -481,6 +482,8 @@
         const level = Number(key);
         if (!Number.isInteger(level) || level < 1 || level > 10) return { ok: false };
         stars = level;
+      } else if (source === "quest") {
+        stars = { daily: 1, puzzles: 2, win: 2 }[key] || 0;
       } else if (source === "pawn") stars = 2;
       else if (source === "vision") {
         score = Math.floor(Number(score) || 0);
@@ -928,7 +931,7 @@
         if (typeof closeSideNav === "function") closeSideNav();
       }
       const ai = window.fbAuthInfo ? window.fbAuthInfo() : { password: true, google: true };
-      const menuText = currentTheme() === "dark" ? "text-gray-200" : "text-gray-700";
+      const menuText = currentTheme() !== "light" ? "text-gray-200" : "text-gray-700";
       const mi = (fn, label, icon, cls) => `<button onclick="closeAcctMenu(); ${fn}" role="menuitem" class="w-full flex items-center gap-2.5 px-3 h-11 rounded-lg text-sm text-start hover:bg-yellow-500/10 ${cls || menuText}">${icon}<span>${label}</span></button>`;
       acct.innerHTML = `${u.role === "student" ? notificationBellHTML() : ""}<div class="relative">
         <button id="acctBtn" onclick="toggleAcctMenu(event)" aria-haspopup="menu" aria-expanded="false" aria-label="الحساب" title="${esc(u.name || "")}" class="icon-btn">
@@ -1965,27 +1968,33 @@
     }
 
     // ---------- Theme (dark / light) ----------
-    const THEMES = [["dark", "داكن", "Dark"], ["light", "فاتح", "Light"]];
-    const THEME_META = { dark: "#050507", light: "#f6f9ff" };
-    const THEME_SWATCH = { dark: "linear-gradient(135deg,#050507 50%,#0a45a8 50%)", light: "linear-gradient(135deg,#f6f9ff 50%,#0a45a8 50%)" };
+    const THEMES = [["game", "لعبة", "Game"], ["dark", "داكن", "Dark"], ["light", "فاتح", "Light"]];
+    const THEME_META = { game: "#070b1f", dark: "#050507", light: "#f6f9ff" };
+    const THEME_SWATCH = { game: "linear-gradient(135deg,#2563eb 50%,#a855f7 50%)", dark: "linear-gradient(135deg,#050507 50%,#0a45a8 50%)", light: "linear-gradient(135deg,#f6f9ff 50%,#0a45a8 50%)" };
     const THEME_ICON = {
+      game: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16" cy="11.5" r=".6"/><circle cx="18" cy="13.5" r=".6"/></svg>',
       light: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
       dark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
     };
-    function currentTheme() { return document.documentElement.classList.contains("dark") ? "dark" : "light"; }
+    function currentTheme() { const c = document.documentElement.classList; return c.contains("game") ? "game" : c.contains("dark") ? "dark" : "light"; }
     function applyTheme(t) {
       if (!THEMES.some(x => x[0] === t)) t = "light";
-      const d = document.documentElement; d.classList.remove("dark", "light", "eca", "kids");
-      d.classList.add(t);
+      const d = document.documentElement; d.classList.remove("dark", "light", "eca", "kids", "game");
+      // Game بيتبني فوق dark، فكل قواعد الوضع الداكن بتفضل شغالة
+      if (t === "game") d.classList.add("dark", "game"); else d.classList.add(t);
       const b = document.getElementById("themeBtn"); if (b) b.innerHTML = THEME_ICON[t];
       const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", THEME_META[t]);
     }
-    function saveThemePreference(t) { try { localStorage.setItem("ECA_THEME", t); } catch (_) {} }
+    function saveThemePreference(t) { try { localStorage.setItem("ECA_THEME", t); localStorage.setItem("ECA_THEME_PICKED", "1"); } catch (_) {} }
     function applyRoleDefaultTheme() {
-      let saved = "";
-      try { saved = localStorage.getItem("ECA_THEME") || ""; } catch (_) {}
+      let saved = "", picked = false;
+      try { saved = localStorage.getItem("ECA_THEME") || ""; picked = !!localStorage.getItem("ECA_THEME_PICKED"); } catch (_) {}
       if (!THEMES.some(x => x[0] === saved)) saved = "";
-      const desired = saved || "light";
+      // Game هو الافتراضي للطالب، إلا لو اختار شكل بنفسه. «فاتح» من غير اختيار معناه الافتراضي القديم مش اختياره هو
+      const user = currUser(), isStudent = !!(user && user.role === "student"), auto = isStudent && !picked && (!saved || saved === "light");
+      if (!user && window.__authLoading) return;
+      try { if (auto) localStorage.setItem("ECA_THEME_AUTO", "game"); else if (!isStudent) localStorage.removeItem("ECA_THEME_AUTO"); } catch (_) {}
+      const desired = auto ? "game" : saved || "light";
       if (currentTheme() !== desired) applyTheme(desired);
     }
     function closeThemeMenu() { const m = document.getElementById("themeMenu"); if (m) m.remove(); const b = document.getElementById("themeBtn"); if (b) b.setAttribute("aria-expanded", "false"); }

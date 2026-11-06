@@ -93,6 +93,17 @@ async function runSuite(label, rules, quiet) {
   await T("coach level 11 rejected", false, fresh, db => coachWin(db, 11));
   await T("coach same level twice a day", false, fresh, async db => { await coachWin(db, 3); await coachWin(db, 3); });
   await T("coach two levels on the same day", true, fresh, async db => { await coachWin(db, 3); await coachWin(db, 4); });
+  // daily quests: fixed reward, once a day per quest
+  const quest = (db, key, stars) => econ(db, { kind: "earn", source: "quest", key, starsDelta: stars, xpDelta: stars * 20, id: `quest-${today}-${key}` });
+  await T("quest daily", true, fresh, db => quest(db, "daily", 1));
+  await T("quest puzzles on a legacy account", true, legacy, db => quest(db, "puzzles", 2));
+  await T("quest win", true, fresh, db => quest(db, "win", 2));
+  await T("quest with forged stars", false, fresh, db => quest(db, "win", 9));
+  await T("quest with an unknown key", false, fresh, db => quest(db, "free", 2));
+  await T("same quest twice a day", false, fresh, async db => { await quest(db, "win", 2); await quest(db, "win", 2); });
+  await T("three quests on the same day", true, fresh, async db => { await quest(db, "daily", 1); await quest(db, "puzzles", 2); await quest(db, "win", 2); });
+  await T("quest counters saved with an arena attempt", true, legacy, db => attempt(db, "arena", "QuEsT1", true, u => ({ arena: Object.assign({}, u.arena, { puzTried: u.arena.puzTried + 1, puzSolved: u.arena.puzSolved + 1, puzStreak: u.arena.puzStreak + 1, puzBestStreak: Math.max(u.arena.puzBestStreak, u.arena.puzStreak + 1), qd: today, qp: 1, qw: 0, days: dayPush(u) }) })));
+  await T("quest win counter saved with a game result", true, legacy, db => patch(db, { arena: Object.assign({}, legacy.arena, { games: { w: 2, l: 2, d: 0 }, qd: today, qp: 0, qw: 1, days: [...legacy.arena.days, today] }) }));
   // daily login reward: decided by the date, once a day
   const dom = Number(today.slice(8)), loginStars = dom % 7 === 0 ? 3 : dom % 3 === 0 ? 2 : 1;
   const login = (db, stars = loginStars, day = today) => econ(db, { kind: "earn", source: "login", key: day, starsDelta: stars, xpDelta: stars * 20, id: "login-" + day });

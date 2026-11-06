@@ -256,6 +256,7 @@
         else if (source === "bot" && /^(0|[1-7])$/.test(key)) id = "bot-" + day + "-" + key;
         else if (source === "coach" && /^([1-9]|10)$/.test(key)) id = "coach-" + day + "-" + key;
         else if (source === "login") id = "login-" + day;
+        else if (source === "quest" && ["daily", "puzzles", "win"].includes(key)) id = "quest-" + day + "-" + key;
         else if (source === "pawn") id = "pawn-" + day;
         else if (source === "vision") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "vision-" + day; }
         else return { ok: false };
@@ -288,6 +289,11 @@
           } else if (source === "bot") starsDelta = Number(key) + 1;
           else if (source === "coach") starsDelta = Number(key);
           else if (source === "login") starsDelta = loginRewardStars(day);
+          else if (source === "quest") {
+            starsDelta = { daily: 1, puzzles: 2, win: 2 }[key];
+            const claimed = arena.qc && arena.qc.d === day && Array.isArray(arena.qc.k) ? arena.qc.k : [];
+            arena.qc = { d: day, k: [...claimed, key] };
+          }
           else if (source === "pawn") starsDelta = 2;
           else if (source === "vision") starsDelta = Math.min(10, Math.floor(score / 3));
           xpDelta = (source === "puzzle" && missionBonus ? starsDelta - 1 : starsDelta) * 20;

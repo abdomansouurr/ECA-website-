@@ -73,6 +73,7 @@ function makeCtx({ uid, old, neu, before, after, now }) {
       if (r.source === 'bot') return /^[0-7]$/.test(r.key) && id === 'bot-' + r.day + '-' + r.key
         && (r.key === '0' || (get(os,'bots',[]).includes(Number(r.key))))
         && r.starsDelta === Number(r.key) + 1 && r.xpDelta === r.starsDelta * 20;
+      if (r.source === 'quest') { const s = { daily: 1, puzzles: 2, win: 2 }[r.key]; return !!s && id === 'quest-' + r.day + '-' + r.key && r.starsDelta === s && r.xpDelta === s * 20; }
       if (r.source === 'coach') return /^([1-9]|10)$/.test(r.key) && id === 'coach-' + r.day + '-' + r.key && r.starsDelta === Number(r.key) && r.xpDelta === r.starsDelta * 20;
       if (r.source === 'login') { const d = Number(r.day.slice(8)), s = d % 7 === 0 ? 3 : d % 3 === 0 ? 2 : 1; return r.key === r.day && id === 'login-' + r.day && r.starsDelta === s && r.xpDelta === s * 20; }
       if (r.source === 'pawn') return id === 'pawn-' + r.day && r.starsDelta === 2 && r.xpDelta === 40;

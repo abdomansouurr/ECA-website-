@@ -69,6 +69,7 @@
       await recordArena(a => {
         a.games = a.games || { w: 0, l: 0, d: 0 }; a.games[over === "win" ? "w" : over === "loss" ? "l" : "d"]++;
         if (over === "win" && level !== COACH_BOT) a.bestWin = Math.max(a.bestWin || 0, level + 1);
+        if (over === "win" && window.ecaQuestBump) window.ecaQuestBump(a, "win");
         if (over === "win") { a.winStreak = (a.winStreak || 0) + 1; a.bestWinStreak = Math.max(a.bestWinStreak || 0, a.winStreak); }
         else if (over === "loss") a.winStreak = 0;
       });

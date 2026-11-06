@@ -417,6 +417,7 @@
         if (!solved && typeof reviewAdd === "function") reviewAdd(u, id, Z.info.rating);     // اللغز الغلط يدخل المراجعة
         a.puzTried = (a.puzTried || 0) + 1;
         if (solved) {
+          if (window.ecaQuestBump) window.ecaQuestBump(a, "puzzles");
           a.puzSolved = (a.puzSolved || 0) + 1; a.puzStreak = (a.puzStreak || 0) + 1; a.puzBestStreak = Math.max(a.puzBestStreak || 0, a.puzStreak);
         }
         else a.puzStreak = 0;
