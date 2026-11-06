@@ -242,7 +242,7 @@
       (window.__ecaErr = window.__ecaErr || []).push({ msg: "economy denied " + JSON.stringify(shape), src: "fbEconomy", line: 0 });
     }
     // لوحة الصدارة: صف الطالب بيتنشر لوحده لما ملفه يتغير (الاسم المستعار بس، من غير الاسم الحقيقي)
-    let boardLast = null, boardLastUid = "", boardTimer = null;
+    let boardLast = null, boardLastUid = "", boardTimer = null, boardRetried = false;
     async function boardPublish() {
       if (!me || me.role !== "student" || !maps.core[me.uid] || !window.ecaWeekKey) return;
       const uid = me.uid, p = maps.core[uid], shop = p.shop || {}, wk = window.ecaWeekKey();
@@ -258,13 +258,15 @@
           if (["n", "a", "t", "g", "xp", "wk", "wx"].every(k => old[k] === row[k])) return;
         }
         await setDoc(ref, row);
-        boardLast = row;
+        boardLast = row; boardRetried = false;
       } catch (e) {
         boardLast = null;
+        // ممكن تكون الخبرة زادت على السيرفر قبل ما توصل هنا: نحاول تاني مرة واحدة ببيانات أحدث
+        if (e && e.code === "permission-denied" && !boardRetried) { boardRetried = true; boardPublishSoon(); return; }
         console.warn("Leaderboard update failed:", e && e.code);
       }
     }
-    function boardPublishSoon() { clearTimeout(boardTimer); boardTimer = setTimeout(boardPublish, 2000); }
+    function boardPublishSoon() { clearTimeout(boardTimer); boardTimer = setTimeout(boardPublish, 4000); }
     window.fbBoardWatch = (onRows, onError) => onSnapshot(query(collection(firestore, "leaderboard"), orderBy("xp", "desc"), limit(500)),
       snap => onRows(snap.docs.map(d => Object.assign(cleanDeep(d.data()), { id: d.id }))),
       err => { console.warn("Leaderboard read failed:", err && err.code); onError(); });
@@ -318,7 +320,7 @@
       let id = "", source = "", key = "", day = "", item = "", score = 0, starsDelta = 0, xpDelta = 0, spinHex = "";
       if (op === "earn") {
         source = String(request.source || ""); key = String(request.key || ""); day = String(request.day || "");
-        if (source === "login") { day = cairoDayKey(); key = day; }
+        if (source === "login" || source === "spin") { day = cairoDayKey(); key = day; }
         if (!dayOk(day)) return { ok: false };
         if (source === "lesson" && /^[1-6]-[0-9]{1,2}$/.test(key)) id = "lesson-" + key;
         else if (source === "puzzle" && ["daily","easiest","easier","normal","harder","hardest"].includes(key)) id = "puzzle-" + day + "-" + key;
@@ -328,7 +330,7 @@
         else if (source === "rush") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "rush-" + day; key = day; }
         else if (source === "quest" && ["daily", "puzzles", "win"].includes(key)) id = "quest-" + day + "-" + key;
         else if (source === "pawn") id = "pawn-" + day;
-        else if (source === "spin") { day = cairoDayKey(); key = day; id = "spin-" + day; spinHex = await spinHexOf(uid, day); }
+        else if (source === "spin") { id = "spin-" + day; spinHex = await spinHexOf(uid, day); }
         else if (source === "duel" && /^[A-Za-z0-9]{10,40}$/.test(key)) id = "duel-" + day;
         else if (source === "vision") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "vision-" + day; }
         else return { ok: false };
@@ -414,6 +416,7 @@
           if ((Number(shop.freezes) || 0) < 1) return { ok: false, code: "no-freezes" };
           nextShop.freezes = Number(shop.freezes) - 1;
           nextShop.frozen = [...(shop.frozen || []), key];
+          receiptKind = "spend-freeze";
         } else {
           if ((Number(shop.hints) || 0) < 1) return { ok: false, code: "no-hints" };
           nextShop.hints = Number(shop.hints) - 1;
