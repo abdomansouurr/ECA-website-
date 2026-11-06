@@ -9,10 +9,14 @@
     "check:inline-scripts": "node scripts/check-inline-scripts.js",
     "release": "npm run build:css && npm run bump",
     "test:rules": "node scripts/rules-sim.test.js",
+    "test:rules:emulator": "firebase emulators:exec --only firestore --project demo-eca \"node scripts/rules-emulator.test.js\"",
     "vendor": "node scripts/vendor.js"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "3.0.4",
     "chess.js": "1.4.0",
+    "firebase": "10.12.2",
+    "firebase-tools": "15.35.0",
     "stockfish": "19.0.1",
     "tailwindcss": "3.4.17"
   }

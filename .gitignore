@@ -11,3 +11,8 @@ serviceAccount*.json
 *-adminsdk-*.json
 .vercel
 .env*
+
+# Firebase emulator logs
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

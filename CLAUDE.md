@@ -7,7 +7,8 @@ Roles: `admin`, `coach` (`staff/`), `student` (`users/`), parents (`parentLinks`
 - `npm run build:css` — rebuild `tailwind.css` (compiled output only includes classes scanned from `index.html` + `js/**/*.js`).
 - `npm run bump` — bump `eca-vN` in `index.html` and `sw.js`.
 - `npm run release` — runs `build:css` + `bump`.
-- `npm run test:rules` — simulate `firestore.rules` (MUST run after any rules edit).
+- `npm run test:rules` — simulate `firestore.rules` with a JS port (MUST run after any rules edit).
+- `npm run test:rules:emulator` — run the real `firestore.rules` on the emulator, including Firestore's limits (MUST run after any rules edit; needs Java).
 - `npm run vendor` — download self-hosted `vendor/chess.js` & `vendor/stockfish.js`.
 - Deploy Firestore rules manually via Console or `firebase deploy --only firestore:rules`.
 
