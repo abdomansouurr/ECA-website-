@@ -41,7 +41,7 @@ service cloud.firestore {
         && s.get('activeTitle', '') is string;
     }
     function protectedEconomySame(o, n) {
-      return !n.diff(o).affectedKeys().hasAny(['stars','xp','missionDate','missionDone','cb']);
+      return !n.diff(o).affectedKeys().hasAny(['stars','xp','missionDate','missionDone','cb','tr']);
     }
     function shopEquipOk(o, n) {
       return shopValid(n) && shopCoreSame(o, n)
@@ -175,6 +175,13 @@ service cloud.firestore {
     function loginStars(day) {
       return int(day.split('-')[2]) % 7 == 0 ? 3 : int(day.split('-')[2]) % 3 == 0 ? 2 : 1;
     }
+    // جايزة البطولة: الترتيب بيكتبه حساب الكوتش أو الأدمن عند القفل، والطالب بيستلم بنفسه
+    function arenaStars(rank) { return rank == 1 ? 50 : rank == 2 ? 30 : rank == 3 ? 20 : 0; }
+    function arenaRankOfStars(stars) { return stars == 50 ? 1 : stars == 30 ? 2 : 3; }
+    function arenaPayOk(r) {
+      return r.starsDelta > 0 && r.xpDelta == r.starsDelta * 20
+        && r.starsDelta == arenaStars(get(/databases/$(database)/documents/speedArenas/$(r.key)).data.get('rank', {}).get(r.uid, 0));
+    }
     // عجلة الحظ: الجايزة من بصمة الحساب واليوم، فمفيش اختيار ولا إعادة لف
     function spinHex(uid, day) { return hashing.sha256(uid + '|' + day).toHexString().lower()[0:1]; }
     function spinStars(h) { return h in ['0','1','2','3','4','5'] ? 1 : h in ['6','7','8','9'] ? 2 : h in ['a','b','c'] ? 3 : 5; }
@@ -218,6 +225,8 @@ service cloud.firestore {
         : r.source == 'login'
           ? (r.key == r.day && id == 'login-' + r.day && r.starsDelta == loginStars(r.day)
               && r.xpDelta == loginStars(r.day) * 20 && r.missionBonus == false)
+        : r.source == 'arena'
+          ? (r.key.matches('[A-Za-z0-9-]{1,40}') && id == 'arena-' + r.key && r.missionBonus == false && arenaPayOk(r))
         : r.source == 'spin'
           ? (r.key == r.day && id == 'spin-' + r.day && r.missionBonus == false && spinOk(r, u))
         : r.source == 'duel'
@@ -261,6 +270,7 @@ service cloud.firestore {
         && num(newA, 'xp') == num(oldA, 'xp') + r.xpDelta
         && missionOk(r, oldA, newA)
         && (r.source == 'coach' ? coachOk(r, oldA, newA) : oldA.get('cb', {}) == newA.get('cb', {}))
+        && (r.source == 'arena' ? listGrantOk(oldA.get('tr', []), newA.get('tr', []), r.key + '|' + string(arenaRankOfStars(r.starsDelta))) : oldA.get('tr', []) == newA.get('tr', []))
         && economyKindOk(id, r, u);
     }
     // ملف الطالب بيفحص تغيير المتجر لأن بياناته متاحة هنا مباشرة، وقاعدة الإيصال بتفحص النجوم والخبرة ونوع المكافأة
@@ -608,6 +618,48 @@ service cloud.firestore {
           ? request.resource.data.wx == resource.data.wx + boardGain(request.resource.data, resource.data)
           : (request.resource.data.wk > resource.data.wk && request.resource.data.wx == boardGain(request.resource.data, resource.data)));
       allow delete: if isAdmin();
+    }
+
+    // ---------- بطولة السرعة: الجمعة 16:00 UTC لمدة 30 دقيقة، أول زائر بيسجل الموعد ----------
+    function arenaSlotOk(id) {
+      let d = request.resource.data;
+      let day = timestamp.date(int(id.split('-')[0]), int(id.split('-')[1]), int(id.split('-')[2]));
+      return id.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && d.keys().hasOnly(['startsAt','endsAt','closed']) && d.keys().hasAll(['startsAt','endsAt','closed'])
+        && d.closed == false && day.dayOfWeek() == 5
+        && d.startsAt == day + duration.value(16, 'h') && d.endsAt == day + duration.value(16, 'h') + duration.value(30, 'm')
+        && request.time < d.endsAt && request.time > day - duration.value(8, 'd');
+    }
+    function arenaLive(aid) {
+      let a = get(/databases/$(database)/documents/speedArenas/$(aid)).data;
+      return a.closed == false && request.time >= a.startsAt && request.time < a.endsAt;
+    }
+    function arenaEntryNewOk() {
+      let d = request.resource.data;
+      let u = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return d.keys().hasOnly(['n','a','score','solved','at']) && d.keys().hasAll(['n','a','score','solved','at'])
+        && u.role == 'student' && d.n == u.get('nickname', '') && d.a == u.get('shop', {}).get('eq', {}).get('a', '')
+        && d.score == 0 && d.solved == 0 && d.at == request.time;
+    }
+    // حل واحد كل ثانيتين على الأكتر، بنقطة أو نقطتين
+    function arenaEntryStepOk() {
+      let d = request.resource.data;
+      return d.diff(resource.data).affectedKeys().hasOnly(['score','solved','at'])
+        && d.solved == resource.data.solved + 1
+        && d.score >= resource.data.score + 1 && d.score <= resource.data.score + 2
+        && d.at == request.time && request.time > resource.data.at + duration.value(2, 's');
+    }
+    match /speedArenas/{aid} {
+      allow read: if notAnon();
+      allow create: if isStaff() || (notAnon() && arenaSlotOk(aid));
+      allow update: if isStaff();
+      allow delete: if isAdmin();
+      match /entries/{uid} {
+        allow read: if notAnon();
+        allow create: if notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid)) && arenaLive(aid) && arenaEntryNewOk();
+        allow update: if notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid)) && arenaLive(aid) && arenaEntryStepOk();
+        allow delete: if isAdmin();
+      }
     }
 
     // ---------- التحدي المباشر: بالأسماء المستعارة بس ومفيش شات ----------

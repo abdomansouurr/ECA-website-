@@ -68,6 +68,7 @@ function ecaXpProgress(xp) {
 }
 function ecaShowLevelUp(label) {
   ecaSfx("levelup");
+  if (window.ecaFireworks) { ecaFireworks(3); ecaShake(); }
   const pop = document.createElement("div");
   pop.className = "eca-levelup";
   pop.setAttribute("role", "status");
@@ -363,6 +364,7 @@ function rushPlay(mv) {
   }
   R.score++; R.combo++;
   if (window.ecaOnSolve) window.ecaOnSolve();
+  if (R.combo % 5 === 0 && window.ecaShake) { ecaShake(); ecaConfetti(50); }
   if (R.combo >= 2) ecaSfx("combo", R.combo); else ecaSfx("ting");
   rushNext();
   arenaRefresh();

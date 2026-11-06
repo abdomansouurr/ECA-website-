@@ -274,6 +274,51 @@
       const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(uid + "|" + day));
       return (new Uint8Array(bytes)[0] >> 4).toString(16);
     }
+    // بطولة السرعة
+    const msOf = t => (t && t.toMillis ? t.toMillis() : 0);
+    window.fbArenaWatchOpen = (onRows, onError) => onSnapshot(query(collection(firestore, "speedArenas"), where("closed", "==", false), limit(10)),
+      snap => onRows(snap.docs.map(d => ({ id: d.id, startsMs: msOf(d.data().startsAt), endsMs: msOf(d.data().endsAt) }))),
+      err => { if (auth.currentUser) console.warn("Speed arena list failed:", err && err.code); onError(); });
+    window.fbArenaEnsure = async (id, startsAt, endsAt) => {
+      const ref = doc(firestore, "speedArenas", id);
+      if (!(await getDoc(ref)).exists()) await setDoc(ref, { startsAt, endsAt, closed: false });
+    };
+    window.fbArenaStartNow = async minutes => {
+      if (!me || !isStaffRole(me.role)) throw new Error("not-staff");
+      const now = Date.now();
+      await setDoc(doc(firestore, "speedArenas", "live-" + now), { startsAt: new Date(now), endsAt: new Date(now + minutes * 60000), closed: false });
+    };
+    window.fbArenaBoard = (id, size, onRows, onError) => onSnapshot(query(collection(firestore, "speedArenas", id, "entries"), orderBy("score", "desc"), limit(size)),
+      snap => onRows(snap.docs.map(d => { const r = d.data(); return { id: d.id, n: cleanDeep(r.n || ""), a: r.a || "", score: Number(r.score) || 0, atMs: msOf(r.at) }; })),
+      err => { if (auth.currentUser) console.warn("Speed arena board failed:", err && err.code); onError(); });
+    // بيرجع للطالب نتيجته لو كان دخل قبل كده في نفس البطولة
+    window.fbArenaJoin = async id => {
+      const ref = doc(firestore, "speedArenas", id, "entries", me.uid), snap = await getDoc(ref);
+      if (snap.exists()) { const r = snap.data(); return { score: Number(r.score) || 0, solved: Number(r.solved) || 0, atMs: msOf(r.at) }; }
+      const p = maps.core[me.uid] || {};
+      await setDoc(ref, { n: p.nickname || "", a: ((p.shop || {}).eq || {}).a || "", score: 0, solved: 0, at: serverTimestamp() });
+      return { score: 0, solved: 0, atMs: Date.now() };
+    };
+    window.fbArenaSolve = (id, score, solved) => updateDoc(doc(firestore, "speedArenas", id, "entries", me.uid), { score, solved, at: serverTimestamp() });
+    window.fbArenaMyWins = async () => {
+      if (!me) return [];
+      const snap = await getDocs(query(collection(firestore, "speedArenas"), where("rank." + me.uid, ">=", 1), limit(10)));
+      return snap.docs.map(d => ({ id: d.id, rank: d.data().rank[me.uid] }));
+    };
+    // القفل: أول 3 بالنقط، والتعادل للي وصل الأول
+    window.fbArenaCloseDue = async () => {
+      if (!me || !isStaffRole(me.role)) return;
+      const open = await getDocs(query(collection(firestore, "speedArenas"), where("closed", "==", false), limit(10)));
+      for (const a of open.docs) {
+        if (msOf(a.data().endsAt) > Date.now() - 5000) continue;
+        const top = await getDocs(query(collection(firestore, "speedArenas", a.id, "entries"), orderBy("score", "desc"), limit(20)));
+        const rows = top.docs.map(d => ({ id: d.id, n: d.data().n || "", a: d.data().a || "", score: Number(d.data().score) || 0, at: msOf(d.data().at) }))
+          .filter(r => r.score > 0).sort((x, y) => y.score - x.score || x.at - y.at).slice(0, 3);
+        const rank = {};
+        rows.forEach((r, i) => { rank[r.id] = i + 1; });
+        await updateDoc(a.ref, { closed: true, rank, podium: rows.map(r => ({ uid: r.id, n: r.n, a: r.a, score: r.score })) });
+      }
+    };
     // التحدي المباشر
     window.fbDuelLobby = (onRows, onError) => onSnapshot(query(collection(firestore, "duels"), where("status", "==", "open"), limit(20)),
       snap => onRows(snap.docs.map(d => { const r = d.data(); return { id: d.id, a: r.a, an: cleanDeep(r.an || ""), createdMs: r.created && r.created.toMillis ? r.created.toMillis() : 0 }; })),
@@ -330,6 +375,7 @@
         else if (source === "rush") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "rush-" + day; key = day; }
         else if (source === "quest" && ["daily", "puzzles", "win"].includes(key)) id = "quest-" + day + "-" + key;
         else if (source === "pawn") id = "pawn-" + day;
+        else if (source === "arena" && /^[A-Za-z0-9-]{1,40}$/.test(key) && [1, 2, 3].includes(request.rank)) id = "arena-" + key;
         else if (source === "spin") { id = "spin-" + day; spinHex = await spinHexOf(uid, day); }
         else if (source === "duel" && /^[A-Za-z0-9]{10,40}$/.test(key)) id = "duel-" + day;
         else if (source === "vision") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "vision-" + day; }
@@ -381,6 +427,10 @@
           }
           else if (source === "pawn") starsDelta = 2;
           else if (source === "duel") starsDelta = 3;
+          else if (source === "arena") {
+            starsDelta = { 1: 50, 2: 30, 3: 20 }[request.rank];
+            arena.tr = [...(Array.isArray(arena.tr) ? arena.tr : []), key + "|" + request.rank];
+          }
           else if (source === "spin") {
             arena.sp = day;
             if (spinHex === "f") {
@@ -1282,6 +1332,8 @@
     // المسح النهائي بضغطة من الأدمن بعد الـ 30 يوم. أول قراءة من السيرفر هي البوابة: القواعد بترفضها لو الـ 30 يوم ما عدّوش،
     // فساعة جهاز غلط مش ممكن تمسح طالب بدري. لو حصل فشل في النص، الأدمن يقدر يضغط تاني ويكمّل.
     async function purgeStudentData(uid) {
+      const arenas = await getDocs(collection(firestore, "speedArenas"));
+      for (const a of arenas.docs) await deleteDoc(doc(firestore, "speedArenas", a.id, "entries", uid));
       const economy = await getDocsFromServer(collection(firestore, "users", uid, "economy"));
       const [notes, attempts, links, profile, priv] = await Promise.all([
         getDocs(collection(firestore, "users", uid, "notifications")),

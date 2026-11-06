@@ -102,9 +102,9 @@ function ecaAchUnlock(ids) {
   if (!fresh.length) return;
   u.arena.ach = [...have, ...fresh];
   save();
-  ecaSfx("levelup");
   const item = ECA_ACH.find(x => x.id === fresh[0]);
-  toast((lang === "en" ? "Secret achievement: " : "إنجاز سري: ") + item.icon + " " + (lang === "en" ? item.en : item.ar));
+  if (window.ecaMilestone) ecaMilestone({ icon: item.icon, title: lang === "en" ? "Secret achievement!" : "إنجاز سري!", text: (lang === "en" ? item.en + ": " + item.dEn : item.ar + ": " + item.dAr) });
+  else toast((lang === "en" ? "Secret achievement: " : "إنجاز سري: ") + item.icon + " " + (lang === "en" ? item.en : item.ar));
 }
 // الإنجازات اللي بتتحسب من بيانات الطالب نفسها
 function ecaAchScan(u) {
@@ -218,8 +218,13 @@ function ecaSpinAutoOpen(u) {
   if (ecaSpinAuto || tab !== "home" || !window.fbEconomy || ecaSpinDone(u)) return;
   const key = "ECA_SPIN_SEEN_" + u.id, day = ecaSpinDay();
   ecaSpinAuto = true;
-  try { if (localStorage.getItem(key) === day) return; localStorage.setItem(key, day); } catch (_) {}
-  setTimeout(ecaSpinOpen, 1500);
+  try { if (localStorage.getItem(key) === day) return; } catch (_) {}
+  setTimeout(() => {
+    // لو الطالب ساب الرئيسية قبل ما تفتح، تستنى زيارته الجاية ليها
+    if (tab !== "home") { ecaSpinAuto = false; return; }
+    try { localStorage.setItem(key, day); } catch (_) {}
+    ecaSpinOpen();
+  }, 1500);
 }
 
 // ================= ربطهم بالصفحة الرئيسية =================

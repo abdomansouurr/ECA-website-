@@ -38,6 +38,7 @@ const server = http.createServer((req, res) => {
 // ---------- seed and read the emulators ----------
 function toValue(v) {
   if (v === null) return { nullValue: null };
+  if (v instanceof Date) return { timestampValue: v.toISOString() };
   if (Array.isArray(v)) return { arrayValue: { values: v.map(toValue) } };
   if (typeof v === "number") return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
   if (typeof v === "boolean") return { booleanValue: v };
@@ -79,13 +80,21 @@ async function openPage(label, viewport) {
   page.send = send;
   page.ev = async expr => { const r = await send("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true }); if (r.exceptionDetails) throw new Error(label + " eval: " + (r.exceptionDetails.exception?.description || r.exceptionDetails.text).slice(0, 400) + " :: " + expr.slice(0, 80)); return r.result.value; };
   await send("Runtime.enable"); await send("Page.enable"); await send("Network.enable");
+  await send("Emulation.setFocusEmulationEnabled", { enabled: true });   // keeps animation running on pages in the background
+  await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });   // headless Chrome asks for reduced motion by default
   await send("Network.setBlockedURLs", { urls: ["https://firestore.googleapis.com/*", "https://identitytoolkit.googleapis.com/*", "https://securetoken.googleapis.com/*"] });
   await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await send("Page.navigate", { url: "http://127.0.0.1:8772/" });
   await page.ev("new Promise(r=>{ if(document.readyState==='complete') r(); else addEventListener('load',()=>r()); })").catch(() => {});
   return page;
 }
-async function waitReady(p) { await until(() => p.ev("typeof window.fbLogin==='function'&&typeof render==='function'").catch(() => false), 30000); }
+async function waitReady(p) {
+  const ready = () => until(() => p.ev("typeof window.fbLogin==='function'&&typeof render==='function'").catch(() => false), 30000);
+  if (await ready()) return;
+  console.log("Reloading", p.label, "because the Firebase SDK did not load in time");
+  await p.send("Page.reload");
+  if (!(await ready())) throw new Error(p.label + ": the Firebase SDK did not load. Check the internet connection.");
+}
 async function login(p, id) {
   await waitReady(p);
   const out = await p.ev(`fbLogin(${JSON.stringify(id)}, ${JSON.stringify(PASS)}).then(r=>JSON.stringify(r||{}))`);
@@ -287,6 +296,64 @@ async function login(p, id) {
     await earnOk("priciest cosmetic", 'window.fbEconomy({op:"purchase",item:"piece-gold"})', -150);
     await earnOk("priciest title", 'window.fbEconomy({op:"purchase",item:"title-master"})', -250);
 
+    // ---------- speed arena: a real tournament from start to prize ----------
+    const nextSlot = await pb.ev("JSON.stringify(saNextSlot(Date.now()))");
+    const slotId = JSON.parse(nextSlot).id;
+    check("the weekly slot records itself", !!(await until(() => read("speedArenas/" + slotId))), slotId);
+    const pg = await openPage("Staff");
+    await login(pg, "admin@test.local");
+    await pg.ev("window.fbArenaStartNow(0.75)");
+    const liveId = await until(async () => (await list("speedArenas")).find(x => x.startsWith("live-")));
+    check("staff starts a tournament", !!liveId, liveId);
+    await pa.ev("switchTab('home')"); await pb.ev("switchTab('home')");
+    await pb.ev("ecaSpinAuto=false; try{localStorage.removeItem('ECA_SPIN_SEEN_'+currUser().id)}catch(_){}; ecaSpinClose(); render();");
+    await pb.ev("switchTab('arena'); arena.sub='speed'; render();");
+    await sleep(1900);
+    check("wheel does not open during a tournament", !(await pb.ev("!!document.getElementById('ecaSpinModal')")));
+    for (const p of [pa, pb]) { await p.ev("switchTab('arena'); arena.sub='speed'; render();"); await until(() => p.ev("!!ChessCls"), 30000); await until(() => p.ev("!!saActive()")); await p.ev("render()"); }
+    await pa.ev("saJoin()"); await pb.ev("saJoin()");
+    check("both students join", !!(await until(async () => (await pa.ev("arena.speed.status")) === "play" && (await pb.ev("arena.speed.status")) === "play")));
+    const saSolve = n => "(async()=>{ const S=arena.speed; let done=0,guard=0; while(done<" + n + "&&guard++<200&&S.status==='play'){ const before=S.solved; const m=S.sol[S.idx]; saPlay(m.length>4?{from:m.slice(0,2),to:m.slice(2,4),promotion:m[4]}:{from:m.slice(0,2),to:m.slice(2,4)}); if(S.solved>before) done++; await new Promise(r=>setTimeout(r,20)); } return S.solved; })()";
+    check("A solves 4 quickly", (await pa.ev(saSolve(4))) === 4);
+    check("B solves 2", (await pb.ev(saSolve(2))) === 2);
+    const scored = await until(async () => { const e = await read(`speedArenas/${liveId}/entries/${A}`); return e && e.solved === 4 ? e : null; }, 20000);
+    check("fast solutions all reach the server", !!scored && scored.score === 6, scored && { score: scored.score, solved: scored.solved });
+    const seen = await until(() => pb.ev("(()=>{ const r=(arena.speed.rows||[]).slice().sort((x,y)=>y.score-x.score); return r.length>=2&&r[0].score===6; })()"), 10000);
+    check("standings update live", !!seen);
+    await sleep(1000);
+    const standings = await pb.ev("document.getElementById('saBoard').textContent");
+    check("standings show no legal names", !/Real Name/.test(standings));
+    if (process.env.E2E_SHOTS) { await pb.send("Page.bringToFront"); await sleep(400); const r = await pb.send("Page.captureScreenshot", { format: "png" }); fs.writeFileSync(path.join(process.env.E2E_SHOTS, "speed-play.png"), Buffer.from(r.data, "base64")); }
+    check("own row glows in standings", (await pb.ev("!!document.querySelector('#saBoard .eca-lb-me')")));
+    check("entry holds no legal name", !!scored && !JSON.stringify(scored).includes("Real Name"));
+    const endsIn = await pa.ev("arena.speed.endsAt-Date.now()");
+    await sleep(Math.max(0, endsIn) + 6000);
+    check("students stop when time ends", (await pa.ev("arena.speed.status")) === "done");
+    await pg.ev("window.fbArenaCloseDue()");
+    const closed = await until(async () => { const d = await read("speedArenas/" + liveId); return d && d.closed ? d : null; });
+    check("staff close writes the podium", !!closed && closed.rank[A] === 1 && closed.rank[B] === 2, closed && closed.rank);
+    const prizeBefore = (await U(A)).arena.stars;
+    await pa.ev("saClaimed=false; render();");
+    const prizeDoc = await until(() => read(`users/${A}/economy/arena-${liveId}`));
+    check("winner collects the prize", !!prizeDoc && (await U(A)).arena.stars === prizeBefore + 50, prizeDoc && prizeDoc.starsDelta);
+    check("trophy saved in the profile", ((await U(A)).arena.tr || []).includes(liveId + "|1"));
+    check("trophy popup shown", !!(await until(() => pa.ev("!!document.getElementById('ecaMilestone')"))));
+    if (process.env.E2E_SHOTS) { await pa.send("Page.bringToFront"); await sleep(900); const r = await pa.send("Page.captureScreenshot", { format: "png" }); fs.writeFileSync(path.join(process.env.E2E_SHOTS, "milestone.png"), Buffer.from(r.data, "base64")); }
+    check("second place collects", !!(await (async () => { await pb.ev("saClaimed=false; render();"); return until(async () => { const d = await read(`users/${B}/economy/arena-${liveId}`); return d && d.starsDelta === 30; }); })()));
+    const prizeStars = (await U(A)).arena.stars;
+    await pa.ev("ecaMilestoneClose(); saClaimed=false; render();");
+    await sleep(1500);
+    check("prize pays once", (await U(A)).arena.stars === prizeStars);
+
+    // ---------- celebration effects ----------
+    await pa.ev("switchTab('home')");
+    await pa.send("Page.bringToFront");
+    await pa.ev("ecaSpinClose(); while(document.getElementById('ecaMilestone')) ecaMilestoneClose();");
+    check("home shows the trophy", await pa.ev("(()=>{ render(); return document.getElementById('mainView').textContent.includes('🥇'); })()"));
+    check("confetti draws and cleans up", await pa.ev("(async()=>{ ecaConfetti(20); const on=!!document.querySelector('.eca-fx-canvas'); for(let i=0;i<40&&document.querySelector('.eca-fx-canvas');i++) await new Promise(r=>setTimeout(r,250)); return on&&!document.querySelector('.eca-fx-canvas'); })()"));
+    check("shake class clears", await pa.ev("(async()=>{ ecaShake(); const on=document.getElementById('mainView').classList.contains('eca-shake'); await new Promise(r=>setTimeout(r,600)); return on&&!document.getElementById('mainView').classList.contains('eca-shake'); })()"));
+    check("milestone text is not HTML", await pa.ev("(()=>{ ecaMilestone({icon:'x',title:'<img src=x onerror=window.__x=1>',text:'t'}); const ok=!document.querySelector('#ecaMilestone img'); ecaMilestoneClose(); return ok; })()"));
+
     // ---------- companion and achievements persist ----------
     await pc.ev("switchTab('home'); ecaPetPick('cat')");
     check("companion saved", !!(await until(async () => (await U(C)).arena.pet === "cat")));
@@ -304,7 +371,7 @@ async function login(p, id) {
     check("admin restore works", JSON.parse(res).ok === true, res);
 
     // ---------- problems seen in any browser ----------
-    for (const p of [pa, pb, pc, pd, pe, pf]) {
+    for (const p of Object.values(sessions)) {
       check(`no uncaught errors on ${p.label}`, !p.errors.length, [...new Set(p.errors)].map(e => String(e).slice(0, 200)));
       check(`no denied writes on ${p.label}`, !p.denied.length, [...new Set(p.denied)].slice(0, 8));
     }

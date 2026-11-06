@@ -47,7 +47,7 @@ function duelFinish(won) {
   const D = arena.duel;
   duelStopTimer(); duelStopWatch();
   D.status = "done"; D.won = won; D.game = null; D.sel = null;
-  if (won) ecaSfx("levelup");
+  if (won) { ecaSfx("levelup"); if (window.ecaFireworks) { ecaFireworks(3); ecaShake(); } }
   duelPaint();
 }
 function duelWatch(id) {

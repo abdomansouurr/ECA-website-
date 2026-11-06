@@ -241,6 +241,47 @@ async function runSuite(label, rules, quiet) {
   await T("duel: delete own open duel", true, rich, db => duelRef(db).delete(), duelSeed(duelBase({ a: uid })));
   await T("duel: delete a live duel", false, rich, db => duelRef(db).delete(), duelSeed(liveDuel({ a: uid, b: other })));
   await T("duel: delete someone else's duel", false, rich, db => duelRef(db).delete(), duelSeed(duelBase()));
+  // speed arena
+  const AID = "live-test", arenaRef = (db, id = AID) => db.collection("speedArenas").doc(id), entryRef = (db, who = uid) => arenaRef(db).collection("entries").doc(who);
+  const liveWindow = (x = {}) => Object.assign({ startsAt: tsAgo(60000), endsAt: TS.fromMillis(Date.now() + 600000), closed: false }, x);
+  const arenaSeed = (a = liveWindow(), entry) => async s => { await s.collection("speedArenas").doc(AID).set(a); if (entry) await s.collection("speedArenas").doc(AID).collection("entries").doc(uid).set(entry); };
+  const newEntry = (x = {}) => Object.assign({ n: "", a: "", score: 0, solved: 0, at: ts() }, x);
+  const oldEntry = (x = {}) => Object.assign({ n: "", a: "", score: 5, solved: 4, at: tsAgo(10000) }, x);
+  const nextFriday = () => { const t = new Date(); t.setUTCHours(16, 0, 0, 0); while (t.getUTCDay() !== 5 || t.getTime() + 1800000 <= Date.now()) t.setUTCDate(t.getUTCDate() + 1); return t; };
+  const fri = nextFriday(), friId = fri.toISOString().slice(0, 10), slot = (x = {}) => Object.assign({ startsAt: TS.fromDate(fri), endsAt: TS.fromMillis(fri.getTime() + 1800000), closed: false }, x);
+  const thuId = new Date(fri.getTime() - 864e5).toISOString().slice(0, 10), thu = new Date(fri.getTime() - 864e5);
+  await T("arena: student records next Friday", true, rich, db => arenaRef(db, friId).set(slot()));
+  await T("arena: slot on the wrong day", false, rich, db => arenaRef(db, thuId).set({ startsAt: TS.fromDate(thu), endsAt: TS.fromMillis(thu.getTime() + 1800000), closed: false }));
+  await T("arena: slot at the wrong hour", false, rich, db => arenaRef(db, friId).set(slot({ startsAt: TS.fromMillis(fri.getTime() - 3600000) })));
+  await T("arena: slot too long", false, rich, db => arenaRef(db, friId).set(slot({ endsAt: TS.fromMillis(fri.getTime() + 7200000) })));
+  await T("arena: student starts one now", false, rich, db => arenaRef(db).set(liveWindow()));
+  await T("arena: student edits the schedule", false, rich, db => arenaRef(db).update({ closed: true }), arenaSeed());
+  await T("arena: student writes the prizes", false, rich, db => arenaRef(db).update({ rank: { [uid]: 1 } }), arenaSeed());
+  await T("arena: join", true, rich, db => entryRef(db).set(newEntry()), arenaSeed());
+  await T("arena: join before it starts", false, rich, db => entryRef(db).set(newEntry()), arenaSeed(liveWindow({ startsAt: TS.fromMillis(Date.now() + 60000) })));
+  await T("arena: join after it ends", false, rich, db => entryRef(db).set(newEntry()), arenaSeed(liveWindow({ endsAt: tsAgo(1000) })));
+  await T("arena: join a closed one", false, rich, db => entryRef(db).set(newEntry()), arenaSeed(liveWindow({ closed: true })));
+  await T("arena: join with points", false, rich, db => entryRef(db).set(newEntry({ score: 99 })), arenaSeed());
+  await T("arena: join with a legal name", false, rich, db => entryRef(db).set(newEntry({ n: "Ali" })), arenaSeed());
+  await T("arena: join for someone else", false, rich, db => entryRef(db, other).set(newEntry()), arenaSeed());
+  await T("arena: one solve", true, rich, db => entryRef(db).update({ score: 6, solved: 5, at: ts() }), arenaSeed(liveWindow(), oldEntry()));
+  await T("arena: streak solve", true, rich, db => entryRef(db).update({ score: 7, solved: 5, at: ts() }), arenaSeed(liveWindow(), oldEntry()));
+  await T("arena: forged points", false, rich, db => entryRef(db).update({ score: 50, solved: 5, at: ts() }), arenaSeed(liveWindow(), oldEntry()));
+  await T("arena: points with no solve", false, rich, db => entryRef(db).update({ score: 6, at: ts() }), arenaSeed(liveWindow(), oldEntry()));
+  await T("arena: solving too fast", false, rich, db => entryRef(db).update({ score: 6, solved: 5, at: ts() }), arenaSeed(liveWindow(), oldEntry({ at: tsAgo(500) })));
+  await T("arena: solve after the end", false, rich, db => entryRef(db).update({ score: 6, solved: 5, at: ts() }), arenaSeed(liveWindow({ endsAt: tsAgo(1000) }), oldEntry()));
+  await T("arena: change the nickname mid-way", false, rich, db => entryRef(db).update({ score: 6, solved: 5, at: ts(), n: "x" }), arenaSeed(liveWindow(), oldEntry()));
+  const winner = (rk, x = {}) => liveWindow(Object.assign({ closed: true, endsAt: tsAgo(60000), rank: { [uid]: rk } }, x));
+  const prize = (db, stars, rk, tr = AID + "|" + rk) => econ(db, { kind: "earn", source: "arena", key: AID, starsDelta: stars, xpDelta: stars * 20, id: "arena-" + AID }, (s, a) => { a.tr = [...(a.tr || []), tr]; return s; });
+  for (const [rk, stars] of [[1, 50], [2, 30], [3, 20]]) await T("arena: prize for place " + rk, true, rich, db => prize(db, stars, rk), arenaSeed(winner(rk)));
+  await T("arena: prize above the place", false, rich, db => prize(db, 50, 1), arenaSeed(winner(2)));
+  await T("arena: prize without a place", false, rich, db => prize(db, 20, 3), arenaSeed(liveWindow({ closed: true, rank: {} })));
+  await T("arena: prize before closing", false, rich, db => prize(db, 50, 1), arenaSeed(liveWindow()));
+  await T("arena: prize twice", false, rich, async db => { await prize(db, 50, 1); await prize(db, 50, 1); }, arenaSeed(winner(1)));
+  await T("arena: prize with a wrong trophy", false, rich, db => prize(db, 30, 2, AID + "|1"), arenaSeed(winner(2)));
+  await T("arena: prize without the trophy", false, rich, db => econ(db, { kind: "earn", source: "arena", key: AID, starsDelta: 50, xpDelta: 1000, id: "arena-" + AID }), arenaSeed(winner(1)));
+  await T("arena: trophy added with no receipt", false, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { tr: ["x|1"] }) }));
+  await T("arena: trophy added by another reward", false, rich, db => econ(db, { kind: "earn", source: "pawn", key: today, starsDelta: 2, xpDelta: 40, id: "pawn-" + today }, (s, a) => { a.tr = ["x|1"]; return s; }));
   // companion and achievements stay in the student's own profile
   await T("save companion and achievements", true, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { pet: "dragon", ach: ["night-owl"], duelW: 1 }) }));
   // leaderboard
