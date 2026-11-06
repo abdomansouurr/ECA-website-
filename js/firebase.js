@@ -241,6 +241,33 @@
       const shape = { source, day, now: new Date().toISOString(), loaded: !!profile, shopKeys: Object.keys(s), hints: typeof s.hints, stars: typeof a.stars, xp: typeof a.xp, level: typeof p.level, name: typeof p.name, email: typeof p.email };
       (window.__ecaErr = window.__ecaErr || []).push({ msg: "economy denied " + JSON.stringify(shape), src: "fbEconomy", line: 0 });
     }
+    // لوحة الصدارة: صف الطالب بيتنشر لوحده لما ملفه يتغير (الاسم المستعار بس، من غير الاسم الحقيقي)
+    let boardLast = null, boardLastUid = "", boardTimer = null;
+    async function boardPublish() {
+      if (!me || me.role !== "student" || !maps.core[me.uid] || !window.ecaWeekKey) return;
+      const uid = me.uid, p = maps.core[uid], shop = p.shop || {}, wk = window.ecaWeekKey();
+      const row = { n: p.nickname || "", a: (shop.eq || {}).a || "", t: shop.activeTitle || "", g: p.group || "", xp: Number((p.arena || {}).xp) || 0, wk, wx: 0 };
+      const ref = doc(firestore, "leaderboard", uid);
+      try {
+        if (boardLastUid !== uid) { boardLast = null; boardLastUid = uid; }
+        if (!boardLast) { const snap = await getDoc(ref); boardLast = snap.exists() ? snap.data() : null; }
+        const old = boardLast;
+        if (old) {
+          const gain = Math.max(0, row.xp - (Number(old.xp) || 0));
+          row.wx = old.wk === wk ? (Number(old.wx) || 0) + gain : gain;
+          if (["n", "a", "t", "g", "xp", "wk", "wx"].every(k => old[k] === row[k])) return;
+        }
+        await setDoc(ref, row);
+        boardLast = row;
+      } catch (e) {
+        boardLast = null;
+        console.warn("Leaderboard update failed:", e && e.code);
+      }
+    }
+    function boardPublishSoon() { clearTimeout(boardTimer); boardTimer = setTimeout(boardPublish, 2000); }
+    window.fbBoardWatch = (onRows, onError) => onSnapshot(query(collection(firestore, "leaderboard"), orderBy("xp", "desc"), limit(500)),
+      snap => onRows(snap.docs.map(d => Object.assign(cleanDeep(d.data()), { id: d.id }))),
+      err => { console.warn("Leaderboard read failed:", err && err.code); onError(); });
     window.fbEconomy = async request => {
       if (!me || me.role !== "student" || !request || typeof request !== "object") return { ok: false };
       const uid = me.uid, userRef = doc(firestore, "users", uid), op = request.op;
@@ -293,7 +320,12 @@
             missionBonus = arena.missionDate !== day;
             if (missionBonus) { starsDelta++; arena.missionDate = day; arena.missionDone = true; }
           } else if (source === "bot") starsDelta = Number(key) + 1;
-          else if (source === "coach") starsDelta = Number(key);
+          else if (source === "coach") {
+            const level = Number(key), prev = arena.cb && arena.cb.d === day ? Number(arena.cb.k) || 0 : 0;
+            if (level <= prev) return { ok: false, code: "coach-not-higher", best: prev };
+            starsDelta = level - prev;
+            arena.cb = { d: day, k: level };
+          }
           else if (source === "login") starsDelta = loginRewardStars(day);
           else if (source === "rush") starsDelta = Math.min(5, Math.floor(score / 3));
           else if (source === "quest") {
@@ -664,6 +696,7 @@
             maps.core = {}; maps.core[me.uid] = profile;
             loaded.core = true; window.__authLoading = false;
             if (changed) rebuild();
+            if (!snap.metadata.hasPendingWrites && !snap.metadata.fromCache) boardPublishSoon();
           } else if (!signingUp && !snap.metadata.fromCache) {
             window.__authLoading = false;
             if (window.toast) toast("الحساب ده مش مربوط ببيانات طالب. كلّم الكوتش.");
@@ -1144,6 +1177,7 @@
           name: String(name || profile.data().name || "طالب").slice(0, 80),
           by: me.uid
         });
+        deleteDoc(doc(firestore, "leaderboard", id)).catch(e => console.warn("Leaderboard row removal failed:", e && e.code));
         rebuild();
         return { ok: true };
       } catch (e) {
@@ -1201,7 +1235,7 @@
         getDoc(doc(firestore, "private", uid))
       ]);
       const refs = [...economy.docs, ...notes.docs, ...attempts.docs, ...links.docs].map(d => d.ref);
-      refs.push(doc(firestore, "private", uid), doc(firestore, "finance", uid));
+      refs.push(doc(firestore, "private", uid), doc(firestore, "finance", uid), doc(firestore, "leaderboard", uid));
       const parentCode = priv.exists() ? priv.data().parentCode : "";
       if (typeof parentCode === "string" && /^[A-Z0-9]{8,16}$/.test(parentCode)) refs.push(doc(firestore, "parentCodes", parentCode));
       const data = profile.exists() ? profile.data() : {};

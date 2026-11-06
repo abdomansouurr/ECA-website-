@@ -543,6 +543,8 @@
         if (result.ok && !result.duplicate) showStudentReward(result);
         else if (result.duplicate && source !== "lesson") {
           toast(lang === "en" ? "You already collected today's reward for this activity." : "سبق الحصول على مكافأة هذا النشاط اليوم.");
+        } else if (result.code === "coach-not-higher") {
+          toast(lang === "en" ? `Nice win! Today's reward counts your highest level. Beat a level above ${result.best} for more stars.` : `مكسب حلو! جايزة النهاردة لأعلى مستوى، اكسب مستوى أعلى من ${result.best} عشان نجوم أكتر.`);
         } else if (result.code === "not-attended") {
           toast(lang === "en" ? "Attend this lesson before collecting its reward." : "يجب حضور هذا الدرس قبل الحصول على مكافأته.");
         }

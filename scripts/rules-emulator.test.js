@@ -86,13 +86,19 @@ async function runSuite(label, rules, quiet) {
   await T("bot 7 owned", true, Object.assign({}, rich, { shop: { titles: [], bots: [7], hints: 0, activeTitle: "" } }), db => earn(db, "bot", "7", 8));
   await T("pawn reward", true, fresh, db => earn(db, "pawn", today, 2));
   // Coach bot: stars follow the chosen level, once a day per level
-  const coachWin = (db, level, stars = level) => econ(db, { kind: "earn", source: "coach", key: String(level), starsDelta: stars, xpDelta: stars * 20, id: `coach-${today}-${level}` });
+  const coachWin = (db, level, stars = level, cb = { d: today, k: level }) => econ(db, { kind: "earn", source: "coach", key: String(level), starsDelta: stars, xpDelta: stars * 20, id: `coach-${today}-${level}` }, (s, a) => { if (cb) a.cb = cb; else delete a.cb; return s; });
   await T("coach level 1 win", true, fresh, db => coachWin(db, 1));
   await T("coach level 10 win", true, legacy, db => coachWin(db, 10));
   await T("coach win with forged stars", false, fresh, db => coachWin(db, 2, 9));
   await T("coach level 11 rejected", false, fresh, db => coachWin(db, 11));
   await T("coach same level twice a day", false, fresh, async db => { await coachWin(db, 3); await coachWin(db, 3); });
-  await T("coach two levels on the same day", true, fresh, async db => { await coachWin(db, 3); await coachWin(db, 4); });
+  await T("coach higher level pays the difference", true, fresh, async db => { await coachWin(db, 3); await coachWin(db, 5, 2); });
+  await T("coach higher level pays in full", false, fresh, async db => { await coachWin(db, 3); await coachWin(db, 4, 4); });
+  await T("coach lower level after a higher one", false, fresh, async db => { await coachWin(db, 5); await coachWin(db, 3, 1); });
+  await T("coach win without recording the level", false, fresh, db => coachWin(db, 3, 3, null));
+  await T("coach win records a lower level", false, fresh, db => coachWin(db, 3, 3, { d: today, k: 1 }));
+  await T("coach level from another day does not count", true, Object.assign({}, fresh, { arena: Object.assign({}, fresh.arena, { cb: { d: "2020-01-01", k: 10 } }) }), db => coachWin(db, 1));
+  await T("coach record reset by another reward", false, Object.assign({}, fresh, { arena: Object.assign({}, fresh.arena, { cb: { d: today, k: 10 } }) }), db => econ(db, { kind: "earn", source: "pawn", key: today, starsDelta: 2, xpDelta: 40, id: "pawn-" + today }, (s, a) => { delete a.cb; return s; }));
   // daily quests: fixed reward, once a day per quest
   const quest = (db, key, stars) => econ(db, { kind: "earn", source: "quest", key, starsDelta: stars, xpDelta: stars * 20, id: `quest-${today}-${key}` });
   await T("quest daily", true, fresh, db => quest(db, "daily", 1));
@@ -173,6 +179,30 @@ async function runSuite(label, rules, quiet) {
   await T("equip a cosmetic not owned", false, withItems(["board-neon"]), db => patch(db, { shop: shopWith(["board-neon"], { b: "board-royal" }) }));
   await T("equip with an unknown slot", false, withItems(["board-neon"]), db => patch(db, { shop: shopWith(["board-neon"], { x: "board-neon" }) }));
   await T("equip and add an item together", false, withItems(["board-neon"]), db => patch(db, { shop: shopWith(["board-neon", "piece-gold"], { p: "piece-gold" }) }));
+  // leaderboard
+  const bRow = (extra = {}) => Object.assign({ n: "", a: "", t: "", g: "A", xp: 500, wk: today, wx: 0 }, extra);
+  const pub = row => db => db.collection("leaderboard").doc(uid).set(row);
+  const bSeed = row => s => s.collection("leaderboard").doc(uid).set(row);
+  const bOld = (extra = {}) => bRow(Object.assign({ xp: 400, wx: 50 }, extra));
+  await T("board: first publish", true, rich, pub(bRow()));
+  await T("board: first publish claims weekly points", false, rich, pub(bRow({ wx: 500 })));
+  await T("board: forged xp", false, rich, pub(bRow({ xp: 9999 })));
+  await T("board: legal name as nickname", false, rich, pub(bRow({ n: "Ali" })));
+  await T("board: extra field", false, rich, pub(bRow({ name: "Ali" })));
+  await T("board: another group", false, rich, pub(bRow({ g: "B" })));
+  await T("board: avatar not equipped", false, rich, pub(bRow({ a: "avatar-dragon" })));
+  await T("board: avatar equipped", true, Object.assign({}, rich, { shop: { titles: [], bots: [], hints: 0, activeTitle: "", items: ["avatar-owl"], eq: { a: "avatar-owl" } } }), pub(bRow({ a: "avatar-owl" })));
+  await T("board: stale week", false, rich, pub(bRow({ wk: "2020-01-04" })));
+  await T("board: gain in the same week", true, rich, pub(bRow({ wx: 150 })), bSeed(bOld()));
+  await T("board: forged weekly gain", false, rich, pub(bRow({ wx: 900 })), bSeed(bOld()));
+  await T("board: new week starts from the gain", true, rich, pub(bRow({ wx: 100 })), bSeed(bOld({ wk: dayBack(7) })));
+  await T("board: new week keeps old points", false, rich, pub(bRow({ wx: 150 })), bSeed(bOld({ wk: dayBack(7) })));
+  await T("board: week moved back", false, rich, pub(bRow({ wk: dayBack(1), wx: 100 })), bSeed(bOld()));
+  await T("board: another student's row", false, rich, db => db.collection("leaderboard").doc("other1").set(bRow()));
+  await T("board: staff-only profile fields stay out", false, rich, pub(bRow({ phone: "01000000000" })));
+  await T("board: deleted student", false, rich, pub(bRow()), s => s.collection("deleted").doc(uid).set({ name: "x" }));
+  await T("board: read the list", true, rich, db => db.collection("leaderboard").orderBy("xp", "desc").limit(50).get(), bSeed(bRow()));
+  await T("board: student cannot delete", false, rich, db => db.collection("leaderboard").doc(uid).delete(), bSeed(bRow()));
   await T("edit stars with no receipt", false, legacy, db => patch(db, { arena: Object.assign({}, legacy.arena, { stars: 999 }) }));
   // attempts + days
   await T("daily attempt: first day of a new account", true, fresh, db => daily(db));

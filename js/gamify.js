@@ -123,6 +123,73 @@ function ecaHudUpdate() {
 window.ecaHudUpdate = ecaHudUpdate;
 { const _r = render; render = function () { ecaCosmeticsApply(); const out = _r.apply(this, arguments); ecaHudUpdate(); return out; }; }
 
+// ================= جايزة Coach: لأعلى مستوى في اليوم =================
+function ecaCoachRewardText(level) {
+  const en = lang === "en", u = currUser(), cb = (u && u.arena && u.arena.cb) || {};
+  const best = cb.d === todayISO() ? Number(cb.k) || 0 : 0, stars = level - best;
+  if (stars <= 0) return en ? `You already won level ${best} today. Beat a higher level for more stars.` : `كسبت مستوى ${best} النهاردة. اكسب مستوى أعلى عشان نجوم أكتر.`;
+  return en ? `Win at this level: +${stars} stars and ${stars * 20} XP (the reward counts your highest level today)` : `لو كسبت المستوى ده: +${stars} نجوم و${stars * 20} خبرة (الجايزة لأعلى مستوى تكسبه في اليوم)`;
+}
+
+// ================= لوحة الصدارة المباشرة =================
+function ecaWeekKey() {
+  const t = new Date(todayISO() + "T12:00:00Z");
+  t.setUTCDate(t.getUTCDate() - (t.getUTCDay() + 1) % 7);   // الأسبوع بيبدأ يوم السبت
+  return t.toISOString().slice(0, 10);
+}
+window.ecaWeekKey = ecaWeekKey;
+const LB_TOP = 50;
+let lbRows = null, lbFailed = false, lbUnsub = null, lbTab = "global";
+function lbWatch() {
+  const want = tab === "honor" && !!currUser() && !!window.fbBoardWatch;
+  if (want && !lbUnsub) {
+    lbUnsub = window.fbBoardWatch(rows => { lbRows = rows; lbFailed = false; lbPaint(); }, () => { lbFailed = true; lbPaint(); });
+  } else if (!want && lbUnsub) {
+    lbUnsub(); lbUnsub = null; lbRows = null; lbFailed = false;
+  }
+}
+function lbPaint() {
+  const el = document.getElementById("ecaLiveBoard"), u = currUser();
+  if (el && u) el.outerHTML = ecaLiveBoardHTML(u);
+}
+function lbTabSet(key) { lbTab = key; lbPaint(); }
+window.lbTabSet = lbTabSet;
+function ecaLiveBoardHTML(u) {
+  const en = lang === "en", isStudent = u.role === "student", wk = ecaWeekKey();
+  const tabs = [["global", en ? "Global" : "الكل"], ...(isStudent ? [["group", en ? "My group" : "مجموعتي"]] : []), ["weekly", en ? "This week" : "الأسبوع ده"]];
+  const active = tabs.some(t => t[0] === lbTab) ? lbTab : "global";
+  const score = r => active === "weekly" ? (r.wk === wk ? Number(r.wx) || 0 : 0) : Number(r.xp) || 0;
+  const list = (lbRows || []).filter(r => score(r) > 0 && (active !== "group" || (u.group && r.g === u.group)))
+    .sort((a, b) => score(b) - score(a) || String(a.id).localeCompare(String(b.id)));
+  const catalog = window.ecaShopCatalog || [];
+  const row = (r, i) => {
+    const me = r.id === u.id, avatar = catalog.find(x => x.id === r.a && x.cat === "avatar"), title = catalog.find(x => x.id === r.t && x.type === "title");
+    return `<li class="eca-lb-row ${me ? "eca-lb-me" : ""}"${me ? ' aria-current="true"' : ""}>
+      <span class="eca-lb-pos">${i < 3 ? ["🥇", "🥈", "🥉"][i] : i + 1}</span>
+      <span class="eca-lb-av" aria-hidden="true">${avatar ? esc(avatar.icon) : "♟"}</span>
+      <span class="min-w-0 flex-1"><b class="block truncate text-sm text-white">${esc(ecaStudentAlias({ id: r.id, nickname: r.n }))}</b>${title ? `<span class="block truncate text-xs text-gray-400">${esc(en ? title.en : title.title)}</span>` : ""}</span>
+      <b class="text-sm text-emerald-300 whitespace-nowrap" dir="ltr">${esc(score(r))} XP</b>
+    </li>`;
+  };
+  const myIndex = list.findIndex(r => r.id === u.id);
+  const empty = lbFailed ? (en ? "The leaderboard could not load. Try again later." : "تعذّر تحميل اللوحة. حاول تاني بعد شوية.")
+    : !lbRows ? (en ? "Loading..." : "بنحمّل اللوحة...")
+    : active === "group" && !u.group ? (en ? "You are not in a group yet." : "لسه مش في مجموعة.")
+    : active === "weekly" ? (en ? "No points yet this week. Be the first!" : "لسه محدش جمع نقط الأسبوع ده. كن الأول!")
+    : (en ? "No points yet. Train to get on the board!" : "لسه مفيش نقط. اتدرب وادخل اللوحة!");
+  return `<section id="ecaLiveBoard" class="gold-card rounded-2xl p-5 space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h3 class="font-display font-bold text-lg text-yellow-300">🏆 ${en ? "Live leaderboard" : "الترتيب المباشر"}</h3>
+      ${myIndex >= 0 ? `<span class="text-xs font-bold text-yellow-300">${en ? "Your rank" : "ترتيبك"}: #${myIndex + 1}</span>` : ""}
+    </div>
+    <div class="flex flex-wrap gap-2" role="tablist">${tabs.map(t => `<button type="button" role="tab" aria-selected="${active === t[0]}" onclick="lbTabSet('${t[0]}')" class="tap rounded-lg px-3 text-xs font-bold ${active === t[0] ? "gold-btn" : "bg-zinc-900 text-gray-300 border border-yellow-500/20"}">${t[1]}</button>`).join("")}</div>
+    ${list.length ? `<ol class="space-y-2">${list.slice(0, LB_TOP).map(row).join("")}${myIndex >= LB_TOP ? row(list[myIndex], myIndex) : ""}</ol>` : `<p class="text-sm text-gray-400 text-center py-4">${empty}</p>`}
+    <p class="text-xs text-gray-500 text-center">${en ? "Ranked by training XP from puzzles, games and rewards. Only nicknames are shown." : "الترتيب بخبرة التدريب من الألغاز والألعاب والجوايز، وبتظهر الأسماء المستعارة بس."}</p>
+  </section>`;
+}
+{ const _hv = renderHonorView; renderHonorView = function (u) { return `<div class="space-y-5">${ecaLiveBoardHTML(u)}${_hv(u)}</div>`; }; }
+{ const _r = render; render = function () { const out = _r.apply(this, arguments); lbWatch(); return out; }; }
+
 // ================= الرقعة والقطع من المتجر =================
 function ecaEquipped(u, cat, slot) {
   const shop = (u && u.role === "student" && u.shop) || {}, id = (shop.eq || {})[slot];
