@@ -362,6 +362,7 @@ function rushPlay(mv) {
     if (R.idx < R.sol.length) return arenaRefresh();
   }
   R.score++; R.combo++;
+  if (window.ecaOnSolve) window.ecaOnSolve();
   if (R.combo >= 2) ecaSfx("combo", R.combo); else ecaSfx("ting");
   rushNext();
   arenaRefresh();

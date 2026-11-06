@@ -58,7 +58,7 @@ service cloud.firestore {
         && (e.get('a', '') == '' || e.get('a', '') in items);
     }
     function cosmeticPrice(item) {
-      return item in ['avatar-rocket','avatar-robot','avatar-owl'] ? 25 : item == 'board-neon' ? 40 : item in ['avatar-crown','avatar-dragon'] ? 60
+      return item in ['avatar-rocket','avatar-robot','avatar-owl'] ? 25 : item == 'board-wood' ? 30 : item == 'board-neon' ? 40 : item == 'board-midnight' ? 50 : item == 'board-marble' ? 70 : item in ['avatar-crown','avatar-dragon'] ? 60
         : item == 'board-ember' ? 60 : item == 'piece-neon' ? 80 : item == 'board-royal' ? 90 : item == 'piece-gold' ? 150 : 0;
     }
     function cosmeticGrantOk(o, n, r) {
@@ -77,7 +77,7 @@ service cloud.firestore {
     }
     // Firestore بيوقف التقييم عند 1000 عملية في الطلب، فالإيصال بيتقرا مرة واحدة ويتبعت للدوال كـ parameter
     function shopPrice(item) {
-      return item == 'hint' || item == 'bot-1' ? 20 : item == 'bot-2' ? 40 : item == 'title-tactics' ? 50
+      return item == 'title-novice' ? 15 : item == 'title-wizard' ? 180 : item == 'hint' || item == 'bot-1' ? 20 : item == 'bot-2' ? 40 : item == 'title-tactics' ? 50
         : item == 'bot-3' ? 70 : item == 'bot-4' ? 100 : item == 'title-knight' ? 120 : item == 'bot-5' ? 150
         : item == 'bot-6' ? 220 : item == 'title-master' ? 250 : item == 'bot-7' ? 300 : item == 'streak-freeze' ? 30 : 0;
     }
@@ -105,10 +105,14 @@ service cloud.firestore {
           ? (listGrantOk(o.get('titles', []), n.get('titles', []), item) && n.get('bots', []) == o.get('bots', []) && n.get('hints', 0) == o.get('hints', 0))
           : (listGrantOk(o.get('bots', []), n.get('bots', []), int(item.split('-')[1])) && n.get('titles', []) == o.get('titles', []) && n.get('hints', 0) == o.get('hints', 0));
     }
+    function spinFreezeOk(o, n, r) {
+      return r.source == 'spin' && r.starsDelta == 0 && r.xpDelta == 0
+        && n.get('freezes', 0) == o.get('freezes', 0) + 1 && n.get('frozen', []) == o.get('frozen', []) && shopSameExceptFreeze(o, n);
+    }
     function economyShopChangeOk(o, n, r) {
       return shopValid(n) && o.get('activeTitle', '') == n.get('activeTitle', '') && o.get('eq', {}) == n.get('eq', {})
         && (o.get('items', []) != n.get('items', []) ? cosmeticGrantOk(o, n, r)
-          : r.kind == 'earn' ? shopCoreSame(o, n)
+          : r.kind == 'earn' ? (shopCoreSame(o, n) || spinFreezeOk(o, n, r))
           : r.kind == 'spend-freeze' ? freezeUseOk(o, n, r)
           : r.kind == 'spend-hint'
             ? (r.starsDelta == 0 && r.xpDelta == 0 && o.get('hints', 0) >= 1 && n.get('hints', 0) == o.get('hints', 0) - 1
@@ -171,6 +175,20 @@ service cloud.firestore {
     function loginStars(day) {
       return int(day.split('-')[2]) % 7 == 0 ? 3 : int(day.split('-')[2]) % 3 == 0 ? 2 : 1;
     }
+    // عجلة الحظ: الجايزة من بصمة الحساب واليوم، فمفيش اختيار ولا إعادة لف
+    function spinHex(uid, day) { return hashing.sha256(uid + '|' + day).toHexString().lower()[0:1]; }
+    function spinStars(h) { return h in ['0','1','2','3','4','5'] ? 1 : h in ['6','7','8','9'] ? 2 : h in ['a','b','c'] ? 3 : 5; }
+    function spinOk(r, u) {
+      return spinHex(r.uid, r.day) == 'e' ? (r.starsDelta == 0 && r.xpDelta == 100)
+        : spinHex(r.uid, r.day) == 'f'
+          ? (u.get('shop', {}).get('freezes', 0) >= 2 ? (r.starsDelta == 3 && r.xpDelta == 60) : (r.starsDelta == 0 && r.xpDelta == 0))
+          : (r.starsDelta == spinStars(spinHex(r.uid, r.day)) && r.xpDelta == r.starsDelta * 20);
+    }
+    // جايزة التحدي لفائز حقيقي في تحدي لسه مخلص، عشان التحدي القديم ما يتصرفش تاني
+    function duelWon(did, uid) {
+      let d = get(/databases/$(database)/documents/duels/$(did)).data;
+      return d.status == 'done' && d.winner == uid && request.time < d.ended + duration.value(10, 'm');
+    }
     function botOwned(key, shop) {
       let bots = shop.get('bots', []);
       return key == '0' || (key == '1' && 1 in bots) || (key == '2' && 2 in bots)
@@ -200,6 +218,10 @@ service cloud.firestore {
         : r.source == 'login'
           ? (r.key == r.day && id == 'login-' + r.day && r.starsDelta == loginStars(r.day)
               && r.xpDelta == loginStars(r.day) * 20 && r.missionBonus == false)
+        : r.source == 'spin'
+          ? (r.key == r.day && id == 'spin-' + r.day && r.missionBonus == false && spinOk(r, u))
+        : r.source == 'duel'
+          ? (r.key.matches('[A-Za-z0-9]{10,40}') && id == 'duel-' + r.day && r.starsDelta == 3 && r.xpDelta == 60 && r.missionBonus == false && duelWon(r.key, r.uid))
         : r.source == 'pawn'
           ? (r.key == r.day && id == 'pawn-' + r.day && r.starsDelta == 2 && r.xpDelta == 40 && r.missionBonus == false)
         : r.source == 'vision'
@@ -586,6 +608,41 @@ service cloud.firestore {
           ? request.resource.data.wx == resource.data.wx + boardGain(request.resource.data, resource.data)
           : (request.resource.data.wk > resource.data.wk && request.resource.data.wx == boardGain(request.resource.data, resource.data)));
       allow delete: if isAdmin();
+    }
+
+    // ---------- التحدي المباشر: بالأسماء المستعارة بس ومفيش شات ----------
+    function duelNickOk(nick) {
+      let u = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return u.role == 'student' && nick == u.get('nickname', '');
+    }
+    function duelJoinOk() {
+      let d = request.resource.data;
+      return resource.data.status == 'open' && request.auth.uid != resource.data.a
+        && request.time < resource.data.created + duration.value(3, 'm')
+        && d.diff(resource.data).affectedKeys().hasOnly(['status','b','bn','started'])
+        && d.status == 'live' && d.b == request.auth.uid && d.started == request.time && duelNickOk(d.bn);
+    }
+    function duelWinOk() {
+      let d = request.resource.data;
+      return resource.data.status == 'live' && request.auth.uid in [resource.data.a, resource.data.b]
+        && request.time > resource.data.started + duration.value(3, 's')
+        && request.time < resource.data.started + duration.value(5, 'm')
+        && d.diff(resource.data).affectedKeys().hasOnly(['status','winner','ended'])
+        && d.status == 'done' && d.winner == request.auth.uid && d.ended == request.time;
+    }
+    match /duels/{id} {
+      allow read: if notAnon();
+      allow create: if notAnon() && !exists(/databases/$(database)/documents/deleted/$(request.auth.uid))
+        && request.resource.data.keys().hasOnly(['a','an','fen','moves','status','created'])
+        && request.resource.data.keys().hasAll(['a','an','fen','moves','status','created'])
+        && request.resource.data.a == request.auth.uid && request.resource.data.status == 'open'
+        && request.resource.data.created == request.time
+        && safeText(request.resource.data.fen, 100)
+        && safeText(request.resource.data.moves, 200) && request.resource.data.moves.matches('[a-h1-8qrbn ]+')
+        && duelNickOk(request.resource.data.an);
+      allow update: if notAnon() && !exists(/databases/$(database)/documents/deleted/$(request.auth.uid)) && (duelJoinOk() || duelWinOk());
+      allow delete: if isAdmin() || (notAnon() && request.auth.uid == resource.data.a
+        && (resource.data.status != 'live' || request.time > resource.data.started + duration.value(10, 'm')));
     }
 
     match /meta/{id} {

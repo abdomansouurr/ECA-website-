@@ -363,6 +363,8 @@
     }
     window.setStudentAlias = setStudentAlias;
     const ECA_SHOP_ITEMS = [
+      { id: "title-novice", type: "title", title: "البيدق المبتدئ", en: "Pawn Novice", cost: 15 },
+      { id: "title-wizard", type: "title", title: "ساحر التكتيك", en: "Tactical Wizard", cost: 180 },
       { id: "title-tactics", type: "title", title: "عبقري التكتيك", en: "Tactics Genius", cost: 50 },
       { id: "title-knight", type: "title", title: "بطل الحصان", en: "Knight Champion", cost: 120 },
       { id: "title-master", type: "title", title: "بطل الشطرنج", en: "Chess Champion", cost: 250 },
@@ -371,6 +373,9 @@
       ...[1, 2, 3, 4, 5, 6, 7].map((level, index) => ({
         id: "bot-" + level, type: "bot", title: "فتح البوت " + (level + 1), en: "Unlock bot " + (level + 1), cost: [20, 40, 70, 100, 150, 220, 300][index]
       })),
+      { id: "board-wood", type: "cosmetic", cat: "board", title: "الخشب الكلاسيكي", en: "Classic wood", cost: 30, l: "#deb887", d: "#8b5a2b" },
+      { id: "board-midnight", type: "cosmetic", cat: "board", title: "رقعة منتصف الليل", en: "Midnight dark", cost: 50, l: "#94a3b8", d: "#334155" },
+      { id: "board-marble", type: "cosmetic", cat: "board", title: "الرخام الخيالي", en: "Fantasy marble", cost: 70, l: "#f8fafc", d: "#94a3b8" },
       { id: "board-neon", type: "cosmetic", cat: "board", title: "رقعة النيون", en: "Neon board", cost: 40, l: "#c7d2fe", d: "#6366f1" },
       { id: "board-ember", type: "cosmetic", cat: "board", title: "رقعة الجمر", en: "Ember board", cost: 60, l: "#fed7aa", d: "#c2410c" },
       { id: "board-royal", type: "cosmetic", cat: "board", title: "الرقعة الملكية", en: "Royal board", cost: 90, l: "#e9d5ff", d: "#7e22ce" },

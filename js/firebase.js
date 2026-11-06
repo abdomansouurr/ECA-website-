@@ -268,12 +268,54 @@
     window.fbBoardWatch = (onRows, onError) => onSnapshot(query(collection(firestore, "leaderboard"), orderBy("xp", "desc"), limit(500)),
       snap => onRows(snap.docs.map(d => Object.assign(cleanDeep(d.data()), { id: d.id }))),
       err => { console.warn("Leaderboard read failed:", err && err.code); onError(); });
+    async function spinHexOf(uid, day) {
+      const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(uid + "|" + day));
+      return (new Uint8Array(bytes)[0] >> 4).toString(16);
+    }
+    // التحدي المباشر
+    window.fbDuelLobby = (onRows, onError) => onSnapshot(query(collection(firestore, "duels"), where("status", "==", "open"), limit(20)),
+      snap => onRows(snap.docs.map(d => { const r = d.data(); return { id: d.id, a: r.a, an: cleanDeep(r.an || ""), createdMs: r.created && r.created.toMillis ? r.created.toMillis() : 0 }; })),
+      err => { console.warn("Duel lobby failed:", err && err.code); onError(); });
+    window.fbDuelWatch = (id, onDoc) => onSnapshot(doc(firestore, "duels", id),
+      snap => { if (snap.exists()) { const r = snap.data(); onDoc({ id: snap.id, a: r.a, an: r.an, b: r.b, bn: r.bn, fen: r.fen, moves: r.moves, status: r.status, winner: r.winner }); } else onDoc(null); },
+      err => console.warn("Duel watch failed:", err && err.code));
+    window.fbDuelCreate = async (fen, moves) => {
+      if (!me || me.role !== "student") throw new Error("not-student");
+      const old = await getDocs(query(collection(firestore, "duels"), where("a", "==", me.uid), limit(10)));
+      await Promise.all(old.docs.filter(d => d.data().status !== "live").map(d => deleteDoc(d.ref).catch(() => {})));
+      const ref = doc(collection(firestore, "duels"));
+      await setDoc(ref, { a: me.uid, an: (maps.core[me.uid] || {}).nickname || "", fen, moves, status: "open", created: serverTimestamp() });
+      return ref.id;
+    };
+    window.fbDuelJoin = id => runTransaction(firestore, async tx => {
+      const ref = doc(firestore, "duels", id), snap = await tx.get(ref);
+      if (!me || !snap.exists() || snap.data().status !== "open" || snap.data().a === me.uid) return null;
+      const bn = (maps.core[me.uid] || {}).nickname || "", r = snap.data();
+      tx.update(ref, { status: "live", b: me.uid, bn, started: serverTimestamp() });
+      return { id, a: r.a, an: r.an, b: me.uid, bn, fen: r.fen, moves: r.moves, status: "live" };
+    });
+    // أول واحد يكتب النتيجة هو الفائز. القواعد بترفض حل أسرع من 3 ثواني، فبنستنى ونحاول تاني مرة
+    window.fbDuelWin = async id => {
+      const attempt = () => runTransaction(firestore, async tx => {
+        const ref = doc(firestore, "duels", id), snap = await tx.get(ref);
+        if (!me || !snap.exists() || snap.data().status !== "live") return false;
+        tx.update(ref, { status: "done", winner: me.uid, ended: serverTimestamp() });
+        return true;
+      });
+      try { return await attempt(); }
+      catch (e) {
+        if (!e || e.code !== "permission-denied") throw e;
+        await new Promise(r => setTimeout(r, 3200));
+        return attempt();
+      }
+    };
+    window.fbDuelDelete = id => deleteDoc(doc(firestore, "duels", id)).catch(e => console.warn("Duel delete failed:", e && e.code));
     window.fbEconomy = async request => {
       if (!me || me.role !== "student" || !request || typeof request !== "object") return { ok: false };
       const uid = me.uid, userRef = doc(firestore, "users", uid), op = request.op;
       const dayOk = day => typeof day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(day);
       const nonce = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
-      let id = "", source = "", key = "", day = "", item = "", score = 0, starsDelta = 0, xpDelta = 0;
+      let id = "", source = "", key = "", day = "", item = "", score = 0, starsDelta = 0, xpDelta = 0, spinHex = "";
       if (op === "earn") {
         source = String(request.source || ""); key = String(request.key || ""); day = String(request.day || "");
         if (source === "login") { day = cairoDayKey(); key = day; }
@@ -286,6 +328,8 @@
         else if (source === "rush") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "rush-" + day; key = day; }
         else if (source === "quest" && ["daily", "puzzles", "win"].includes(key)) id = "quest-" + day + "-" + key;
         else if (source === "pawn") id = "pawn-" + day;
+        else if (source === "spin") { day = cairoDayKey(); key = day; id = "spin-" + day; spinHex = await spinHexOf(uid, day); }
+        else if (source === "duel" && /^[A-Za-z0-9]{10,40}$/.test(key)) id = "duel-" + day;
         else if (source === "vision") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "vision-" + day; }
         else return { ok: false };
       } else if (op === "purchase") {
@@ -334,8 +378,16 @@
             arena.qc = { d: day, k: [...claimed, key] };
           }
           else if (source === "pawn") starsDelta = 2;
+          else if (source === "duel") starsDelta = 3;
+          else if (source === "spin") {
+            arena.sp = day;
+            if (spinHex === "f") {
+              if ((Number(shop.freezes) || 0) >= 2) starsDelta = 3;
+              else nextShop.freezes = (Number(shop.freezes) || 0) + 1;
+            } else if (spinHex !== "e") starsDelta = "012345".includes(spinHex) ? 1 : "6789".includes(spinHex) ? 2 : "abc".includes(spinHex) ? 3 : 5;
+          }
           else if (source === "vision") starsDelta = Math.min(10, Math.floor(score / 3));
-          xpDelta = (source === "puzzle" && missionBonus ? starsDelta - 1 : starsDelta) * 20;
+          xpDelta = source === "spin" && spinHex === "e" ? 100 : (source === "puzzle" && missionBonus ? starsDelta - 1 : starsDelta) * 20;
         } else if (op === "purchase") {
           const catalogItem = window.ecaShopCatalog.find(x => x.id === item);
           if (!catalogItem) return { ok: false };
@@ -431,6 +483,7 @@
     }
     // جائزة الدخول: مرة في اليوم بتوقيت القاهرة، والإيصال login-{اليوم} هو اللي بيمنع التكرار حتى من أكتر من جهاز
     let loginRewardDay = "", loginRewardTries = 0, loginRewardBusy = false;
+    window.ecaCairoDay = () => cairoDayKey();
     async function checkDailyLoginReward() {
       if (!me || me.role !== "student" || loginRewardBusy || !navigator.onLine) return;
       const day = cairoDayKey();

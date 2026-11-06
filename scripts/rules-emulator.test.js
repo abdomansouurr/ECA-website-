@@ -16,7 +16,7 @@ const legacy = Object.assign({}, fresh, { coachName: "Coach", stuCode: "ECA-0001
   arena: { days: ["2026-10-01", "2026-10-02"], puzTried: 5, puzSolved: 3, puzStreak: 1, puzBestStreak: 2, stars: 7, missionDate: "2026-10-02", missionDone: true, games: { w: 1, l: 2, d: 0 } },
   examState: { "1": { status: "passed", score: 80, attempts: 1, date: "2026-09-01" } }, certificates: [{ step: 1, score: 80, studentName: "Ali", coachName: "Coach", date: "2026-09-01" }] });
 const rich = Object.assign({}, legacy, { arena: Object.assign({}, legacy.arena, { stars: 1000, xp: 500 }), shop: { titles: [], bots: [], hints: 2, activeTitle: "" } });
-const STARS = { daily: 1, easiest: 1, easier: 2, normal: 3, harder: 4, hardest: 5 }, PRICES = { hint: 20, "bot-1": 20, "bot-2": 40, "title-tactics": 50, "bot-3": 70, "bot-4": 100, "title-knight": 120, "bot-5": 150, "bot-6": 220, "title-master": 250, "bot-7": 300 };
+const STARS = { daily: 1, easiest: 1, easier: 2, normal: 3, harder: 4, hardest: 5 }, PRICES = { hint: 20, "bot-1": 20, "bot-2": 40, "title-tactics": 50, "bot-3": 70, "bot-4": 100, "title-knight": 120, "bot-5": 150, "bot-6": 220, "title-master": 250, "bot-7": 300, "title-novice": 15, "title-wizard": 180 };
 async function econ(db, r, change) {
   const ur = db.collection("users").doc(uid), rr = ur.collection("economy").doc(r.id);
   return db.runTransaction(async tx => {
@@ -157,7 +157,7 @@ async function runSuite(label, rules, quiet) {
   await T("equip owned title", true, Object.assign({}, rich, { shop: { titles: ["title-knight"], bots: [], hints: 0, activeTitle: "" } }), db => patch(db, { shop: { titles: ["title-knight"], bots: [], hints: 0, activeTitle: "title-knight" } }));
   await T("equip locked title", false, rich, db => patch(db, { shop: { titles: [], bots: [], hints: 2, activeTitle: "title-master" } }));
   // cosmetics
-  const COSMETICS = { "avatar-rocket": 25, "avatar-robot": 25, "avatar-owl": 25, "board-neon": 40, "avatar-crown": 60, "avatar-dragon": 60, "board-ember": 60, "piece-neon": 80, "board-royal": 90, "piece-gold": 150 };
+  const COSMETICS = { "avatar-rocket": 25, "avatar-robot": 25, "avatar-owl": 25, "board-neon": 40, "avatar-crown": 60, "avatar-dragon": 60, "board-ember": 60, "piece-neon": 80, "board-royal": 90, "piece-gold": 150, "board-wood": 30, "board-midnight": 50, "board-marble": 70 };
   const addItem = id => s => { s.items = [...(s.items || []), id]; return s; };
   const withItems = (items, eq) => Object.assign({}, rich, { shop: Object.assign({ titles: [], bots: [], hints: 0, activeTitle: "", items }, eq ? { eq } : {}) });
   const shopWith = (items, eq) => ({ titles: [], bots: [], hints: 0, activeTitle: "", items, eq });
@@ -179,6 +179,70 @@ async function runSuite(label, rules, quiet) {
   await T("equip a cosmetic not owned", false, withItems(["board-neon"]), db => patch(db, { shop: shopWith(["board-neon"], { b: "board-royal" }) }));
   await T("equip with an unknown slot", false, withItems(["board-neon"]), db => patch(db, { shop: shopWith(["board-neon"], { x: "board-neon" }) }));
   await T("equip and add an item together", false, withItems(["board-neon"]), db => patch(db, { shop: shopWith(["board-neon", "piece-gold"], { p: "piece-gold" }) }));
+  // lucky wheel: the prize comes from the account and the day
+  const spinHexOf = (who, day) => require("crypto").createHash("sha256").update(who + "|" + day).digest("hex")[0];
+  const spinPay = h => h === "e" ? [0, 100] : h === "f" ? [0, 0] : (s => [s, s * 20])("012345".includes(h) ? 1 : "6789".includes(h) ? 2 : "abc".includes(h) ? 3 : 5);
+  const spinEcon = (db, who, stars, xp, change) => { const ur = db.collection("users").doc(who), id = "spin-" + today, rr = ur.collection("economy").doc(id); return db.runTransaction(async tx => {
+    const p = (await tx.get(ur)).data(); await tx.get(rr);
+    const arena = Object.assign({}, p.arena || {}), shop = Object.assign({ titles: [], bots: [], hints: 0, activeTitle: "" }, p.shop || {});
+    arena.stars = (Number(arena.stars) || 0) + stars; arena.xp = (Number(arena.xp) || 0) + xp; arena.sp = today;
+    tx.update(ur, { arena, shop: change ? change(shop) : shop, lastEconomy: id });
+    tx.set(rr, { uid: who, kind: "earn", source: "spin", key: today, day: today, item: "", score: 0, starsDelta: stars, xpDelta: xp, missionBonus: false, at: ts() });
+  }); };
+  // Finds a user id per prize type, so every branch runs whatever today's date is
+  const spinUser = want => { for (let i = 0; i < 5000; i++) { const who = "spin" + i; if (spinHexOf(who, today) === want) return who; } throw new Error("no spin user"); };
+  const spinT = async (name, expect, who, profile, fn) => {
+    await env.clearFirestore();
+    await seedAs(s => s.collection("users").doc(who).set(profile));
+    const db = env.authenticatedContext(who, { firebase: { sign_in_provider: "password" } }).firestore();
+    let got = true, msg = "";
+    try { await fn(db); } catch (e) { got = false; msg = String(e.message).replace(/\s+/g, " ").slice(0, 300); }
+    const ok = got === expect; ok ? pass++ : (fail++, failures.push(name + " :: " + msg));
+    if (!ok || !quiet) console.log(ok ? "OK  " : "FAIL", expect ? "allow" : "deny ", name);
+  };
+  for (const h of ["0", "7", "b", "d"]) { const who = spinUser(h), [s, x] = spinPay(h); await spinT("spin prize " + h, true, who, rich, db => spinEcon(db, who, s, x)); await spinT("spin prize " + h + " forged", false, who, rich, db => spinEcon(db, who, s + 4, (s + 4) * 20)); }
+  { const who = spinUser("e"); await spinT("spin xp prize", true, who, rich, db => spinEcon(db, who, 0, 100)); await spinT("spin xp prize forged", false, who, rich, db => spinEcon(db, who, 5, 100)); }
+  { const who = spinUser("f"), withF = n => Object.assign({}, rich, { shop: { titles: [], bots: [], hints: 0, activeTitle: "", freezes: n, frozen: [] } }), addF = s => { s.freezes = (s.freezes || 0) + 1; return s; };
+    await spinT("spin freeze prize", true, who, withF(0), db => spinEcon(db, who, 0, 0, addF));
+    await spinT("spin freeze prize becomes stars at the limit", true, who, withF(2), db => spinEcon(db, who, 3, 60));
+    await spinT("spin third freeze", false, who, withF(2), db => spinEcon(db, who, 0, 0, addF)); }
+  { const who = spinUser("0"); await spinT("spin claims a freeze it did not win", false, who, rich, db => spinEcon(db, who, 0, 0, s => { s.freezes = 1; return s; }));
+    await spinT("spin twice", false, who, rich, async db => { await spinEcon(db, who, 1, 20); await spinEcon(db, who, 1, 20); }); }
+  // duels
+  const other = "other1", tsAgo = ms => TS.fromMillis(Date.now() - ms), DID = "duelAAAAAAAAAAAAAAAAA";
+  const duelBase = (x = {}) => Object.assign({ a: other, an: "", fen: "8/8/8/8/8/8/8/8 w - - 0 1", moves: "e2e4 e7e5", status: "open", created: tsAgo(1000) }, x);
+  const duelSeed = d => async s => { await s.collection("users").doc(other).set(Object.assign({}, rich, { username: "other_1" })); await s.collection("duels").doc(DID).set(d); };
+  const duelRef = db => db.collection("duels").doc(DID);
+  const liveDuel = (x = {}) => duelBase(Object.assign({ status: "live", b: uid, bn: "", started: tsAgo(20000) }, x));
+  const newDuel = (x = {}) => Object.assign({ a: uid, an: "", fen: "8/8/8/8/8/8/8/8 w - - 0 1", moves: "e2e4 e7e5", status: "open", created: ts() }, x);
+  await T("duel: create", true, rich, db => duelRef(db).set(newDuel()));
+  await T("duel: create for another student", false, rich, db => duelRef(db).set(newDuel({ a: other })));
+  await T("duel: create with a legal name", false, rich, db => duelRef(db).set(newDuel({ an: "Ali" })));
+  await T("duel: create with an extra field", false, rich, db => duelRef(db).set(newDuel({ chat: "hi" })));
+  await T("duel: create already won", false, rich, db => duelRef(db).set(newDuel({ status: "done" })));
+  await T("duel: join", true, rich, db => duelRef(db).update({ status: "live", b: uid, bn: "", started: ts() }), duelSeed(duelBase()));
+  await T("duel: join own duel", false, rich, db => duelRef(db).update({ status: "live", b: uid, bn: "", started: ts() }), duelSeed(duelBase({ a: uid })));
+  await T("duel: join an expired duel", false, rich, db => duelRef(db).update({ status: "live", b: uid, bn: "", started: ts() }), duelSeed(duelBase({ created: tsAgo(10 * 60000) })));
+  await T("duel: join as someone else", false, rich, db => duelRef(db).update({ status: "live", b: other, bn: "", started: ts() }), duelSeed(duelBase()));
+  await T("duel: join and change the puzzle", false, rich, db => duelRef(db).update({ status: "live", b: uid, bn: "", started: ts(), moves: "a2a3" }), duelSeed(duelBase()));
+  await T("duel: win", true, rich, db => duelRef(db).update({ status: "done", winner: uid, ended: ts() }), duelSeed(liveDuel()));
+  await T("duel: win instantly", false, rich, db => duelRef(db).update({ status: "done", winner: uid, ended: ts() }), duelSeed(liveDuel({ started: tsAgo(500) })));
+  await T("duel: declare the rival as winner", false, rich, db => duelRef(db).update({ status: "done", winner: other, ended: ts() }), duelSeed(liveDuel()));
+  await T("duel: win a duel you are not in", false, rich, db => duelRef(db).update({ status: "done", winner: uid, ended: ts() }), duelSeed(liveDuel({ b: "third1" })));
+  await T("duel: overwrite a finished duel", false, rich, db => duelRef(db).update({ winner: uid, ended: ts() }), duelSeed(liveDuel({ status: "done", winner: other, ended: tsAgo(1000) })));
+  const duelPay = (db, stars = 3, id = "duel-" + today) => econ(db, { kind: "earn", source: "duel", key: DID, starsDelta: stars, xpDelta: stars * 20, id });
+  const doneDuel = (x = {}) => liveDuel(Object.assign({ status: "done", winner: uid, ended: tsAgo(5000) }, x));
+  await T("duel: reward the winner", true, rich, db => duelPay(db), duelSeed(doneDuel()));
+  await T("duel: reward with forged stars", false, rich, db => duelPay(db, 9), duelSeed(doneDuel()));
+  await T("duel: reward the loser", false, rich, db => duelPay(db), duelSeed(doneDuel({ winner: other })));
+  await T("duel: reward an unfinished duel", false, rich, db => duelPay(db), duelSeed(liveDuel()));
+  await T("duel: reward from an old win", false, rich, db => duelPay(db), duelSeed(doneDuel({ ended: tsAgo(60 * 60000) })));
+  await T("duel: reward twice a day", false, rich, async db => { await duelPay(db); await duelPay(db); }, duelSeed(doneDuel()));
+  await T("duel: delete own open duel", true, rich, db => duelRef(db).delete(), duelSeed(duelBase({ a: uid })));
+  await T("duel: delete a live duel", false, rich, db => duelRef(db).delete(), duelSeed(liveDuel({ a: uid, b: other })));
+  await T("duel: delete someone else's duel", false, rich, db => duelRef(db).delete(), duelSeed(duelBase()));
+  // companion and achievements stay in the student's own profile
+  await T("save companion and achievements", true, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { pet: "dragon", ach: ["night-owl"], duelW: 1 }) }));
   // leaderboard
   const bRow = (extra = {}) => Object.assign({ n: "", a: "", t: "", g: "A", xp: 500, wk: today, wx: 0 }, extra);
   const pub = row => db => db.collection("leaderboard").doc(uid).set(row);
