@@ -9,6 +9,7 @@ Roles: `admin`, `coach` (`staff/`), `student` (`users/`), parents (`parentLinks`
 - `npm run release` — runs `build:css` + `bump`.
 - `npm run test:rules` — simulate `firestore.rules` with a JS port (MUST run after any rules edit).
 - `npm run test:rules:emulator` — run the real `firestore.rules` on the emulator, including Firestore's limits (MUST run after any rules edit; needs Java).
+- `npm run test:e2e` — run the real site code on the Auth + Firestore emulators with real accounts in Chrome (run after changing economy, shop, duel or leaderboard code; needs Java and Chrome).
 - `npm run vendor` — download self-hosted `vendor/chess.js` & `vendor/stockfish.js`.
 - Deploy Firestore rules manually via Console or `firebase deploy --only firestore:rules`.
 
