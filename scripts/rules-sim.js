@@ -21,8 +21,10 @@ function makeCtx({ uid, old, neu, before, after, now }) {
       || (puzSame(op,np) && !arenaSame(oa,na) && newAttempt('arena') && arenaStep(oa,na)); };
   const dateNear = p => { if (p.length < 3) return false; const t = Date.UTC(+p[0], +p[1]-1, +p[2]); return now > t - 864e5 && now < t + 2*864e5; };
   const daysOk = () => { const od = get(get(old,'arena',{}),'days',[]), nd = get(get(neu,'arena',{}),'days',[]);
-    return eq(nd, od) || (Array.isArray(nd) && nd.length >= 1 && nd.length <= od.length + 1 && nd.length <= 800
-      && eq(nd.slice(0, nd.length - 1), od.slice(od.length - (nd.length - 1), od.length)) && typeof nd[nd.length-1] === 'string' && dateNear(nd[nd.length-1].split('-'))); };
+    return eq(nd, od) || (Array.isArray(nd) && nd.length >= 1 && nd.length <= 800
+      && ((nd.length === od.length + 1 && eq(nd.slice(0, od.length), od))
+          || (od.length >= 800 && nd.length === 800 && eq(nd.slice(0, 799), od.slice(od.length - 799))))
+      && typeof nd[nd.length-1] === 'string' && /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(nd[nd.length-1]) && dateNear(nd[nd.length-1].split('-'))); };
   const lvl = String(get(old,'level',1));
   const size = m => Object.keys(m).length;
   const examStart = (k, a, b) => (size(a) === 0 || get(a,'status','') === 'retry') && k === lvl

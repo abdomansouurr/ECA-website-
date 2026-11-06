@@ -1,7 +1,7 @@
 // ECA — firebase.js (اتفصل من index.html في eca-v3)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, linkWithPopup, deleteUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { initializeFirestore, writeBatch, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot, serverTimestamp, orderBy, limit, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { initializeFirestore, writeBatch, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocs, getDocsFromServer, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot, serverTimestamp, orderBy, limit, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDofyiWsg2HmOQgigWeqUpOaSupoMQ1GKc",
@@ -86,7 +86,19 @@
         else core[k] = u[k];
       }
       core.role = "student";
-      return { core: plain(core), priv: plain(priv), fin: plain(fin) };
+      return { core: cleanDeep(plain(core)), priv: plain(priv), fin: plain(fin) };
+    }
+    // الطالب بيبعت اللي اتغير بس، عشان حقول الكوتش ماتتبعتش بعد تنضيفها فالقواعد ترفض الحفظ كله.
+    // الاسم والإيميل والنيك نيم بيتبعتوا دايمًا لأن القواعد بتشيّك عليهم، وده بينضّف أي قيمة قديمة فيها حروف ممنوعة.
+    function corePatch(prevJson, core) {
+      let prev;
+      try { prev = JSON.parse(prevJson); } catch (_) { return core; }
+      if (!prev || typeof prev !== "object") return core;
+      const patch = {};
+      for (const k of Object.keys(core)) if (JSON.stringify(core[k]) !== JSON.stringify(prev[k])) patch[k] = core[k];
+      if (!Object.keys(patch).length) return patch;
+      for (const k of ["name", "email", "nickname"]) if (k in core) patch[k] = core[k];
+      return patch;
     }
 
     // يبني db.users من الخرائط المحلية ويعيد الرسم
@@ -133,7 +145,12 @@
           present.add(u.id);
           const p = split(u);
           if (!staff && !loaded.core) continue;
-          push("c:" + u.id, JSON.stringify(p.core), () => staff ? setDoc(doc(firestore, "users", u.id), p.core) : updateDoc(doc(firestore, "users", u.id), p.core));
+          const prevCore = synced["c:" + u.id];
+          push("c:" + u.id, JSON.stringify(p.core), async () => {
+            if (staff) return setDoc(doc(firestore, "users", u.id), p.core);
+            const patch = corePatch(prevCore, p.core);
+            if (Object.keys(patch).length) await updateDoc(doc(firestore, "users", u.id), patch);
+          });
           if (staff && Object.keys(p.priv).length) push("p:" + u.id, JSON.stringify(p.priv), () => setDoc(doc(firestore, "private", u.id), p.priv));
           if (admin && Object.keys(p.fin).length) push("f:" + u.id, JSON.stringify(p.fin), () => setDoc(doc(firestore, "finance", u.id), p.fin));
         }
@@ -185,7 +202,7 @@
       try {
         const b = writeBatch(firestore);
         b.set(doc(firestore, "attempts", id), Object.assign({ uid: me.uid, at: serverTimestamp() }, att));
-        b.update(doc(firestore, "users", me.uid), p.core);
+        b.update(doc(firestore, "users", me.uid), corePatch(prev, p.core));
         await b.commit();
         return { ok: true };
       } catch (e) {
@@ -306,14 +323,16 @@
       const safe = value => String(value || "").replace(BAD, "").slice(0, 400);
       return { type, titleAr: safe(titleAr), titleEn: safe(titleEn), bodyAr: safe(bodyAr), bodyEn: safe(bodyEn), createdAt: serverTimestamp(), read: false };
     }
+    // حد Firebase: 20 قراءة في قواعد الـ batch الواحد، وكل إشعار بيحتاج لحد 3 (staff + users + deleted)
+    const NOTIFY_BATCH = 6;
     async function createAnnouncementNotifications(item) {
       if (!item || !/^[A-Za-z0-9_-]{1,60}$/.test(String(item.id || ""))) return false;
       const text = String(item.text || "").replace(BAD, "").slice(0, 400);
       if (!text) return false;
       const recipients = (db.users || []).filter(u => u.role === "student" && (item.aud === "ALL" || u.group === item.aud));
-      for (let offset = 0; offset < recipients.length; offset += 400) {
+      for (let offset = 0; offset < recipients.length; offset += NOTIFY_BATCH) {
         const batch = writeBatch(firestore);
-        recipients.slice(offset, offset + 400).forEach(u => {
+        recipients.slice(offset, offset + NOTIFY_BATCH).forEach(u => {
           const ref = doc(firestore, "users", u.id, "notifications", "announcement-" + item.id);
           batch.set(ref, notificationData("announcement", "إعلان جديد من الأكاديمية", "New academy announcement", text, text));
         });
@@ -371,9 +390,9 @@
       const titleAr = type === "homework" ? "واجب جديد من الكوتش" : "إعلان من الكوتش";
       const titleEn = type === "homework" ? "New homework from your coach" : "Announcement from your coach";
       try {
-        for (let offset = 0; offset < recipients.length; offset += 400) {
+        for (let offset = 0; offset < recipients.length; offset += NOTIFY_BATCH) {
           const batch = writeBatch(firestore);
-          recipients.slice(offset, offset + 400).forEach(sid => {
+          recipients.slice(offset, offset + NOTIFY_BATCH).forEach(sid => {
             const ref = doc(collection(firestore, "users", sid, "notifications"));
             batch.set(ref, notificationData(type, titleAr, titleEn, body, body));
           });
@@ -528,7 +547,10 @@
         unsubs.push(onSnapshot(collection(firestore, "users"), s => applyColl("core", s), onErr("users")));
         unsubs.push(onSnapshot(collection(firestore, "deleted"), applyDeletedStudents, onErr("deleted students")));
         unsubs.push(onSnapshot(collection(firestore, "private"), s => applyColl("priv", s), onErr("private")));
-        if (me.role === "admin") unsubs.push(onSnapshot(collection(firestore, "finance"), s => applyColl("fin", s), onErr("finance")));
+        if (me.role === "admin") {
+          unsubs.push(onSnapshot(collection(firestore, "finance"), s => applyColl("fin", s), onErr("finance")));
+          setTimeout(purgeExpiredStudents, 20000);
+        }
         unsubs.push(onSnapshot(collection(firestore, "attendance"), applyAtt, onErr("attendance")));
       } else if (me.role === "student") {
         unsubs.push(onSnapshot(doc(firestore, "deleted", me.uid), snap => {
@@ -792,31 +814,22 @@
       } finally { signingUp = false; }
     };
 
-    // تفعيل حساب كوتش/أدمن بكود:
-    // 1) كود الأدمن الثابت (أول مرة بس): متخزّن في Firestore Rules مش في الصفحة، وبعد أول استخدام بيتقفل للأبد (meta/adminBootstrap)
-    // 2) غير كده: كود دعوة عادي من invites (بيستخدم مرة واحدة)
+    // تفعيل حساب كوتش/أدمن بكود دعوة من invites (بيستخدم مرة واحدة)
     async function claimStaff(uid, name, username, code) {
-      try {
-        const b = writeBatch(firestore);
-        b.set(doc(firestore, "staff", uid), { role: "admin", name, username, invite: code });
-        b.set(doc(firestore, "meta", "adminBootstrap"), { uid, at: Date.now() });
-        await b.commit();
-        try { await deleteDoc(doc(firestore, "users", uid)); } catch (_) {}   // لو كان اتسجّل طالب بالغلط قبل كده
-        return "admin";
-      } catch (_) { /* مش كود الأدمن الثابت → نجرب كود دعوة أدمن */ }
       try {
         // كود دعوة أدمن (invites/{code}.role == "admin") — الـ Rules بترفضه لو الكود ده كود كوتش
         const b = writeBatch(firestore);
         b.update(doc(firestore, "invites", code), { used: true, usedBy: uid });
         b.set(doc(firestore, "staff", uid), { role: "admin", name, username, invite: code });
         await b.commit();
-        try { await deleteDoc(doc(firestore, "users", uid)); } catch (_) {}
+        try { await deleteDoc(doc(firestore, "users", uid)); } catch (_) {}   // لو كان اتسجّل طالب قبل كده
         return "admin";
       } catch (_) { /* مش كود أدمن → نجرب كود دعوة كوتش */ }
       const batch = writeBatch(firestore);
       batch.update(doc(firestore, "invites", code), { used: true, usedBy: uid });
       batch.set(doc(firestore, "staff", uid), { role: "coach", name, username, invite: code });
       await batch.commit();
+      try { await deleteDoc(doc(firestore, "users", uid)); } catch (_) {}     // لو كان اتسجّل طالب قبل كده
       return "coach";
     }
 
@@ -981,7 +994,7 @@
       if (!me || !isStaffRole(me.role)) return { ok: false, rows: [] };
       try {
         const q = await getDocs(query(collection(firestore, "placementTests"), orderBy("createdAt", "desc"), limit(500)));
-        return { ok: true, rows: q.docs.map(d => Object.assign({ id: d.id }, d.data())) };
+        return { ok: true, rows: q.docs.map(d => Object.assign({ id: d.id }, cleanDeep(d.data()))) };
       } catch (e) { console.error(e); return { ok: false, rows: [] }; }
     };
     window.fbPtUpdate = async (id, patch) => {
@@ -1045,7 +1058,7 @@
       if (!me || me.role !== "admin") return { ok: false, rows: [] };
       try {
         const snap = await getDocs(collection(firestore, "deleted"));
-        return { ok: true, rows: snap.docs.map(d => {
+        return { ok: true, rows: snap.docs.filter(d => !(d.data() || {}).purgedAt).map(d => {
           const data = d.data() || {};
           const millis = v => v && typeof v.toMillis === "function" ? v.toMillis() : (Number(v) || 0);
           return { id: d.id, name: String(data.name || "طالب"), deletedAt: millis(data.deletedAt || data.at), expiresAt: millis(data.expiresAt) };
@@ -1076,6 +1089,47 @@
         return { ok: false, code: e && e.code };
       }
     };
+
+    // المسح النهائي بعد مهلة الـ 30 يوم. أول قراءة من السيرفر هي البوابة: القواعد بترفضها لو المهلة لسه ما خلصتش،
+    // فساعة جهاز غلط مش ممكن تمسح طالب بدري. لو حصل فشل في النص، بنكمّل في دخول الأدمن الجاي.
+    async function purgeStudentData(uid) {
+      const economy = await getDocsFromServer(collection(firestore, "users", uid, "economy"));
+      const [notes, attempts, links, profile, priv] = await Promise.all([
+        getDocs(collection(firestore, "users", uid, "notifications")),
+        getDocs(query(collection(firestore, "attempts"), where("uid", "==", uid))),
+        getDocs(query(collection(firestore, "parentLinks"), where("sid", "==", uid))),
+        getDoc(doc(firestore, "users", uid)),
+        getDoc(doc(firestore, "private", uid))
+      ]);
+      const refs = [...economy.docs, ...notes.docs, ...attempts.docs, ...links.docs].map(d => d.ref);
+      refs.push(doc(firestore, "private", uid), doc(firestore, "finance", uid));
+      const parentCode = priv.exists() ? priv.data().parentCode : "";
+      if (typeof parentCode === "string" && /^[A-Z0-9]{8,16}$/.test(parentCode)) refs.push(doc(firestore, "parentCodes", parentCode));
+      const data = profile.exists() ? profile.data() : {};
+      if (/^[0-9]{8,15}$/.test(String(data.phone || ""))) {
+        const test = await getDoc(doc(firestore, "placementTests", data.phone));
+        if (test.exists() && test.data().parentPhone === data.parentPhone) refs.push(test.ref);
+      }
+      // كل مسح بيحتاج لحد 4 قراءات في القواعد، والحد 20 للـ batch
+      for (let i = 0; i < refs.length; i += 5) {
+        const batch = writeBatch(firestore);
+        refs.slice(i, i + 5).forEach(ref => batch.delete(ref));
+        await batch.commit();
+      }
+      await deleteDoc(doc(firestore, "users", uid));
+      await updateDoc(doc(firestore, "deleted", uid), { name: "", purgedAt: serverTimestamp() });
+    }
+    async function purgeExpiredStudents() {
+      if (!me || me.role !== "admin" || !navigator.onLine) return;
+      try {
+        const snap = await getDocsFromServer(query(collection(firestore, "deleted"), where("expiresAt", "<", new Date())));
+        for (const d of snap.docs) {
+          if ((d.data() || {}).purgedAt) continue;
+          try { await purgeStudentData(d.id); }
+          catch (e) { console.error("Student purge failed:", d.id, e && e.code); }
+        }
+      } catch (e) { console.error("Expired students lookup failed:", e && e.code); }
+    }
 
     window.fbChangePassword = async (oldP, newP) => {
       try {

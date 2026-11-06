@@ -318,7 +318,7 @@
       PTR.loading = false; render();
     }
     const ptFinal = r => Number(r.level) || Number(r.suggested) || 0;
-    const ptLevelLabel = level => ptL("المستوى", "Level") + " " + level;
+    const ptLevelLabel = level => ptL("المستوى", "Level") + " " + (Number(level) || 0);
     function ptMatch(r, q) {
       q = String(q || "").trim().toLowerCase(); if (!q) return true;
       const d = ptPhoneKey(q);
@@ -348,11 +348,11 @@
         </div>
         ${dup.length ? `<div class="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg p-2">⚠️ ${dup.join(" • ")}</div>` : ""}
         <div class="text-xs text-gray-300 flex flex-wrap gap-x-4 gap-y-1"><span>${ptL("التقييم:", "Rating:")} ${esc(r.rating) || "—"}</span><span>${r.link ? `<a href="${esc(r.link)}" target="_blank" rel="noopener" class="text-yellow-300 underline">${ptL("حساب الشطرنج", "Chess profile")}</a>` : ptL("بدون لينك", "No profile link")}</span><span>${esc(ptDate(r.createdAt))}</span></div>
-        ${done ? `<div class="flex flex-wrap items-center gap-2 text-sm"><span class="text-gray-300">${ptL("النتيجة:", "Score:")} <b class="text-white">${r.score}%</b> (${r.correct}/${r.total})</span><span class="text-gray-300">${ptL("المقترح:", "Suggested:")} <b class="text-yellow-300">${ptLevelLabel(r.suggested)}</b></span>
-          <span class="text-gray-300">${ptL("المعتمد:", "Approved:")}</span><select onchange="ptSetLevel('${r.id}', this.value)" class="pt-in" style="width:auto;height:34px">${opts}</select><span class="text-[11px] text-gray-400">(${by})</span>
-          ${Number(r.level) ? "" : `<button onclick="ptSetLevel('${r.id}', ${r.suggested})" class="px-3 py-1.5 rounded-lg text-xs gold-btn">${ptL("اعتماد المقترح", "Approve suggestion")}</button>`}</div>` : ""}
+        ${done ? `<div class="flex flex-wrap items-center gap-2 text-sm"><span class="text-gray-300">${ptL("النتيجة:", "Score:")} <b class="text-white">${Number(r.score) || 0}%</b> (${Number(r.correct) || 0}/${Number(r.total) || 0})</span><span class="text-gray-300">${ptL("المقترح:", "Suggested:")} <b class="text-yellow-300">${ptLevelLabel(r.suggested)}</b></span>
+          <span class="text-gray-300">${ptL("المعتمد:", "Approved:")}</span><select onchange="ptSetLevel('${esc(r.id)}', this.value)" class="pt-in" style="width:auto;height:34px">${opts}</select><span class="text-[11px] text-gray-400">(${by})</span>
+          ${Number(r.level) ? "" : `<button onclick="ptSetLevel('${esc(r.id)}', ${Number(r.suggested) || 0})" class="px-3 py-1.5 rounded-lg text-xs gold-btn">${ptL("اعتماد المقترح", "Approve suggestion")}</button>`}</div>` : ""}
         ${done ? ptDetBlock(r) : ""}
-        <div class="flex justify-end"><button onclick="ptReopen('${r.id}')" class="px-3 py-1.5 rounded-lg text-xs bg-red-500/15 border border-red-500/30 text-red-300">${ptL("إعادة فتح الاختبار للطالب", "Reopen test for student")}</button></div>
+        <div class="flex justify-end"><button onclick="ptReopen('${esc(r.id)}')" class="px-3 py-1.5 rounded-lg text-xs bg-red-500/15 border border-red-500/30 text-red-300">${ptL("إعادة فتح الاختبار للطالب", "Reopen test for student")}</button></div>
       </div>`;
     }
 
@@ -420,7 +420,7 @@
       const ans = r.answers || {}, total = Number(r.total) || 20; let wrong = 0;
       for (let k = 0; k < total; k++) if (!(ans[k] && ans[k].ok)) wrong++;
       const open = !!PTR.open[r.id];
-      return `<div><button onclick="ptToggleDet('${r.id}')" class="px-3 py-1.5 rounded-lg text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">${ptL(open ? "إخفاء" : "عرض", open ? "Hide" : "Show")} ${ptL("تفاصيل الأخطاء", "answer details")} (${wrong} ${ptL("من", "of")} ${total})</button></div>${open ? ptDetHtml(r) : ""}`;
+      return `<div><button onclick="ptToggleDet('${esc(r.id)}')" class="px-3 py-1.5 rounded-lg text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">${ptL(open ? "إخفاء" : "عرض", open ? "Hide" : "Show")} ${ptL("تفاصيل الأخطاء", "answer details")} (${wrong} ${ptL("من", "of")} ${total})</button></div>${open ? ptDetHtml(r) : ""}`;
     }
     function ptDetHtml(r) {
       const d = PTR.det[r.id];

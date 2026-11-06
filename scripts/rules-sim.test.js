@@ -27,6 +27,11 @@ function T(name, expect, args) { const r = makeCtx(Object.assign({ uid, now, bef
 { const neu = C(base); neu.arena.games = { w: 1, l: 0, d: 0 }; neu.arena.days.push(today); T('game result + today', true, { old: base, neu }); }
 { const neu = C(base); neu.arena.days = ['2026-01-01','2026-01-02','2026-01-03', today]; T('days history rewritten', false, { old: base, neu }); }
 { const neu = C(base); neu.arena.days.push('2027-05-05'); T('future day appended', false, { old: base, neu }); }
+{ const neu = C(base); neu.arena.days = [today]; T('days history wiped down to today', false, { old: base, neu }); }
+{ const neu = C(base); neu.arena.days = ['2026-10-21', today]; T('oldest day dropped before the 800 cap', false, { old: base, neu }); }
+{ const neu = C(base); neu.arena.days.push(today + '-x'); T('malformed day appended', false, { old: base, neu }); }
+{ const old = C(base); old.arena.days = Array.from({ length: 800 }, (_, i) => 'd' + i); const neu = C(old); neu.arena.days.shift(); neu.arena.days.push(today);
+  T('oldest day rolls off at the 800 cap', true, { old, neu }); }
 { const neu = C(base); neu.att = { '1-0': true }; T('student marks own attendance', false, { old: base, neu }); }
 // 5) exam start → pass
 const exId = `${uid}_exam_1-1`;

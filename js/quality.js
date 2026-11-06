@@ -93,7 +93,7 @@
       const rows = result.rows.sort((a, b) => b.deletedAt - a.deletedAt);
       modal.innerHTML = `<div class="gold-card rounded-2xl max-w-xl w-full p-5 max-h-[90vh] overflow-y-auto space-y-3">
         <div class="flex items-center justify-between gap-2"><h3 class="font-bold text-lg text-yellow-400">${LQ("الطلاب المحذوفون", "Deleted students")}</h3><button onclick="document.getElementById('deletedStudentsModal').remove()" aria-label="${LQ("إغلاق", "Close")}" class="tap px-3 py-2 rounded-xl bg-zinc-900 text-gray-300">✕</button></div>
-        <p class="text-xs text-gray-400">${LQ("يمكن استعادة الطالب خلال 30 يومًا من الحذف.", "Students can be restored within 30 days of deletion.")}</p>
+        <p class="text-xs text-gray-400">${LQ("يمكن استعادة الطالب خلال 30 يومًا من الحذف، وبعدها تُمسح بياناته نهائيًا.", "Students can be restored within 30 days of deletion. After that, their data is permanently erased.")}</p>
         ${rows.length ? rows.map(s => {
           const remaining = s.expiresAt - Date.now();
           const canRestore = remaining > 0 && s.expiresAt > 0;
