@@ -1,5 +1,5 @@
 // ECA service worker — offline support. Bump VERSION to force clients to refresh the cache.
-const VERSION = "eca-v65";
+const VERSION = "eca-v66";
 const SHELL = [
   "./", "./index.html", "./manifest.json",
   "./favicon.ico", "./img/favicon.png", "./apple-touch-icon.png",   // لوجو الأكاديمية على التاب والأيفون — أوفلاين برضه
@@ -9,9 +9,9 @@ const SHELL = [
   "./img/pieces/lichess/bK.svg", "./img/pieces/lichess/bQ.svg", "./img/pieces/lichess/bR.svg", "./img/pieces/lichess/bB.svg", "./img/pieces/lichess/bN.svg", "./img/pieces/lichess/bP.svg",
   "./vendor/chess.js", "./vendor/stockfish.js",
   // ملفات الكود (لازم نفس ?v= اللي في index.html)
-  "./tailwind.css?v=eca-v65",
-  "./js/core.js?v=eca-v65", "./js/arena.js?v=eca-v65", "./js/extras.js?v=eca-v65", "./js/streaks.js?v=eca-v65", "./js/review.js?v=eca-v65", "./js/quality.js?v=eca-v65", "./js/announce.js?v=eca-v65", "./js/progress.js?v=eca-v65", "./js/arena2.js?v=eca-v65", "./js/ux.js?v=eca-v65", "./js/annotate.js?v=eca-v65", "./js/gamify.js?v=eca-v65", "./js/adventure.js?v=eca-v65", "./js/duel.js?v=eca-v65", "./js/firebase.js?v=eca-v65", "./js/finance.js?v=eca-v65", "./js/homework.js?v=eca-v65", "./js/today.js?v=eca-v65", "./js/reports.js?v=eca-v65", "./js/tournaments.js?v=eca-v65", "./js/placement-data.js?v=eca-v65", "./js/placement.js?v=eca-v65",
-  "./puzzles.js?v=eca-v65"   // عشان الامتحان يشتغل أوفلاين
+  "./tailwind.css?v=eca-v66",
+  "./js/core.js?v=eca-v66", "./js/arena.js?v=eca-v66", "./js/extras.js?v=eca-v66", "./js/streaks.js?v=eca-v66", "./js/review.js?v=eca-v66", "./js/quality.js?v=eca-v66", "./js/announce.js?v=eca-v66", "./js/progress.js?v=eca-v66", "./js/arena2.js?v=eca-v66", "./js/ux.js?v=eca-v66", "./js/annotate.js?v=eca-v66", "./js/gamify.js?v=eca-v66", "./js/adventure.js?v=eca-v66", "./js/duel.js?v=eca-v66", "./js/firebase.js?v=eca-v66", "./js/finance.js?v=eca-v66", "./js/homework.js?v=eca-v66", "./js/today.js?v=eca-v66", "./js/reports.js?v=eca-v66", "./js/tournaments.js?v=eca-v66", "./js/placement-data.js?v=eca-v66", "./js/placement.js?v=eca-v66",
+  "./puzzles.js?v=eca-v66"   // عشان الامتحان يشتغل أوفلاين
 ];
 const CDN = [
   "https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap"
