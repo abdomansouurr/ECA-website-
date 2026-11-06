@@ -104,6 +104,33 @@ async function runSuite(label, rules, quiet) {
   await T("three quests on the same day", true, fresh, async db => { await quest(db, "daily", 1); await quest(db, "puzzles", 2); await quest(db, "win", 2); });
   await T("quest counters saved with an arena attempt", true, legacy, db => attempt(db, "arena", "QuEsT1", true, u => ({ arena: Object.assign({}, u.arena, { puzTried: u.arena.puzTried + 1, puzSolved: u.arena.puzSolved + 1, puzStreak: u.arena.puzStreak + 1, puzBestStreak: Math.max(u.arena.puzBestStreak, u.arena.puzStreak + 1), qd: today, qp: 1, qw: 0, days: dayPush(u) }) })));
   await T("quest win counter saved with a game result", true, legacy, db => patch(db, { arena: Object.assign({}, legacy.arena, { games: { w: 2, l: 2, d: 0 }, qd: today, qp: 0, qw: 1, days: [...legacy.arena.days, today] }) }));
+  // Puzzle Rush: stars follow the score, once a day
+  const rush = (db, score, stars) => econ(db, { kind: "earn", source: "rush", key: today, score, starsDelta: stars, xpDelta: stars * 20, id: "rush-" + today });
+  await T("rush score 3", true, fresh, db => rush(db, 3, 1));
+  await T("rush score 15 on a legacy account", true, legacy, db => rush(db, 15, 5));
+  await T("rush score 40 stays at 5 stars", true, fresh, db => rush(db, 40, 5));
+  await T("rush forged stars", false, fresh, db => rush(db, 3, 5));
+  await T("rush score under 3", false, fresh, db => rush(db, 2, 1));
+  await T("rush twice a day", false, fresh, async db => { await rush(db, 6, 2); await rush(db, 6, 2); });
+  // Streak Freeze: bought with stars, used on a recent missed day
+  const dayBack = n => { const x = new Date(Date.parse(today + "T12:00:00Z") - n * 864e5); return x.toISOString().slice(0, 10); };
+  const buyFreeze = (db, price = 30) => buy(db, "streak-freeze", s => { s.freezes = (s.freezes || 0) + 1; return s; }, price);
+  const useFreeze = (db, key, change) => econ(db, { kind: "spend-freeze", key, starsDelta: 0, xpDelta: 0, id: "freeze-" + key }, change || (s => { s.freezes = s.freezes - 1; s.frozen = [...(s.frozen || []), key]; return s; }));
+  const withFreeze = n => Object.assign({}, rich, { shop: { titles: [], bots: [], hints: 0, activeTitle: "", freezes: n, frozen: [] } });
+  await T("buy streak freeze", true, rich, db => buyFreeze(db));
+  await T("buy streak freeze at a forged price", false, rich, db => buyFreeze(db, 1));
+  await T("hold a third streak freeze", false, withFreeze(2), db => buyFreeze(db));
+  await T("use freeze for yesterday", true, withFreeze(1), db => useFreeze(db, dayBack(1)));
+  await T("use freeze for two days ago", true, withFreeze(2), db => useFreeze(db, dayBack(2)));
+  await T("use freeze with none left", false, withFreeze(0), db => useFreeze(db, dayBack(1)));
+  await T("use freeze on today", false, withFreeze(1), db => useFreeze(db, today));
+  await T("use freeze on an old day", false, withFreeze(1), db => useFreeze(db, dayBack(9)));
+  await T("use freeze twice on one day", false, withFreeze(2), async db => { await useFreeze(db, dayBack(1)); await useFreeze(db, dayBack(1)); });
+  await T("use freeze without paying for it", false, withFreeze(1), db => useFreeze(db, dayBack(1), s => { s.frozen = [dayBack(1)]; return s; }));
+  await T("frozen days written with no receipt", false, withFreeze(1), db => patch(db, { shop: { titles: [], bots: [], hints: 0, activeTitle: "", freezes: 1, frozen: [dayBack(1)] } }));
+  await T("freezes added with no receipt", false, rich, db => patch(db, { shop: { titles: [], bots: [], hints: 2, activeTitle: "", freezes: 2 } }));
+  await T("reward adds a freeze for free", false, withFreeze(0), db => econ(db, { kind: "earn", source: "lesson", key: "1-0", starsDelta: 1, xpDelta: 20, id: "lesson-1-0" }, s => { s.freezes = 2; return s; }));
+  await T("hint purchase adds frozen days", false, withFreeze(1), db => buy(db, "hint", s => { s.hints++; s.frozen = [dayBack(1)]; return s; }));
   // daily login reward: decided by the date, once a day
   const dom = Number(today.slice(8)), loginStars = dom % 7 === 0 ? 3 : dom % 3 === 0 ? 2 : 1;
   const login = (db, stars = loginStars, day = today) => econ(db, { kind: "earn", source: "login", key: day, starsDelta: stars, xpDelta: stars * 20, id: "login-" + day });

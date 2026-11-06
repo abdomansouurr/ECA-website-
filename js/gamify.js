@@ -57,6 +57,7 @@ function ecaHudBuild(el) {
     </div>
     <span class="eca-hud-stat" id="ecaHudStars"></span>
     <span class="eca-hud-stat" id="ecaHudStreak"></span>
+    <span class="eca-hud-stat" id="ecaHudFreeze" hidden></span>
     <button type="button" class="eca-hud-sound" id="ecaHudSound" onclick="ecaToggleSfx()"></button>
   </div>`;
 }
@@ -100,7 +101,11 @@ function ecaHudUpdate() {
   const track = document.getElementById("ecaHudTrack");
   track.setAttribute("aria-valuenow", String(p.percent));
   track.setAttribute("aria-label", en ? "Progress to the next rank" : "التقدم للرتبة الجاية");
-  const stars = Number(a.stars) || 0, streak = streaks(a.days).current;
+  const stars = Number(a.stars) || 0, streak = ecaStreak(u).current, freezes = Number((u.shop || {}).freezes) || 0;
+  const freezeEl = document.getElementById("ecaHudFreeze");
+  freezeEl.hidden = !freezes;
+  freezeEl.textContent = "🧊 " + freezes;
+  freezeEl.title = en ? "Streak Freezes" : "حماية السلسلة";
   const starsEl = document.getElementById("ecaHudStars"), streakEl = document.getElementById("ecaHudStreak");
   starsEl.textContent = "⭐ " + stars;
   starsEl.title = en ? "Your stars" : "نجومك";
@@ -178,6 +183,120 @@ function ecaQuestsCardHTML(u) {
 {
   const _sh = renderStudentHome;
   renderStudentHome = function (s) { return `<div class="space-y-6">${ecaQuestsCardHTML(s)}${_sh(s)}</div>`; };
+}
+
+// ================= تحدي 60 ثانية (Puzzle Rush) =================
+// الألغاز من البنك المحلي وبتصعب مع النتيجة. النتيجة بتتحسب هنا بس، وجائزتها مرة في اليوم
+const RUSH_SECONDS = 60, RUSH_TIERS = ["easiest", "easier", "normal", "harder", "hardest"];
+arena.rush = { status: "idle", game: null, sol: [], idx: 0, color: "w", flip: false, sel: null, last: null, flash: null, score: 0, combo: 0, mistakes: 0, endsAt: 0, timer: null, seen: new Set() };
+function rushStop() { const R = arena.rush; clearInterval(R.timer); R.timer = null; }
+function rushNext() {
+  const R = arena.rush, bank = window.ECA_PUZZLE_BANK, tier = RUSH_TIERS[Math.min(RUSH_TIERS.length - 1, Math.floor(R.score / 5))];
+  const pool = bank[tier] || [], fresh = pool.filter(row => !R.seen.has(row)), list = fresh.length ? fresh : pool;
+  const row = list[Math.floor(Math.random() * list.length)];
+  R.seen.add(row);
+  const parts = row.split("|"), moves = parts[2].split(" "), g = new ChessCls(parts[1]), first = uciMove(g, moves[0]);
+  Object.assign(R, { game: g, sol: moves.slice(1), idx: 0, color: g.turn(), flip: g.turn() === "b", sel: null, last: [first.from, first.to], flash: null });
+}
+async function rushStart() {
+  const R = arena.rush;
+  if (!ChessCls || R.status === "loading") return;
+  R.status = "loading"; arenaRefresh();
+  try { await loadPuzzleBank(); }
+  catch (e) { console.warn("Puzzle bank failed:", e); R.status = "idle"; toast(lang === "en" ? "Could not load the puzzles. Try again." : "تعذّر تحميل الألغاز. حاول مرة أخرى."); return arenaRefresh(); }
+  rushStop();
+  Object.assign(R, { status: "play", score: 0, combo: 0, mistakes: 0, endsAt: Date.now() + RUSH_SECONDS * 1000, seen: new Set() });
+  rushNext();
+  R.timer = setInterval(() => {
+    const left = Math.max(0, Math.ceil((R.endsAt - Date.now()) / 1000)), el = document.getElementById("rushLeft");
+    if (el) el.textContent = left;
+    if (left <= 0) rushEnd();
+  }, 200);
+  arenaRefresh();
+  const card = document.getElementById("rushCard");
+  if (card) card.scrollIntoView({ block: "start" });
+}
+window.rushStart = rushStart;
+async function rushEnd() {
+  const R = arena.rush;
+  if (R.status !== "play") return;
+  rushStop();
+  R.status = "done"; R.game = null; R.sel = null;
+  const score = R.score;
+  arenaRefresh();
+  await recordArena(a => { if (score > (a.rushBest || 0)) a.rushBest = score; });
+  if (score >= 3 && window.ecaAwardStudentActivity) await window.ecaAwardStudentActivity("rush", todayISO(), score);
+  arenaRefresh();
+}
+function rushClick(sq) {
+  const R = arena.rush, g = R.game;
+  if (R.status !== "play" || !g || Date.now() >= R.endsAt) return;
+  const mv = pickOrMove(R, sq, R.color);
+  if (!mv) return arenaRefresh();
+  if (mv.promotion && promoNeeded(R, mv.from, mv.to)) return promoShow(R, mv.from, mv.to, pc => rushPlay(Object.assign(mv, { promotion: pc })));
+  rushPlay(mv);
+}
+window.rushClick = rushClick;
+function rushPlay(mv) {
+  const R = arena.rush, g = R.game;
+  let r = null;
+  try { r = g.move(mv); } catch (_) {}
+  if (!r) return arenaRefresh();
+  R.last = [r.from, r.to];
+  const ok = r.from + r.to + (r.promotion || "") === (R.sol[R.idx] || "") || g.isCheckmate();
+  if (!ok) {
+    R.combo = 0; R.mistakes++; R.flash = { [r.to]: "bad" }; R.status = "wrong";
+    arenaRefresh();
+    setTimeout(() => { if (R.status === "wrong" && R.game === g) { R.status = "play"; rushNext(); arenaRefresh(); } }, 450);
+    return;
+  }
+  R.idx++;
+  if (R.idx < R.sol.length && !g.isCheckmate()) {
+    const reply = uciMove(g, R.sol[R.idx]);
+    R.idx++;
+    if (reply) R.last = [reply.from, reply.to];
+    R.flash = { [r.to]: "good" };
+    if (R.idx < R.sol.length) return arenaRefresh();
+  }
+  R.score++; R.combo++;
+  if (R.combo >= 2) ecaSfx("combo", R.combo); else ecaSfx("ting");
+  rushNext();
+  arenaRefresh();
+}
+// الخروج من التحدي بيلغيه من غير نتيجة
+{
+  const _r = render;
+  render = function () {
+    const R = arena.rush;
+    if ((R.status === "play" || R.status === "wrong") && !(tab === "arena" && arena.sub === "rush")) { rushStop(); R.status = "idle"; R.game = null; }
+    return _r.apply(this, arguments);
+  };
+}
+function arenaRushHTML() {
+  const R = arena.rush, u = currUser(), en = lang === "en", best = (u && u.role === "student" && u.arena && u.arena.rushBest) || 0, active = R.status === "play" || R.status === "wrong";
+  const left = active ? Math.max(0, Math.ceil((R.endsAt - Date.now()) / 1000)) : RUSH_SECONDS;
+  const stat = (id, value, label, cls) => `<div class="p-2 rounded-xl bg-black/40 border border-yellow-500/20 text-center"><div ${id ? `id="${id}"` : ""} class="text-2xl font-extrabold ${cls}" dir="ltr">${value}</div><div class="text-xs text-gray-400">${label}</div></div>`;
+  const stars = Math.min(5, Math.floor(R.score / 3));
+  const panel = active ? "" : `<div class="space-y-3 text-center">
+    ${R.status === "done" ? `<p class="text-lg font-bold text-yellow-300">${en ? "Your score" : "نتيجتك"}: ${R.score}</p><p class="text-sm text-gray-300">${stars ? (en ? `Worth ${stars} stars, once a day` : `تستاهل ${stars} نجوم، مرة في اليوم`) : (en ? "Solve 3 or more to earn stars" : "حل 3 ألغاز أو أكتر عشان تكسب نجوم")}</p>` : `<p class="text-sm text-gray-300">${en ? "Solve as many puzzles as you can in 60 seconds. They get harder as you go, and every 3 solved earns a star (up to 5)." : "حل أكبر عدد من الألغاز في 60 ثانية. الألغاز بتصعب مع الوقت، وكل 3 ألغاز بنجمة (لحد 5 نجوم)."}</p>`}
+    <button type="button" onclick="rushStart()" ${R.status === "loading" ? "disabled" : ""} class="tap w-full rounded-xl text-sm gold-btn">${R.status === "loading" ? (en ? "Loading…" : "جاري التحميل…") : R.status === "done" ? (en ? "Play again" : "العب تاني") : (en ? "Start" : "ابدأ")}</button>
+  </div>`;
+  const stats = `<div class="grid grid-cols-3 gap-2">
+    ${stat("rushLeft", left, en ? "Seconds" : "ثانية", "text-sky-400")}
+    ${stat("", R.score, en ? "Score" : "النتيجة", "text-emerald-300")}
+    ${stat("", best, en ? "Best" : "أحسن نتيجة", "text-yellow-300")}
+  </div>`;
+  // أثناء اللعب العداد فوق الرقعة، عشان يفضل باين على الموبايل من غير سكرول
+  if (active) return `<div id="rushCard" class="gold-card rounded-2xl p-3 sm:p-5 space-y-3 max-w-xl w-full mx-auto" style="scroll-margin-top:124px">
+    ${stats}
+    ${boardHTML({ game: R.game, flip: R.flip, sel: R.sel, targets: targetsOf(R.game, R.sel), last: R.last, flash: R.flash, onClick: "rushClick" })}
+    <p class="text-center text-sm text-gray-300">${R.color === "w" ? (en ? "White to move" : "الدور على الأبيض") : (en ? "Black to move" : "الدور على الأسود")}${R.combo >= 2 ? ` • <b class="text-yellow-300">🔥 ${en ? "Combo" : "كومبو"} x${R.combo}</b>` : ""}</p>
+  </div>`;
+  return `<div class="gold-card rounded-2xl p-5 space-y-4 max-w-xl w-full mx-auto">
+    <h3 class="font-display font-bold text-lg text-yellow-300">⚡ ${en ? "Puzzle Rush" : "تحدي 60 ثانية"}</h3>
+    ${stats}
+    ${panel}
+  </div>`;
 }
 
 // ================= ربط الأصوات باللحظات المهمة =================

@@ -289,15 +289,17 @@
       }));
       return { cur, next };
     }
-    function streaks(days) {
-      const ds = Array.from(new Set(days || [])).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+    // frozen = الأيام اللي اتحمت بـ Streak Freeze: بتتحسب في السلسلة كأنها أيام تمرين
+    function ecaStreak(user) { return streaks((user && user.arena || {}).days, (user && user.shop || {}).frozen); }
+    function streaks(days, frozen) {
+      const ds = Array.from(new Set([...(days || []), ...(frozen || [])])).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
       let best = 0, run = 0, prev = null;
       ds.forEach(d => { const t = Date.parse(d + "T12:00:00Z"); run = prev !== null && t - prev === 864e5 ? run + 1 : 1; best = Math.max(best, run); prev = t; });
       const last = ds.length ? Date.parse(ds[ds.length - 1] + "T12:00:00Z") : 0, today = Date.parse(todayISO() + "T12:00:00Z");
       return { best, current: last && today - last <= 864e5 ? run : 0 };
     }
     function badgeList(s) {
-      const a = s.arena || {}, g = a.games || {}, st = streaks(a.days), bs = a.puzBestStreak || 0;
+      const a = s.arena || {}, g = a.games || {}, st = ecaStreak(s), bs = a.puzBestStreak || 0;
       return [
         { cat: "أيام التمرين ورا بعض", items: [
           ["يومين", "اتمرّن يومين ورا بعض", "2-days.png", st.best >= 2], ["5 أيام", "اتمرّن 5 أيام ورا بعض", "5-days.png", st.best >= 5],
@@ -373,7 +375,7 @@
               </div>`).join("")}
             </div>
           </div>`).join("")}
-          ${isStu ? `<p class="text-[11px] text-gray-500">أيام تمرين ورا بعض دلوقتي: ${streaks((u.arena || {}).days).current} • أطول سلسلة: ${streaks((u.arena || {}).days).best}</p>` : ''}
+          ${isStu ? `<p class="text-[11px] text-gray-500">أيام تمرين ورا بعض دلوقتي: ${ecaStreak(u).current} • أطول سلسلة: ${ecaStreak(u).best}</p>` : ''}
         </div>`;
       return `
         <div class="space-y-5">
@@ -885,7 +887,7 @@
     function computeHonor() {
       const studs = db.users.filter(s => s.role === "student");
       const row = (s, v, streak) => {
-        const a = s.arena || {}, games = a.games || {}, days = streaks(a.days), rank = rankOf(calcXP(s).total);
+        const a = s.arena || {}, games = a.games || {}, days = ecaStreak(s), rank = rankOf(calcXP(s).total);
         return {
           id: s.id, n: window.ecaStudentAlias ? window.ecaStudentAlias(s) : "ECA Student", s: Number(s.level) || 1, v, st: streak || 0,
           rank: rank.cur ? rank.cur.label : "لسه بدون رتبة",
@@ -902,7 +904,7 @@
         aliasVersion: 1,
         puzzles: top(studs.map(s => { const a = s.arena || {}; return row(s, (a.puzSolved || 0) + ((s.puz && s.puz.c) || 0), a.puzBestStreak); })),
         games: top(studs.map(s => { const a = s.arena || {}; return row(s, ((a.games && a.games.w) || 0) + (a.pawnWins || 0), a.bestWinStreak); })),
-        days: top(studs.map(s => { const a = s.arena || {}; const st = streaks(a.days); return row(s, st.best, st.current); }))
+        days: top(studs.map(s => { const st = ecaStreak(s); return row(s, st.best, st.current); }))
       };
     }
     function safeHonorData(data) {
@@ -1054,7 +1056,7 @@
     // ================= داشبورد ولي الأمر (جوه حساب الطالب، من غير كود) =================
     function renderStudentParentView(u) {
       const s = calcStats(u), a = u.arena || {}, gm = a.games || { w: 0, l: 0, d: 0 };
-      const xp = calcXP(u), rk = rankOf(xp.total), st = streaks(a.days);
+      const xp = calcXP(u), rk = rankOf(xp.total), st = ecaStreak(u);
       const earned = badgeList(u).reduce((n, c) => n + c.items.filter(b => b[3]).length, 0), allBadges = badgeList(u).reduce((n, c) => n + c.items.length, 0);
       const certs = u.certificates || [], exams = u.examState || {};
       const cnt = (o, step) => Object.keys(o || {}).filter(k => o[k] && k.split("-")[0] === String(step)).length;

@@ -367,6 +367,7 @@
       { id: "title-knight", type: "title", title: "بطل الحصان", en: "Knight Champion", cost: 120 },
       { id: "title-master", type: "title", title: "بطل الشطرنج", en: "Chess Champion", cost: 250 },
       { id: "hint", type: "hint", title: "تلميح واجب إضافي", en: "Extra homework hint", cost: 20 },
+      { id: "streak-freeze", type: "freeze", title: "🧊 حماية السلسلة (بتحفظ سلسلتك لو غبت يوم)", en: "🧊 Streak Freeze (saves your streak if you miss a day)", cost: 30 },
       ...[1, 2, 3, 4, 5, 6, 7].map((level, index) => ({
         id: "bot-" + level, type: "bot", title: "فتح البوت " + (level + 1), en: "Unlock bot " + (level + 1), cost: [20, 40, 70, 100, 150, 220, 300][index]
       }))
@@ -379,6 +380,8 @@
       window.fbEconomy({ op: "purchase", item: item.id }).then(result => {
         if (!result.ok) return toast(result.code === "insufficient-stars"
           ? (lang === "en" ? "You need more stars" : "تحتاج نجومًا أكثر")
+          : result.code === "freeze-limit"
+            ? (lang === "en" ? "You can hold 2 Streak Freezes at most" : "أقصى عدد من حماية السلسلة هو 2")
           : result.code === "already-owned"
             ? (lang === "en" ? "You already own this item" : "هذا العنصر لديك بالفعل")
             : (lang === "en" ? "Purchase could not be completed. Try again." : "تعذّر إتمام الشراء. حاول مرة أخرى."));
@@ -399,7 +402,7 @@
     window.setStudentTitle = setStudentTitle;
     function studentShopCard(user) {
       const a = user.arena || {}, shop = user.shop || {}, stars = Number(a.stars) || 0;
-      const ownedTitles = shop.titles || [], ownedBots = shop.bots || [], hints = Number(shop.hints) || 0;
+      const ownedTitles = shop.titles || [], ownedBots = shop.bots || [], hints = Number(shop.hints) || 0, freezes = Number(shop.freezes) || 0;
       const itemCard = item => {
         const owned = item.type === "title" ? ownedTitles.includes(item.id)
           : item.type === "bot" ? ownedBots.includes(Number(item.id.slice(4)))
@@ -407,8 +410,8 @@
         const label = lang === "en" ? item.en : item.title;
         return `<div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-black/30 border border-yellow-500/15">
           <div class="min-w-0"><div class="text-sm font-bold text-white">${esc(label)}</div>
-            <div class="text-[11px] text-gray-400">${owned ? (lang === "en" ? "Owned" : "تم الفتح") : "⭐ " + item.cost}</div></div>
-          ${owned ? `<span class="text-emerald-400 text-xs font-bold">✓</span>` : `<button type="button" onclick="buyShopItem('${item.id}')" ${stars < item.cost ? "disabled" : ""} class="tap rounded-lg px-3 text-xs gold-btn disabled:opacity-40">${lang === "en" ? "Buy" : "شراء"}</button>`}
+            <div class="text-[11px] text-gray-400">${owned ? (lang === "en" ? "Owned" : "تم الفتح") : "⭐ " + item.cost}${item.type === "freeze" ? " • " + (lang === "en" ? "You have" : "معاك") + " " + freezes + "/2" : ""}</div></div>
+          ${owned ? `<span class="text-emerald-400 text-xs font-bold">✓</span>` : `<button type="button" onclick="buyShopItem('${item.id}')" ${stars < item.cost || (item.type === "freeze" && freezes >= 2) ? "disabled" : ""} class="tap rounded-lg px-3 text-xs gold-btn disabled:opacity-40">${lang === "en" ? "Buy" : "شراء"}</button>`}
         </div>`;
       };
       return `<section class="gold-card rounded-2xl p-5 space-y-3">
@@ -482,6 +485,9 @@
         const level = Number(key);
         if (!Number.isInteger(level) || level < 1 || level > 10) return { ok: false };
         stars = level;
+      } else if (source === "rush") {
+        score = Math.floor(Number(score) || 0);
+        stars = Math.min(5, Math.floor(score / 3));
       } else if (source === "quest") {
         stars = { daily: 1, puzzles: 2, win: 2 }[key] || 0;
       } else if (source === "pawn") stars = 2;
@@ -1266,7 +1272,7 @@
                       const LV = LESSONS_VIEW.get(st.step + "-" + idx) || { links: les.l.map(x => ({ t: x[0], u: x[1] })), hw: [] };
                       let tCls = "text-white", chip = "";
                       if (u.role === "student") {
-                        const k = u.level + "-" + idx, a = u.att && u.att[k];
+                        const k = st.step + "-" + idx, a = u.att && u.att[k];
                         const h = (u.hw && u.hw[k]) || (typeof hwIsAutoComplete === "function" && hwIsAutoComplete(u, k));
                         if (a && h) { tCls = "text-emerald-400"; chip = `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 shrink-0">درس مكتمل ✓</span>`; }
                         else if (a) { tCls = "text-red-400"; chip = `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 shrink-0">شرح فقط</span>`; }

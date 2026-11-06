@@ -70,7 +70,7 @@
     function resetState() {
       unsubs.forEach(u => { try { u(); } catch (_) {} }); unsubs = [];
       clearInterval(dailyNotificationTimer); dailyNotificationTimer = null; dailyNotificationAttemptDate = "";
-      loginRewardDay = ""; loginRewardTries = 0;
+      loginRewardDay = ""; loginRewardTries = 0; freezeCheckDay = "";
       window.ecaNotifications = [];
       maps = { core: {}, priv: {}, fin: {}, att: {} }; synced = {};
       deletedStudentIds = new Set();
@@ -256,6 +256,7 @@
         else if (source === "bot" && /^(0|[1-7])$/.test(key)) id = "bot-" + day + "-" + key;
         else if (source === "coach" && /^([1-9]|10)$/.test(key)) id = "coach-" + day + "-" + key;
         else if (source === "login") id = "login-" + day;
+        else if (source === "rush") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "rush-" + day; key = day; }
         else if (source === "quest" && ["daily", "puzzles", "win"].includes(key)) id = "quest-" + day + "-" + key;
         else if (source === "pawn") id = "pawn-" + day;
         else if (source === "vision") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "vision-" + day; }
@@ -265,6 +266,11 @@
         if (!window.ecaShopCatalog || !window.ecaShopCatalog.some(x => x.id === item)) return { ok: false };
         id = "buy-" + item + "-" + nonce();
         day = cairoDayKey();
+      } else if (op === "use-freeze") {
+        key = String(request.key || "");
+        if (!dayOk(key)) return { ok: false };
+        id = "freeze-" + key;
+        day = todayISO();
       } else if (op === "spend-hint") {
         id = "hint-use-" + nonce();
         day = cairoDayKey();
@@ -289,6 +295,7 @@
           } else if (source === "bot") starsDelta = Number(key) + 1;
           else if (source === "coach") starsDelta = Number(key);
           else if (source === "login") starsDelta = loginRewardStars(day);
+          else if (source === "rush") starsDelta = Math.min(5, Math.floor(score / 3));
           else if (source === "quest") {
             starsDelta = { daily: 1, puzzles: 2, win: 2 }[key];
             const claimed = arena.qc && arena.qc.d === day && Array.isArray(arena.qc.k) ? arena.qc.k : [];
@@ -308,9 +315,17 @@
             if ((shop.bots || []).includes(level)) return { ok: false, code: "already-owned" };
             nextShop.bots = [...(shop.bots || []), level];
           } else if (catalogItem.type === "hint") nextShop.hints = (Number(shop.hints) || 0) + 1;
+          else if (catalogItem.type === "freeze") {
+            if ((Number(shop.freezes) || 0) >= 2) return { ok: false, code: "freeze-limit" };
+            nextShop.freezes = (Number(shop.freezes) || 0) + 1;
+          }
           else return { ok: false };
           if (oldStars < catalogItem.cost) return { ok: false, code: "insufficient-stars" };
           starsDelta = -catalogItem.cost;
+        } else if (op === "use-freeze") {
+          if ((Number(shop.freezes) || 0) < 1) return { ok: false, code: "no-freezes" };
+          nextShop.freezes = Number(shop.freezes) - 1;
+          nextShop.frozen = [...(shop.frozen || []), key];
         } else {
           if ((Number(shop.hints) || 0) < 1) return { ok: false, code: "no-hints" };
           nextShop.hints = Number(shop.hints) - 1;
@@ -399,6 +414,28 @@
         console.warn("daily login reward:", e && (e.code || e.message));
         if (++loginRewardTries >= 3) { loginRewardDay = day; loginRewardTries = 0; }
       } finally { loginRewardBusy = false; }
+    }
+    // حماية السلسلة: لو الطالب غاب يوم أو يومين ومعاه حماية كفاية، بتتستخدم تلقائيًا أول ما يفتح الموقع
+    let freezeCheckDay = "";
+    async function checkStreakFreeze() {
+      if (!me || me.role !== "student" || !loaded.core || !navigator.onLine) return;
+      const today = todayISO(), profile = maps.core[me.uid];
+      if (freezeCheckDay === today || !profile) return;
+      freezeCheckDay = today;
+      const shop = profile.shop || {}, freezes = Number(shop.freezes) || 0;
+      const seen = [...((profile.arena || {}).days || []), ...(shop.frozen || [])].filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d) && d < today).sort();
+      const last = seen[seen.length - 1];
+      if (!last || !freezes) return;
+      const missed = [];
+      for (let t = Date.parse(last + "T12:00:00Z") + 864e5, end = Date.parse(today + "T12:00:00Z"); t < end; t += 864e5) missed.push(new Date(t).toISOString().slice(0, 10));
+      if (!missed.length || missed.length > 2 || missed.length > freezes) return;
+      try {
+        for (const key of missed) {
+          const result = await window.fbEconomy({ op: "use-freeze", key });
+          if (!result || !result.ok) return;
+        }
+        if (window.toast) toast(lang === "en" ? "🧊 A Streak Freeze saved your streak!" : "🧊 حماية السلسلة حفظت سلسلتك!");
+      } catch (e) { console.warn("streak freeze:", e && (e.code || e.message)); freezeCheckDay = ""; }
     }
     async function checkDailyPuzzleNotification() {
       if (!me || me.role !== "student") return;
@@ -654,7 +691,8 @@
         }, onErr("notifications")));
         checkDailyPuzzleNotification();
         checkDailyLoginReward();
-        dailyNotificationTimer = setInterval(() => { checkDailyPuzzleNotification(); checkDailyLoginReward(); }, 60 * 1000);
+        setTimeout(checkStreakFreeze, 2500);
+        dailyNotificationTimer = setInterval(() => { checkDailyPuzzleNotification(); checkDailyLoginReward(); checkStreakFreeze(); }, 60 * 1000);
       }
       unsubs.push(onSnapshot(doc(firestore, "meta", "groups"), applyGroups, onErr("groups")));
       unsubs.push(onSnapshot(doc(firestore, "meta", "announcements"), snap => {

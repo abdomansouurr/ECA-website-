@@ -25,7 +25,7 @@
     }
 
     function streakCardHTML(u) {
-      const a = u.arena || {}, st = streaks(a.days), dots = weekDots(a.days);
+      const a = u.arena || {}, st = ecaStreak(u), dots = weekDots(a.days);
       const done = dots.filter(x => x.on).length, left = Math.max(0, WEEK_GOAL - done);
       const daysLeft = dots.filter(x => x.future || (x.today && !x.on)).length;
       const L = (ar, en) => lang === "en" ? en : ar;

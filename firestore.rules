@@ -26,13 +26,19 @@ service cloud.firestore {
     function shopCoreSame(o, n) {
       return o.get('titles', []) == n.get('titles', [])
         && o.get('bots', []) == n.get('bots', [])
-        && o.get('hints', 0) == n.get('hints', 0);
+        && o.get('hints', 0) == n.get('hints', 0)
+        && freezeSame(o, n);
+    }
+    function freezeSame(o, n) {
+      return o.get('freezes', 0) == n.get('freezes', 0) && o.get('frozen', []) == n.get('frozen', []);
     }
     function shopValid(s) {
       let titles = s.get('titles', []);
       let bots = s.get('bots', []);
       let hints = s.get('hints', 0);
-      return s.keys().hasOnly(['titles','bots','hints','activeTitle'])
+      return s.keys().hasOnly(['titles','bots','hints','activeTitle','freezes','frozen'])
+        && s.get('freezes', 0) is int && s.get('freezes', 0) >= 0 && s.get('freezes', 0) <= 2
+        && s.get('frozen', []) is list && s.get('frozen', []).size() <= 400
         && titles is list && titles.size() <= 3 && titles.hasOnly(['title-tactics','title-knight','title-master'])
         && bots is list && bots.size() <= 7 && bots.hasOnly([1,2,3,4,5,6,7])
         && hints is int && hints >= 0 && hints <= 5000
@@ -40,9 +46,7 @@ service cloud.firestore {
         && (s.get('activeTitle', '') == '' || s.get('activeTitle', '') in titles);
     }
     function protectedEconomySame(o, n) {
-      return num(o, 'stars') == num(n, 'stars') && num(o, 'xp') == num(n, 'xp')
-        && o.get('missionDate', '') == n.get('missionDate', '')
-        && o.get('missionDone', false) == n.get('missionDone', false);
+      return !n.diff(o).affectedKeys().hasAny(['stars','xp','missionDate','missionDone']);
     }
     function shopEquipOk(o, n) {
       return shopValid(n) && shopCoreSame(o, n)
@@ -63,13 +67,27 @@ service cloud.firestore {
     function shopPrice(item) {
       return item == 'hint' || item == 'bot-1' ? 20 : item == 'bot-2' ? 40 : item == 'title-tactics' ? 50
         : item == 'bot-3' ? 70 : item == 'bot-4' ? 100 : item == 'title-knight' ? 120 : item == 'bot-5' ? 150
-        : item == 'bot-6' ? 220 : item == 'title-master' ? 250 : item == 'bot-7' ? 300 : 0;
+        : item == 'bot-6' ? 220 : item == 'title-master' ? 250 : item == 'bot-7' ? 300 : item == 'streak-freeze' ? 30 : 0;
     }
     function listGrantOk(before, after, x) {
       return !(x in before) && after.size() == before.size() + 1 && after.hasAll(before) && x in after;
     }
+    function shopSameExceptFreeze(o, n) {
+      return n.get('titles', []) == o.get('titles', []) && n.get('bots', []) == o.get('bots', []) && n.get('hints', 0) == o.get('hints', 0);
+    }
+    // الحماية بتتاخد على يوم فات من آخر 3 أيام، مرة واحدة لكل يوم
+    function freezeUseOk(o, n, r) {
+      return r.starsDelta == 0 && r.xpDelta == 0 && o.get('freezes', 0) >= 1 && n.get('freezes', 0) == o.get('freezes', 0) - 1
+        && r.key.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') && r.key < r.day
+        && request.time < timestamp.date(int(r.key.split('-')[0]), int(r.key.split('-')[1]), int(r.key.split('-')[2])) + duration.value(4, 'd')
+        && listGrantOk(o.get('frozen', []), n.get('frozen', []), r.key)
+        && shopSameExceptFreeze(o, n);
+    }
     function shopGrantOk(o, n, item) {
-      return item == 'hint'
+      return item == 'streak-freeze'
+          ? (n.get('freezes', 0) == o.get('freezes', 0) + 1 && n.get('frozen', []) == o.get('frozen', []) && shopSameExceptFreeze(o, n))
+        : !freezeSame(o, n) ? false
+        : item == 'hint'
           ? (n.get('hints', 0) == o.get('hints', 0) + 1 && n.get('titles', []) == o.get('titles', []) && n.get('bots', []) == o.get('bots', []))
         : item.matches('title-.*')
           ? (listGrantOk(o.get('titles', []), n.get('titles', []), item) && n.get('bots', []) == o.get('bots', []) && n.get('hints', 0) == o.get('hints', 0))
@@ -78,11 +96,12 @@ service cloud.firestore {
     function economyShopChangeOk(o, n, r) {
       return shopValid(n) && o.get('activeTitle', '') == n.get('activeTitle', '')
         && (r.kind == 'earn' ? shopCoreSame(o, n)
+          : r.kind == 'spend-freeze' ? freezeUseOk(o, n, r)
           : r.kind == 'spend-hint'
             ? (r.starsDelta == 0 && r.xpDelta == 0 && o.get('hints', 0) >= 1 && n.get('hints', 0) == o.get('hints', 0) - 1
-                && n.get('titles', []) == o.get('titles', []) && n.get('bots', []) == o.get('bots', []))
-            : (r.kind == 'purchase' && r.xpDelta == 0 && shopPrice(r.get('item', '')) > 0
-                && r.starsDelta + shopPrice(r.get('item', '')) == 0 && shopGrantOk(o, n, r.get('item', ''))));
+                && n.get('titles', []) == o.get('titles', []) && n.get('bots', []) == o.get('bots', []) && freezeSame(o, n))
+            : (r.kind == 'purchase' && r.xpDelta == 0 && r.starsDelta < 0
+                && r.starsDelta + shopPrice(r.item) == 0 && shopGrantOk(o, n, r.item)));
     }
 
     // المستوى الابتدائي: Step 1، إلا لو الطالب ربط حسابه بنتيجة اختبار تحديد مستوى معتمدة (plk = مفتاح placementLevels)
@@ -130,6 +149,9 @@ service cloud.firestore {
       return key == '0' ? 1 : key == '1' ? 2 : key == '2' ? 3 : key == '3' ? 4
         : key == '4' ? 5 : key == '5' ? 6 : key == '6' ? 7 : key == '7' ? 8 : 0;
     }
+    function rushStars(score) {
+      return score >= 15 ? 5 : score >= 12 ? 4 : score >= 9 ? 3 : score >= 6 ? 2 : 1;
+    }
     function questStars(key) {
       return key == 'daily' ? 1 : key == 'puzzles' || key == 'win' ? 2 : 0;
     }
@@ -156,6 +178,9 @@ service cloud.firestore {
         : r.source == 'coach'
           ? (r.key in ['1','2','3','4','5','6','7','8','9','10'] && id == 'coach-' + r.day + '-' + r.key
               && r.starsDelta == int(r.key) && r.xpDelta == int(r.key) * 20 && r.missionBonus == false)
+        : r.source == 'rush'
+          ? (r.key == r.day && id == 'rush-' + r.day && r.score >= 3 && r.score <= 1000
+              && r.starsDelta == rushStars(r.score) && r.xpDelta == rushStars(r.score) * 20 && r.missionBonus == false)
         : r.source == 'quest'
           ? (r.key in ['daily','puzzles','win'] && id == 'quest-' + r.day + '-' + r.key
               && r.starsDelta == questStars(r.key) && r.xpDelta == questStars(r.key) * 20 && r.missionBonus == false)
@@ -171,11 +196,13 @@ service cloud.firestore {
     }
     function economyKindOk(id, r, u) {
       return r.kind == 'earn'
-        ? (r.item == '' && (r.source == 'vision' || r.score == 0) && economyEarnOk(id, r, u))
-        : r.source == '' && r.key == '' && r.score == 0 && r.missionBonus == false
+        ? (r.item == '' && (r.source == 'vision' || r.source == 'rush' || r.score == 0) && economyEarnOk(id, r, u))
+        : r.source == '' && r.score == 0 && r.missionBonus == false
           && (r.kind == 'purchase'
-            ? id.matches('buy-' + r.item + '-[A-Za-z0-9]{8,40}')
-            : (r.kind == 'spend-hint' && id.matches('hint-use-[A-Za-z0-9]{8,40}') && r.item == ''));
+            ? (r.key == '' && id.matches('buy-' + r.item + '-[A-Za-z0-9]{8,40}'))
+            : r.kind == 'spend-freeze'
+              ? (r.item == '' && id == 'freeze-' + r.key)
+              : (r.kind == 'spend-hint' && r.key == '' && id.matches('hint-use-[A-Za-z0-9]{8,40}') && r.item == ''));
     }
     // المهمة اليومية بتتغير بس مع مكافأة فيها missionBonus
     function missionOk(r, oldA, newA) {
@@ -190,11 +217,10 @@ service cloud.firestore {
         && num(newA, 'stars') == num(oldA, 'stars') + r.starsDelta
         && num(newA, 'xp') == num(oldA, 'xp') + r.xpDelta
         && missionOk(r, oldA, newA)
-        && economyShopChangeOk(u.get('shop', {}), n.get('shop', {}), r)
         && economyKindOk(id, r, u);
     }
-    // ملف الطالب بيتأكد إن إيصال جديد اتعمل في نفس العملية، وقاعدة الإيصال هي اللي بتفحص كل التفاصيل
-    // (Firestore بيوقف التقييم عند 1000 عملية في الطلب، وقراءة الإيصال من ملف الطالب تكلفتها عالية)
+    // ملف الطالب بيفحص تغيير المتجر لأن بياناته متاحة هنا مباشرة، وقاعدة الإيصال بتفحص النجوم والخبرة ونوع المكافأة
+    // (Firestore بيوقف التقييم عند 1000 عملية في الطلب، فلازم كل فحص يبقى في المكان الأرخص)
     function economyUpdateOk() {
       let id = request.resource.data.get('lastEconomy', '');
       return id == resource.data.get('lastEconomy', '')
@@ -202,14 +228,15 @@ service cloud.firestore {
             && (resource.data.get('shop', {}) == request.resource.data.get('shop', {})
               || shopEquipOk(resource.data.get('shop', {}), request.resource.data.get('shop', {}))))
         : (id is string && id.matches('[A-Za-z0-9-]{1,100}')
-            && !exists(economyDoc(request.auth.uid, id)) && existsAfter(economyDoc(request.auth.uid, id)));
+            && !exists(economyDoc(request.auth.uid, id)) && existsAfter(economyDoc(request.auth.uid, id))
+            && economyShopChangeOk(resource.data.get('shop', {}), request.resource.data.get('shop', {}), getAfter(economyDoc(request.auth.uid, id)).data));
     }
     function economyReceiptCreateOk(uid, id) {
       let userPath = /databases/$(database)/documents/users/$(uid);
       let r = request.resource.data;
       return notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))
         && r.keys().hasOnly(['uid','kind','source','key','day','item','score','starsDelta','xpDelta','missionBonus','at'])
-        && r.uid == uid && r.kind in ['earn','purchase','spend-hint']
+        && r.uid == uid && r.kind in ['earn','purchase','spend-hint','spend-freeze']
         && r.source is string && r.key is string && r.day is string && r.item is string
         && r.score is int && r.starsDelta is int && r.xpDelta is int && r.missionBonus is bool
         && r.at == request.time && dateNear(r.day.split('-'))
@@ -235,10 +262,9 @@ service cloud.firestore {
     function newOk() { return getAfter(attDoc(newL())).data.ok == true; }
 
     // اللغز اليومي (puz.t / puz.c) وألغاز الساحة (arena.puz*)
-    function puzSame(o, n)   { return num(o, 't') == num(n, 't') && num(o, 'c') == num(n, 'c'); }
+    function puzSame(o, n)   { return !n.diff(o).affectedKeys().hasAny(['t','c']); }
     function arenaSame(o, n) {
-      return num(o, 'puzTried') == num(n, 'puzTried') && num(o, 'puzSolved') == num(n, 'puzSolved')
-        && num(o, 'puzStreak') == num(n, 'puzStreak') && num(o, 'puzBestStreak') == num(n, 'puzBestStreak');
+      return !n.diff(o).affectedKeys().hasAny(['puzTried','puzSolved','puzStreak','puzBestStreak']);
     }
     function dailyStep(o, n) {
       return num(n, 't') == num(o, 't') + 1

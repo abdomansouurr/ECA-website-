@@ -17,7 +17,7 @@
       const att = stuAttStats(s.id, month), marked = att.p + att.l + att.a;
       const st = calcStats(s), a = s.arena || {}, g = a.games || {};
       const days = Array.from(new Set(a.days || [])).filter(d => String(d).startsWith(month));
-      const sk = streaks(a.days), xp = calcXP(s), rk = rankOf(xp.total);
+      const sk = ecaStreak(s), xp = calcXP(s), rk = rankOf(xp.total);
       const badges = badgeList(s).reduce((n, c) => n + c.items.filter(b => b[3]).length, 0);
       // ألغاز الشهر من دفتر المحاولات (الكوتش بس يقدر يقراه)
       let puz = null;
