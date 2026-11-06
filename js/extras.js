@@ -311,7 +311,7 @@
           ["حكم الوزير", "حل 50 لغز صح ورا بعض", "chess-queen-icon.svg", bs >= 50], ["فتوحات الملك", "حل 100 لغز صح ورا بعض", "chess-king-icon.svg", bs >= 100]] },
         { cat: "إنجازات متنوعة", items: [
           ["أول انتصار", "اكسب أول دور ضد الكمبيوتر", "chess-knight-icon.svg", (g.w || 0) >= 1],
-          ["قاهر الجراند ماستر", "اكسب ضد البوت «جراند ماستر»", "chess-king-icon.svg", (a.bestWin || 0) >= LEVELS.length],
+          ["قاهر الجراند ماستر", "اكسب ضد البوت «جراند ماستر»", "chess-king-icon.svg", (a.bestWin || 0) >= COACH_BOT],
           ["ملك البيادق", "اكسب 5 أدوار في لعبة البيادق", "chess-pawn-icon.svg", (a.pawnWins || 0) >= 5],
           ["عين الصقر", "جيب 20 نقطة أو أكتر في تدريب الرؤية", "chess_aim_target.webp", (a.visionBest || 0) >= 20],
           ["أول شهادة", "اجتاز امتحان أول Step", "chess-queen-icon.svg", (s.certificates || []).length >= 1]] }

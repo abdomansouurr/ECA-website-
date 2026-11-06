@@ -85,6 +85,21 @@ async function runSuite(label, rules, quiet) {
   await T("bot 7 locked", false, rich, db => earn(db, "bot", "7", 8));
   await T("bot 7 owned", true, Object.assign({}, rich, { shop: { titles: [], bots: [7], hints: 0, activeTitle: "" } }), db => earn(db, "bot", "7", 8));
   await T("pawn reward", true, fresh, db => earn(db, "pawn", today, 2));
+  // Coach bot: stars follow the chosen level, once a day per level
+  const coachWin = (db, level, stars = level) => econ(db, { kind: "earn", source: "coach", key: String(level), starsDelta: stars, xpDelta: stars * 20, id: `coach-${today}-${level}` });
+  await T("coach level 1 win", true, fresh, db => coachWin(db, 1));
+  await T("coach level 10 win", true, legacy, db => coachWin(db, 10));
+  await T("coach win with forged stars", false, fresh, db => coachWin(db, 2, 9));
+  await T("coach level 11 rejected", false, fresh, db => coachWin(db, 11));
+  await T("coach same level twice a day", false, fresh, async db => { await coachWin(db, 3); await coachWin(db, 3); });
+  await T("coach two levels on the same day", true, fresh, async db => { await coachWin(db, 3); await coachWin(db, 4); });
+  // daily login reward: decided by the date, once a day
+  const dom = Number(today.slice(8)), loginStars = dom % 7 === 0 ? 3 : dom % 3 === 0 ? 2 : 1;
+  const login = (db, stars = loginStars, day = today) => econ(db, { kind: "earn", source: "login", key: day, starsDelta: stars, xpDelta: stars * 20, id: "login-" + day });
+  await T("login reward: new account", true, fresh, db => login(db));
+  await T("login reward: legacy account", true, legacy, db => login(db));
+  await T("login reward: forged bigger prize", false, fresh, db => login(db, loginStars + 1));
+  await T("login reward: twice in one day", false, fresh, async db => { await login(db); await login(db); });
   await T("vision reward score 30", true, fresh, db => earn(db, "vision", today, 10, { score: 30 }));
   await T("vision forged stars", false, fresh, db => earn(db, "vision", today, 10, { score: 3 }));
   // shop

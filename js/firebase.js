@@ -70,6 +70,7 @@
     function resetState() {
       unsubs.forEach(u => { try { u(); } catch (_) {} }); unsubs = [];
       clearInterval(dailyNotificationTimer); dailyNotificationTimer = null; dailyNotificationAttemptDate = "";
+      loginRewardDay = ""; loginRewardTries = 0;
       window.ecaNotifications = [];
       maps = { core: {}, priv: {}, fin: {}, att: {} }; synced = {};
       deletedStudentIds = new Set();
@@ -218,6 +219,11 @@
       return snap.exists();
     };
     // القواعد بتفحص الاسم والإيميل واللقب مع كل كتابة، فأي قيمة قديمة فيها حروف ممنوعة بترفض المكافأة، فبننضفها في نفس العملية
+    // جائزة الدخول بتتحدد من التاريخ، وقواعد Firestore بتحسبها بنفس الطريقة، فمحدش يقدر يختار جائزة أكبر
+    function loginRewardStars(day) {
+      const d = Number(String(day).slice(8));
+      return d % 7 === 0 ? 3 : d % 3 === 0 ? 2 : 1;
+    }
     function selfFieldsFix(profile) {
       const fix = {};
       for (const [k, max] of [["name", 80], ["email", 120], ["nickname", 24]]) {
@@ -243,10 +249,13 @@
       let id = "", source = "", key = "", day = "", item = "", score = 0, starsDelta = 0, xpDelta = 0;
       if (op === "earn") {
         source = String(request.source || ""); key = String(request.key || ""); day = String(request.day || "");
+        if (source === "login") { day = cairoDayKey(); key = day; }
         if (!dayOk(day)) return { ok: false };
         if (source === "lesson" && /^[1-6]-[0-9]{1,2}$/.test(key)) id = "lesson-" + key;
         else if (source === "puzzle" && ["daily","easiest","easier","normal","harder","hardest"].includes(key)) id = "puzzle-" + day + "-" + key;
         else if (source === "bot" && /^(0|[1-7])$/.test(key)) id = "bot-" + day + "-" + key;
+        else if (source === "coach" && /^([1-9]|10)$/.test(key)) id = "coach-" + day + "-" + key;
+        else if (source === "login") id = "login-" + day;
         else if (source === "pawn") id = "pawn-" + day;
         else if (source === "vision") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "vision-" + day; }
         else return { ok: false };
@@ -277,6 +286,8 @@
             missionBonus = arena.missionDate !== day;
             if (missionBonus) { starsDelta++; arena.missionDate = day; arena.missionDone = true; }
           } else if (source === "bot") starsDelta = Number(key) + 1;
+          else if (source === "coach") starsDelta = Number(key);
+          else if (source === "login") starsDelta = loginRewardStars(day);
           else if (source === "pawn") starsDelta = 2;
           else if (source === "vision") starsDelta = Math.min(10, Math.floor(score / 3));
           xpDelta = (source === "puzzle" && missionBonus ? starsDelta - 1 : starsDelta) * 20;
@@ -360,6 +371,28 @@
         await batch.commit();
       }
       return true;
+    }
+    // جائزة الدخول: مرة في اليوم بتوقيت القاهرة، والإيصال login-{اليوم} هو اللي بيمنع التكرار حتى من أكتر من جهاز
+    let loginRewardDay = "", loginRewardTries = 0, loginRewardBusy = false;
+    async function checkDailyLoginReward() {
+      if (!me || me.role !== "student" || loginRewardBusy || !navigator.onLine) return;
+      const day = cairoDayKey();
+      if (loginRewardDay === day) return;
+      loginRewardBusy = true;
+      const uid = me.uid;
+      try {
+        const result = await window.fbEconomy({ op: "earn", source: "login" });
+        if (!me || me.uid !== uid) return;
+        if (result && result.ok) {
+          loginRewardDay = day; loginRewardTries = 0;
+          if (!result.duplicate && window.ecaShowLoginReward) window.ecaShowLoginReward(result);
+          return;
+        }
+        throw new Error("login reward was not saved");
+      } catch (e) {
+        console.warn("daily login reward:", e && (e.code || e.message));
+        if (++loginRewardTries >= 3) { loginRewardDay = day; loginRewardTries = 0; }
+      } finally { loginRewardBusy = false; }
     }
     async function checkDailyPuzzleNotification() {
       if (!me || me.role !== "student") return;
@@ -614,7 +647,8 @@
           }
         }, onErr("notifications")));
         checkDailyPuzzleNotification();
-        dailyNotificationTimer = setInterval(checkDailyPuzzleNotification, 60 * 1000);
+        checkDailyLoginReward();
+        dailyNotificationTimer = setInterval(() => { checkDailyPuzzleNotification(); checkDailyLoginReward(); }, 60 * 1000);
       }
       unsubs.push(onSnapshot(doc(firestore, "meta", "groups"), applyGroups, onErr("groups")));
       unsubs.push(onSnapshot(doc(firestore, "meta", "announcements"), snap => {

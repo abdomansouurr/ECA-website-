@@ -68,13 +68,13 @@
       P.over = over; P.reason = reason || ""; P.thinking = false; P.pre = null; P.sel = null; P.promo = null;
       await recordArena(a => {
         a.games = a.games || { w: 0, l: 0, d: 0 }; a.games[over === "win" ? "w" : over === "loss" ? "l" : "d"]++;
-        if (over === "win") a.bestWin = Math.max(a.bestWin || 0, level + 1);
+        if (over === "win" && level !== COACH_BOT) a.bestWin = Math.max(a.bestWin || 0, level + 1);
         if (over === "win") { a.winStreak = (a.winStreak || 0) + 1; a.bestWinStreak = Math.max(a.bestWinStreak || 0, a.winStreak); }
         else if (over === "loss") a.winStreak = 0;
       });
       toast(reason === "left" ? aL("خرجت من الدور — اتحسب خسارة", "You left the game — counted as a loss")
         : over === "win" ? aL("كسبت ضد " + LEVELS[level].name + "! برافو عليك", "You won! Well done") : over === "loss" ? aL(LEVELS[level].name + " كسب — جرّب تاني", "You lost — try again") : aL("تعادل", "Draw"));
-      if (over === "win" && window.ecaAwardStudentActivity) await window.ecaAwardStudentActivity("bot", level);
+      if (over === "win" && window.ecaAwardStudentActivity) await (level === COACH_BOT ? window.ecaAwardStudentActivity("coach", P.coachLevel || 1) : window.ecaAwardStudentActivity("bot", level));
     }
     playCheckEnd = function () {
       const P = arena.play, g = P.game;
@@ -211,7 +211,7 @@
         if (!P.game) {
           const tcb = PLAY_TC.map((t, i) => `<button onclick="arena.play.tc=${i}; lsSet('ECA_TC', ${i}); render();" class="px-3 py-1.5 rounded-lg text-xs font-bold border ${P.tc === i ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border-yellow-500/20'}" dir="ltr">${aL(t[2], t[3])}</button>`).join("");
           h = h.replace('<button onclick="playStart()" class="w-full py-3 rounded-xl text-sm gold-btn">ابدأ الدور</button>',
-            `<div><div class="text-[11px] text-gray-400 mb-1">${aL("الوقت", "Time control")}</div><div class="flex flex-wrap gap-1.5">${tcb}</div></div><button onclick="playStart()" class="w-full py-3 rounded-xl text-sm gold-btn">ابدأ الدور</button>`);
+            `${P.level === COACH_BOT ? `<div><div class="text-[12px] text-gray-400 mb-1">${aL("مستوى Coach", "Coach level")}</div><div class="flex flex-wrap gap-1.5" dir="ltr">${COACH_LEVELS.map((_, i) => `<button type="button" onclick="setCoachLevel(${i + 1})" aria-label="${aL("مستوى", "Level")} ${i + 1}" class="tap px-3 rounded-lg text-xs font-bold border ${(P.coachLevel || 1) === i + 1 ? "gold-btn" : "bg-zinc-900 text-gray-300 border-yellow-500/20"}">${i + 1}</button>`).join("")}</div><p class="text-xs text-yellow-300 mt-2">${aL(`لو كسبت المستوى ده: +${P.coachLevel || 1} نجوم و${(P.coachLevel || 1) * 20} خبرة (مرة في اليوم لكل مستوى)`, `Win at this level: +${P.coachLevel || 1} stars and ${(P.coachLevel || 1) * 20} XP (once a day per level)`)}</p></div>` : ""}<div><div class="text-[11px] text-gray-400 mb-1">${aL("الوقت", "Time control")}</div><div class="flex flex-wrap gap-1.5">${tcb}</div></div><button onclick="playStart()" class="w-full py-3 rounded-xl text-sm gold-btn">ابدأ الدور</button>`);
         } else {
           if (P.reason === "time") h = h.replace(">خسرت الدور<", ">" + aL("خسرت الدور — خلص وقتك", "You lost — out of time") + "<").replace(">كسبت الدور!<", ">" + aL("كسبت الدور — خلص وقت " + esc(LEVELS[P.level].name), "You won — opponent out of time") + "<");
         }

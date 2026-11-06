@@ -17,6 +17,21 @@
       { name: "أستاذ", elo: "~1700", piece: "q", color: "#d946ef", img: "img/bots/7.webp?v=eca-v50", desc: "صعب جداً وبنصب فخاخ لخصومي.", skill: 15, depth: 12, ms: 800, rnd: 0 },
       { name: "جراند ماستر", elo: "2000+", piece: "k", color: "#d4af37", img: "img/bots/8.webp?v=eca-v50", desc: "لاعب محترف — الأقوى بس هو اللي يقدر يكسبني.", skill: 20, depth: 18, ms: 1200, rnd: 0 }
     ];
+    // بوت Coach: مجاني، والطالب بيحدد مستواه من 1 لـ 10. كل مكسب بيدّي نجوم = رقم المستوى، مرة لكل مستوى في اليوم
+    const COACH_BOT = LEVELS.length;
+    const COACH_LEVELS = [
+      { elo: "~300", skill: 0, depth: 1, ms: 60, rnd: .35 },
+      { elo: "~500", skill: 1, depth: 2, ms: 100, rnd: .25 },
+      { elo: "~700", skill: 3, depth: 3, ms: 150, rnd: .15 },
+      { elo: "~900", skill: 5, depth: 4, ms: 220, rnd: .08 },
+      { elo: "~1100", skill: 7, depth: 6, ms: 320, rnd: .05 },
+      { elo: "~1300", skill: 9, depth: 8, ms: 450, rnd: .03 },
+      { elo: "~1500", skill: 12, depth: 10, ms: 600, rnd: .01 },
+      { elo: "~1700", skill: 15, depth: 12, ms: 800, rnd: 0 },
+      { elo: "~1900", skill: 17, depth: 14, ms: 1000, rnd: 0 },
+      { elo: "2100+", skill: 20, depth: 16, ms: 1300, rnd: 0 }
+    ];
+    LEVELS.push(Object.assign({ name: "Coach", piece: "q", color: "#d4af37", desc: "حدد مستواي بنفسك: كل ما تكسب مستوى أصعب، تاخد نجوم وخبرة أكتر." }, COACH_LEVELS[0]));
     // صورة البوت: لو له صورة بنعرضها، غير كده دايرة بلونه وفيها قطعته
     function botAvatar(b, size) {
       size = size || 48;
@@ -258,7 +273,7 @@
     function playNew() { const P = arena.play; P.game = null; P.over = ""; P.sel = null; P.last = null; P.thinking = false; P.lastComment = ""; render(); }
     function botIsUnlocked(level) {
       const u = currUser();
-      return !u || u.role !== "student" || level === 0 || (u.shop && (u.shop.bots || []).includes(level));
+      return !u || u.role !== "student" || level === 0 || level === COACH_BOT || (u.shop && (u.shop.bots || []).includes(level));
     }
     function setBotLevel(level) {
       if (!Number.isInteger(level) || level < 0 || level >= LEVELS.length) return;
@@ -266,6 +281,14 @@
       arena.play.level = level; render();
     }
     window.setBotLevel = setBotLevel;
+    function setCoachLevel(level) {
+      const P = arena.play;
+      if (!Number.isInteger(level) || level < 1 || level > COACH_LEVELS.length || (P.game && !P.over)) return;
+      P.level = COACH_BOT; P.coachLevel = level;
+      Object.assign(LEVELS[COACH_BOT], COACH_LEVELS[level - 1]);
+      render();
+    }
+    window.setCoachLevel = setCoachLevel;
     function moveBotComment(move, playerMove) {
       if (move.san && move.san.includes("#")) return playerMove ? "كش مات! نقلة رائعة." : "كش مات — انتهى الدور.";
       if (move.san && move.san.includes("+")) return playerMove ? "كش! راقب ملك الخصم." : "كش! لازم ترد على تهديد الملك.";
@@ -290,7 +313,7 @@
         <div class="gold-card rounded-2xl p-5 space-y-4">
           <div>
             <h3 class="font-display font-bold text-lg text-yellow-400">اختار البوت اللي هتلعب ضده</h3>
-            <p class="text-xs text-gray-400 mt-1">8 بوتات من الأسهل للأصعب — ابدأ من الأول وكل ما تكسب بوت جرّب اللي بعده.</p>
+            <p class="text-xs text-gray-400 mt-1">${lang === "en" ? "8 bots from easiest to hardest, plus Coach: you pick his level, and harder wins earn more." : "8 بوتات من الأسهل للأصعب، ومعاهم Coach اللي بتحدد مستواه بنفسك."}</p>
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             ${LEVELS.map((b, i) => {
@@ -342,6 +365,7 @@
                 <button onclick="playStart()" class="tap rounded-xl text-xs gold-btn">دور تاني مع ${esc(bot.name)}</button>
                 <button onclick="playNew()" class="tap rounded-xl text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">اختار بوت تاني</button>
               </div>
+              ${P.over === "win" && P.level === COACH_BOT && (P.coachLevel || 1) < COACH_LEVELS.length ? `<button onclick="setCoachLevel(${(P.coachLevel || 1) + 1}); playStart();" class="w-full py-2.5 rounded-xl text-xs font-bold bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">${lang === "en" ? "Play Coach at level " : "العب ضد Coach مستوى "}${(P.coachLevel || 1) + 1}</button>` : ''}
               ${P.over === "win" && P.level < LEVELS.length - 1 && botIsUnlocked(P.level + 1) ? `<button onclick="setBotLevel(${P.level + 1}); playStart();" class="w-full py-2.5 rounded-xl text-xs font-bold bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">العب ضد البوت اللي بعده: ${esc(LEVELS[P.level + 1].name)}</button>` : ''}
             </div>
             <div class="gold-card rounded-2xl p-4">

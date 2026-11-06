@@ -1,5 +1,5 @@
 // ECA service worker — offline support. Bump VERSION to force clients to refresh the cache.
-const VERSION = "eca-v59";
+const VERSION = "eca-v60";
 const SHELL = [
   "./", "./index.html", "./manifest.json",
   "./favicon.ico", "./img/favicon.png", "./apple-touch-icon.png",   // لوجو الأكاديمية على التاب والأيفون — أوفلاين برضه
@@ -9,9 +9,9 @@ const SHELL = [
   "./img/pieces/lichess/bK.svg", "./img/pieces/lichess/bQ.svg", "./img/pieces/lichess/bR.svg", "./img/pieces/lichess/bB.svg", "./img/pieces/lichess/bN.svg", "./img/pieces/lichess/bP.svg",
   "./vendor/chess.js", "./vendor/stockfish.js",
   // ملفات الكود (لازم نفس ?v= اللي في index.html)
-  "./tailwind.css?v=eca-v59",
-  "./js/core.js?v=eca-v59", "./js/arena.js?v=eca-v59", "./js/extras.js?v=eca-v59", "./js/streaks.js?v=eca-v59", "./js/review.js?v=eca-v59", "./js/quality.js?v=eca-v59", "./js/announce.js?v=eca-v59", "./js/progress.js?v=eca-v59", "./js/arena2.js?v=eca-v59", "./js/ux.js?v=eca-v59", "./js/annotate.js?v=eca-v59", "./js/firebase.js?v=eca-v59", "./js/finance.js?v=eca-v59", "./js/homework.js?v=eca-v59", "./js/today.js?v=eca-v59", "./js/reports.js?v=eca-v59", "./js/tournaments.js?v=eca-v59", "./js/placement-data.js?v=eca-v59", "./js/placement.js?v=eca-v59",
-  "./puzzles.js?v=eca-v59"   // عشان الامتحان يشتغل أوفلاين
+  "./tailwind.css?v=eca-v60",
+  "./js/core.js?v=eca-v60", "./js/arena.js?v=eca-v60", "./js/extras.js?v=eca-v60", "./js/streaks.js?v=eca-v60", "./js/review.js?v=eca-v60", "./js/quality.js?v=eca-v60", "./js/announce.js?v=eca-v60", "./js/progress.js?v=eca-v60", "./js/arena2.js?v=eca-v60", "./js/ux.js?v=eca-v60", "./js/annotate.js?v=eca-v60", "./js/firebase.js?v=eca-v60", "./js/finance.js?v=eca-v60", "./js/homework.js?v=eca-v60", "./js/today.js?v=eca-v60", "./js/reports.js?v=eca-v60", "./js/tournaments.js?v=eca-v60", "./js/placement-data.js?v=eca-v60", "./js/placement.js?v=eca-v60",
+  "./puzzles.js?v=eca-v60"   // عشان الامتحان يشتغل أوفلاين
 ];
 const CDN = [
   "https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap"

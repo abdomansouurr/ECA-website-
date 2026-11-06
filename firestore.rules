@@ -130,6 +130,9 @@ service cloud.firestore {
       return key == '0' ? 1 : key == '1' ? 2 : key == '2' ? 3 : key == '3' ? 4
         : key == '4' ? 5 : key == '5' ? 6 : key == '6' ? 7 : key == '7' ? 8 : 0;
     }
+    function loginStars(day) {
+      return int(day.split('-')[2]) % 7 == 0 ? 3 : int(day.split('-')[2]) % 3 == 0 ? 2 : 1;
+    }
     function botOwned(key, shop) {
       let bots = shop.get('bots', []);
       return key == '0' || (key == '1' && 1 in bots) || (key == '2' && 2 in bots)
@@ -147,6 +150,12 @@ service cloud.firestore {
         : r.source == 'bot'
           ? (r.key in ['0','1','2','3','4','5','6','7'] && id == 'bot-' + r.day + '-' + r.key
               && botOwned(r.key, u.get('shop', {})) && r.starsDelta == botStars(r.key) && r.xpDelta == botStars(r.key) * 20 && r.missionBonus == false)
+        : r.source == 'coach'
+          ? (r.key in ['1','2','3','4','5','6','7','8','9','10'] && id == 'coach-' + r.day + '-' + r.key
+              && r.starsDelta == int(r.key) && r.xpDelta == int(r.key) * 20 && r.missionBonus == false)
+        : r.source == 'login'
+          ? (r.key == r.day && id == 'login-' + r.day && r.starsDelta == loginStars(r.day)
+              && r.xpDelta == loginStars(r.day) * 20 && r.missionBonus == false)
         : r.source == 'pawn'
           ? (r.key == r.day && id == 'pawn-' + r.day && r.starsDelta == 2 && r.xpDelta == 40 && r.missionBonus == false)
         : r.source == 'vision'

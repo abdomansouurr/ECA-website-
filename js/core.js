@@ -477,6 +477,10 @@
         const level = Number(key);
         if (!Number.isInteger(level) || level < 0 || level > 7) return { ok: false };
         stars = level + 1;
+      } else if (source === "coach") {
+        const level = Number(key);
+        if (!Number.isInteger(level) || level < 1 || level > 10) return { ok: false };
+        stars = level;
       } else if (source === "pawn") stars = 2;
       else if (source === "vision") {
         score = Math.floor(Number(score) || 0);
@@ -510,6 +514,13 @@
     }
     window.ecaAwardStudentActivity = awardStudentActivity;
     window.ecaShowStudentReward = showStudentReward;
+    window.ecaShowLoginReward = function (reward) {
+      const stars = Number(reward && reward.starsDelta) || 0, xp = Number(reward && reward.xpDelta) || 0;
+      if (!stars) return;
+      celebrateStudentStar(stars);
+      toast(lang === "en" ? `Daily login reward: +${stars} stars and ${xp} XP!` : `🎁 جائزة دخول النهاردة: +${stars} نجوم و${xp} خبرة!`);
+      if (tab === "home") render();
+    };
     function studentMissionCard(user) {
       const arenaData = user.arena || {}, done = dailyMissionDone(user), stars = Number(arenaData.stars) || 0;
       return `<div class="gold-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
@@ -820,6 +831,7 @@
 
     let pendingViewLoad = null;
     function render() {
+      paintInteractiveLesson();
       applyRoleDefaultTheme();
       const required = modulesForCurrentView(), missing = required.filter(name => !loadedModules.has(name));
       if (missing.length) {
@@ -1260,7 +1272,9 @@
                       // زر الواجب: لو الموقف قابل للحل يفتح لاعب الألغاز جوه المنصة، غير كده لينك Lichess
                       const hwKey = st.step + "-" + idx;
                       const HE = typeof hwEntry === "function" ? hwEntry(hwKey) : null;
+                      const hwLocked = u.role === "student" && !(u.att && u.att[hwKey]);
                       const hwBtn = x => {
+                        if (hwLocked) return `<button type="button" onclick="hwLockedNotice()" aria-disabled="true" title="${lang === "en" ? "Attend this lesson first" : "يجب حضور الدرس أولاً"}" class="px-3 py-1 rounded-lg text-xs bg-zinc-900 border border-dashed border-zinc-700 text-gray-500 cursor-not-allowed">🔒 Homework</button>`;
                         const cls = 'px-3 py-1 rounded-lg text-xs bg-zinc-900 border border-dashed border-yellow-500/60 text-yellow-300 hover:bg-yellow-500 hover:text-black';
                         return HE && HE.puzzles && HE.puzzles.length
                           ? `<button onclick="openHomework('${hwKey}')" class="${cls}">Homework ↗</button>`
@@ -1297,7 +1311,6 @@
               </div>
             `;
           }).join('')}
-          ${u.role === "student" && interactiveLesson ? renderInteractiveLessonCard() : ""}
         </div>
       `;
     }
@@ -1320,9 +1333,12 @@
       else question = { lessonTitle: title, q: `أي طريقة تساعدك على تطبيق فكرة درس «${title}»؟`, opts: ["أحسب نقلتي وتهديدات الخصم قبل اللعب", "أحرك قطعة عشوائيًا", "أتجاهل سلامة الملك"], ans: 0 };
       interactiveLesson = { step: Number(step), index: Number(index), question, choice: null, correct: false, saving: false };
       render();
-      window.scrollTo({ top: 0, behavior: "smooth" });
     }
     window.openInteractiveLesson = openInteractiveLesson;
+    function hwLockedNotice() {
+      toast(lang === "en" ? "Homework opens after you attend this lesson." : "الواجب هيتفتح بعد ما تحضر الدرس ده.");
+    }
+    window.hwLockedNotice = hwLockedNotice;
     function retryInteractiveLesson() {
       if (!interactiveLesson || interactiveLesson.correct || interactiveLesson.saving) return;
       interactiveLesson.choice = null;
@@ -1352,14 +1368,30 @@
     window.answerInteractiveLesson = answerInteractiveLesson;
     function closeInteractiveLesson() { interactiveLesson = null; render(); }
     window.closeInteractiveLesson = closeInteractiveLesson;
+    function paintInteractiveLesson() {
+      const user = currUser();
+      if (interactiveLesson && !(tab === "lessons" && user && user.role === "student")) interactiveLesson = null;
+      let portal = document.getElementById("ecaLessonPortal");
+      if (!interactiveLesson) {
+        if (portal) { portal.remove(); document.body.style.overflow = ""; }
+        return;
+      }
+      if (!portal) {
+        portal = document.createElement("div");
+        portal.id = "ecaLessonPortal";
+        document.body.appendChild(portal);
+      }
+      document.body.style.overflow = "hidden";
+      portal.innerHTML = renderInteractiveLessonCard();
+    }
     function renderInteractiveLessonCard() {
       const p = interactiveLesson;
       const q = p.question;
       const feedback = p.choice === null ? "" : p.correct
         ? `<p role="status" class="eca-lesson-feedback text-center text-sm font-bold">${p.saving ? (lang === "en" ? "Saving your reward…" : "جارٍ حفظ المكافأة…") : (lang === "en" ? "Correct! Great thinking." : "إجابة صحيحة! تفكير ممتاز.")}</p>`
         : `<p role="status" class="eca-lesson-feedback text-center text-sm font-bold">${lang === "en" ? "Not quite. Try another answer." : "ليست الإجابة الصحيحة، جرّب إجابة أخرى."}</p>`;
-      return `<div id="interactiveLessonDialog" class="eca-interactive-lesson fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="interactiveLessonTitle">
-        <div class="gold-card rounded-2xl max-w-xl w-full p-5 space-y-4">
+      return `<div id="interactiveLessonDialog" class="eca-interactive-lesson fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="interactiveLessonTitle">
+        <div class="gold-card rounded-2xl max-w-xl w-full max-h-full overflow-y-auto p-5 space-y-4">
           <div class="flex items-center justify-between gap-3">
             <h3 id="interactiveLessonTitle" class="font-bold text-lg text-yellow-300">${lang === "en" ? "Quick interactive lesson" : "درس تفاعلي سريع"} • ${esc(q.lessonTitle)}</h3>
             <button type="button" onclick="closeInteractiveLesson()" aria-label="${lang === "en" ? "Close lesson" : "إغلاق الدرس"}" class="tap px-3 rounded-xl text-lg bg-zinc-900 text-gray-300">×</button>

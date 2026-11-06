@@ -1201,6 +1201,8 @@ function hwIsAutoComplete(u, key) {
 
 function openHomework(key) {
   if (HW.hintSaving) return toast(hwT("جارٍ تسجيل التلميح، انتظر لحظة.", "Saving the hint—please wait."));
+  const viewer = currUser();
+  if (viewer && viewer.role === "student" && !(viewer.att && viewer.att[key])) return hwLockedNotice();
   const e = hwEntry(key); if (!e) return;
   HW.key = key; HW.entry = e; HW.finished = false;
   go("homework"); hwStartAttempt();
