@@ -217,6 +217,24 @@
       const snap = await getDoc(doc(firestore, "users", me.uid, "economy", id));
       return snap.exists();
     };
+    // القواعد بتفحص الاسم والإيميل واللقب مع كل كتابة، فأي قيمة قديمة فيها حروف ممنوعة بترفض المكافأة، فبننضفها في نفس العملية
+    function selfFieldsFix(profile) {
+      const fix = {};
+      for (const [k, max] of [["name", 80], ["email", 120], ["nickname", 24]]) {
+        if (typeof profile[k] !== "string") continue;
+        let clean = profile[k].replace(BAD, "").slice(0, max);
+        if (k === "nickname" && clean.length < 2) clean = "";
+        if (clean !== profile[k]) fix[k] = clean;
+      }
+      return fix;
+    }
+    // السجل ده بيوضح سبب الرفض في «سجل الأخطاء» عند الأدمن: أنواع وأسماء حقول بس، من غير أي بيانات شخصية
+    function reportEconomyDenied(err, source, day, profile) {
+      if (!err || err.code !== "permission-denied") return;
+      const p = profile || {}, a = p.arena || {}, s = p.shop || {};
+      const shape = { source, day, now: new Date().toISOString(), loaded: !!profile, shopKeys: Object.keys(s), hints: typeof s.hints, stars: typeof a.stars, xp: typeof a.xp, level: typeof p.level, name: typeof p.name, email: typeof p.email };
+      (window.__ecaErr = window.__ecaErr || []).push({ msg: "economy denied " + JSON.stringify(shape), src: "fbEconomy", line: 0 });
+    }
     window.fbEconomy = async request => {
       if (!me || me.role !== "student" || !request || typeof request !== "object") return { ok: false };
       const uid = me.uid, userRef = doc(firestore, "users", uid), op = request.op;
@@ -242,10 +260,12 @@
         day = cairoDayKey();
       } else return { ok: false };
       const receiptRef = doc(firestore, "users", uid, "economy", id);
+      let lastProfile = null;
       const result = await runTransaction(firestore, async tx => {
         const [userSnap, receiptSnap] = await Promise.all([tx.get(userRef), tx.get(receiptRef)]);
         if (!userSnap.exists()) return { ok: false };
         if (receiptSnap.exists()) return { ok: true, duplicate: true };
+        lastProfile = userSnap.data();
         const profile = userSnap.data(), arena = Object.assign({}, profile.arena || {}), shop = Object.assign({ titles: [], bots: [], hints: 0, activeTitle: "" }, profile.shop || {});
         const oldStars = Number(arena.stars) || 0;
         let nextShop = Object.assign({}, shop), missionBonus = false, receiptKind = op;
@@ -281,12 +301,13 @@
         }
         arena.stars = oldStars + starsDelta;
         arena.xp = (Number(arena.xp) || 0) + xpDelta;
-        tx.update(userRef, { arena, shop: nextShop, lastEconomy: id });
+        const fix = selfFieldsFix(profile);
+        tx.update(userRef, Object.assign({ arena, shop: nextShop, lastEconomy: id }, fix));
         tx.set(receiptRef, {
           uid, kind: receiptKind, source, key, day, item, score, starsDelta, xpDelta, missionBonus, at: serverTimestamp()
         });
-        return { ok: true, duplicate: false, starsDelta, xpDelta, missionBonus, profile: Object.assign({}, profile, { arena, shop: nextShop, lastEconomy: id }) };
-      });
+        return { ok: true, duplicate: false, starsDelta, xpDelta, missionBonus, profile: Object.assign({}, profile, fix, { arena, shop: nextShop, lastEconomy: id }) };
+      }).catch(err => { reportEconomyDenied(err, source || op, day, lastProfile); throw err; });
       if (result.ok && !result.duplicate && result.profile) {
         maps.core[uid] = cleanDeep(result.profile);
         synced["c:" + uid] = JSON.stringify(split(Object.assign({ id: uid }, result.profile)).core);

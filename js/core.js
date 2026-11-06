@@ -498,8 +498,8 @@
         const code = error && error.code || "";
         if (code === "permission-denied") {
           toast(lang === "en"
-            ? "Firestore rules rejected the reward. Publish the latest firestore.rules, then try again."
-            : "قواعد Firestore رفضت حفظ المكافأة. انشر آخر تحديث لقواعد firestore.rules ثم حاول مرة أخرى.");
+            ? "Your reward could not be saved. Try again, and tell your coach if this keeps happening."
+            : "تعذّر حفظ المكافأة. حاول مرة أخرى، ولو المشكلة اتكررت بلّغ الكوتش.");
         } else if (code === "unavailable" || code === "deadline-exceeded") {
           toast(lang === "en" ? "Reward could not be saved. Check your connection and try again." : "تعذّر حفظ المكافأة بسبب الاتصال. تحقق من الإنترنت وحاول مرة أخرى.");
         } else {
