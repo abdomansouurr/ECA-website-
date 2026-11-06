@@ -2433,7 +2433,7 @@
         extraCoachControls = `
           <div class="gold-card rounded-2xl p-4 mt-4 flex flex-wrap items-center justify-between gap-3">
             <div class="flex flex-wrap items-center gap-2 flex-1">
-              <span class="text-xs text-yellow-300 font-bold">اسم الكوتش في شهادة الطالب (${esc(sel.name)}):</span>
+              <span class="text-xs text-yellow-300 font-bold">${lang === "en" ? `Coach's name on the student's certificate (${esc(sel.name)}):` : `اسم الكوتش في شهادة الطالب (${esc(sel.name)}):`}</span>
               <input id="stuCoachInp" value="${esc(curCoach)}" onchange="assignStudentCoach('${sel.id}', this.value)" class="bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white" />
             </div>
             ${certs.length ? `<button onclick="previewAndDownloadCert('${sel.id}',${certs.length - 1}, true)" class="px-3 py-1.5 rounded-xl text-xs gold-btn">إرسال آخر شهادة لولي الأمر PDF</button>` : ""}
