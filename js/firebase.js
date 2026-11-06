@@ -315,6 +315,10 @@
             if ((shop.bots || []).includes(level)) return { ok: false, code: "already-owned" };
             nextShop.bots = [...(shop.bots || []), level];
           } else if (catalogItem.type === "hint") nextShop.hints = (Number(shop.hints) || 0) + 1;
+          else if (catalogItem.type === "cosmetic") {
+            if ((shop.items || []).includes(item)) return { ok: false, code: "already-owned" };
+            nextShop.items = [...(shop.items || []), item];
+          }
           else if (catalogItem.type === "freeze") {
             if ((Number(shop.freezes) || 0) >= 2) return { ok: false, code: "freeze-limit" };
             nextShop.freezes = (Number(shop.freezes) || 0) + 1;

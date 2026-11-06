@@ -150,6 +150,29 @@ async function runSuite(label, rules, quiet) {
   await T("spend hint with none left", false, Object.assign({}, rich, { shop: { titles: [], bots: [], hints: 0, activeTitle: "" } }), db => econ(db, { kind: "spend-hint", starsDelta: 0, xpDelta: 0, id: "hint-use-abcd12345678" }, s => { s.hints = -1; return s; }));
   await T("equip owned title", true, Object.assign({}, rich, { shop: { titles: ["title-knight"], bots: [], hints: 0, activeTitle: "" } }), db => patch(db, { shop: { titles: ["title-knight"], bots: [], hints: 0, activeTitle: "title-knight" } }));
   await T("equip locked title", false, rich, db => patch(db, { shop: { titles: [], bots: [], hints: 2, activeTitle: "title-master" } }));
+  // cosmetics
+  const COSMETICS = { "avatar-rocket": 25, "avatar-robot": 25, "avatar-owl": 25, "board-neon": 40, "avatar-crown": 60, "avatar-dragon": 60, "board-ember": 60, "piece-neon": 80, "board-royal": 90, "piece-gold": 150 };
+  const addItem = id => s => { s.items = [...(s.items || []), id]; return s; };
+  const withItems = (items, eq) => Object.assign({}, rich, { shop: Object.assign({ titles: [], bots: [], hints: 0, activeTitle: "", items }, eq ? { eq } : {}) });
+  const shopWith = (items, eq) => ({ titles: [], bots: [], hints: 0, activeTitle: "", items, eq });
+  for (const id of Object.keys(COSMETICS)) await T("buy " + id, true, rich, db => buy(db, id, addItem(id), COSMETICS[id]));
+  await T("buy cosmetic with a full inventory", true, withItems(Object.keys(COSMETICS).filter(x => x !== "piece-gold"), { b: "board-neon", p: "piece-neon", a: "avatar-owl" }), db => buy(db, "piece-gold", addItem("piece-gold"), 150));
+  await T("buy cosmetic at a forged price", false, rich, db => buy(db, "piece-gold", addItem("piece-gold"), 1));
+  await T("buy unknown cosmetic", false, rich, db => buy(db, "board-free", addItem("board-free"), 1));
+  await T("buy cosmetic already owned", false, withItems(["board-neon"]), db => buy(db, "board-neon", addItem("board-neon"), 40));
+  await T("cosmetic purchase grants another item", false, rich, db => buy(db, "avatar-owl", addItem("piece-gold"), 25));
+  await T("cosmetic purchase adds a bot", false, rich, db => buy(db, "avatar-owl", s => { s.items = ["avatar-owl"]; s.bots = [7]; return s; }, 25));
+  await T("cosmetic purchase adds a freeze", false, rich, db => buy(db, "avatar-owl", s => { s.items = ["avatar-owl"]; s.freezes = 2; return s; }, 25));
+  await T("cosmetic purchase equips another item", false, withItems(["board-neon"]), db => buy(db, "avatar-owl", s => { s.items = [...s.items, "avatar-owl"]; s.eq = { b: "board-neon" }; return s; }, 25));
+  await T("hint purchase adds a cosmetic", false, rich, db => buy(db, "hint", s => { s.hints++; s.items = ["piece-gold"]; return s; }));
+  await T("reward adds a cosmetic", false, rich, db => econ(db, { kind: "earn", source: "pawn", key: today, starsDelta: 2, xpDelta: 40, id: "pawn-" + today }, s => { s.items = ["piece-gold"]; return s; }));
+  await T("reward still works with cosmetics owned", true, withItems(["board-neon"], { b: "board-neon" }), db => econ(db, { kind: "earn", source: "pawn", key: today, starsDelta: 2, xpDelta: 40, id: "pawn-" + today }));
+  await T("cosmetic added with no receipt", false, rich, db => patch(db, { shop: { titles: [], bots: [], hints: 2, activeTitle: "", items: ["piece-gold"] } }));
+  await T("equip owned cosmetics", true, withItems(["board-neon", "avatar-owl"]), db => patch(db, { shop: shopWith(["board-neon", "avatar-owl"], { b: "board-neon", a: "avatar-owl" }) }));
+  await T("remove an equipped cosmetic", true, withItems(["board-neon"], { b: "board-neon" }), db => patch(db, { shop: shopWith(["board-neon"], { b: "" }) }));
+  await T("equip a cosmetic not owned", false, withItems(["board-neon"]), db => patch(db, { shop: shopWith(["board-neon"], { b: "board-royal" }) }));
+  await T("equip with an unknown slot", false, withItems(["board-neon"]), db => patch(db, { shop: shopWith(["board-neon"], { x: "board-neon" }) }));
+  await T("equip and add an item together", false, withItems(["board-neon"]), db => patch(db, { shop: shopWith(["board-neon", "piece-gold"], { p: "piece-gold" }) }));
   await T("edit stars with no receipt", false, legacy, db => patch(db, { arena: Object.assign({}, legacy.arena, { stars: 999 }) }));
   // attempts + days
   await T("daily attempt: first day of a new account", true, fresh, db => daily(db));

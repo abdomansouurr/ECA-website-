@@ -27,23 +27,18 @@ service cloud.firestore {
       return o.get('titles', []) == n.get('titles', [])
         && o.get('bots', []) == n.get('bots', [])
         && o.get('hints', 0) == n.get('hints', 0)
+        && o.get('items', []) == n.get('items', [])
         && freezeSame(o, n);
     }
     function freezeSame(o, n) {
       return o.get('freezes', 0) == n.get('freezes', 0) && o.get('frozen', []) == n.get('frozen', []);
     }
+    // كل مسار كتابة بيثبّت القوائم على القيمة القديمة أو بيضيف عنصر له سعر، فمش محتاجة إعادة فحص هنا (حد الـ 1000 عملية)
     function shopValid(s) {
-      let titles = s.get('titles', []);
-      let bots = s.get('bots', []);
-      let hints = s.get('hints', 0);
-      return s.keys().hasOnly(['titles','bots','hints','activeTitle','freezes','frozen'])
-        && s.get('freezes', 0) is int && s.get('freezes', 0) >= 0 && s.get('freezes', 0) <= 2
-        && s.get('frozen', []) is list && s.get('frozen', []).size() <= 400
-        && titles is list && titles.size() <= 3 && titles.hasOnly(['title-tactics','title-knight','title-master'])
-        && bots is list && bots.size() <= 7 && bots.hasOnly([1,2,3,4,5,6,7])
-        && hints is int && hints >= 0 && hints <= 5000
-        && s.get('activeTitle', '') is string
-        && (s.get('activeTitle', '') == '' || s.get('activeTitle', '') in titles);
+      return s.keys().hasOnly(['titles','bots','hints','activeTitle','freezes','frozen','items','eq'])
+        && s.get('freezes', 0) >= 0 && s.get('freezes', 0) <= 2
+        && s.get('frozen', []).size() <= 400
+        && s.get('activeTitle', '') is string;
     }
     function protectedEconomySame(o, n) {
       return !n.diff(o).affectedKeys().hasAny(['stars','xp','missionDate','missionDone']);
@@ -52,7 +47,24 @@ service cloud.firestore {
       return shopValid(n) && shopCoreSame(o, n)
         && (o.get('activeTitle', '') == n.get('activeTitle', '')
           || n.get('activeTitle', '') == ''
-          || n.get('activeTitle', '') in o.get('titles', []));
+          || n.get('activeTitle', '') in o.get('titles', []))
+        && (o.get('eq', {}) == n.get('eq', {}) || eqOk(n.get('eq', {}), o.get('items', [])));
+    }
+    // الرقعة والقطع والأفاتار اللي الطالب مختارهم لازم يكونوا في مخزونه
+    function eqOk(e, items) {
+      return e is map && e.keys().hasOnly(['b','p','a'])
+        && (e.get('b', '') == '' || e.get('b', '') in items)
+        && (e.get('p', '') == '' || e.get('p', '') in items)
+        && (e.get('a', '') == '' || e.get('a', '') in items);
+    }
+    function cosmeticPrice(item) {
+      return item in ['avatar-rocket','avatar-robot','avatar-owl'] ? 25 : item == 'board-neon' ? 40 : item in ['avatar-crown','avatar-dragon'] ? 60
+        : item == 'board-ember' ? 60 : item == 'piece-neon' ? 80 : item == 'board-royal' ? 90 : item == 'piece-gold' ? 150 : 0;
+    }
+    function cosmeticGrantOk(o, n, r) {
+      return r.kind == 'purchase' && r.xpDelta == 0 && r.starsDelta < 0 && r.starsDelta + cosmeticPrice(r.item) == 0
+        && listGrantOk(o.get('items', []), n.get('items', []), r.item)
+        && shopSameExceptFreeze(o, n) && freezeSame(o, n);
     }
     function puzzleStars(key) {
       return key == 'daily' || key == 'easiest' ? 1
@@ -94,8 +106,9 @@ service cloud.firestore {
           : (listGrantOk(o.get('bots', []), n.get('bots', []), int(item.split('-')[1])) && n.get('titles', []) == o.get('titles', []) && n.get('hints', 0) == o.get('hints', 0));
     }
     function economyShopChangeOk(o, n, r) {
-      return shopValid(n) && o.get('activeTitle', '') == n.get('activeTitle', '')
-        && (r.kind == 'earn' ? shopCoreSame(o, n)
+      return shopValid(n) && o.get('activeTitle', '') == n.get('activeTitle', '') && o.get('eq', {}) == n.get('eq', {})
+        && (o.get('items', []) != n.get('items', []) ? cosmeticGrantOk(o, n, r)
+          : r.kind == 'earn' ? shopCoreSame(o, n)
           : r.kind == 'spend-freeze' ? freezeUseOk(o, n, r)
           : r.kind == 'spend-hint'
             ? (r.starsDelta == 0 && r.xpDelta == 0 && o.get('hints', 0) >= 1 && n.get('hints', 0) == o.get('hints', 0) - 1

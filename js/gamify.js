@@ -50,6 +50,7 @@ window.ecaToggleSfx = ecaToggleSfx;
 // العناصر بتتبني مرة واحدة وبعدها بنحدّث قيمها بس، عشان حركة شريط الخبرة تشتغل
 function ecaHudBuild(el) {
   el.innerHTML = `<div class="eca-hud-inner">
+    <span class="eca-hud-avatar" id="ecaHudAvatar" aria-hidden="true" hidden></span>
     <img class="eca-hud-icon" id="ecaHudIcon" alt="" width="28" height="28" hidden />
     <div class="eca-hud-xp">
       <div class="eca-hud-row"><b id="ecaHudRank"></b><span id="ecaHudPoints" dir="ltr"></span></div>
@@ -93,6 +94,8 @@ function ecaHudUpdate() {
   el.hidden = false;
   if (!el.firstElementChild) ecaHudBuild(el);
   const en = lang === "en", a = u.arena || {}, xp = calcXP(u).total, p = ecaXpProgress(xp), cur = p.rank.cur;
+  const avatarEl = document.getElementById("ecaHudAvatar"), avatar = ecaAvatarOf(u);
+  avatarEl.hidden = !avatar; avatarEl.textContent = avatar;
   const icon = document.getElementById("ecaHudIcon");
   if (cur) { icon.hidden = false; if (icon.getAttribute("src") !== cur.icon) icon.setAttribute("src", cur.icon); } else icon.hidden = true;
   document.getElementById("ecaHudRank").textContent = cur ? cur.label : (en ? "No rank yet" : "لسه بدون رتبة");
@@ -118,7 +121,40 @@ function ecaHudUpdate() {
   ecaCheckLevelUp(u, p.rank);
 }
 window.ecaHudUpdate = ecaHudUpdate;
-{ const _r = render; render = function () { const out = _r.apply(this, arguments); ecaHudUpdate(); return out; }; }
+{ const _r = render; render = function () { ecaCosmeticsApply(); const out = _r.apply(this, arguments); ecaHudUpdate(); return out; }; }
+
+// ================= الرقعة والقطع من المتجر =================
+function ecaEquipped(u, cat, slot) {
+  const shop = (u && u.role === "student" && u.shop) || {}, id = (shop.eq || {})[slot];
+  return id && (shop.items || []).includes(id) && window.ecaShopCatalog.some(x => x.id === id && x.cat === cat) ? id : "";
+}
+function ecaCosmeticsApply() {
+  const u = currUser(), root = document.documentElement.dataset, board = ecaEquipped(u, "board", "b"), piece = ecaEquipped(u, "piece", "p");
+  if (board) root.ecab = board; else delete root.ecab;
+  if (piece) { root.ecap = piece; if (pieceSet === "lichess") pieceSet = "classic"; } else delete root.ecap;
+}
+function ecaSetEq(slot, id) {
+  const u = currUser(), shop = u.shop || {};
+  u.shop = Object.assign({}, shop, { eq: Object.assign({}, shop.eq || {}, { [slot]: id }) });
+  ecaCosmeticsApply();
+  save();
+}
+function ecaEquip(slot, id) {
+  const u = currUser(), cat = { b: "board", p: "piece", a: "avatar" }[slot];
+  if (!u || u.role !== "student" || !cat) return;
+  if (id && !((u.shop || {}).items || []).includes(id)) return;
+  if (id && !window.ecaShopCatalog.some(x => x.id === id && x.cat === cat)) return;
+  ecaSetEq(slot, id);
+  if (id) ecaSfx("ting");
+  render();
+}
+window.ecaEquip = ecaEquip;
+// اختيار ألوان أو قطع يدويًا بيرجّع الاختيار اليدوي مكان اللي من المتجر
+{
+  const _color = setBoardColor, _pieces = setPieceSet;
+  setBoardColor = function (k, v) { if (ecaEquipped(currUser(), "board", "b")) ecaSetEq("b", ""); return _color(k, v); };
+  setPieceSet = function (k) { if (ecaEquipped(currUser(), "piece", "p")) ecaSetEq("p", ""); return _pieces(k); };
+}
 
 // ================= الأهداف اليومية =================
 // لازم نفس النجوم في firestore.rules (questStars) وفي awardStudentActivity

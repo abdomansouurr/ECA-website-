@@ -370,7 +370,17 @@
       { id: "streak-freeze", type: "freeze", title: "🧊 حماية السلسلة (بتحفظ سلسلتك لو غبت يوم)", en: "🧊 Streak Freeze (saves your streak if you miss a day)", cost: 30 },
       ...[1, 2, 3, 4, 5, 6, 7].map((level, index) => ({
         id: "bot-" + level, type: "bot", title: "فتح البوت " + (level + 1), en: "Unlock bot " + (level + 1), cost: [20, 40, 70, 100, 150, 220, 300][index]
-      }))
+      })),
+      { id: "board-neon", type: "cosmetic", cat: "board", title: "رقعة النيون", en: "Neon board", cost: 40, l: "#c7d2fe", d: "#6366f1" },
+      { id: "board-ember", type: "cosmetic", cat: "board", title: "رقعة الجمر", en: "Ember board", cost: 60, l: "#fed7aa", d: "#c2410c" },
+      { id: "board-royal", type: "cosmetic", cat: "board", title: "الرقعة الملكية", en: "Royal board", cost: 90, l: "#e9d5ff", d: "#7e22ce" },
+      { id: "piece-neon", type: "cosmetic", cat: "piece", title: "قطع النيون", en: "Neon pieces", cost: 80 },
+      { id: "piece-gold", type: "cosmetic", cat: "piece", title: "القطع الدهبية", en: "Golden pieces", cost: 150 },
+      { id: "avatar-rocket", type: "cosmetic", cat: "avatar", title: "أفاتار الصاروخ", en: "Rocket avatar", cost: 25, icon: "🚀" },
+      { id: "avatar-robot", type: "cosmetic", cat: "avatar", title: "أفاتار الروبوت", en: "Robot avatar", cost: 25, icon: "🤖" },
+      { id: "avatar-owl", type: "cosmetic", cat: "avatar", title: "أفاتار البومة", en: "Owl avatar", cost: 25, icon: "🦉" },
+      { id: "avatar-crown", type: "cosmetic", cat: "avatar", title: "أفاتار التاج", en: "Crown avatar", cost: 60, icon: "👑" },
+      { id: "avatar-dragon", type: "cosmetic", cat: "avatar", title: "أفاتار التنين", en: "Dragon avatar", cost: 60, icon: "🐉" }
     ];
     window.ecaShopCatalog = ECA_SHOP_ITEMS;
     function buyShopItem(id) {
@@ -400,33 +410,64 @@
       save(); render();
     }
     window.setStudentTitle = setStudentTitle;
+    function ecaAvatarOf(user) {
+      const shop = (user && user.shop) || {}, id = (shop.eq || {}).a;
+      const item = id && (shop.items || []).includes(id) ? ECA_SHOP_ITEMS.find(x => x.id === id && x.cat === "avatar") : null;
+      return item ? item.icon : "";
+    }
+    let ecaShopTab = "tools";
+    function ecaShopTabSet(key) {
+      ecaShopTab = key;
+      const el = document.getElementById("ecaShopCard"), u = currUser();
+      if (el && u) el.outerHTML = studentShopCard(u);
+    }
+    window.ecaShopTabSet = ecaShopTabSet;
+    const ECA_SLOT = { board: "b", piece: "p", avatar: "a" };
+    function ecaShopPreview(item) {
+      if (item.cat === "board") return `<span class="eca-shop-prev" style="background:linear-gradient(135deg, ${esc(item.l)} 50%, ${esc(item.d)} 50%)"></span>`;
+      if (item.cat === "piece") return `<span class="eca-shop-prev eca-skin-${esc(item.id)}" style="background:linear-gradient(135deg,#f0d9b5 50%,#b58863 50%)"><span class="eca-pc w">♞&#xFE0E;</span><span class="eca-pc b">♞&#xFE0E;</span></span>`;
+      if (item.cat === "avatar") return `<span class="eca-shop-prev text-2xl" aria-hidden="true">${esc(item.icon)}</span>`;
+      return "";
+    }
     function studentShopCard(user) {
-      const a = user.arena || {}, shop = user.shop || {}, stars = Number(a.stars) || 0;
-      const ownedTitles = shop.titles || [], ownedBots = shop.bots || [], hints = Number(shop.hints) || 0, freezes = Number(shop.freezes) || 0;
+      const a = user.arena || {}, shop = user.shop || {}, stars = Number(a.stars) || 0, en = lang === "en";
+      const ownedTitles = shop.titles || [], ownedBots = shop.bots || [], ownedItems = shop.items || [], eq = shop.eq || {}, hints = Number(shop.hints) || 0, freezes = Number(shop.freezes) || 0;
+      const equipBtn = item => {
+        const off = `class="tap rounded-lg px-3 text-xs bg-zinc-800 text-white border border-yellow-500/30">${en ? "Remove" : "شيل"}</button>`;
+        const on = `class="tap rounded-lg px-3 text-xs gold-btn">${en ? "Use" : "استخدم"}</button>`;
+        if (item.type === "title") return shop.activeTitle === item.id
+          ? `<button type="button" onclick="setStudentTitle('')" ${off}`
+          : `<button type="button" onclick="setStudentTitle('${item.id}')" ${on}`;
+        const slot = ECA_SLOT[item.cat];
+        return eq[slot] === item.id
+          ? `<button type="button" onclick="ecaEquip('${slot}','')" ${off}`
+          : `<button type="button" onclick="ecaEquip('${slot}','${item.id}')" ${on}`;
+      };
       const itemCard = item => {
         const owned = item.type === "title" ? ownedTitles.includes(item.id)
           : item.type === "bot" ? ownedBots.includes(Number(item.id.slice(4)))
+          : item.type === "cosmetic" ? ownedItems.includes(item.id)
           : false;
         const label = lang === "en" ? item.en : item.title;
         return `<div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-black/30 border border-yellow-500/15">
-          <div class="min-w-0"><div class="text-sm font-bold text-white">${esc(label)}</div>
-            <div class="text-[11px] text-gray-400">${owned ? (lang === "en" ? "Owned" : "تم الفتح") : "⭐ " + item.cost}${item.type === "freeze" ? " • " + (lang === "en" ? "You have" : "معاك") + " " + freezes + "/2" : ""}</div></div>
-          ${owned ? `<span class="text-emerald-400 text-xs font-bold">✓</span>` : `<button type="button" onclick="buyShopItem('${item.id}')" ${stars < item.cost || (item.type === "freeze" && freezes >= 2) ? "disabled" : ""} class="tap rounded-lg px-3 text-xs gold-btn disabled:opacity-40">${lang === "en" ? "Buy" : "شراء"}</button>`}
+          ${ecaShopPreview(item)}<div class="min-w-0 flex-1"><div class="text-sm font-bold text-white">${esc(label)}</div>
+            <div class="text-xs text-gray-400">${owned ? (lang === "en" ? "Owned" : "تم الفتح") : "⭐ " + item.cost}${item.type === "freeze" ? " • " + (lang === "en" ? "You have" : "معاك") + " " + freezes + "/2" : ""}</div></div>
+          ${owned ? (item.type === "cosmetic" || item.type === "title" ? equipBtn(item) : `<span class="text-emerald-400 text-xs font-bold">✓</span>`) : `<button type="button" onclick="buyShopItem('${item.id}')" ${stars < item.cost || (item.type === "freeze" && freezes >= 2) ? "disabled" : ""} class="tap rounded-lg px-3 text-xs gold-btn disabled:opacity-40">${lang === "en" ? "Buy" : "شراء"}</button>`}
         </div>`;
       };
-      return `<section class="gold-card rounded-2xl p-5 space-y-3">
+      const tabs = [["tools", en ? "Tools" : "أدوات"], ["board", en ? "Boards" : "رقع"], ["piece", en ? "Pieces" : "قطع"], ["avatar", en ? "Avatars" : "أفاتار"], ["title", en ? "Titles" : "ألقاب"], ["inventory", en ? "My items" : "مخزوني"]];
+      const inTab = item => ecaShopTab === "tools" ? (item.type === "hint" || item.type === "freeze" || item.type === "bot")
+        : ecaShopTab === "title" ? item.type === "title" : item.cat === ecaShopTab;
+      const inventory = ECA_SHOP_ITEMS.filter(item => (item.type === "title" && ownedTitles.includes(item.id)) || (item.type === "cosmetic" && ownedItems.includes(item.id)));
+      const inventoryBody = `<p class="text-xs text-gray-400">${en ? "Bots unlocked" : "البوتات المفتوحة"}: ${ownedBots.length} • ${en ? "Hints" : "تلميحات"}: ${hints} • 🧊 ${freezes}/2</p>
+        ${inventory.length ? `<div class="grid sm:grid-cols-2 gap-2">${inventory.map(itemCard).join("")}</div>` : `<p class="text-sm text-gray-400 text-center py-4">${en ? "Nothing here yet. Buy your first item!" : "لسه مفيش حاجة. اشتري أول حاجة ليك!"}</p>`}`;
+      return `<section id="ecaShopCard" class="gold-card rounded-2xl p-5 space-y-3">
         <div class="flex items-center justify-between gap-3">
           <div><h3 class="font-bold text-lg text-yellow-300">${lang === "en" ? "Star shop" : "متجر النجوم"} 🛍️</h3>
             <p class="text-xs text-gray-400">${lang === "en" ? "Balance" : "رصيدك"}: ⭐ ${esc(String(stars))} • ${lang === "en" ? "Homework hints" : "تلميحات الواجب"}: ${esc(String(hints))}</p></div>
         </div>
-        <label class="flex items-center gap-2 text-xs text-gray-300">
-          <span>${lang === "en" ? "Your title" : "لقبك"}</span>
-          <select aria-label="${lang === "en" ? "Choose an owned title" : "اختر لقبًا مفتوحًا"}" onchange="setStudentTitle(this.value)" class="tap min-h-[44px] rounded-xl bg-black border border-yellow-500/40 px-3 text-sm text-white">
-            <option value="">${lang === "en" ? "No title" : "بدون لقب"}</option>
-            ${ownedTitles.map(id => { const item = ECA_SHOP_ITEMS.find(x => x.id === id); return item ? `<option value="${item.id}" ${shop.activeTitle === item.id ? "selected" : ""}>${esc(lang === "en" ? item.en : item.title)}</option>` : ""; }).join("")}
-          </select>
-        </label>
-        <div class="grid sm:grid-cols-2 gap-2">${ECA_SHOP_ITEMS.map(itemCard).join("")}</div>
+        <div class="flex flex-wrap gap-2" role="tablist">${tabs.map(t => `<button type="button" role="tab" aria-selected="${ecaShopTab === t[0]}" onclick="ecaShopTabSet('${t[0]}')" class="tap rounded-lg px-3 text-xs font-bold ${ecaShopTab === t[0] ? "gold-btn" : "bg-zinc-900 text-gray-300 border border-yellow-500/20"}">${t[1]}</button>`).join("")}</div>
+        ${ecaShopTab === "inventory" ? inventoryBody : `<div class="grid sm:grid-cols-2 gap-2">${ECA_SHOP_ITEMS.filter(inTab).map(itemCard).join("")}</div>`}
       </section>`;
     }
     function dailyMissionDone(user) {
@@ -1165,7 +1206,7 @@
           <div class="gold-card rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <span class="px-2.5 py-1 rounded-full text-xs gold-btn">STEP ${stu.level} STUDENT</span>
-              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">${lang === "en" ? "Welcome, " : "أهلاً يا "}${esc(ecaStudentAlias(stu))}${activeTitle ? ` <span class="text-sm text-yellow-300">${esc(lang === "en" ? activeTitle.en : activeTitle.title)}</span>` : ""}</h2>
+              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">${ecaAvatarOf(stu) ? `<span aria-hidden="true">${esc(ecaAvatarOf(stu))}</span> ` : ""}${lang === "en" ? "Welcome, " : "أهلاً يا "}${esc(ecaStudentAlias(stu))}${activeTitle ? ` <span class="text-sm text-yellow-300">${esc(lang === "en" ? activeTitle.en : activeTitle.title)}</span>` : ""}</h2>
               <p class="text-xs text-sky-300 mt-1">${lang === "en" ? "Level" : "المستوى"} ${studentLevel} • ${xp} XP</p>
               <p class="text-xs text-gray-400 mt-1">حضرت ${s.attC}/${s.total} درس في Step ${stu.level} • متبقي ${s.rem} درس للامتحان</p>
               <label class="inline-flex flex-wrap items-center gap-2 mt-3 text-xs text-gray-400">
