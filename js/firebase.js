@@ -592,8 +592,8 @@
           day,
           titleAr: "لغز اليوم الجديد جاهز",
           titleEn: "Today's new puzzle is ready",
-          bodyAr: "افتح الصفحة الرئيسية وحل لغز اليوم.",
-          bodyEn: "Open the home page and solve today's puzzle.",
+          bodyAr: "افتح ساحة التدريب وحل لغز اليوم.",
+          bodyEn: "Open the Training Arena and solve today's puzzle.",
           createdAt: serverTimestamp(),
           read: false
         });
@@ -601,6 +601,19 @@
         console.error("daily puzzle notification:", e);
         if (window.toast) toast("تعذّر حفظ إشعار لغز اليوم");
       }
+      // إشعار عجلة الحظ: مرة في اليوم، ولو الطالب لسه ما لفّش
+      const profile = maps.core[me.uid] || {};
+      if ((profile.arena || {}).sp === day) return;
+      const spinRef = doc(firestore, "users", me.uid, "notifications", "lucky-spin-" + day);
+      try {
+        const existing = await getDoc(spinRef);
+        if (!existing.exists()) await setDoc(spinRef, {
+          type: "lucky_spin", day,
+          titleAr: "عجلة الحظ جاهزة", titleEn: "Your lucky wheel is ready",
+          bodyAr: "لفة مجانية مستنياك النهاردة. اضغط هنا وجرّب حظك.", bodyEn: "A free spin is waiting for you today. Tap here to spin.",
+          createdAt: serverTimestamp(), read: false
+        });
+      } catch (e) { console.warn("lucky wheel notification:", e && e.code); }
     }
     window.fbNotifyHomework = async (sid, key, lessonTitle) => {
       if (!me || !isStaffRole(me.role) || !(db.users || []).some(u => u.id === sid && u.role === "student")) return false;

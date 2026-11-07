@@ -46,7 +46,7 @@ function ecaMapHTML(stu) {
 // ================= الرفيق: بيكبر مع الخبرة =================
 const ECA_PETS = {
   dragon: { ar: "التنين", en: "Dragon", stages: ["🥚", "🦎", "🐲", "🐉", "🐉"] },
-  cat: { ar: "القطة", en: "Cat", stages: ["🥚", "🐱", "😺", "🐈", "🦁"] }
+  cat: { ar: "الأسد", en: "Lion", stages: ["🥚", "🐱", "😺", "🐈", "🦁"] }
 };
 const ECA_PET_XP = [0, 300, 1000, 2500, 5000];
 const ECA_PET_NAMES = [["بيضة", "Egg"], ["صغير", "Baby"], ["شقي", "Young"], ["قوي", "Strong"], ["أسطوري", "Legendary"]];
@@ -72,7 +72,7 @@ function ecaPetHTML(stu) {
   if (!p.kind) return `<section class="gold-card rounded-2xl p-4 space-y-3">
     <h3 class="font-display font-bold text-lg text-yellow-300">🥚 ${en ? "Choose your companion" : "اختار رفيقك"}</h3>
     <p class="text-sm text-gray-300">${en ? "It grows as you earn XP." : "هيكبر كل ما تجمع خبرة."}</p>
-    <div class="grid grid-cols-2 gap-2">${Object.keys(ECA_PETS).map(k => `<button type="button" onclick="ecaPetPick('${k}')" class="tap rounded-xl px-3 text-sm font-bold gold-btn">${ECA_PETS[k].stages[3]} ${en ? ECA_PETS[k].en : ECA_PETS[k].ar}</button>`).join("")}</div>
+    <div class="grid grid-cols-2 gap-2">${Object.keys(ECA_PETS).map(k => `<button type="button" onclick="ecaPetPick('${k}')" class="tap rounded-xl px-3 text-sm font-bold gold-btn">${ECA_PETS[k].stages[4]} ${en ? ECA_PETS[k].en : ECA_PETS[k].ar}</button>`).join("")}</div>
   </section>`;
   const stageName = ECA_PET_NAMES[p.stage][en ? 1 : 0], petName = en ? ECA_PETS[p.kind].en : ECA_PETS[p.kind].ar;
   return `<section class="gold-card rounded-2xl p-4 flex items-center gap-4">

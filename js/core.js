@@ -681,6 +681,29 @@
       const id = button && button.dataset && button.dataset.notificationId;
       if (id && window.fbMarkNotificationRead) window.fbMarkNotificationRead(id);
     }
+    // الضغط على الإشعار بيعلّمه مقروء ويودّي للمكان اللي بيتكلم عنه
+    function openNotification(button) {
+      const id = button && button.dataset && button.dataset.notificationId;
+      const n = (window.ecaNotifications || []).find(x => x.id === id);
+      if (!n) return;
+      if (!n.read && window.fbMarkNotificationRead) window.fbMarkNotificationRead(n.id);
+      notificationsOpen = false;
+      const u = currUser(), student = !!(u && u.role === "student");
+      if (n.type === "daily_puzzle") {
+        arena.puz.diff = "daily"; arena.sub = "puzzles"; switchTab("arena");
+        // الرقعة محتاجة مكتبة الشطرنج، فبنستنى تتحمّل وبعدين نجيب لغز اليوم
+        let tries = 0;
+        const waitBoard = setInterval(() => { if (typeof ChessCls !== "undefined" && ChessCls) { clearInterval(waitBoard); if (tab === "arena" && arena.sub === "puzzles") puzLoad(); } else if (++tries > 50) clearInterval(waitBoard); }, 200);
+      } else if (n.type === "lucky_spin") {
+        switchTab("home");
+        if (student && window.ecaSpinOpen) setTimeout(() => { if (window.ecaSpinDone && ecaSpinDone(currUser())) toast(lang === "en" ? "You already spun today. Come back tomorrow!" : "لفيت النهاردة. استنى لبكرة!"); else ecaSpinOpen(); }, 300);
+      } else if (n.type === "homework") switchTab("lessons");
+      else if (n.type === "announcement") {
+        switchTab("home");
+        setTimeout(() => { const card = document.getElementById("ecaAnnCard"); if (card) card.scrollIntoView({ block: "start" }); }, 300);
+      } else render();
+    }
+    window.openNotification = openNotification;
     function markAllNotificationsRead() {
       if (window.fbMarkAllNotificationsRead) window.fbMarkAllNotificationsRead((window.ecaNotifications || []).filter(n => !n.read).map(n => n.id));
     }
@@ -774,11 +797,11 @@
               const time = Number(n.createdAt), at = Number.isFinite(time) && time > 0 ? time : 0;
               return `<div class="p-3 ${n.read ? "" : "bg-yellow-500/5"}">
                 <div class="flex items-start gap-2 justify-between">
-                  <div class="min-w-0">
+                  <button type="button" data-notification-id="${esc(n.id)}" onclick="openNotification(this)" class="min-w-0 flex-1 min-h-[44px] text-start rounded-lg hover:bg-yellow-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-yellow-400">
                     <div class="text-xs font-bold ${n.read ? "text-gray-200" : "text-white"} break-words">${esc(title)}</div>
                     <div class="text-xs text-gray-400 mt-1 whitespace-pre-wrap break-words">${esc(body)}</div>
                     ${at ? `<time class="block text-[11px] text-gray-500 mt-1" datetime="${new Date(at).toISOString()}">${new Date(at).toLocaleString(en ? "en-GB" : "ar-EG")}</time>` : ""}
-                  </div>
+                  </button>
                   ${!n.read ? `<button type="button" data-notification-id="${esc(n.id)}" onclick="markNotificationRead(this)" aria-label="${en ? "Mark as read" : "تحديد كمقروء"}" title="${en ? "Mark as read" : "تحديد كمقروء"}" class="shrink-0 min-w-[44px] min-h-[44px] rounded-lg text-emerald-300 hover:bg-emerald-500/10 flex items-center justify-center"><span aria-hidden="true">✓</span></button>` : ""}
                 </div>
               </div>`;
@@ -2312,7 +2335,7 @@
                   <div class="text-xs text-gray-400">النتيجة: ${c.score}% • المدرب: ${esc(c.coachName)} •${c.date}</div>
                 </div>
                 <div class="flex gap-2">
-                  <button onclick="previewAndDownloadCert('${stu.id}',${idx}, false)" class="px-3 py-1.5 rounded-xl text-xs gold-btn">تحميل PDF</button>
+                  <button onclick="previewAndDownloadCert('${stu.id}',${idx}, false)" class="px-3 py-1.5 rounded-xl text-xs gold-btn">${lang === "en" ? "Download PDF" : "تحميل PDF"}</button>
                   <button onclick="previewAndDownloadCert('${stu.id}',${idx}, true)" class="px-3 py-1.5 rounded-xl text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">إرسال لواتساب ولي الأمر</button>
                 </div>
               </div>

@@ -139,6 +139,19 @@ async function login(p, id) {
     const receipts = await until(async () => { const l = await list(`users/${A}/economy`); return l.some(x => x.startsWith("login-")) ? l : null; }, 10000);
     check("login reward saved", !!receipts, receipts);
 
+    // ---------- notifications open the right place ----------
+    const notes = await until(async () => { const l = await list(`users/${A}/notifications`); return l.some(x => x.startsWith("lucky-spin-")) && l.some(x => x.startsWith("daily-puzzle-")) ? l : null; }, 15000);
+    check("daily puzzle and lucky wheel notifications created", !!notes, notes);
+    await until(() => pa.ev("(window.ecaNotifications||[]).length>=2"));
+    const clickNote = async type => { await pa.ev("switchTab('home'); toggleNotifications()"); await sleep(300); await pa.ev(`(()=>{ const n=(window.ecaNotifications||[]).find(x=>x.type===${JSON.stringify(type)}); document.querySelector('[data-notification-id="'+n.id+'"][onclick^="openNotification"]').click(); })()`); await sleep(1200); };
+    await clickNote("daily_puzzle");
+    check("daily puzzle notification opens today's puzzle", await pa.ev("tab==='arena'&&arena.sub==='puzzles'&&arena.puz.diff==='daily'&&!document.getElementById('notificationsMenu').offsetParent"));
+    await clickNote("lucky_spin");
+    check("lucky wheel notification opens the wheel", await pa.ev("tab==='home'&&!!document.getElementById('ecaSpinModal')"));
+    await pa.ev("ecaSpinClose()");
+    check("clicked notifications are marked read", !!(await until(async () => { const a = await read(`users/${A}/notifications/${notes.find(x => x.startsWith("lucky-spin-"))}`), b = await read(`users/${A}/notifications/${notes.find(x => x.startsWith("daily-puzzle-"))}`); return a.read && b.read; })));
+    check("companion is called Lion", await pa.ev("(()=>{ const l=lang; lang='en'; const h=ecaPetHTML({arena:{},att:{},hw:{},puz:{}}); lang=l; return h.includes('Lion')&&!h.includes('Cat'); })()"));
+
     // ---------- shop ----------
     await pa.ev("switchTab('home')");
     await pa.ev("buyShopItem('avatar-owl')");

@@ -282,6 +282,16 @@ async function runSuite(label, rules, quiet) {
   await T("arena: prize without the trophy", false, rich, db => econ(db, { kind: "earn", source: "arena", key: AID, starsDelta: 50, xpDelta: 1000, id: "arena-" + AID }), arenaSeed(winner(1)));
   await T("arena: trophy added with no receipt", false, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { tr: ["x|1"] }) }));
   await T("arena: trophy added by another reward", false, rich, db => econ(db, { kind: "earn", source: "pawn", key: today, starsDelta: 2, xpDelta: 40, id: "pawn-" + today }, (s, a) => { a.tr = ["x|1"]; return s; }));
+  // student-made daily notifications
+  const note = (id, x) => db => db.collection("users").doc(uid).collection("notifications").doc(id).set(x);
+  const spinNote = (x = {}) => Object.assign({ type: "lucky_spin", day: today, titleAr: "عجلة الحظ جاهزة", titleEn: "Your lucky wheel is ready", bodyAr: "لفة مجانية مستنياك النهاردة. اضغط هنا وجرّب حظك.", bodyEn: "A free spin is waiting for you today. Tap here to spin.", createdAt: ts(), read: false }, x);
+  const puzzleNote = (x = {}) => Object.assign({ type: "daily_puzzle", day: today, titleAr: "لغز اليوم الجديد جاهز", titleEn: "Today's new puzzle is ready", bodyAr: "افتح ساحة التدريب وحل لغز اليوم.", bodyEn: "Open the Training Arena and solve today's puzzle.", createdAt: ts(), read: false }, x);
+  await T("notification: daily puzzle", true, rich, note("daily-puzzle-" + today, puzzleNote()));
+  await T("notification: lucky wheel", true, rich, note("lucky-spin-" + today, spinNote()));
+  await T("notification: lucky wheel with other text", false, rich, note("lucky-spin-" + today, spinNote({ bodyEn: "Click this link" })));
+  await T("notification: lucky wheel for another day", false, rich, note("lucky-spin-2020-01-01", spinNote({ day: "2020-01-01" })));
+  await T("notification: lucky wheel under another id", false, rich, note("announcement-x", spinNote()));
+  await T("notification: another student's wheel", false, rich, db => db.collection("users").doc(other).collection("notifications").doc("lucky-spin-" + today).set(spinNote()), duelSeed(duelBase()));
   // companion and achievements stay in the student's own profile
   await T("save companion and achievements", true, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { pet: "dragon", ach: ["night-owl"], duelW: 1 }) }));
   // leaderboard

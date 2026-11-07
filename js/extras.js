@@ -1133,7 +1133,7 @@
               <h3 class="font-display font-bold text-lg text-yellow-400 mb-3">الشهادات</h3>
               ${certs.length ? `<div class="space-y-2">${certs.map((c, i) => `<div class="flex flex-wrap justify-between items-center gap-2 p-3 rounded-xl bg-black/70 border border-yellow-500/25">
                 <div><div class="text-sm font-bold text-white">شهادة إتمام Step ${esc(c.step)}</div><div class="text-[11px] text-gray-400">${esc(c.score)}% • ${esc(c.date)}</div></div>
-                <button onclick="previewAndDownloadCert('${u.id}', ${i}, false)" class="px-3 py-1.5 rounded-xl text-xs gold-btn">تحميل PDF</button>
+                <button onclick="previewAndDownloadCert('${u.id}', ${i}, false)" class="px-3 py-1.5 rounded-xl text-xs gold-btn">${lang === "en" ? "Download PDF" : "تحميل PDF"}</button>
               </div>`).join("")}</div>` : `<p class="text-xs text-gray-400">لسه مفيش شهادات — الشهادة بتطلع بعد ما ينجح في امتحان الـ Step.</p>`}
             </div>
             <div class="gold-card rounded-2xl p-5 space-y-3">
@@ -1141,7 +1141,7 @@
               ${u.note ? `<div class="p-3 rounded-xl bg-black/80 border border-yellow-500/40"><b class="text-xs text-yellow-400">ملاحظة الكوتش:</b><p class="text-sm text-white mt-1">${esc(u.note)}</p></div>` : ''}
               <ul class="space-y-2 text-sm text-gray-300">
                 ${s.rem > 0 ? `<li>فاضله <b class="text-white">${s.rem}</b> درس عشان يقدر يدخل امتحان Step ${esc(u.level)}.</li>` : `<li>خلّص حضور كل دروس Step ${esc(u.level)} — امتحان الترقية متاح.</li>`}
-                ${s.hwP < 70 ? `<li>الواجبات محتاجة متابعة: حلّ ${s.hwC} من ${s.total}.</li>` : `<li>ملتزم في الواجبات (${s.hwP}%).</li>`}
+                ${s.hwP < 70 ? `<li>${lang === "en" ? `Homework needs follow-up: ${s.hwC} of ${s.total} done.` : `الواجبات محتاجة متابعة: حلّ ${s.hwC} من ${s.total}.`}</li>` : `<li>ملتزم في الواجبات (${s.hwP}%).</li>`}
                 ${st.current === 0 ? `<li>ما اتمرّنش النهاردة ولا امبارح على المنصة — شجّعه يتمرّن في ساحة التدريب.</li>` : `<li>بيتمرّن ${st.current} يوم ورا بعض — كمّل!</li>`}
               </ul>
             </div>

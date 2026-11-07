@@ -510,8 +510,22 @@ service cloud.firestore {
             && dateNear(request.resource.data.day.split('-'))
             && request.resource.data.titleAr == 'لغز اليوم الجديد جاهز'
             && request.resource.data.titleEn == "Today's new puzzle is ready"
-            && request.resource.data.bodyAr == 'افتح الصفحة الرئيسية وحل لغز اليوم.'
-            && request.resource.data.bodyEn == "Open the home page and solve today's puzzle."
+            && request.resource.data.bodyAr == 'افتح ساحة التدريب وحل لغز اليوم.'
+            && request.resource.data.bodyEn == "Open the Training Arena and solve today's puzzle."
+            && request.resource.data.createdAt == request.time
+            && request.resource.data.read == false)
+          || (notAnon() && request.auth.uid == uid
+            && !exists(/databases/$(database)/documents/deleted/$(uid))
+            && nid.matches('lucky-spin-[0-9]{4}-[0-9]{2}-[0-9]{2}')
+            && request.resource.data.keys().hasOnly(['type','day','titleAr','titleEn','bodyAr','bodyEn','createdAt','read'])
+            && request.resource.data.type == 'lucky_spin'
+            && request.resource.data.day is string
+            && nid == 'lucky-spin-' + request.resource.data.day
+            && dateNear(request.resource.data.day.split('-'))
+            && request.resource.data.titleAr == 'عجلة الحظ جاهزة'
+            && request.resource.data.titleEn == 'Your lucky wheel is ready'
+            && request.resource.data.bodyAr == 'لفة مجانية مستنياك النهاردة. اضغط هنا وجرّب حظك.'
+            && request.resource.data.bodyEn == 'A free spin is waiting for you today. Tap here to spin.'
             && request.resource.data.createdAt == request.time
             && request.resource.data.read == false);
         allow update: if notAnon() && request.auth.uid == uid

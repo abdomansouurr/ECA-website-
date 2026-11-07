@@ -62,7 +62,7 @@
     function annStudentHTML(u) {
       const hid = annHidden(), list = annSort(annFor(u)).filter(a => a.pin || !hid.includes(a.id));
       if (!list.length) return "";
-      return `<div class="gold-card rounded-2xl p-5 space-y-3 border border-yellow-500/40">
+      return `<div id="ecaAnnCard" class="gold-card rounded-2xl p-5 space-y-3 border border-yellow-500/40" style="scroll-margin-top:124px">
         <h3 class="font-bold text-yellow-300">${LA("من الأكاديمية", "From the academy")}</h3>
         ${list.slice(0, 4).map(a => annCard(a, false)).join("")}
       </div>`;
