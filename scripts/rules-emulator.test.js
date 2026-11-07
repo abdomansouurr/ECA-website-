@@ -292,6 +292,32 @@ async function runSuite(label, rules, quiet) {
   await T("notification: lucky wheel for another day", false, rich, note("lucky-spin-2020-01-01", spinNote({ day: "2020-01-01" })));
   await T("notification: lucky wheel under another id", false, rich, note("announcement-x", spinNote()));
   await T("notification: another student's wheel", false, rich, db => db.collection("users").doc(other).collection("notifications").doc("lucky-spin-" + today).set(spinNote()), duelSeed(duelBase()));
+  // heroes and frames
+  const shopEq = (eq, items = []) => ({ titles: [], bots: [], hints: 0, activeTitle: "", items, eq });
+  const atLevel = (level, items = []) => Object.assign({}, rich, { level, shop: shopEq({}, items) });
+  await T("hero: equip a hero from a passed Step", true, atLevel(3), db => patch(db, { shop: shopEq({ a: "hero-2" }) }));
+  await T("hero: equip the current Step's hero", false, atLevel(3), db => patch(db, { shop: shopEq({ a: "hero-3" }) }));
+  await T("hero: equip an unknown hero", false, atLevel(6), db => patch(db, { shop: shopEq({ a: "hero-9" }) }));
+  await T("frame: equip an owned frame", true, atLevel(1, ["frame-gold"]), db => patch(db, { shop: shopEq({ f: "frame-gold" }, ["frame-gold"]) }));
+  await T("frame: equip a frame not owned", false, atLevel(1), db => patch(db, { shop: shopEq({ f: "frame-gold" }) }));
+  await T("frame: buy a frame", false, rich, db => buy(db, "frame-gold", addItem("frame-gold"), 1));
+  // mystery chest: the prize comes from the account and the chest number
+  const CHEST_ITEMS = { a: "frame-silver", b: "frame-silver", c: "frame-gold", d: "frame-fire", e: "piece-ruby", f: "piece-crystal" };
+  const chestUser = want => { for (let i = 0; i < 5000; i++) { const who = "chest" + i; if (require("crypto").createHash("sha256").update(who + "|0").digest("hex")[0] === want) return who; } throw new Error("no chest user"); };
+  const chestEcon = (db, who, x = {}) => { const ur = db.collection("users").doc(who), id = x.id || "chest-0", rr = ur.collection("economy").doc(id); return db.runTransaction(async tx => {
+    const p = (await tx.get(ur)).data(); await tx.get(rr);
+    const arena = Object.assign({}, p.arena || {}), shop = Object.assign({ titles: [], bots: [], hints: 0, activeTitle: "" }, p.shop || {});
+    const stars = x.stars === undefined ? -40 : x.stars, xp = x.xp || 0;
+    arena.stars = (Number(arena.stars) || 0) + stars; arena.xp = (Number(arena.xp) || 0) + xp; arena.ch = x.ch === undefined ? (Number(arena.ch) || 0) + 1 : x.ch;
+    if (x.item) shop.items = [...(shop.items || []), x.item];
+    tx.update(ur, { arena, shop, lastEconomy: id });
+    tx.set(rr, { uid: who, kind: "chest", source: "", key: "", day: today, item: "", score: 0, starsDelta: stars, xpDelta: xp, missionBonus: false, at: ts() });
+  }); };
+  { const who = chestUser("2"); await spinT("chest: small XP prize", true, who, rich, db => chestEcon(db, who, { xp: 150 })); await spinT("chest: bigger XP than drawn", false, who, rich, db => chestEcon(db, who, { xp: 300 })); await spinT("chest: an item it did not draw", false, who, rich, db => chestEcon(db, who, { item: "frame-gold" })); await spinT("chest: free chest", false, who, rich, db => chestEcon(db, who, { stars: 0, xp: 150 })); await spinT("chest: counter not moved", false, who, rich, db => chestEcon(db, who, { xp: 150, ch: 0 })); await spinT("chest: counter skipped", false, who, rich, db => chestEcon(db, who, { xp: 150, ch: 5 })); await spinT("chest: wrong id", false, who, rich, db => chestEcon(db, who, { xp: 150, id: "chest-7" })); }
+  { const who = chestUser("8"); await spinT("chest: big XP prize", true, who, rich, db => chestEcon(db, who, { xp: 300 })); }
+  { const who = chestUser("c"); await spinT("chest: legendary frame", true, who, rich, db => chestEcon(db, who, { item: "frame-gold" })); await spinT("chest: legendary frame plus XP", false, who, rich, db => chestEcon(db, who, { item: "frame-gold", xp: 300 })); await spinT("chest: owned frame turns into XP", true, who, Object.assign({}, rich, { shop: shopEq({}, ["frame-gold"]) }), db => chestEcon(db, who, { xp: 300 })); }
+  { const who = chestUser("f"); await spinT("chest: rare piece set", true, who, rich, db => chestEcon(db, who, { item: "piece-crystal" })); }
+  await T("chest: counter changed with no receipt", false, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { ch: 9 }) }));
   // companion and achievements stay in the student's own profile
   await T("save companion and achievements", true, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { pet: "dragon", ach: ["night-owl"], duelW: 1 }) }));
   // leaderboard

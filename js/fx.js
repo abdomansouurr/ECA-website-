@@ -122,12 +122,55 @@ window.ecaMilestone = ecaMilestone;
 window.ecaMilestoneClose = ecaMilestoneClose;
 document.addEventListener("keydown", e => { if (e.key === "Escape" && fxOpen) ecaMilestoneClose(); });
 
+// ================= التشجيع بالصوت =================
+// جمل قصيرة بصوت المتصفح نفسه (من غير ملفات صوت). بتتقفل مع زرار الصوت أو من قايمة الحساب.
+const CHEERS = {
+  hype: { en: ["Brilliant!", "Unstoppable!", "What a move!"], ar: ["برافو عليك!", "محدش يقدر يوقفك!", "نقلة عبقرية!"] },
+  retry: { en: ["Almost! Try again!", "So close! You can do it!"], ar: ["قربت! حاول تاني", "قريبة جدًا! انت تقدر"] }
+};
+window.ecaVoiceOff = false;
+try { window.ecaVoiceOff = localStorage.getItem("ECA_VOICE_OFF") === "1"; } catch (_) {}
+function ecaToggleVoice() {
+  window.ecaVoiceOff = !window.ecaVoiceOff;
+  try { localStorage.setItem("ECA_VOICE_OFF", window.ecaVoiceOff ? "1" : "0"); } catch (_) {}
+  if (!window.ecaVoiceOff) ecaCheer("hype", true);
+  render();
+}
+window.ecaToggleVoice = ecaToggleVoice;
+let cheerLast = 0;
+function ecaCheer(kind, force) {
+  const set = CHEERS[kind];
+  if (!set || window.ecaSfxMuted || window.ecaVoiceOff || document.hidden) return;
+  const now = Date.now();
+  if (!force && now - cheerLast < 3500) return;
+  cheerLast = now;
+  const en = lang === "en", list = en ? set.en : set.ar, line = list[Math.floor(Math.random() * list.length)];
+  // الجملة بتظهر مكتوبة كمان، عشان لو الجهاز مفيهوش صوت للغة دي
+  const pop = document.createElement("div");
+  pop.className = "eca-cheer " + (kind === "hype" ? "is-hype" : "is-retry");
+  pop.setAttribute("role", "status");
+  pop.textContent = line;
+  document.body.appendChild(pop);
+  setTimeout(() => pop.remove(), 1600);
+  const synth = window.speechSynthesis;
+  if (!synth || typeof SpeechSynthesisUtterance === "undefined") return;
+  const voices = synth.getVoices(), voice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(en ? "en" : "ar"));
+  if (!voice) return;
+  try {
+    synth.cancel();
+    const say = new SpeechSynthesisUtterance(line);
+    say.voice = voice; say.lang = voice.lang; say.rate = kind === "hype" ? 1.05 : 0.95; say.pitch = kind === "hype" ? 1.2 : 1;
+    synth.speak(say);
+  } catch (_) {}
+}
+window.ecaCheer = ecaCheer;
+
 // الألغاز الصعبة بتستاهل احتفال أكبر
 {
   const _award = window.ecaAwardStudentActivity;
   window.ecaAwardStudentActivity = async function (source, key, score) {
     const result = await _award(source, key, score);
-    if (result && result.ok && !result.duplicate && source === "puzzle" && (key === "harder" || key === "hardest")) { ecaConfetti(70); ecaShake(); }
+    if (result && result.ok && !result.duplicate && source === "puzzle" && (key === "harder" || key === "hardest")) { ecaConfetti(70); ecaShake(); ecaCheer("hype"); }
     return result;
   };
 }

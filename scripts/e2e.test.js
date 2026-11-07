@@ -367,6 +367,37 @@ async function login(p, id) {
     check("shake class clears", await pa.ev("(async()=>{ ecaShake(); const on=document.getElementById('mainView').classList.contains('eca-shake'); await new Promise(r=>setTimeout(r,600)); return on&&!document.getElementById('mainView').classList.contains('eca-shake'); })()"));
     check("milestone text is not HTML", await pa.ev("(()=>{ ecaMilestone({icon:'x',title:'<img src=x onerror=window.__x=1>',text:'t'}); const ok=!document.querySelector('#ecaMilestone img'); ecaMilestoneClose(); return ok; })()"));
 
+    // ---------- heroes, mystery chests, frames and voice cheers ----------
+    await pa.send("Page.bringToFront");
+    await pa.ev("switchTab('home'); ecaSpinClose(); while(document.getElementById('ecaMilestone')) ecaMilestoneClose();");
+    check("map uses the kingdom names", await pa.ev("(()=>{ const l=lang; lang='en'; const h=ecaMapHTML(currUser()); lang=l; return h.includes('Pawn Kingdom')&&h.includes('Queen Empire'); })()"));
+    check("passed Step 1 unlocks its hero", await pa.ev("ecaOwnsItem(currUser(),'hero-1')&&!ecaOwnsItem(currUser(),'hero-2')"));
+    await pa.ev("ecaEquip('a','hero-1')");
+    check("hero equipped on the server", !!(await until(async () => ((await U(A)).shop.eq || {}).a === "hero-1")));
+    check("locked hero cannot be equipped", await pa.ev("(()=>{ ecaEquip('a','hero-3'); return currUser().shop.eq.a==='hero-1'; })()"));
+    const chestOne = async () => {
+      const before = await U(A), n = Number(before.arena.ch) || 0;
+      await pa.ev("ecaChestClose(); ecaOpenChest(); ecaChestGo()");
+      const receipt = await until(() => read(`users/${A}/economy/chest-${n}`), 15000);
+      const after = await U(A);
+      return { before, after, receipt, n };
+    };
+    const c1 = await chestOne();
+    const hex1 = crypto.createHash("sha256").update(A + "|" + c1.n).digest("hex")[0];
+    check("chest opens through the real code", !!c1.receipt && c1.after.arena.stars === c1.before.arena.stars - 40 && c1.after.arena.ch === c1.n + 1, c1.receipt && { hex: hex1, xp: c1.receipt.xpDelta });
+    await sleep(1600);
+    check("chest shows its prize", await pa.ev("(()=>{ const t=document.getElementById('ecaChestPrize').textContent; return /XP|Frame|frame|pieces|إطار|قطع|خبرة/.test(t); })()"));
+    const c2 = await chestOne();
+    check("second chest uses the next number", !!c2.receipt && c2.after.arena.ch === c2.n + 1);
+    await pa.ev("ecaChestClose()");
+    const lootItem = ((await U(A)).shop.items || []).find(x => /^(frame|piece)-(silver|gold|fire|ruby|crystal)$/.test(x));
+    if (lootItem && lootItem.startsWith("frame-")) {
+      await pa.ev(`ecaEquip('f', ${JSON.stringify(lootItem)})`);
+      check("frame from a chest can be equipped", !!(await until(async () => ((await U(A)).shop.eq || {}).f === lootItem)));
+    }
+    check("voice cheer shows on screen", await pa.ev("(()=>{ window.ecaSfxMuted=false; window.ecaVoiceOff=false; cheerLast=0; ecaCheer('retry'); const on=!!document.querySelector('.eca-cheer.is-retry'); return on; })()"));
+    check("voice cheers can be turned off", await pa.ev("(()=>{ ecaToggleVoice(); document.querySelectorAll('.eca-cheer').forEach(e=>e.remove()); cheerLast=0; ecaCheer('hype'); const quiet=!document.querySelector('.eca-cheer'); ecaToggleVoice(); window.ecaSfxMuted=true; return quiet && localStorage.getItem('ECA_VOICE_OFF')==='0'; })()"));
+
     // ---------- companion and achievements persist ----------
     await pc.ev("switchTab('home'); ecaPetPick('cat')");
     check("companion saved", !!(await until(async () => (await U(C)).arena.pet === "cat")));

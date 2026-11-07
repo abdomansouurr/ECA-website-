@@ -47,7 +47,7 @@ function duelFinish(won) {
   const D = arena.duel;
   duelStopTimer(); duelStopWatch();
   D.status = "done"; D.won = won; D.game = null; D.sel = null;
-  if (won) { ecaSfx("levelup"); if (window.ecaFireworks) { ecaFireworks(3); ecaShake(); } }
+  if (won) { ecaSfx("levelup"); if (window.ecaFireworks) { ecaFireworks(3); ecaShake(); } if (window.ecaCheer) ecaCheer("hype"); }
   duelPaint();
 }
 function duelWatch(id) {
@@ -128,6 +128,7 @@ function duelPlay(mv) {
   if (!ok) {
     // الغلطة بترجّع اللغز من الأول، وبتاخد ثانية وقت
     D.flash = { [r.to]: "bad" }; D.status = "wrong";
+    if (window.ecaCheer) ecaCheer("retry");
     arenaRefresh();
     setTimeout(() => { if (D.status === "wrong" && D.game === g) { D.status = "live"; duelSetup(); arenaRefresh(); } }, 1000);
     return;

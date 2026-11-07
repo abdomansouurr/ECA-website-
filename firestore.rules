@@ -41,21 +41,24 @@ service cloud.firestore {
         && s.get('activeTitle', '') is string;
     }
     function protectedEconomySame(o, n) {
-      return !n.diff(o).affectedKeys().hasAny(['stars','xp','missionDate','missionDone','cb','tr']);
+      return !n.diff(o).affectedKeys().hasAny(['stars','xp','missionDate','missionDone','cb','tr','ch']);
     }
-    function shopEquipOk(o, n) {
+    function shopEquipOk(o, n, level) {
       return shopValid(n) && shopCoreSame(o, n)
         && (o.get('activeTitle', '') == n.get('activeTitle', '')
           || n.get('activeTitle', '') == ''
           || n.get('activeTitle', '') in o.get('titles', []))
-        && (o.get('eq', {}) == n.get('eq', {}) || eqOk(n.get('eq', {}), o.get('items', [])));
+        && (o.get('eq', {}) == n.get('eq', {}) || eqOk(n.get('eq', {}), o.get('items', []), level));
     }
     // الرقعة والقطع والأفاتار اللي الطالب مختارهم لازم يكونوا في مخزونه
-    function eqOk(e, items) {
-      return e is map && e.keys().hasOnly(['b','p','a'])
+    // الأبطال مش بيتشتروا: البطل رقم N بيتفتح لما الطالب يعدّي Step N
+    function eqOk(e, items, level) {
+      return e is map && e.keys().hasOnly(['b','p','a','f'])
         && (e.get('b', '') == '' || e.get('b', '') in items)
         && (e.get('p', '') == '' || e.get('p', '') in items)
-        && (e.get('a', '') == '' || e.get('a', '') in items);
+        && (e.get('f', '') == '' || e.get('f', '') in items)
+        && (e.get('a', '') == '' || e.get('a', '') in items
+          || (e.get('a', '').matches('hero-[1-5]') && int(e.get('a', '').split('-')[1]) < level));
     }
     function cosmeticPrice(item) {
       return item in ['avatar-rocket','avatar-robot','avatar-owl'] ? 25 : item == 'board-wood' ? 30 : item == 'board-neon' ? 40 : item == 'board-midnight' ? 50 : item == 'board-marble' ? 70 : item in ['avatar-crown','avatar-dragon'] ? 60
@@ -109,9 +112,16 @@ service cloud.firestore {
       return r.source == 'spin' && r.starsDelta == 0 && r.xpDelta == 0
         && n.get('freezes', 0) == o.get('freezes', 0) + 1 && n.get('frozen', []) == o.get('frozen', []) && shopSameExceptFreeze(o, n);
     }
+    // صندوق الكنز: ممكن يضيف عنصر واحد بس، وقاعدة الإيصال بتتأكد إنه العنصر الصح
+    function chestShopOk(o, n) {
+      return shopSameExceptFreeze(o, n) && freezeSame(o, n)
+        && (o.get('items', []) == n.get('items', [])
+          || (n.get('items', []).size() == o.get('items', []).size() + 1 && n.get('items', []).hasAll(o.get('items', []))));
+    }
     function economyShopChangeOk(o, n, r) {
       return shopValid(n) && o.get('activeTitle', '') == n.get('activeTitle', '') && o.get('eq', {}) == n.get('eq', {})
-        && (o.get('items', []) != n.get('items', []) ? cosmeticGrantOk(o, n, r)
+        && (r.kind == 'chest' ? chestShopOk(o, n)
+          : o.get('items', []) != n.get('items', []) ? cosmeticGrantOk(o, n, r)
           : r.kind == 'earn' ? (shopCoreSame(o, n) || spinFreezeOk(o, n, r))
           : r.kind == 'spend-freeze' ? freezeUseOk(o, n, r)
           : r.kind == 'spend-hint'
@@ -244,6 +254,8 @@ service cloud.firestore {
         : r.source == '' && r.score == 0 && r.missionBonus == false
           && (r.kind == 'purchase'
             ? (r.key == '' && id.matches('buy-' + r.item + '-[A-Za-z0-9]{8,40}'))
+            : r.kind == 'chest'
+              ? (r.key == '' && r.item == '')
             : r.kind == 'spend-freeze'
               ? (r.item == '' && id == 'freeze-' + r.key)
               : (r.kind == 'spend-hint' && r.key == '' && id.matches('hint-use-[A-Za-z0-9]{8,40}') && r.item == ''));
@@ -262,6 +274,20 @@ service cloud.firestore {
         && r.xpDelta == r.starsDelta * 20
         && newA.get('cb', {}) == {'d': r.day, 'k': int(r.key)};
     }
+    // صندوق الكنز: الجايزة من بصمة الحساب ورقم الصندوق، والعنصر المكرر بيتحول لـ 300 خبرة
+    function chestHex(r, a) { return hashing.sha256(r.uid + '|' + string(a.get('ch', 0))).toHexString().lower()[0:1]; }
+    function chestItem(h) {
+      return h in ['a','b'] ? 'frame-silver' : h == 'c' ? 'frame-gold' : h == 'd' ? 'frame-fire' : h == 'e' ? 'piece-ruby' : h == 'f' ? 'piece-crystal' : '';
+    }
+    function chestPrizeOk(r, h, item, oi, ni) {
+      return item == '' ? (r.xpDelta == (h in ['0','1','2','3','4','5'] ? 150 : 300) && ni == oi)
+        : item in oi ? (r.xpDelta == 300 && ni == oi)
+        : (r.xpDelta == 0 && listGrantOk(oi, ni, item));
+    }
+    function chestOk(id, r, oldA, newA, oi, ni) {
+      return id == 'chest-' + string(oldA.get('ch', 0)) && newA.get('ch', 0) == oldA.get('ch', 0) + 1 && r.starsDelta == -40
+        && chestPrizeOk(r, chestHex(r, oldA), chestItem(chestHex(r, oldA)), oi, ni);
+    }
     function economyStateOk(id, r, u, n) {
       let oldA = u.get('arena', {});
       let newA = n.get('arena', {});
@@ -271,6 +297,7 @@ service cloud.firestore {
         && missionOk(r, oldA, newA)
         && (r.source == 'coach' ? coachOk(r, oldA, newA) : oldA.get('cb', {}) == newA.get('cb', {}))
         && (r.source == 'arena' ? listGrantOk(oldA.get('tr', []), newA.get('tr', []), r.key + '|' + string(arenaRankOfStars(r.starsDelta))) : oldA.get('tr', []) == newA.get('tr', []))
+        && (r.kind == 'chest' ? chestOk(id, r, oldA, newA, u.get('shop', {}).get('items', []), n.get('shop', {}).get('items', [])) : oldA.get('ch', 0) == newA.get('ch', 0))
         && economyKindOk(id, r, u);
     }
     // ملف الطالب بيفحص تغيير المتجر لأن بياناته متاحة هنا مباشرة، وقاعدة الإيصال بتفحص النجوم والخبرة ونوع المكافأة
@@ -280,7 +307,7 @@ service cloud.firestore {
       return id == resource.data.get('lastEconomy', '')
         ? (protectedEconomySame(resource.data.get('arena', {}), request.resource.data.get('arena', {}))
             && (resource.data.get('shop', {}) == request.resource.data.get('shop', {})
-              || shopEquipOk(resource.data.get('shop', {}), request.resource.data.get('shop', {}))))
+              || shopEquipOk(resource.data.get('shop', {}), request.resource.data.get('shop', {}), resource.data.get('level', 1))))
         : (id is string && id.matches('[A-Za-z0-9-]{1,100}')
             && !exists(economyDoc(request.auth.uid, id)) && existsAfter(economyDoc(request.auth.uid, id))
             && economyShopChangeOk(resource.data.get('shop', {}), request.resource.data.get('shop', {}), getAfter(economyDoc(request.auth.uid, id)).data));
@@ -290,7 +317,7 @@ service cloud.firestore {
       let r = request.resource.data;
       return notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))
         && r.keys().hasOnly(['uid','kind','source','key','day','item','score','starsDelta','xpDelta','missionBonus','at'])
-        && r.uid == uid && r.kind in ['earn','purchase','spend-hint','spend-freeze']
+        && r.uid == uid && r.kind in ['earn','purchase','spend-hint','spend-freeze','chest']
         && r.source is string && r.key is string && r.day is string && r.item is string
         && r.score is int && r.starsDelta is int && r.xpDelta is int && r.missionBonus is bool
         && r.at == request.time && dateNear(r.day.split('-'))

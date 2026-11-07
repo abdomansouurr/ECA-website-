@@ -3,11 +3,11 @@
 
 // ================= خريطة المغامرة =================
 const ECA_MAP = [
-  { step: 1, icon: "🏝️", ar: "جزيرة البيدق", en: "Pawn Island", x: 22, y: 88 },
-  { step: 2, icon: "🌲", ar: "غابة الحصان", en: "Knight Forest", x: 72, y: 73 },
-  { step: 3, icon: "⛰️", ar: "جبل الفيل", en: "Bishop Mountain", x: 28, y: 56 },
-  { step: 4, icon: "🏰", ar: "قلعة الطابية", en: "Rook Castle", x: 74, y: 40 },
-  { step: 5, icon: "🌋", ar: "بركان الوزير", en: "Queen Volcano", x: 26, y: 24 },
+  { step: 1, icon: "🏝️", ar: "مملكة البيدق", en: "Pawn Kingdom", x: 22, y: 88 },
+  { step: 2, icon: "🌲", ar: "قلعة الحصان", en: "Knight Castle", x: 72, y: 73 },
+  { step: 3, icon: "⛰️", ar: "برج الفيل", en: "Bishop Tower", x: 28, y: 56 },
+  { step: 4, icon: "🏰", ar: "حصن الطابية", en: "Rook Fortress", x: 74, y: 40 },
+  { step: 5, icon: "🌋", ar: "إمبراطورية الوزير", en: "Queen Empire", x: 26, y: 24 },
   { step: 6, icon: "👑", ar: "عرش الملك", en: "King's Throne", x: 68, y: 8 }
 ];
 function ecaMapClick(step) {
@@ -22,12 +22,14 @@ function ecaMapHTML(stu) {
   const en = lang === "en", level = Number(stu.level) || 1, s = calcStats(stu), pet = ecaPetOf(stu);
   const nodes = ECA_MAP.map(n => {
     const state = n.step < level ? "done" : n.step === level ? "now" : "locked", name = en ? n.en : n.ar;
-    const label = name + " • Step " + n.step + (state === "locked" ? (en ? " (locked)" : " (مقفول)") : "");
+    const hero = (window.ecaShopCatalog || []).find(x => x.type === "hero" && x.step === n.step);
+    const label = name + " • Step " + n.step + (state === "locked" ? (en ? " (locked)" : " (مقفول)") : "") + (hero ? " • " + (en ? "Hero: " + hero.en : "البطل: " + hero.title) : "");
     return `<button type="button" onclick="ecaMapClick(${n.step})" aria-label="${esc(label)}" title="${esc(label)}" class="eca-map-node is-${state}" style="left:${n.x}%;top:${n.y}%">
       <span class="eca-map-disc" aria-hidden="true">${state === "locked" ? "🔒" : n.icon}</span>
       <span class="eca-map-name">${esc(name)}</span>
       ${state === "now" ? `<span class="eca-map-pet" aria-hidden="true">${esc(pet.icon)}</span>` : ""}
       ${state === "done" ? `<span class="eca-map-check" aria-hidden="true">✓</span>` : ""}
+      ${hero ? `<span class="eca-map-hero ${state === "done" ? "is-won" : ""}" aria-hidden="true">${esc(hero.icon)}</span>` : ""}
     </button>`;
   }).join("");
   const points = ECA_MAP.map(n => n.x + "," + n.y).join(" ");
@@ -129,7 +131,11 @@ window.ecaOnSolve = ecaOnSolve;
   const _pc = puzCount;
   puzCount = function (solved) {
     const Z = arena.puz;
-    if (solved && !Z.counted && !Z.review) ecaOnSolve();
+    if (solved && !Z.counted && !Z.review) {
+      ecaOnSolve();
+      const streak = Number(((currUser() || {}).arena || {}).puzStreak) || 0;
+      if ((streak + 1) % 5 === 0 && window.ecaCheer) ecaCheer("hype");
+    } else if (!solved && !Z.counted && !Z.review && window.ecaCheer) ecaCheer("retry");
     return _pc(solved);
   };
 }

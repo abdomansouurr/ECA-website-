@@ -274,6 +274,41 @@
       const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(uid + "|" + day));
       return (new Uint8Array(bytes)[0] >> 4).toString(16);
     }
+    // صندوق الكنز: رقم الصندوق محفوظ في ملف الطالب، والجايزة من بصمة الحساب والرقم ده
+    const CHEST_ITEMS = { a: "frame-silver", b: "frame-silver", c: "frame-gold", d: "frame-fire", e: "piece-ruby", f: "piece-crystal" };
+    window.fbChest = async () => {
+      if (!me || me.role !== "student") return { ok: false };
+      const uid = me.uid, userRef = doc(firestore, "users", uid);
+      let lastProfile = null;
+      const result = await runTransaction(firestore, async tx => {
+        const userSnap = await tx.get(userRef);
+        if (!userSnap.exists()) return { ok: false };
+        const profile = userSnap.data(); lastProfile = profile;
+        const arena = Object.assign({}, profile.arena || {}), shop = Object.assign({}, profile.shop || {});
+        const count = Number(arena.ch) || 0, id = "chest-" + count, receiptRef = doc(firestore, "users", uid, "economy", id);
+        if ((await tx.get(receiptRef)).exists()) return { ok: false, code: "stale" };
+        if ((Number(arena.stars) || 0) < 40) return { ok: false, code: "insufficient-stars" };
+        const hex = await spinHexOf(uid, String(count));
+        let item = CHEST_ITEMS[hex] || "", xpDelta = 0, duplicate = false;
+        const items = Array.isArray(shop.items) ? shop.items : [];
+        if (!item) xpDelta = "012345".includes(hex) ? 150 : 300;
+        else if (items.includes(item)) { duplicate = true; xpDelta = 300; item = ""; }
+        else shop.items = [...items, item];
+        arena.stars = (Number(arena.stars) || 0) - 40;
+        arena.xp = (Number(arena.xp) || 0) + xpDelta;
+        arena.ch = count + 1;
+        const fix = selfFieldsFix(profile);
+        tx.update(userRef, Object.assign({ arena, shop, lastEconomy: id }, fix));
+        tx.set(receiptRef, { uid, kind: "chest", source: "", key: "", day: cairoDayKey(), item: "", score: 0, starsDelta: -40, xpDelta, missionBonus: false, at: serverTimestamp() });
+        return { ok: true, item, xpDelta, duplicate, starsDelta: -40, profile: Object.assign({}, profile, fix, { arena, shop, lastEconomy: id }) };
+      }).catch(err => { reportEconomyDenied(err, "chest", cairoDayKey(), lastProfile); throw err; });
+      if (result.ok && result.profile) {
+        maps.core[uid] = cleanDeep(result.profile);
+        synced["c:" + uid] = JSON.stringify(split(Object.assign({ id: uid }, result.profile)).core);
+        rebuild();
+      }
+      return result;
+    };
     // بطولة السرعة
     const msOf = t => (t && t.toMillis ? t.toMillis() : 0);
     window.fbArenaWatchOpen = (onRows, onError) => onSnapshot(query(collection(firestore, "speedArenas"), where("closed", "==", false), limit(10)),

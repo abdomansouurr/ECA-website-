@@ -109,6 +109,7 @@ function saPlay(mv) {
   const ok = r.from + r.to + (r.promotion || "") === (S.sol[S.idx] || "") || g.isCheckmate();
   if (!ok) {
     S.combo = 0; S.flash = { [r.to]: "bad" }; S.status = "wrong";
+    if (window.ecaCheer) ecaCheer("retry");
     arenaRefresh();
     setTimeout(() => { if (S.status === "wrong" && S.game === g) { S.status = "play"; saNextPuzzle(); arenaRefresh(); } }, 450);
     return;
@@ -128,7 +129,7 @@ function saPlay(mv) {
   saFlush();
   if (window.ecaOnSolve) window.ecaOnSolve();
   if (S.combo >= 2) ecaSfx("combo", S.combo); else ecaSfx("ting");
-  if (S.combo % 5 === 0 && window.ecaShake) ecaShake();
+  if (S.combo % 5 === 0 && window.ecaShake) { ecaShake(); if (window.ecaCheer) ecaCheer("hype"); }
   saNextPuzzle();
   arenaRefresh();
 }

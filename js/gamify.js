@@ -97,6 +97,8 @@ function ecaHudUpdate() {
   const en = lang === "en", a = u.arena || {}, xp = calcXP(u).total, p = ecaXpProgress(xp), cur = p.rank.cur;
   const avatarEl = document.getElementById("ecaHudAvatar"), avatar = ecaAvatarOf(u);
   avatarEl.hidden = !avatar; avatarEl.textContent = avatar;
+  const frame = window.ecaFrameOf ? ecaFrameOf(u) : "";
+  avatarEl.className = "eca-hud-avatar eca-frame" + (frame ? " eca-frame-" + frame : "");
   const icon = document.getElementById("ecaHudIcon");
   if (cur) { icon.hidden = false; if (icon.getAttribute("src") !== cur.icon) icon.setAttribute("src", cur.icon); } else icon.hidden = true;
   document.getElementById("ecaHudRank").textContent = cur ? cur.label : (en ? "No rank yet" : "لسه بدون رتبة");
@@ -194,7 +196,7 @@ function ecaLiveBoardHTML(u) {
 // ================= الرقعة والقطع من المتجر =================
 function ecaEquipped(u, cat, slot) {
   const shop = (u && u.role === "student" && u.shop) || {}, id = (shop.eq || {})[slot];
-  return id && (shop.items || []).includes(id) && window.ecaShopCatalog.some(x => x.id === id && x.cat === cat) ? id : "";
+  return id && window.ecaOwnsItem(u, id) && window.ecaShopCatalog.some(x => x.id === id && x.cat === cat) ? id : "";
 }
 function ecaCosmeticsApply() {
   const u = currUser(), root = document.documentElement.dataset, board = ecaEquipped(u, "board", "b"), piece = ecaEquipped(u, "piece", "p");
@@ -208,9 +210,9 @@ function ecaSetEq(slot, id) {
   save();
 }
 function ecaEquip(slot, id) {
-  const u = currUser(), cat = { b: "board", p: "piece", a: "avatar" }[slot];
+  const u = currUser(), cat = { b: "board", p: "piece", a: "avatar", f: "frame" }[slot];
   if (!u || u.role !== "student" || !cat) return;
-  if (id && !((u.shop || {}).items || []).includes(id)) return;
+  if (id && !window.ecaOwnsItem(u, id)) return;
   if (id && !window.ecaShopCatalog.some(x => x.id === id && x.cat === cat)) return;
   ecaSetEq(slot, id);
   if (id) ecaSfx("ting");
@@ -350,6 +352,7 @@ function rushPlay(mv) {
   const ok = r.from + r.to + (r.promotion || "") === (R.sol[R.idx] || "") || g.isCheckmate();
   if (!ok) {
     R.combo = 0; R.mistakes++; R.flash = { [r.to]: "bad" }; R.status = "wrong";
+    if (window.ecaCheer) ecaCheer("retry");
     arenaRefresh();
     setTimeout(() => { if (R.status === "wrong" && R.game === g) { R.status = "play"; rushNext(); arenaRefresh(); } }, 450);
     return;
@@ -364,7 +367,7 @@ function rushPlay(mv) {
   }
   R.score++; R.combo++;
   if (window.ecaOnSolve) window.ecaOnSolve();
-  if (R.combo % 5 === 0 && window.ecaShake) { ecaShake(); ecaConfetti(50); }
+  if (R.combo % 5 === 0 && window.ecaShake) { ecaShake(); ecaConfetti(50); if (window.ecaCheer) ecaCheer("hype"); }
   if (R.combo >= 2) ecaSfx("combo", R.combo); else ecaSfx("ting");
   rushNext();
   arenaRefresh();

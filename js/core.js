@@ -385,8 +385,29 @@
       { id: "avatar-robot", type: "cosmetic", cat: "avatar", title: "أفاتار الروبوت", en: "Robot avatar", cost: 25, icon: "🤖" },
       { id: "avatar-owl", type: "cosmetic", cat: "avatar", title: "أفاتار البومة", en: "Owl avatar", cost: 25, icon: "🦉" },
       { id: "avatar-crown", type: "cosmetic", cat: "avatar", title: "أفاتار التاج", en: "Crown avatar", cost: 60, icon: "👑" },
-      { id: "avatar-dragon", type: "cosmetic", cat: "avatar", title: "أفاتار التنين", en: "Dragon avatar", cost: 60, icon: "🐉" }
+      { id: "avatar-dragon", type: "cosmetic", cat: "avatar", title: "أفاتار التنين", en: "Dragon avatar", cost: 60, icon: "🐉" },
+      // صندوق الكنز وجوايزه (مش بتتشتري لوحدها)
+      { id: "chest", type: "chest", title: "🎁 صندوق الكنز الغامض", en: "🎁 Mystery chest", cost: 40 },
+      { id: "frame-silver", type: "loot", cat: "frame", rarity: "rare", title: "إطار فضي", en: "Silver frame", cost: 0, icon: "🥈" },
+      { id: "frame-gold", type: "loot", cat: "frame", rarity: "legendary", title: "إطار دهبي", en: "Golden frame", cost: 0, icon: "🥇" },
+      { id: "frame-fire", type: "loot", cat: "frame", rarity: "legendary", title: "إطار النار", en: "Fire frame", cost: 0, icon: "🔥" },
+      { id: "piece-ruby", type: "loot", cat: "piece", rarity: "rare", title: "قطع الياقوت", en: "Ruby pieces", cost: 0, icon: "♞" },
+      { id: "piece-crystal", type: "loot", cat: "piece", rarity: "legendary", title: "قطع الكريستال", en: "Crystal pieces", cost: 0, icon: "♞" },
+      // الأبطال: كل Step بتعدّيه بيفتح بطل
+      { id: "hero-1", type: "hero", cat: "avatar", step: 1, title: "حارس البيدق", en: "Pawn Guardian", cost: 0, icon: "🛡️" },
+      { id: "hero-2", type: "hero", cat: "avatar", step: 2, title: "فارس الحصان", en: "Knight Rider", cost: 0, icon: "🏇" },
+      { id: "hero-3", type: "hero", cat: "avatar", step: 3, title: "حكيم الفيل", en: "Bishop Sage", cost: 0, icon: "🧙" },
+      { id: "hero-4", type: "hero", cat: "avatar", step: 4, title: "حامي الطابية", en: "Rook Warden", cost: 0, icon: "🏰" },
+      { id: "hero-5", type: "hero", cat: "avatar", step: 5, title: "ملكة الإمبراطورية", en: "Queen of the Empire", cost: 0, icon: "👸" }
     ];
+    // الطالب يملك العنصر لو في مخزونه، أو لو بطل عدّى الـ Step بتاعه
+    function ecaOwnsItem(user, id) {
+      const item = ECA_SHOP_ITEMS.find(x => x.id === id);
+      if (!item || !user) return false;
+      if (item.type === "hero") return (Number(user.level) || 1) > item.step;
+      return ((user.shop || {}).items || []).includes(id);
+    }
+    window.ecaOwnsItem = ecaOwnsItem;
     window.ecaShopCatalog = ECA_SHOP_ITEMS;
     function buyShopItem(id) {
       const item = ECA_SHOP_ITEMS.find(x => x.id === id), u = currUser();
@@ -417,9 +438,14 @@
     window.setStudentTitle = setStudentTitle;
     function ecaAvatarOf(user) {
       const shop = (user && user.shop) || {}, id = (shop.eq || {}).a;
-      const item = id && (shop.items || []).includes(id) ? ECA_SHOP_ITEMS.find(x => x.id === id && x.cat === "avatar") : null;
+      const item = id && ecaOwnsItem(user, id) ? ECA_SHOP_ITEMS.find(x => x.id === id && x.cat === "avatar") : null;
       return item ? item.icon : "";
     }
+    function ecaFrameOf(user) {
+      const shop = (user && user.shop) || {}, id = (shop.eq || {}).f;
+      return id && ecaOwnsItem(user, id) && ECA_SHOP_ITEMS.some(x => x.id === id && x.cat === "frame") ? id : "";
+    }
+    window.ecaFrameOf = ecaFrameOf;
     let ecaShopTab = "tools";
     function ecaShopTabSet(key) {
       ecaShopTab = key;
@@ -427,11 +453,13 @@
       if (el && u) el.outerHTML = studentShopCard(u);
     }
     window.ecaShopTabSet = ecaShopTabSet;
-    const ECA_SLOT = { board: "b", piece: "p", avatar: "a" };
+    const ECA_SLOT = { board: "b", piece: "p", avatar: "a", frame: "f" };
     function ecaShopPreview(item) {
       if (item.cat === "board") return `<span class="eca-shop-prev" style="background:linear-gradient(135deg, ${esc(item.l)} 50%, ${esc(item.d)} 50%)"></span>`;
       if (item.cat === "piece") return `<span class="eca-shop-prev eca-skin-${esc(item.id)}" style="background:linear-gradient(135deg,#f0d9b5 50%,#b58863 50%)"><span class="eca-pc w">♞&#xFE0E;</span><span class="eca-pc b">♞&#xFE0E;</span></span>`;
       if (item.cat === "avatar") return `<span class="eca-shop-prev text-2xl" aria-hidden="true">${esc(item.icon)}</span>`;
+      if (item.cat === "frame") return `<span class="eca-shop-prev text-2xl" aria-hidden="true"><span class="eca-frame eca-frame-${esc(item.id)}">🙂</span></span>`;
+      if (item.type === "chest") return `<span class="eca-shop-prev text-2xl" aria-hidden="true">🎁</span>`;
       return "";
     }
     function studentShopCard(user) {
@@ -451,19 +479,24 @@
       const itemCard = item => {
         const owned = item.type === "title" ? ownedTitles.includes(item.id)
           : item.type === "bot" ? ownedBots.includes(Number(item.id.slice(4)))
-          : item.type === "cosmetic" ? ownedItems.includes(item.id)
+          : item.type === "cosmetic" || item.type === "loot" || item.type === "hero" ? ecaOwnsItem(user, item.id)
           : false;
+        const source = item.type === "hero" ? (en ? `Pass Step ${item.step} to unlock` : `بيتفتح لما تعدّي Step ${item.step}`)
+          : item.type === "loot" ? (en ? "Found in mystery chests" : "بيطلع من صندوق الكنز") : "";
         const label = lang === "en" ? item.en : item.title;
         return `<div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-black/30 border border-yellow-500/15">
           ${ecaShopPreview(item)}<div class="min-w-0 flex-1"><div class="text-sm font-bold text-white">${esc(label)}</div>
-            <div class="text-xs text-gray-400">${owned ? (lang === "en" ? "Owned" : "تم الفتح") : "⭐ " + item.cost}${item.type === "freeze" ? " • " + (lang === "en" ? "You have" : "معاك") + " " + freezes + "/2" : ""}</div></div>
-          ${owned ? (item.type === "cosmetic" || item.type === "title" ? equipBtn(item) : `<span class="text-emerald-400 text-xs font-bold">✓</span>`) : `<button type="button" onclick="buyShopItem('${item.id}')" ${stars < item.cost || (item.type === "freeze" && freezes >= 2) ? "disabled" : ""} class="tap rounded-lg px-3 text-xs gold-btn disabled:opacity-40">${lang === "en" ? "Buy" : "شراء"}</button>`}
+            <div class="text-xs text-gray-400">${owned ? (lang === "en" ? "Owned" : "تم الفتح") : source ? esc(source) : "⭐ " + item.cost}${item.type === "freeze" ? " • " + (lang === "en" ? "You have" : "معاك") + " " + freezes + "/2" : ""}</div></div>
+          ${owned ? (item.type === "cosmetic" || item.type === "title" || item.type === "loot" || item.type === "hero" ? equipBtn(item) : `<span class="text-emerald-400 text-xs font-bold">✓</span>`)
+            : source ? `<span class="text-xs text-gray-500" aria-hidden="true">🔒</span>`
+            : item.type === "chest" ? `<button type="button" onclick="ecaOpenChest()" class="tap rounded-lg px-3 text-xs gold-btn">${en ? "Open" : "افتح"}</button>`
+            : `<button type="button" onclick="buyShopItem('${item.id}')" ${stars < item.cost || (item.type === "freeze" && freezes >= 2) ? "disabled" : ""} class="tap rounded-lg px-3 text-xs gold-btn disabled:opacity-40">${lang === "en" ? "Buy" : "شراء"}</button>`}
         </div>`;
       };
-      const tabs = [["tools", en ? "Tools" : "أدوات"], ["board", en ? "Boards" : "رقع"], ["piece", en ? "Pieces" : "قطع"], ["avatar", en ? "Avatars" : "أفاتار"], ["title", en ? "Titles" : "ألقاب"], ["inventory", en ? "My items" : "مخزوني"]];
-      const inTab = item => ecaShopTab === "tools" ? (item.type === "hint" || item.type === "freeze" || item.type === "bot")
+      const tabs = [["tools", en ? "Tools" : "أدوات"], ["board", en ? "Boards" : "رقع"], ["piece", en ? "Pieces" : "قطع"], ["avatar", en ? "Avatars" : "أفاتار"], ["frame", en ? "Frames" : "إطارات"], ["title", en ? "Titles" : "ألقاب"], ["inventory", en ? "My items" : "مخزوني"]];
+      const inTab = item => ecaShopTab === "tools" ? (item.type === "chest" || item.type === "hint" || item.type === "freeze" || item.type === "bot")
         : ecaShopTab === "title" ? item.type === "title" : item.cat === ecaShopTab;
-      const inventory = ECA_SHOP_ITEMS.filter(item => (item.type === "title" && ownedTitles.includes(item.id)) || (item.type === "cosmetic" && ownedItems.includes(item.id)));
+      const inventory = ECA_SHOP_ITEMS.filter(item => (item.type === "title" && ownedTitles.includes(item.id)) || (["cosmetic", "loot", "hero"].includes(item.type) && ecaOwnsItem(user, item.id)));
       const inventoryBody = `<p class="text-xs text-gray-400">${en ? "Bots unlocked" : "البوتات المفتوحة"}: ${ownedBots.length} • ${en ? "Hints" : "تلميحات"}: ${hints} • 🧊 ${freezes}/2</p>
         ${inventory.length ? `<div class="grid sm:grid-cols-2 gap-2">${inventory.map(itemCard).join("")}</div>` : `<p class="text-sm text-gray-400 text-center py-4">${en ? "Nothing here yet. Buy your first item!" : "لسه مفيش حاجة. اشتري أول حاجة ليك!"}</p>`}`;
       return `<section id="ecaShopCard" class="gold-card rounded-2xl p-5 space-y-3">
@@ -1026,6 +1059,7 @@
                 ${THEMES.map(x => `<button type="button" class="thm-chip w-6 h-6 rounded-full border-2 shrink-0" data-t="${x[0]}" onclick="menuTheme('${x[0]}')" aria-label="${lang === "en" ? x[2] : x[1]}" aria-pressed="${currentTheme() === x[0]}" style="border-color:${currentTheme() === x[0] ? "#0a45a8" : "rgba(128,128,128,.4)"};background:${THEME_SWATCH[x[0]]}"></button>`).join("")}
               </span>
             </div>
+            ${u.role === "student" ? `<button onclick="ecaToggleVoice()" role="menuitemcheckbox" aria-checked="${!window.ecaVoiceOff}" class="w-full flex items-center justify-between gap-2.5 px-3 h-10 rounded-lg text-sm text-start hover:bg-yellow-500/10 ${menuText}"><span>${lang === "en" ? "🗣️ Voice cheers" : "🗣️ التشجيع بالصوت"}</span><span class="text-xs font-bold ${window.ecaVoiceOff ? "text-gray-400" : "text-emerald-400"}">${window.ecaVoiceOff ? (lang === "en" ? "Off" : "مقفول") : (lang === "en" ? "On" : "شغّال")}</span></button>` : ""}
             <button onclick="toggleLang()" role="menuitem" class="w-full flex items-center gap-2.5 px-3 h-10 rounded-lg text-sm text-start hover:bg-yellow-500/10 ${menuText}">${lang === "en" ? FLAG_EG + "<span>Arabic</span>" : FLAG_US + "<span>English</span>"}</button>
           </div>
           ${!ai.google ? mi("linkGoogle()", "ربط حساب Google", '<svg viewBox="0 0 24 24" class="w-4 h-4" aria-hidden="true"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.9-5.5 3.9-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.3 14.6 2.3 12 2.3 6.6 2.3 2.3 6.6 2.3 12s4.3 9.7 9.7 9.7c5.6 0 9.3-3.9 9.3-9.5 0-.6-.1-1.1-.2-1.6H12z"/></svg>') : ""}
@@ -1236,7 +1270,7 @@
           <div class="gold-card rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <span class="px-2.5 py-1 rounded-full text-xs gold-btn">STEP ${stu.level} STUDENT</span>
-              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">${ecaAvatarOf(stu) ? `<span aria-hidden="true">${esc(ecaAvatarOf(stu))}</span> ` : ""}${lang === "en" ? "Welcome, " : "أهلاً يا "}${esc(ecaStudentAlias(stu))}${activeTitle ? ` <span class="text-sm text-yellow-300">${esc(lang === "en" ? activeTitle.en : activeTitle.title)}</span>` : ""}</h2>
+              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">${ecaAvatarOf(stu) ? `<span aria-hidden="true" class="eca-frame ${ecaFrameOf(stu) ? "eca-frame-" + ecaFrameOf(stu) : ""}">${esc(ecaAvatarOf(stu))}</span> ` : ""}${lang === "en" ? "Welcome, " : "أهلاً يا "}${esc(ecaStudentAlias(stu))}${activeTitle ? ` <span class="text-sm text-yellow-300">${esc(lang === "en" ? activeTitle.en : activeTitle.title)}</span>` : ""}</h2>
               <p class="text-xs text-sky-300 mt-1">${lang === "en" ? "Level" : "المستوى"} ${studentLevel} • ${xp} XP</p>
               <p class="text-xs text-gray-400 mt-1">حضرت ${s.attC}/${s.total} درس في Step ${stu.level} • متبقي ${s.rem} درس للامتحان</p>
               <label class="inline-flex flex-wrap items-center gap-2 mt-3 text-xs text-gray-400">
