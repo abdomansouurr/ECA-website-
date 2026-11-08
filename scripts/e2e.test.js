@@ -99,7 +99,7 @@ async function login(p, id) {
   await waitReady(p);
   const out = await p.ev(`fbLogin(${JSON.stringify(id)}, ${JSON.stringify(PASS)}).then(r=>JSON.stringify(r||{}))`);
   const ok = await until(() => p.ev("!!(typeof currUser==='function'&&currUser()&&!window.__authLoading)"), 20000);
-  if (!ok) throw new Error(p.label + " login failed: " + out);
+  if (!ok) throw new Error(p.label + " login failed: " + out + " state: " + await p.ev("JSON.stringify({user:typeof currUser==='function'&&!!currUser(),loading:window.__authLoading,users:(db.users||[]).length,currId:db.currId,tab})").catch(e => String(e)));
   await p.ev("(()=>{ try{ localStorage.setItem('ECA_SFX_OFF','1'); window.ecaSfxMuted=true; }catch(_){} })()");
 }
 
@@ -279,7 +279,8 @@ async function login(p, id) {
     await login(pc, "stud_c");
     const frozen = await until(async () => { const s = (await U(C)).shop; return (s.frozen || []).length ? s : null; }, 15000);
     check("freeze used for the missed day", !!frozen && frozen.frozen[0] === dayOf(1) && frozen.freezes === 0, frozen && { frozen: frozen.frozen, freezes: frozen.freezes });
-    check("streak stays alive", (await pc.ev("streaks(currUser().arena.days,currUser().shop.frozen).current")) >= 3, await pc.ev("streaks(currUser().arena.days,currUser().shop.frozen).current"));
+    const streakNow = await until(() => pc.ev("(()=>{ const n=streaks(currUser().arena.days,currUser().shop.frozen).current; return n>=3?n:0; })()"), 10000);
+    check("streak stays alive", streakNow >= 3, streakNow);
 
     // two missed days use two freezes
     const pe = await openPage("E");
@@ -389,6 +390,10 @@ async function login(p, id) {
     check("chest shows its prize", await pa.ev("(()=>{ const t=document.getElementById('ecaChestPrize').textContent; return /XP|Frame|frame|pieces|إطار|قطع|خبرة/.test(t); })()"));
     const c2 = await chestOne();
     check("second chest uses the next number", !!c2.receipt && c2.after.arena.ch === c2.n + 1);
+    const chestXp = (c1.receipt.xpDelta || 0) + (c2.receipt.xpDelta || 0);
+    check("chest XP is set aside", (Number(c2.after.arena.chx) || 0) === chestXp, { chx: c2.after.arena.chx, chestXp });
+    const boardAfterChest = await until(async () => { const r = await read("leaderboard/" + A), p = await U(A); return r && r.xp === p.arena.xp - (Number(p.arena.chx) || 0) ? r : null; }, 15000);
+    check("leaderboard leaves chest XP out", !!boardAfterChest);
     await pa.ev("ecaChestClose()");
     const lootItem = ((await U(A)).shop.items || []).find(x => /^(frame|piece)-(silver|gold|fire|ruby|crystal)$/.test(x));
     if (lootItem && lootItem.startsWith("frame-")) {
@@ -426,11 +431,83 @@ async function login(p, id) {
     check("cards: ten solves unlock the card", !!(await until(async () => ((await U(A)).arena.cards || []).includes("fork"))));
     check("cards: unlocked card shows its stats", await pa.ev("(()=>{ const c=[...document.querySelectorAll('.eca-card.is-on')]; return c.length===1 && /10/.test(c[0].textContent) && /11/.test(c[0].textContent) && /91%/.test(c[0].textContent); })()"));
     await pa.ev("while(document.getElementById('ecaMilestone')) ecaMilestoneClose();");
-    await pa.ev("switchTab('home')");
+    await sleep(1200); await pa.ev("switchTab('home'); while(document.getElementById('ecaMilestone')) ecaMilestoneClose(); ecaChestClose(); ecaSpinClose();");
     check("break: no reminder before 45 minutes", await pa.ev("(()=>{ ecaStaminaSet(30*60000); ecaStaminaTick(); return !document.getElementById('ecaBreakModal'); })()"));
     check("break: reminder after 45 minutes of play", await pa.ev("(()=>{ ecaStaminaSet(45*60000); ecaStaminaTick(); return !!document.getElementById('ecaBreakModal') && /5:00|4:5/.test(document.getElementById('ecaBreakLeft').textContent); })()"));
     check("break: back to training closes it", await pa.ev("(()=>{ ecaBreakClose(); return !document.getElementById('ecaBreakModal'); })()"));
     check("break: waits while a game is running", await pa.ev("(()=>{ arena.rush.status='play'; tab='arena'; ecaStaminaSet(46*60000); ecaStaminaTick(); const waited=!document.getElementById('ecaBreakModal'); arena.rush.status='idle'; tab='home'; ecaStaminaTick(); const shown=!!document.getElementById('ecaBreakModal'); ecaBreakClose(); return waited && shown; })()"));
+
+    // ---------- elite frames, cheers, friend challenge links and the coach's weekly challenge ----------
+    await pa.send("Page.bringToFront");
+    await pa.ev("switchTab('home'); ecaChestClose(); ecaSpinClose(); while(document.getElementById('ecaMilestone')) ecaMilestoneClose(); if(window.ecaBreakClose) ecaBreakClose();");
+    const wkNow = await pa.ev("ecaWeekKey()");
+    await seed("leaderboard/eliteX1", { n: "", a: "", t: "", g: "A", xp: 999, wk: wkNow, wx: 99999 });
+    await seed("leaderboard/eliteX2", { n: "", a: "", t: "", g: "A", xp: 998, wk: wkNow, wx: 50 });
+    await seed("leaderboard/eliteOld", { n: "", a: "", t: "", g: "A", xp: 997, wk: "2020-01-04", wx: 5000 });
+    const rowAnow = await read("leaderboard/" + A);
+    await seed("leaderboard/" + A, Object.assign({}, rowAnow, { wk: wkNow, wx: 99998 }));
+    await pa.ev("eliteAt=0; ecaEliteRefresh()"); await sleep(1500);
+    check("elite: second place this week gets the Electric Plasma frame", await pa.ev(`ecaEliteRank(${JSON.stringify(A)})===2 && ecaEliteRank('eliteX1')===1 && ecaEliteRank('eliteOld')===0`));
+    check("elite: frame shows in the HUD", await pa.ev("(()=>{ ecaHudUpdate(); const e=document.getElementById('ecaHudAvatar'); return !e.hidden && e.classList.contains('eca-elite-2'); })()"));
+    await pb.send("Page.bringToFront");
+    await pb.ev("switchTab('honor')"); await sleep(2500);
+    check("elite: frames show on the leaderboard", await pb.ev("(()=>{ lbTabSet('weekly'); return !!document.querySelector('#ecaLiveBoard .eca-elite-1') && !!document.querySelector('#ecaLiveBoard .eca-elite-2'); })()"));
+    check("cheer button next to other students", await pb.ev(`!!document.querySelector('#ecaLiveBoard [data-emote-to="${A}"]')`));
+    await pb.ev(`(()=>{ const b=document.querySelector('#ecaLiveBoard [data-emote-to="${A}"]'); b.click(); document.querySelector('#ecaEmoteMenu [data-e="1"]').click(); })()`);
+    await pa.send("Page.bringToFront");
+    check("cheer arrives as a floating message", !!(await until(() => pa.ev("!!document.querySelector('.eca-emote-pop') && document.querySelector('.eca-emote-pop').textContent.includes('🔥')"), 10000)));
+    check("received cheers are cleared", !!(await until(async () => (await list(`users/${A}/emotes`)).length === 0)));
+    check("a second cheer within 10 seconds waits", await pb.ev(`(async()=>{ const b=document.querySelector('#ecaLiveBoard [data-emote-to="${A}"]'); b.click(); document.querySelector('#ecaEmoteMenu [data-e="0"]').click(); await new Promise(r=>setTimeout(r,800)); return emoteNextAt > Date.now(); })()`));
+    check("no stranger text can be sent", await pb.ev("typeof ECA_EMOTES!=='undefined' && ECA_EMOTES.length===5 && !document.querySelector('#ecaEmoteMenu input, #ecaEmoteMenu textarea')"));
+
+    // friend challenge by link
+    await pa.ev("switchTab('arena'); arena.sub='friend'; render();");
+    await until(() => pa.ev("!!ChessCls"), 30000);
+    await pa.ev("render(); fdCreate()");
+    const fid = await until(() => pa.ev("arena.friend.doc && arena.friend.doc.status==='open' && arena.friend.id"), 15000);
+    check("friend: challenge created with 5 puzzles", !!fid && (await pa.ev("arena.friend.doc.puzzles.length")) === 5, fid);
+    check("friend: share link and WhatsApp button", await pa.ev(`(()=>{ const h=document.getElementById('mainView').innerHTML; return h.includes('?duel=${fid}') && h.includes('wa.me'); })()`));
+    const playFriend = (wrongAt) => `(async()=>{ const F=arena.friend; let k=0; for(let guard=0; guard<400; guard++){ const side=F.doc&&(F.doc.a===currUser().id?'ra':'rb'); if(F.doc&&side&&F.doc[side]&&F.doc[side].done) return F.doc[side]; if(F.status==='lobby'&&!F.busy){ fdPlayNext(); } if(F.status==='play'&&!F.busy){ const num=F.num; if(${JSON.stringify(wrongAt)}.includes(num) && F.idx===0){ const g=F.game, want=F.sol[0]; const m=g.moves({verbose:true}).find(m=>m.from+m.to!==want.slice(0,4)&&!m.promotion&&(()=>{const c=new ChessCls(g.fen());c.move(m);return !c.isCheckmate()})()); if(m){ fdMove({from:m.from,to:m.to}); } } else { const m=F.sol[F.idx]; if(m) fdMove(m.length>4?{from:m.slice(0,2),to:m.slice(2,4),promotion:m[4]}:{from:m.slice(0,2),to:m.slice(2,4)}); } } await new Promise(r=>setTimeout(r,120)); } return 'timeout'; })()`;
+    const aRes = await pa.ev(playFriend([]));
+    check("friend: creator solves all 5", aRes && aRes.solved === 5 && aRes.done === true, aRes);
+    await pb.send("Page.bringToFront");
+    await pb.ev(`(()=>{ sessionStorage.setItem('ECA_FDUEL', ${JSON.stringify(fid)}); render(); })()`);
+    check("friend: the link opens the challenge", !!(await until(() => pb.ev(`tab==='arena' && arena.sub==='friend' && arena.friend.id===${JSON.stringify(fid)}`))));
+    check("friend: friend joins automatically", !!(await until(async () => (await read("friendDuels/" + fid)).status === "live")));
+    await until(() => pb.ev("!!ChessCls"), 30000);
+    const bRes = await pb.ev(playFriend([2, 4]));
+    check("friend: friend finishes with 3 of 5", bRes && bRes.solved === 3 && bRes.done === true, bRes);
+    const fdone = await until(async () => { const d = await read("friendDuels/" + fid); return d.status === "done" ? d : null; });
+    check("friend: the winner is decided", !!fdone && fdone.winner === A, fdone && fdone.winner);
+    check("friend: both see the comparison", !!(await until(() => pb.ev("document.getElementById('mainView').textContent.includes('3/5')"))) && !!(await until(() => pa.ev("arena.friend.doc && arena.friend.doc.status==='done'"))));
+    const fprize = await until(() => read(`users/${A}/economy/fduel-${dayOf(0)}`), 10000);
+    check("friend: the winner gets the prize", !!fprize && fprize.starsDelta === 3);
+
+    // coach's weekly challenge
+    await pg.send("Page.bringToFront");
+    const wkRow = await pg.ev("loadPuzzleBank().then(b => b.easier[3])");
+    const [, wkFen, wkMoves] = wkRow.split("|");
+    await pg.ev(`window.fbWeeklySave(ecaWeekKey(), { title: 'Find the fork', fen: ${JSON.stringify(wkFen)}, moves: ${JSON.stringify(wkMoves)}, setup: true })`);
+    check("weekly: coach publishes the challenge", !!(await until(() => read("coachChallenges/" + wkNow))));
+    await pa.send("Page.bringToFront");
+    await pa.ev("switchTab('home')");
+    check("weekly: spotlight card on the home page", !!(await until(() => pa.ev("document.getElementById('mainView').textContent.includes('Find the fork')"), 10000)));
+    await pa.ev("arena.sub='weekly'; switchTab('arena');");
+    await until(() => pa.ev("arena.weekly.doc && !!ChessCls"), 15000);
+    await pa.ev("render(); wkStart()");
+    await until(() => pa.ev("arena.weekly.status==='play'"), 10000);
+    await sleep(1100);
+    await pa.ev("(async()=>{ const W=arena.weekly; for(let n=0;n<30&&W.status==='play';n++){ const m=W.sol[W.idx]; wkMove(m.length>4?{from:m.slice(0,2),to:m.slice(2,4),promotion:m[4]}:{from:m.slice(0,2),to:m.slice(2,4)}); await new Promise(r=>setTimeout(r,60)); } })()");
+    const hofA = await until(() => read(`coachChallenges/${wkNow}/hallOfFame/${A}`), 10000);
+    check("weekly: solving adds you to the Hall of Fame", !!hofA && hofA.ms >= 1000 && hofA.a === "hero-1", hofA && { ms: hofA.ms, a: hofA.a });
+    check("weekly: Hall of Fame shows the solver", !!(await until(() => pa.ev("document.querySelectorAll('#mainView .eca-lb-row').length>=1 && document.getElementById('mainView').textContent.includes('🏅')"))));
+    await pb.send("Page.bringToFront");
+    await pb.ev("arena.sub='weekly'; switchTab('arena');");
+    await until(() => pb.ev("arena.weekly.doc && !!ChessCls"), 15000);
+    const failOnce = "(async()=>{ await wkStart(); for(let i=0;i<40&&arena.weekly.status!=='play';i++) await new Promise(r=>setTimeout(r,100)); const W=arena.weekly; if(W.status!=='play') return 'no-play'; const g=W.game, want=W.sol[0]; const m=g.moves({verbose:true}).find(m=>m.from+m.to!==want.slice(0,4)&&!m.promotion&&(()=>{const c=new ChessCls(g.fen());c.move(m);return !c.isCheckmate()})()); wkMove({from:m.from,to:m.to}); await new Promise(r=>setTimeout(r,1200)); return W.status; })()";
+    await pb.ev(failOnce); await pb.ev(failOnce);
+    check("weekly: two attempts only", !!(await until(() => pb.ev("arena.weekly.att && arena.weekly.att.n===2 && !arena.weekly.att.solved && document.getElementById('mainView').textContent.match(/No attempts left|خلّصت محاولاتك/)"), 8000)));
+    check("weekly: the failed student is not in the Hall of Fame", !(await read(`coachChallenges/${wkNow}/hallOfFame/${B}`)));
 
     // ---------- companion and achievements persist ----------
     await pc.ev("switchTab('home'); ecaPetPick('cat')");

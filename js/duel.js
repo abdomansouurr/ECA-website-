@@ -177,7 +177,7 @@ function arenaDuelHTML() {
     const rival = D.doc && (D.doc.a === u.id ? duelName(D.doc.b, D.doc.bn) : duelName(D.doc.a, D.doc.an));
     const left = Math.max(0, Math.ceil((D.endsAt - Date.now()) / 1000));
     return `<div id="duelCard" class="gold-card rounded-2xl p-3 sm:p-5 space-y-3 max-w-xl w-full mx-auto" style="scroll-margin-top:124px">
-      <div class="flex items-center justify-between gap-2 text-sm"><b class="text-white truncate">⚔️ ${esc(rival || "")}</b><b class="text-sky-400 whitespace-nowrap"><span id="duelLeft">${left}</span> ${en ? "sec" : "ثانية"}</b></div>
+      <div class="flex items-center justify-between gap-2 text-sm"><b class="text-white truncate">⚔️ ${esc(rival || "")} ${D.doc && window.ecaEmoteButton ? ecaEmoteButton(D.doc.a === u.id ? D.doc.b : D.doc.a) : ""}</b><b class="text-sky-400 whitespace-nowrap"><span id="duelLeft">${left}</span> ${en ? "sec" : "ثانية"}</b></div>
       ${boardHTML({ game: D.game, flip: D.flip, sel: D.sel, targets: targetsOf(D.game, D.sel), last: D.last, flash: D.flash, onClick: "duelClick" })}
       <p class="text-center text-sm text-gray-300">${D.status === "claiming" ? (en ? "Checking who solved first..." : "بنشوف مين حل الأول...") : D.status === "wrong" ? (en ? "Wrong move. Try again!" : "نقلة غلط. حاول تاني!") : D.color === "w" ? (en ? "White to move" : "الدور على الأبيض") : (en ? "Black to move" : "الدور على الأسود")}</p>
     </div>`;
@@ -186,6 +186,7 @@ function arenaDuelHTML() {
     <button type="button" onclick="duelCancel()" class="tap w-full rounded-xl text-sm font-bold bg-zinc-800 text-white border border-yellow-500/30">${en ? "Cancel" : "إلغاء"}</button>`);
   if (D.status === "loading") return card(`<p class="text-sm text-gray-300 text-center py-4">${en ? "Loading..." : "بنحمّل..."}</p>`);
   if (D.status === "done" || D.status === "timeout") return card(`<p class="text-lg font-bold text-center ${D.won ? "text-emerald-300" : "text-gray-200"}">${D.status === "timeout" ? (en ? "Time's up! Nobody won." : "الوقت خلص! محدش كسب.") : D.won ? (en ? "You won the duel! 🏆" : "كسبت التحدي! 🏆") : (en ? "Your rival solved it first. Next time!" : "منافسك حل الأول. المرة الجاية!")}</p>
+    ${D.doc && window.ecaEmoteButton ? `<div class="flex items-center justify-center gap-2 text-sm text-gray-300">${en ? "Cheer your rival:" : "شجّع منافسك:"} ${ecaEmoteButton(D.doc.a === u.id ? D.doc.b : D.doc.a)}</div>` : ""}
     <button type="button" onclick="duelAgain()" class="tap w-full rounded-xl text-sm font-bold gold-btn">${en ? "Back to duels" : "رجوع للتحديات"}</button>`);
   const now = Date.now();
   const rows = (D.lobby || []).filter(r => r.a !== u.id && r.createdMs && now - r.createdMs < DUEL_OPEN_MS);

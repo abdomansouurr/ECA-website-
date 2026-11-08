@@ -246,7 +246,7 @@
     async function boardPublish() {
       if (!me || me.role !== "student" || !maps.core[me.uid] || !window.ecaWeekKey) return;
       const uid = me.uid, p = maps.core[uid], shop = p.shop || {}, wk = window.ecaWeekKey();
-      const row = { n: p.nickname || "", a: (shop.eq || {}).a || "", t: shop.activeTitle || "", g: p.group || "", xp: Number((p.arena || {}).xp) || 0, wk, wx: 0 };
+      const row = { n: p.nickname || "", a: (shop.eq || {}).a || "", t: shop.activeTitle || "", g: p.group || "", xp: Math.max(0, (Number((p.arena || {}).xp) || 0) - (Number((p.arena || {}).chx) || 0)), wk, wx: 0 };
       const ref = doc(firestore, "leaderboard", uid);
       try {
         if (boardLastUid !== uid) { boardLast = null; boardLastUid = uid; }
@@ -274,6 +274,115 @@
       const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(uid + "|" + day));
       return (new Uint8Array(bytes)[0] >> 4).toString(16);
     }
+    // إطارات النخبة: أول 3 في ترتيب الأسبوع
+    window.fbEliteTop = async () => {
+      const snap = await getDocs(query(collection(firestore, "leaderboard"), orderBy("wx", "desc"), limit(30)));
+      return snap.docs.map(d => ({ id: d.id, wk: d.data().wk, wx: Number(d.data().wx) || 0 }));
+    };
+    // التشجيع بالإيموجي: الكتابة في صندوق الطالب التاني ومعاها توقيت آخر تشجيع (للحد كل 10 ثواني)
+    window.fbSendEmote = async (to, e) => {
+      if (!me || me.role !== "student" || !/^[A-Za-z0-9_-]{1,128}$/.test(String(to))) throw new Error("not-allowed");
+      const batch = writeBatch(firestore);
+      batch.set(doc(firestore, "emoteRate", me.uid), { at: serverTimestamp() });
+      batch.set(doc(collection(firestore, "users", to, "emotes")), { from: me.uid, n: (maps.core[me.uid] || {}).nickname || "", e, at: serverTimestamp() });
+      await batch.commit();
+    };
+    window.fbEmoteWatch = onItems => {
+      if (!me) return () => {};
+      return onSnapshot(query(collection(firestore, "users", me.uid, "emotes"), orderBy("at", "desc"), limit(10)), snap => {
+        const items = snap.docs.filter(d => !d.metadata.hasPendingWrites).map(d => ({ id: d.id, from: d.data().from, n: cleanDeep(d.data().n || ""), e: d.data().e }));
+        if (items.length) onItems(items);
+      }, err => console.warn("Emotes failed:", err && err.code));
+    };
+    window.fbEmoteDelete = id => deleteDoc(doc(firestore, "users", me.uid, "emotes", id));
+
+    // تحدي الأصحاب بالرابط
+    const fdView = (id, r) => ({ id, a: r.a, an: cleanDeep(r.an || ""), b: r.b || "", bn: cleanDeep(r.bn || ""), step: r.step, puzzles: Array.isArray(r.puzzles) ? r.puzzles : [], status: r.status, ra: r.ra || null, rb: r.rb || null, winner: r.winner === undefined ? null : r.winner });
+    window.fbFriendCreate = async (step, puzzles) => {
+      const ref = doc(collection(firestore, "friendDuels"));
+      await setDoc(ref, { a: me.uid, an: (maps.core[me.uid] || {}).nickname || "", step, puzzles, status: "open", created: serverTimestamp() });
+      return ref.id;
+    };
+    window.fbFriendWatch = (id, onDoc) => onSnapshot(doc(firestore, "friendDuels", id), snap => onDoc(snap.exists() ? fdView(snap.id, snap.data()) : null), err => { if (auth.currentUser) console.warn("Friend duel watch failed:", err && err.code); });
+    window.fbFriendJoin = id => runTransaction(firestore, async tx => {
+      const ref = doc(firestore, "friendDuels", id), snap = await tx.get(ref);
+      if (!snap.exists() || snap.data().status !== "open" || snap.data().a === me.uid) return false;
+      tx.update(ref, { status: "live", b: me.uid, bn: (maps.core[me.uid] || {}).nickname || "", started: serverTimestamp() });
+      return true;
+    });
+    // نتيجة لغز واحد. لو اللاعبين الاتنين خلّصوا، نفس الكتابة بتعلن الفايز
+    window.fbFriendProgress = (id, solved, ms) => runTransaction(firestore, async tx => {
+      const ref = doc(firestore, "friendDuels", id), snap = await tx.get(ref);
+      if (!snap.exists()) throw new Error("missing");
+      const d = snap.data(), side = d.a === me.uid ? "ra" : d.b === me.uid ? "rb" : "", other = side === "ra" ? "rb" : "ra";
+      if (!side) throw new Error("not-player");
+      const o = d[side] || {}, n = (Number(o.n) || 0) + 1;
+      if (n > 5) return o;
+      const res = { n, solved: (Number(o.solved) || 0) + (solved ? 1 : 0), ms: (Number(o.ms) || 0) + Math.max(2000, Math.round(ms)), done: n === 5 };
+      const patch = { [side]: res }, them = d[other];
+      if (res.done && them && them.done && d.status === "live") {
+        const A = side === "ra" ? res : them, B = side === "ra" ? them : res;
+        patch.status = "done"; patch.ended = serverTimestamp();
+        patch.winner = A.solved > B.solved || (A.solved === B.solved && A.ms < B.ms) ? d.a : (A.solved === B.solved && A.ms === B.ms ? "" : d.b);
+      }
+      tx.update(ref, patch);
+      return res;
+    });
+    window.fbFriendMine = async () => {
+      const [x, y] = await Promise.all([
+        getDocs(query(collection(firestore, "friendDuels"), where("a", "==", me.uid), limit(15))),
+        getDocs(query(collection(firestore, "friendDuels"), where("b", "==", me.uid), limit(15)))
+      ]);
+      return [...x.docs, ...y.docs].map(d => Object.assign(fdView(d.id, d.data()), { createdMs: d.data().created && d.data().created.toMillis ? d.data().created.toMillis() : 0 }))
+        .sort((p, q) => q.createdMs - p.createdMs).slice(0, 10);
+    };
+
+    // تحدي الكوتش الأسبوعي وقاعة المشاهير
+    window.fbWeeklyWatch = (wk, onChange) => {
+      let docData = null, hof = null, att = null, gotDoc = false;
+      const emit = () => { if (gotDoc) onChange(docData, hof || [], att); };
+      const loadAtt = async () => {
+        if (!me || isStaffRole(me.role)) return;
+        try { const s = await getDoc(doc(firestore, "coachChallenges", wk, "attempts", me.uid)); att = s.exists() ? { n: Number(s.data().n) || 0, solved: !!s.data().solved } : { n: 0, solved: false }; } catch (_) { att = { n: 0, solved: false }; }
+        emit();
+      };
+      const u1 = onSnapshot(doc(firestore, "coachChallenges", wk), snap => {
+        gotDoc = true;
+        docData = snap.exists() ? { title: cleanDeep(snap.data().title || ""), fen: snap.data().fen, moves: snap.data().moves, setup: !!snap.data().setup } : null;
+        emit(); loadAtt();
+      }, err => { console.warn("Weekly challenge failed:", err && err.code); gotDoc = true; emit(); });
+      const u2 = onSnapshot(query(collection(firestore, "coachChallenges", wk, "hallOfFame"), orderBy("ms", "asc"), limit(20)), snap => {
+        hof = snap.docs.map(d => ({ uid: d.data().uid, n: cleanDeep(d.data().n || ""), a: d.data().a || "", f: d.data().f || "", ms: Number(d.data().ms) || 0 }));
+        emit();
+      }, err => console.warn("Hall of Fame failed:", err && err.code));
+      window.__wkReloadAtt = loadAtt;
+      return () => { u1(); u2(); };
+    };
+    window.fbWeeklySave = async (wk, data) => {
+      if (!me || !isStaffRole(me.role)) throw new Error("not-staff");
+      await setDoc(doc(firestore, "coachChallenges", wk), { title: data.title, fen: data.fen, moves: data.moves, setup: !!data.setup, by: me.uid, at: serverTimestamp() });
+    };
+    window.fbWeeklyAttempt = async wk => {
+      const ref = doc(firestore, "coachChallenges", wk, "attempts", me.uid);
+      const r = await runTransaction(firestore, async tx => {
+        const snap = await tx.get(ref);
+        if (snap.exists() && snap.data().solved) return { solved: true };
+        const n = snap.exists() ? (Number(snap.data().n) || 0) + 1 : 1;
+        if (n > 2) return { over: true };
+        if (snap.exists()) tx.update(ref, { n, at: serverTimestamp() }); else tx.set(ref, { n, solved: false, at: serverTimestamp() });
+        return { n };
+      });
+      if (window.__wkReloadAtt) window.__wkReloadAtt();
+      return r;
+    };
+    window.fbWeeklySolved = async (wk, ms) => {
+      const p = maps.core[me.uid] || {}, eq = (p.shop || {}).eq || {}, batch = writeBatch(firestore);
+      batch.update(doc(firestore, "coachChallenges", wk, "attempts", me.uid), { solved: true });
+      batch.set(doc(firestore, "coachChallenges", wk, "hallOfFame", me.uid), { uid: me.uid, n: p.nickname || "", a: eq.a || "", f: eq.f || "", ms: Math.round(ms), at: serverTimestamp() });
+      await batch.commit();
+      if (window.__wkReloadAtt) window.__wkReloadAtt();
+    };
+
     // خزنة الغلطات (دوجو الانتقام)
     const DOJO_GAPS = [30, 24 * 60, 3 * 24 * 60, 7 * 24 * 60];
     const vaultRef = id => doc(firestore, "users", me.uid, "mistakeVault", id);
@@ -323,6 +432,7 @@
         arena.stars = (Number(arena.stars) || 0) - 40;
         arena.xp = (Number(arena.xp) || 0) + xpDelta;
         arena.ch = count + 1;
+        arena.chx = (Number(arena.chx) || 0) + xpDelta;   // خبرة الصندوق لوحدها، عشان ما تتحسبش في لوحة الصدارة
         const fix = selfFieldsFix(profile);
         tx.update(userRef, Object.assign({ arena, shop, lastEconomy: id }, fix));
         tx.set(receiptRef, { uid, kind: "chest", source: "", key: "", day: cairoDayKey(), item: "", score: 0, starsDelta: -40, xpDelta, missionBonus: false, at: serverTimestamp() });
@@ -342,7 +452,10 @@
       err => { if (auth.currentUser) console.warn("Speed arena list failed:", err && err.code); onError(); });
     window.fbArenaEnsure = async (id, startsAt, endsAt) => {
       const ref = doc(firestore, "speedArenas", id);
-      if (!(await getDoc(ref)).exists()) await setDoc(ref, { startsAt, endsAt, closed: false });
+      if ((await getDoc(ref)).exists()) return;
+      // طالبين ممكن يسجّلوا نفس الموعد في نفس اللحظة: لو حد سبقنا يبقى تمام
+      try { await setDoc(ref, { startsAt, endsAt, closed: false }); }
+      catch (e) { if (!(await getDoc(ref)).exists()) throw e; }
     };
     window.fbArenaStartNow = async minutes => {
       if (!me || !isStaffRole(me.role)) throw new Error("not-staff");
@@ -440,6 +553,7 @@
         else if (source === "spin") { id = "spin-" + day; spinHex = await spinHexOf(uid, day); }
         else if (source === "duel" && /^[A-Za-z0-9]{10,40}$/.test(key)) id = "duel-" + day;
         else if (source === "dojo" && /^[A-Za-z0-9]{3,20}$/.test(key)) id = "dojo-" + key;
+        else if (source === "fduel" && /^[A-Za-z0-9]{10,40}$/.test(key)) id = "fduel-" + day;
         else if (source === "vision") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "vision-" + day; }
         else return { ok: false };
       } else if (op === "purchase") {
@@ -489,6 +603,7 @@
           }
           else if (source === "pawn") starsDelta = 2;
           else if (source === "duel") starsDelta = 3;
+          else if (source === "fduel") starsDelta = 3;
           else if (source === "dojo") {
             const vault = await tx.get(doc(firestore, "users", uid, "mistakeVault", key));
             if (!vault.exists() || vault.data().resolved) return { ok: false, code: "dojo-resolved" };
@@ -1417,6 +1532,16 @@
     // المسح النهائي بضغطة من الأدمن بعد الـ 30 يوم. أول قراءة من السيرفر هي البوابة: القواعد بترفضها لو الـ 30 يوم ما عدّوش،
     // فساعة جهاز غلط مش ممكن تمسح طالب بدري. لو حصل فشل في النص، الأدمن يقدر يضغط تاني ويكمّل.
     async function purgeStudentData(uid) {
+      const emotes = await getDocs(collection(firestore, "users", uid, "emotes"));
+      for (const v of emotes.docs) await deleteDoc(v.ref);
+      await deleteDoc(doc(firestore, "emoteRate", uid)).catch(() => {});
+      const fds = await getDocs(query(collection(firestore, "friendDuels"), where("a", "==", uid), limit(200)));
+      for (const v of fds.docs) await deleteDoc(v.ref).catch(() => {});
+      const weeks = await getDocs(collection(firestore, "coachChallenges"));
+      for (const w of weeks.docs) {
+        await deleteDoc(doc(firestore, "coachChallenges", w.id, "hallOfFame", uid)).catch(() => {});
+        await deleteDoc(doc(firestore, "coachChallenges", w.id, "attempts", uid)).catch(() => {});
+      }
       const vault = await getDocs(collection(firestore, "users", uid, "mistakeVault"));
       for (const v of vault.docs) await deleteDoc(v.ref);
       const arenas = await getDocs(collection(firestore, "speedArenas"));

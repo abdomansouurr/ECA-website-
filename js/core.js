@@ -1272,7 +1272,7 @@
           <div class="gold-card rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <span class="px-2.5 py-1 rounded-full text-xs gold-btn">STEP ${stu.level} STUDENT</span>
-              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">${ecaAvatarOf(stu) ? `<span aria-hidden="true" class="eca-frame ${ecaFrameOf(stu) ? "eca-frame-" + ecaFrameOf(stu) : ""}">${esc(ecaAvatarOf(stu))}</span> ` : ""}${lang === "en" ? "Welcome, " : "أهلاً يا "}${esc(ecaStudentAlias(stu))}${activeTitle ? ` <span class="text-sm text-yellow-300">${esc(lang === "en" ? activeTitle.en : activeTitle.title)}</span>` : ""}</h2>
+              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">${ecaAvatarOf(stu) || (window.ecaEliteRank && ecaEliteRank(stu.id)) ? `<span aria-hidden="true" class="eca-frame ${ecaFrameOf(stu) ? "eca-frame-" + ecaFrameOf(stu) : ""} ${window.ecaEliteClass ? ecaEliteClass(stu.id) : ""}">${esc(ecaAvatarOf(stu) || "♟")}</span> ` : ""}${lang === "en" ? "Welcome, " : "أهلاً يا "}${esc(ecaStudentAlias(stu))}${activeTitle ? ` <span class="text-sm text-yellow-300">${esc(lang === "en" ? activeTitle.en : activeTitle.title)}</span>` : ""}</h2>
               <p class="text-xs text-sky-300 mt-1">${lang === "en" ? "Level" : "المستوى"} ${studentLevel} • ${xp} XP</p>
               <p class="text-xs text-gray-400 mt-1">حضرت ${s.attC}/${s.total} درس في Step ${stu.level} • متبقي ${s.rem} درس للامتحان</p>
               <label class="inline-flex flex-wrap items-center gap-2 mt-3 text-xs text-gray-400">

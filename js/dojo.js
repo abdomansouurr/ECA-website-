@@ -76,7 +76,10 @@ reviewLoad = async function () {
   if (!dojoRows) await dojoRefresh();
   const due = dojoDue();
   if (!due.length) { Z.review = false; toast(DL("خلّصت الدوجو! مفيش ألغاز مستحقة دلوقتي", "Dojo cleared! Nothing is due right now")); return puzLoad(); }
-  if (!ChessCls || Z.status === "loading") return;
+  if (!ChessCls) return;
+  // لو لغز تاني لسه بيتحمّل، نستنى يخلص ونبدأ الدوجو بعده
+  if (Z.status === "loading") { if ((Z.dojoWait = (Z.dojoWait || 0) + 1) <= 40) setTimeout(reviewLoad, 250); return; }
+  Z.dojoWait = 0;
   const row = due[0], id = row.id;
   Z.status = "loading"; Z.sel = null; Z.hint = null; Z.flash = null; Z.review = true; arenaRefresh();
   const done = (g, sol, last, rating, themes) => Object.assign(Z, { game: g, sol, idx: 0, color: g.turn(), flip: g.turn() === "b", last, counted: false, status: "play", review: true,

@@ -96,9 +96,11 @@ function ecaHudUpdate() {
   if (!el.firstElementChild) ecaHudBuild(el);
   const en = lang === "en", a = u.arena || {}, xp = calcXP(u).total, p = ecaXpProgress(xp), cur = p.rank.cur;
   const avatarEl = document.getElementById("ecaHudAvatar"), avatar = ecaAvatarOf(u);
-  avatarEl.hidden = !avatar; avatarEl.textContent = avatar;
+  const elite = window.ecaEliteClass ? ecaEliteClass(u.id) : "";
+  avatarEl.hidden = !avatar && !elite; avatarEl.textContent = avatar || "♟";
   const frame = window.ecaFrameOf ? ecaFrameOf(u) : "";
-  avatarEl.className = "eca-hud-avatar eca-frame" + (frame ? " eca-frame-" + frame : "");
+  avatarEl.className = "eca-hud-avatar eca-frame" + (frame ? " eca-frame-" + frame : "") + (elite ? " " + elite : "");
+  if (elite) avatarEl.title = ecaEliteLabel(u.id); else avatarEl.removeAttribute("title");
   const icon = document.getElementById("ecaHudIcon");
   if (cur) { icon.hidden = false; if (icon.getAttribute("src") !== cur.icon) icon.setAttribute("src", cur.icon); } else icon.hidden = true;
   document.getElementById("ecaHudRank").textContent = cur ? cur.label : (en ? "No rank yet" : "لسه بدون رتبة");
@@ -146,7 +148,7 @@ let lbRows = null, lbFailed = false, lbUnsub = null, lbTab = "global";
 function lbWatch() {
   const want = tab === "honor" && !!currUser() && !!window.fbBoardWatch;
   if (want && !lbUnsub) {
-    lbUnsub = window.fbBoardWatch(rows => { lbRows = rows; lbFailed = false; lbPaint(); }, () => { lbFailed = true; lbPaint(); });
+    lbUnsub = window.fbBoardWatch(rows => { lbRows = rows; lbFailed = false; if (window.ecaEliteFromRows) ecaEliteFromRows(rows); lbPaint(); }, () => { lbFailed = true; lbPaint(); });
   } else if (!want && lbUnsub) {
     lbUnsub(); lbUnsub = null; lbRows = null; lbFailed = false;
   }
@@ -169,9 +171,10 @@ function ecaLiveBoardHTML(u) {
     const me = r.id === u.id, avatar = catalog.find(x => x.id === r.a && x.cat === "avatar"), title = catalog.find(x => x.id === r.t && x.type === "title");
     return `<li class="eca-lb-row ${me ? "eca-lb-me" : ""}"${me ? ' aria-current="true"' : ""}>
       <span class="eca-lb-pos">${i < 3 ? ["🥇", "🥈", "🥉"][i] : i + 1}</span>
-      <span class="eca-lb-av" aria-hidden="true">${avatar ? esc(avatar.icon) : "♟"}</span>
+      <span class="eca-lb-av eca-frame ${window.ecaEliteClass ? ecaEliteClass(r.id) : ""}" aria-hidden="true">${avatar ? esc(avatar.icon) : "♟"}</span>
       <span class="min-w-0 flex-1"><b class="block truncate text-sm text-white">${esc(ecaStudentAlias({ id: r.id, nickname: r.n }))}</b>${title ? `<span class="block truncate text-xs text-gray-400">${esc(en ? title.en : title.title)}</span>` : ""}</span>
       <b class="text-sm text-emerald-300 whitespace-nowrap" dir="ltr">${esc(score(r))} XP</b>
+      ${window.ecaEmoteButton ? ecaEmoteButton(r.id) : ""}
     </li>`;
   };
   const myIndex = list.findIndex(r => r.id === u.id);

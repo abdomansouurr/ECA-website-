@@ -41,7 +41,7 @@ service cloud.firestore {
         && s.get('activeTitle', '') is string;
     }
     function protectedEconomySame(o, n) {
-      return !n.diff(o).affectedKeys().hasAny(['stars','xp','missionDate','missionDone','cb','tr','ch','dj']);
+      return !n.diff(o).affectedKeys().hasAny(['stars','xp','missionDate','missionDone','cb','tr','ch','chx','dj']);
     }
     function shopEquipOk(o, n, level) {
       return shopValid(n) && shopCoreSame(o, n)
@@ -197,6 +197,11 @@ service cloud.firestore {
       let v = get(/databases/$(database)/documents/users/$(r.uid)/mistakeVault/$(r.key)).data;
       return v.resolved == false && v.failedAt < request.time - duration.value(30, 'm');
     }
+    // تحدي الأصحاب: الفايز في تحدي خلص من أقل من يوم
+    function fduelWon(did, uid) {
+      let d = get(/databases/$(database)/documents/friendDuels/$(did)).data;
+      return d.status == 'done' && d.winner == uid && request.time < d.ended + duration.value(1, 'd');
+    }
     function dojoPrev(a, day) { return a.get('dj', {}).get('d', '') == day ? a.get('dj', {}).get('n', 0) : 0; }
     function dojoCapOk(r, oldA, newA) {
       return dojoPrev(oldA, r.day) < 5 && newA.get('dj', {}) == {'d': r.day, 'n': dojoPrev(oldA, r.day) + 1};
@@ -248,6 +253,8 @@ service cloud.firestore {
           ? (r.key.matches('[A-Za-z0-9-]{1,40}') && id == 'arena-' + r.key && r.missionBonus == false && arenaPayOk(r))
         : r.source == 'dojo'
           ? (r.key.matches('[A-Za-z0-9]{3,20}') && id == 'dojo-' + r.key && r.starsDelta == 2 && r.xpDelta == 40 && r.missionBonus == false && dojoVaultOk(r))
+        : r.source == 'fduel'
+          ? (r.key.matches('[A-Za-z0-9]{10,40}') && id == 'fduel-' + r.day && r.starsDelta == 3 && r.xpDelta == 60 && r.missionBonus == false && fduelWon(r.key, r.uid))
         : r.source == 'spin'
           ? (r.key == r.day && id == 'spin-' + r.day && r.missionBonus == false && spinOk(r, u))
         : r.source == 'duel'
@@ -297,6 +304,7 @@ service cloud.firestore {
     }
     function chestOk(id, r, oldA, newA, oi, ni) {
       return id == 'chest-' + string(oldA.get('ch', 0)) && newA.get('ch', 0) == oldA.get('ch', 0) + 1 && r.starsDelta == -40
+        && newA.get('chx', 0) == oldA.get('chx', 0) + r.xpDelta
         && chestPrizeOk(r, chestHex(r, oldA), chestItem(chestHex(r, oldA)), oi, ni);
     }
     function economyStateOk(id, r, u, n) {
@@ -309,7 +317,7 @@ service cloud.firestore {
         && (r.source == 'coach' ? coachOk(r, oldA, newA) : oldA.get('cb', {}) == newA.get('cb', {}))
         && (r.source == 'arena' ? listGrantOk(oldA.get('tr', []), newA.get('tr', []), r.key + '|' + string(arenaRankOfStars(r.starsDelta))) : oldA.get('tr', []) == newA.get('tr', []))
         && (r.source == 'dojo' ? dojoCapOk(r, oldA, newA) : oldA.get('dj', {}) == newA.get('dj', {}))
-        && (r.kind == 'chest' ? chestOk(id, r, oldA, newA, u.get('shop', {}).get('items', []), n.get('shop', {}).get('items', [])) : oldA.get('ch', 0) == newA.get('ch', 0))
+        && (r.kind == 'chest' ? chestOk(id, r, oldA, newA, u.get('shop', {}).get('items', []), n.get('shop', {}).get('items', [])) : !newA.diff(oldA).affectedKeys().hasAny(['ch','chx']))
         && economyKindOk(id, r, u);
     }
     // ملف الطالب بيفحص تغيير المتجر لأن بياناته متاحة هنا مباشرة، وقاعدة الإيصال بتفحص النجوم والخبرة ونوع المكافأة
@@ -524,6 +532,19 @@ service cloud.firestore {
         allow delete: if purgeable(uid);
       }
 
+      // التشجيع: إيموجي من قايمة ثابتة بس، طالب لطالب، ومرة كل 10 ثواني
+      match /emotes/{eid} {
+        allow read, delete: if (notAnon() && request.auth.uid == uid) || purgeable(uid);
+        allow create: if notAnon() && request.auth.uid != uid
+          && !exists(/databases/$(database)/documents/deleted/$(request.auth.uid))
+          && request.resource.data.keys().hasOnly(['from','n','e','at']) && request.resource.data.keys().hasAll(['from','n','e','at'])
+          && request.resource.data.from == request.auth.uid
+          && request.resource.data.e in ['👏','🔥','🧠','⚔️','🏆']
+          && request.resource.data.at == request.time
+          && emoteSenderOk(request.resource.data.n)
+          && get(/databases/$(database)/documents/users/$(uid)).data.role == 'student'
+          && getAfter(/databases/$(database)/documents/emoteRate/$(request.auth.uid)).data.at == request.time;
+      }
       // خزنة الغلطات: الطالب بيسجّل غلطاته بنفسه، ومكافأة العودة بتتفحص في قاعدة الإيصال
       match /mistakeVault/{pid} {
         allow read: if (notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))) || purgeable(uid);
@@ -674,7 +695,8 @@ service cloud.firestore {
         && d.a == u.get('shop', {}).get('eq', {}).get('a', '')
         && d.t == u.get('shop', {}).get('activeTitle', '')
         && d.g == u.get('group', '')
-        && d.xp == u.get('arena', {}).get('xp', 0)
+        // خبرة صندوق الكنز مش بتتحسب في الترتيب
+        && d.xp == u.get('arena', {}).get('xp', 0) - u.get('arena', {}).get('chx', 0)
         && d.wx is int && d.wx >= 0
         && d.wk is string && d.wk.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
         && request.time > timestamp.date(int(d.wk.split('-')[0]), int(d.wk.split('-')[1]), int(d.wk.split('-')[2])) - duration.value(2, 'd')
@@ -757,6 +779,100 @@ service cloud.firestore {
         && d.diff(resource.data).affectedKeys().hasOnly(['status','winner','ended'])
         && d.status == 'done' && d.winner == request.auth.uid && d.ended == request.time;
     }
+    function emoteSenderOk(nick) {
+      let u = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return u.role == 'student' && nick == u.get('nickname', '');
+    }
+    match /emoteRate/{sid} {
+      allow create: if notAnon() && request.auth.uid == sid && request.resource.data.keys().hasOnly(['at']) && request.resource.data.at == request.time;
+      allow update: if notAnon() && request.auth.uid == sid && request.resource.data.keys().hasOnly(['at']) && request.resource.data.at == request.time
+        && resource.data.at < request.time - duration.value(10, 's');
+      allow delete: if isAdmin();
+    }
+
+    // ---------- تحدي الأصحاب بالرابط: 5 ألغاز، كل واحد بيسجّل نتيجته، والفايز بيتحسب من النتيجتين ----------
+    function fdRes(m) {
+      return m.keys().hasOnly(['n','solved','ms','done']) && m.n is int && m.solved is int && m.ms is int && m.done is bool
+        && m.n >= 1 && m.n <= 5 && m.solved >= 0 && m.solved <= m.n && m.ms >= m.n * 2000 && m.ms <= 3600000 && m.done == (m.n == 5);
+    }
+    function fdSide() { return request.auth.uid == resource.data.a ? 'ra' : 'rb'; }
+    function fdOther() { return request.auth.uid == resource.data.a ? 'rb' : 'ra'; }
+    function fdStepOk(o, n) {
+      return fdRes(n) && n.n == o.get('n', 0) + 1 && (n.solved == o.get('solved', 0) || n.solved == o.get('solved', 0) + 1) && n.ms >= o.get('ms', 0);
+    }
+    function fdWinner(d) {
+      return d.ra.solved > d.rb.solved || (d.ra.solved == d.rb.solved && d.ra.ms < d.rb.ms) ? d.a
+        : (d.ra.solved == d.rb.solved && d.ra.ms == d.rb.ms ? '' : d.b);
+    }
+    function fdJoinOk() {
+      let d = request.resource.data;
+      return resource.data.status == 'open' && request.auth.uid != resource.data.a
+        && request.time < resource.data.created + duration.value(2, 'd')
+        && d.diff(resource.data).affectedKeys().hasOnly(['status','b','bn','started'])
+        && d.status == 'live' && d.b == request.auth.uid && d.started == request.time && duelNickOk(d.bn);
+    }
+    function fdProgressOk() {
+      let d = request.resource.data;
+      return (request.auth.uid == resource.data.a ? resource.data.status in ['open','live'] : (request.auth.uid == resource.data.get('b', '') && resource.data.status == 'live'))
+        && d.diff(resource.data).affectedKeys().hasOnly([fdSide(), 'status', 'winner', 'ended'])
+        && fdStepOk(resource.data.get(fdSide(), {}), d.get(fdSide(), {}))
+        && (d.get(fdSide(), {}).get('done', false) && d.get(fdOther(), {}).get('done', false)
+          ? (resource.data.status == 'live' && d.status == 'done' && d.ended == request.time && d.winner == fdWinner(d))
+          : (d.status == resource.data.status && !('winner' in d) && !('ended' in d)));
+    }
+    match /friendDuels/{id} {
+      allow read: if notAnon();
+      allow create: if notAnon() && !exists(/databases/$(database)/documents/deleted/$(request.auth.uid))
+        && request.resource.data.keys().hasOnly(['a','an','step','puzzles','status','created'])
+        && request.resource.data.keys().hasAll(['a','an','step','puzzles','status','created'])
+        && request.resource.data.a == request.auth.uid && request.resource.data.status == 'open'
+        && request.resource.data.created == request.time
+        && request.resource.data.step is int && request.resource.data.step >= 1 && request.resource.data.step <= 6
+        && request.resource.data.puzzles is list && request.resource.data.puzzles.size() == 5
+        && duelNickOk(request.resource.data.an);
+      allow update: if notAnon() && !exists(/databases/$(database)/documents/deleted/$(request.auth.uid)) && (fdJoinOk() || fdProgressOk());
+      allow delete: if isAdmin() || (notAnon() && request.auth.uid == resource.data.a && resource.data.status == 'open');
+    }
+
+    // ---------- تحدي الكوتش الأسبوعي وقاعة المشاهير ----------
+    match /coachChallenges/{wid} {
+      allow read: if notAnon();
+      allow create, update: if isStaff() && wid.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && request.resource.data.keys().hasOnly(['title','fen','moves','setup','by','at'])
+        && safeText(request.resource.data.title, 80) && safeText(request.resource.data.fen, 100)
+        && request.resource.data.moves is string && request.resource.data.moves.size() <= 200 && request.resource.data.moves.matches('[a-h1-8qrbn ]+')
+        && request.resource.data.setup is bool && request.resource.data.by == request.auth.uid && request.resource.data.at == request.time;
+      allow delete: if isStaff();
+      match /attempts/{uid} {
+        allow read: if (notAnon() && request.auth.uid == uid) || isStaff();
+        allow create: if notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))
+          && exists(/databases/$(database)/documents/coachChallenges/$(wid))
+          && request.resource.data.keys().hasOnly(['n','solved','at']) && request.resource.data.n == 1
+          && request.resource.data.solved == false && request.resource.data.at == request.time;
+        allow update: if notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid)) && resource.data.solved == false
+          && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['n','at']) && request.resource.data.n == resource.data.n + 1
+               && request.resource.data.n <= 2 && request.resource.data.at == request.time)
+            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['solved']) && request.resource.data.solved == true
+               && request.time < resource.data.at + duration.value(1, 'h')));
+        allow delete: if isStaff();
+      }
+      match /hallOfFame/{uid} {
+        allow read: if notAnon();
+        allow create: if notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))
+          && request.resource.data.keys().hasOnly(['uid','n','a','f','ms','at']) && request.resource.data.keys().hasAll(['uid','n','a','f','ms','at'])
+          && request.resource.data.uid == uid && request.resource.data.at == request.time
+          && request.resource.data.ms is int && request.resource.data.ms >= 1000 && request.resource.data.ms <= 3600000
+          && getAfter(/databases/$(database)/documents/coachChallenges/$(wid)/attempts/$(uid)).data.solved == true
+          && hofProfileOk(request.resource.data);
+        allow delete: if isStaff();
+      }
+    }
+    function hofProfileOk(d) {
+      let u = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return u.role == 'student' && d.n == u.get('nickname', '')
+        && d.a == u.get('shop', {}).get('eq', {}).get('a', '') && d.f == u.get('shop', {}).get('eq', {}).get('f', '');
+    }
+
     match /duels/{id} {
       allow read: if notAnon();
       allow create: if notAnon() && !exists(/databases/$(database)/documents/deleted/$(request.auth.uid))

@@ -309,12 +309,16 @@ async function runSuite(label, rules, quiet) {
     const arena = Object.assign({}, p.arena || {}), shop = Object.assign({ titles: [], bots: [], hints: 0, activeTitle: "" }, p.shop || {});
     const stars = x.stars === undefined ? -40 : x.stars, xp = x.xp || 0;
     arena.stars = (Number(arena.stars) || 0) + stars; arena.xp = (Number(arena.xp) || 0) + xp; arena.ch = x.ch === undefined ? (Number(arena.ch) || 0) + 1 : x.ch;
+    arena.chx = x.chx === undefined ? (Number(arena.chx) || 0) + xp : x.chx;
     if (x.item) shop.items = [...(shop.items || []), x.item];
     tx.update(ur, { arena, shop, lastEconomy: id });
     tx.set(rr, { uid: who, kind: "chest", source: "", key: "", day: today, item: "", score: 0, starsDelta: stars, xpDelta: xp, missionBonus: false, at: ts() });
   }); };
   { const who = chestUser("2"); await spinT("chest: small XP prize", true, who, rich, db => chestEcon(db, who, { xp: 150 })); await spinT("chest: bigger XP than drawn", false, who, rich, db => chestEcon(db, who, { xp: 300 })); await spinT("chest: an item it did not draw", false, who, rich, db => chestEcon(db, who, { item: "frame-gold" })); await spinT("chest: free chest", false, who, rich, db => chestEcon(db, who, { stars: 0, xp: 150 })); await spinT("chest: counter not moved", false, who, rich, db => chestEcon(db, who, { xp: 150, ch: 0 })); await spinT("chest: counter skipped", false, who, rich, db => chestEcon(db, who, { xp: 150, ch: 5 })); await spinT("chest: wrong id", false, who, rich, db => chestEcon(db, who, { xp: 150, id: "chest-7" })); }
-  { const who = chestUser("8"); await spinT("chest: big XP prize", true, who, rich, db => chestEcon(db, who, { xp: 300 })); }
+  { const who = chestUser("8"); await spinT("chest: big XP prize", true, who, rich, db => chestEcon(db, who, { xp: 300 })); await spinT("chest: XP not set aside from the leaderboard", false, who, rich, db => chestEcon(db, who, { xp: 300, chx: 0 })); }
+  await T("chest: set-aside XP changed with no receipt", false, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { chx: 0 }) }), s => s.collection("users").doc(uid).update({ "arena.chx": 300 }));
+  await T("board: chest XP left out", true, Object.assign({}, rich, { arena: Object.assign({}, rich.arena, { xp: 800, chx: 300 }) }), db => db.collection("leaderboard").doc(uid).set({ n: "", a: "", t: "", g: "A", xp: 500, wk: today, wx: 0 }));
+  await T("board: chest XP counted", false, Object.assign({}, rich, { arena: Object.assign({}, rich.arena, { xp: 800, chx: 300 }) }), db => db.collection("leaderboard").doc(uid).set({ n: "", a: "", t: "", g: "A", xp: 800, wk: today, wx: 0 }));
   { const who = chestUser("c"); await spinT("chest: legendary frame", true, who, rich, db => chestEcon(db, who, { item: "frame-gold" })); await spinT("chest: legendary frame plus XP", false, who, rich, db => chestEcon(db, who, { item: "frame-gold", xp: 300 })); await spinT("chest: owned frame turns into XP", true, who, Object.assign({}, rich, { shop: shopEq({}, ["frame-gold"]) }), db => chestEcon(db, who, { xp: 300 })); }
   { const who = chestUser("f"); await spinT("chest: rare piece set", true, who, rich, db => chestEcon(db, who, { item: "piece-crystal" })); }
   await T("chest: counter changed with no receipt", false, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { ch: 9 }) }));
@@ -343,6 +347,51 @@ async function runSuite(label, rules, quiet) {
   await T("dojo: bonus without counting it", false, rich, db => econ(db, { kind: "earn", source: "dojo", key: "abc123", starsDelta: 2, xpDelta: 40, id: "dojo-abc123" }), vaultSeed(oldVault()));
   await T("dojo: counter changed with no receipt", false, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { dj: { d: today, n: 0 } }) }));
   await T("cards: save motif counters and unlocked cards", true, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { mot: { fork: { s: 10, t: 12 } }, cards: ["fork"] }) }));
+  // emotes
+  const emoteTo = (db, target, x = {}) => { const b = db.batch(); b.set(db.collection("emoteRate").doc(uid), { at: ts() }); b.set(db.collection("users").doc(target).collection("emotes").doc(), Object.assign({ from: uid, n: "", e: "🔥", at: ts() }, x)); return b.commit(); };
+  const withOther = async s => { await s.collection("users").doc(other).set(Object.assign({}, rich, { username: "other_1" })); };
+  await T("emote: send a cheer", true, rich, db => emoteTo(db, other), withOther);
+  await T("emote: send a word instead of an emote", false, rich, db => emoteTo(db, other, { e: "loser" }), withOther);
+  await T("emote: send with a legal name", false, rich, db => emoteTo(db, other, { n: "Ali" }), withOther);
+  await T("emote: send as someone else", false, rich, db => emoteTo(db, other, { from: other }), withOther);
+  await T("emote: cheer yourself", false, rich, db => emoteTo(db, uid));
+  await T("emote: two cheers within 10 seconds", false, rich, db => emoteTo(db, other), async s => { await withOther(s); await s.collection("emoteRate").doc(uid).set({ at: tsAgo(3000) }); });
+  await T("emote: cheer after 10 seconds", true, rich, db => emoteTo(db, other), async s => { await withOther(s); await s.collection("emoteRate").doc(uid).set({ at: tsAgo(12000) }); });
+  await T("emote: cheer without the rate stamp", false, rich, db => db.collection("users").doc(other).collection("emotes").doc().set({ from: uid, n: "", e: "🔥", at: ts() }), withOther);
+  await T("emote: read another student's cheers", false, rich, db => db.collection("users").doc(other).collection("emotes").get(), withOther);
+  // friend challenge links
+  const FID = "friendAAAAAAAAAAAAAAA", fRef = db => db.collection("friendDuels").doc(FID);
+  const P5 = ["p1", "p2", "p3", "p4", "p5"];
+  const fBase = (x = {}) => Object.assign({ a: uid, an: "", step: 2, puzzles: P5, status: "open", created: tsAgo(60000) }, x);
+  const fSeed = d => async s => { await withOther(s); await s.collection("friendDuels").doc(FID).set(d); };
+  const res = (n, solved, ms) => ({ n, solved, ms, done: n === 5 });
+  await T("friend: create", true, rich, db => fRef(db).set(Object.assign(fBase(), { created: ts() })));
+  await T("friend: create with 3 puzzles", false, rich, db => fRef(db).set(Object.assign(fBase({ puzzles: ["a", "b", "c"] }), { created: ts() })));
+  await T("friend: create for someone else", false, rich, db => fRef(db).set(Object.assign(fBase({ a: other }), { created: ts() })));
+  await T("friend: join by link", true, rich, db => fRef(db).update({ status: "live", b: uid, bn: "", started: ts() }), fSeed(fBase({ a: other })));
+  await T("friend: join your own", false, rich, db => fRef(db).update({ status: "live", b: uid, bn: "", started: ts() }), fSeed(fBase()));
+  await T("friend: creator plays before the friend joins", true, rich, db => fRef(db).update({ ra: res(1, 1, 9000) }), fSeed(fBase()));
+  await T("friend: claim two solves at once", false, rich, db => fRef(db).update({ ra: res(2, 2, 9000) }), fSeed(fBase()));
+  await T("friend: impossibly fast", false, rich, db => fRef(db).update({ ra: res(1, 1, 500) }), fSeed(fBase()));
+  await T("friend: write the friend's result", false, rich, db => fRef(db).update({ rb: res(1, 1, 9000) }), fSeed(fBase({ status: "live", b: other, bn: "", started: tsAgo(1000) })));
+  const almost = (x = {}) => fBase(Object.assign({ status: "live", b: other, bn: "", started: tsAgo(60000), ra: res(4, 4, 40000), rb: res(5, 3, 30000) }, x));
+  await T("friend: finish and win", true, rich, db => fRef(db).update({ ra: res(5, 5, 50000), status: "done", winner: uid, ended: ts() }), fSeed(almost()));
+  await T("friend: finish and claim a win you lost", false, rich, db => fRef(db).update({ ra: res(5, 2, 50000), status: "done", winner: uid, ended: ts() }), fSeed(almost({ ra: res(4, 2, 40000) })));
+  await T("friend: finish without declaring", false, rich, db => fRef(db).update({ ra: res(5, 5, 50000) }), fSeed(almost()));
+  await T("friend: winner prize", true, rich, db => econ(db, { kind: "earn", source: "fduel", key: FID, starsDelta: 3, xpDelta: 60, id: "fduel-" + today }), fSeed(almost({ status: "done", winner: uid, ended: tsAgo(1000), ra: res(5, 5, 50000) })));
+  await T("friend: prize for the loser", false, rich, db => econ(db, { kind: "earn", source: "fduel", key: FID, starsDelta: 3, xpDelta: 60, id: "fduel-" + today }), fSeed(almost({ status: "done", winner: other, ended: tsAgo(1000), ra: res(5, 1, 50000) })));
+  // coach's weekly challenge and Hall of Fame
+  const WID = today, wRef = (db, sub, id) => sub ? db.collection("coachChallenges").doc(WID).collection(sub).doc(id || uid) : db.collection("coachChallenges").doc(WID);
+  const wSeed = (att) => async s => { await s.collection("coachChallenges").doc(WID).set({ title: "Week", fen: "8/8/8/8/8/8/8/8 w - - 0 1", moves: "e2e4", setup: false, by: "coach", at: tsAgo(1000) }); if (att) await s.collection("coachChallenges").doc(WID).collection("attempts").doc(uid).set(att); };
+  const hof = (x = {}) => Object.assign({ uid, n: "", a: "", f: "", ms: 8000, at: ts() }, x);
+  await T("weekly: student posts the challenge", false, rich, db => wRef(db).set({ title: "x", fen: "8/8/8/8/8/8/8/8 w - - 0 1", moves: "e2e4", setup: false, by: uid, at: ts() }));
+  await T("weekly: first attempt", true, rich, db => wRef(db, "attempts").set({ n: 1, solved: false, at: ts() }), wSeed());
+  await T("weekly: second attempt", true, rich, db => wRef(db, "attempts").update({ n: 2, at: ts() }), wSeed({ n: 1, solved: false, at: tsAgo(60000) }));
+  await T("weekly: third attempt", false, rich, db => wRef(db, "attempts").update({ n: 3, at: ts() }), wSeed({ n: 2, solved: false, at: tsAgo(60000) }));
+  await T("weekly: solve into the Hall of Fame", true, rich, db => { const b = db.batch(); b.update(wRef(db, "attempts"), { solved: true }); b.set(wRef(db, "hallOfFame"), hof()); return b.commit(); }, wSeed({ n: 1, solved: false, at: tsAgo(60000) }));
+  await T("weekly: Hall of Fame without solving", false, rich, db => wRef(db, "hallOfFame").set(hof()), wSeed({ n: 1, solved: false, at: tsAgo(60000) }));
+  await T("weekly: Hall of Fame with a legal name", false, rich, db => { const b = db.batch(); b.update(wRef(db, "attempts"), { solved: true }); b.set(wRef(db, "hallOfFame"), hof({ n: "Ali" })); return b.commit(); }, wSeed({ n: 1, solved: false, at: tsAgo(60000) }));
+  await T("weekly: Hall of Fame for someone else", false, rich, db => wRef(db, "hallOfFame", other).set(hof({ uid: other })), wSeed({ n: 1, solved: false, at: tsAgo(60000) }));
   // companion and achievements stay in the student's own profile
   await T("save companion and achievements", true, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { pet: "dragon", ach: ["night-owl"], duelW: 1 }) }));
   // leaderboard
