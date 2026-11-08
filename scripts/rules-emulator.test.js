@@ -318,6 +318,31 @@ async function runSuite(label, rules, quiet) {
   { const who = chestUser("c"); await spinT("chest: legendary frame", true, who, rich, db => chestEcon(db, who, { item: "frame-gold" })); await spinT("chest: legendary frame plus XP", false, who, rich, db => chestEcon(db, who, { item: "frame-gold", xp: 300 })); await spinT("chest: owned frame turns into XP", true, who, Object.assign({}, rich, { shop: shopEq({}, ["frame-gold"]) }), db => chestEcon(db, who, { xp: 300 })); }
   { const who = chestUser("f"); await spinT("chest: rare piece set", true, who, rich, db => chestEcon(db, who, { item: "piece-crystal" })); }
   await T("chest: counter changed with no receipt", false, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { ch: 9 }) }));
+  // mistake vault and the comeback bonus
+  const vaultRef = (db, id = "abc123") => db.collection("users").doc(uid).collection("mistakeVault").doc(id);
+  const newVault = (x = {}) => Object.assign({ puzzleId: "abc123", motifs: ["fork"], stepLevel: 2, failedAt: ts(), attempts: 1, resolved: false, nextAt: TS.fromMillis(Date.now() + 1800000), rating: 1200 }, x);
+  const oldVault = (x = {}) => newVault(Object.assign({ failedAt: tsAgo(3600000), nextAt: tsAgo(60000) }, x));
+  const vaultSeed = v => s => s.collection("users").doc(uid).collection("mistakeVault").doc("abc123").set(v);
+  await T("vault: log a mistake", true, rich, db => vaultRef(db).set(newVault()));
+  await T("vault: log with an old time", false, rich, db => vaultRef(db).set(newVault({ failedAt: tsAgo(3600000) })));
+  await T("vault: log as already solved", false, rich, db => vaultRef(db).set(newVault({ resolved: true })));
+  await T("vault: log under another id", false, rich, db => vaultRef(db, "zzz999").set(newVault()));
+  await T("vault: log with an extra field", false, rich, db => vaultRef(db).set(newVault({ stars: 5 })));
+  await T("vault: fail again", true, rich, db => vaultRef(db).update({ attempts: 2, failedAt: ts(), nextAt: TS.fromMillis(Date.now() + 864e5) }), vaultSeed(oldVault()));
+  await T("vault: backdate a mistake", false, rich, db => vaultRef(db).update({ failedAt: tsAgo(7200000) }), vaultSeed(newVault({ failedAt: tsAgo(60000) })));
+  await T("vault: mark solved", true, rich, db => vaultRef(db).update({ resolved: true }), vaultSeed(oldVault()));
+  await T("vault: another student's vault", false, rich, db => db.collection("users").doc(other).collection("mistakeVault").doc("abc123").set(newVault()), duelSeed(duelBase()));
+  const dojoPay = (db, x = {}) => econ(db, Object.assign({ kind: "earn", source: "dojo", key: "abc123", starsDelta: 2, xpDelta: 40, id: "dojo-abc123" }, x), (s, a) => { a.dj = x.dj || { d: today, n: 1 }; return s; });
+  await T("dojo: comeback bonus", true, rich, db => dojoPay(db), vaultSeed(oldVault()));
+  await T("dojo: bonus right after the mistake", false, rich, db => dojoPay(db), vaultSeed(newVault({ failedAt: tsAgo(60000) })));
+  await T("dojo: bonus for a solved puzzle", false, rich, db => dojoPay(db), vaultSeed(oldVault({ resolved: true })));
+  await T("dojo: bonus with no mistake logged", false, rich, db => dojoPay(db));
+  await T("dojo: forged bonus", false, rich, db => dojoPay(db, { starsDelta: 10, xpDelta: 200 }), vaultSeed(oldVault()));
+  await T("dojo: bonus twice for one puzzle", false, rich, async db => { await dojoPay(db); await dojoPay(db, { dj: { d: today, n: 2 } }); }, vaultSeed(oldVault()));
+  await T("dojo: sixth bonus in a day", false, Object.assign({}, rich, { arena: Object.assign({}, rich.arena, { dj: { d: today, n: 5 } }) }), db => dojoPay(db, { dj: { d: today, n: 6 } }), vaultSeed(oldVault()));
+  await T("dojo: bonus without counting it", false, rich, db => econ(db, { kind: "earn", source: "dojo", key: "abc123", starsDelta: 2, xpDelta: 40, id: "dojo-abc123" }), vaultSeed(oldVault()));
+  await T("dojo: counter changed with no receipt", false, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { dj: { d: today, n: 0 } }) }));
+  await T("cards: save motif counters and unlocked cards", true, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { mot: { fork: { s: 10, t: 12 } }, cards: ["fork"] }) }));
   // companion and achievements stay in the student's own profile
   await T("save companion and achievements", true, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { pet: "dragon", ach: ["night-owl"], duelW: 1 }) }));
   // leaderboard

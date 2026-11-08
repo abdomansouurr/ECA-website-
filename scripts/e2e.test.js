@@ -398,6 +398,40 @@ async function login(p, id) {
     check("voice cheer shows on screen", await pa.ev("(()=>{ window.ecaSfxMuted=false; window.ecaVoiceOff=false; cheerLast=0; ecaCheer('retry'); const on=!!document.querySelector('.eca-cheer.is-retry'); return on; })()"));
     check("voice cheers can be turned off", await pa.ev("(()=>{ ecaToggleVoice(); document.querySelectorAll('.eca-cheer').forEach(e=>e.remove()); cheerLast=0; ecaCheer('hype'); const quiet=!document.querySelector('.eca-cheer'); ecaToggleVoice(); window.ecaSfxMuted=true; return quiet && localStorage.getItem('ECA_VOICE_OFF')==='0'; })()"));
 
+    // ---------- Dojo Revenge, tactic cards and break reminder ----------
+    await pa.send("Page.bringToFront");
+    await pa.ev("switchTab('home'); ecaChestClose(); ecaSpinClose(); while(document.getElementById('ecaMilestone')) ecaMilestoneClose();");
+    const bankId = await pa.ev("loadPuzzleBank().then(b => b.easiest[0].split('|')[0])");
+    await pa.ev(`window.fbVaultFail(${JSON.stringify(bankId)}, { motifs: ['fork'], step: 2, rating: 900 })`);
+    const logged = await until(() => read(`users/${A}/mistakeVault/${bankId}`));
+    check("a missed puzzle goes into the vault", !!logged && logged.resolved === false && logged.attempts === 1 && logged.stepLevel === 2, logged && { motifs: logged.motifs });
+    const oldIso = new Date(Date.now() - 2 * 3600000).toISOString();
+    await fetch(docUrl(`users/${A}/mistakeVault/${bankId}`) + "?updateMask.fieldPaths=failedAt&updateMask.fieldPaths=nextAt", { method: "PATCH", headers: owner, body: JSON.stringify({ fields: { failedAt: { timestampValue: oldIso }, nextAt: { timestampValue: oldIso } } }) });
+    await pa.ev("dojoRows=null; switchTab('arena'); arena.sub='puzzles'; render();");
+    await until(() => pa.ev("!!ChessCls"), 30000);
+    const dueCount = await until(() => pa.ev("Array.isArray(dojoRows) && dojoDue().length"));
+    check("the dojo shows the due puzzle", dueCount >= 1, dueCount);
+    check("the dojo box replaces the old review box", await pa.ev("document.getElementById('mainView').innerHTML.includes('reviewStart()')"));
+    const dojoBefore = await U(A);
+    await pa.ev("reviewStart()");
+    await until(() => pa.ev("arena.puz.review===true && arena.puz.status==='play'"), 20000);
+    const dojoSolve = await pa.ev("(async()=>{ const Z=arena.puz; let n=0; while(Z.status!=='solved'&&n++<80){ if(Z.status==='play'){ const m=Z.sol[Z.idx]; puzPlay(m.length>4?{from:m.slice(0,2),to:m.slice(2,4),promotion:m[4]}:{from:m.slice(0,2),to:m.slice(2,4)}); } await new Promise(r=>setTimeout(r,150)); } return JSON.stringify({s:Z.status,rev:Z.review,idx:Z.idx,len:Z.sol.length,counted:Z.counted,id:Z.info&&Z.info.id}); })()").catch(e => String(e));
+    const bonus = await until(() => read(`users/${A}/economy/dojo-${bankId}`), 15000);
+    const dojoAfter = await U(A);
+    check("solving it pays the comeback bonus", !!bonus && dojoAfter.arena.stars === dojoBefore.arena.stars + 2 && dojoAfter.arena.xp === dojoBefore.arena.xp + 40, bonus ? { stars: bonus.starsDelta, xp: bonus.xpDelta } : dojoSolve);
+    check("the puzzle is marked solved in the vault", !!(await until(async () => (await read(`users/${A}/mistakeVault/${bankId}`)).resolved === true)));
+    await pa.ev("puzLoad()");
+    check("cards: the album opens", await pa.ev("(()=>{ arena.sub='cards'; render(); return document.querySelectorAll('.eca-card').length===8 && document.querySelectorAll('.eca-card.is-locked').length>=7; })()"));
+    await pa.ev("(()=>{ const u=currUser(); u.arena=u.arena||{}; for(let i=0;i<10;i++) ecaMotifCount(u.arena,['fork','middlegame'],true); ecaMotifCount(u.arena,['fork'],false); save(); render(); })()");
+    check("cards: ten solves unlock the card", !!(await until(async () => ((await U(A)).arena.cards || []).includes("fork"))));
+    check("cards: unlocked card shows its stats", await pa.ev("(()=>{ const c=[...document.querySelectorAll('.eca-card.is-on')]; return c.length===1 && /10/.test(c[0].textContent) && /11/.test(c[0].textContent) && /91%/.test(c[0].textContent); })()"));
+    await pa.ev("while(document.getElementById('ecaMilestone')) ecaMilestoneClose();");
+    await pa.ev("switchTab('home')");
+    check("break: no reminder before 45 minutes", await pa.ev("(()=>{ ecaStaminaSet(30*60000); ecaStaminaTick(); return !document.getElementById('ecaBreakModal'); })()"));
+    check("break: reminder after 45 minutes of play", await pa.ev("(()=>{ ecaStaminaSet(45*60000); ecaStaminaTick(); return !!document.getElementById('ecaBreakModal') && /5:00|4:5/.test(document.getElementById('ecaBreakLeft').textContent); })()"));
+    check("break: back to training closes it", await pa.ev("(()=>{ ecaBreakClose(); return !document.getElementById('ecaBreakModal'); })()"));
+    check("break: waits while a game is running", await pa.ev("(()=>{ arena.rush.status='play'; tab='arena'; ecaStaminaSet(46*60000); ecaStaminaTick(); const waited=!document.getElementById('ecaBreakModal'); arena.rush.status='idle'; tab='home'; ecaStaminaTick(); const shown=!!document.getElementById('ecaBreakModal'); ecaBreakClose(); return waited && shown; })()"));
+
     // ---------- companion and achievements persist ----------
     await pc.ev("switchTab('home'); ecaPetPick('cat')");
     check("companion saved", !!(await until(async () => (await U(C)).arena.pet === "cat")));

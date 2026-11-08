@@ -41,7 +41,7 @@ service cloud.firestore {
         && s.get('activeTitle', '') is string;
     }
     function protectedEconomySame(o, n) {
-      return !n.diff(o).affectedKeys().hasAny(['stars','xp','missionDate','missionDone','cb','tr','ch']);
+      return !n.diff(o).affectedKeys().hasAny(['stars','xp','missionDate','missionDone','cb','tr','ch','dj']);
     }
     function shopEquipOk(o, n, level) {
       return shopValid(n) && shopCoreSame(o, n)
@@ -192,6 +192,15 @@ service cloud.firestore {
       return r.starsDelta > 0 && r.xpDelta == r.starsDelta * 20
         && r.starsDelta == arenaStars(get(/databases/$(database)/documents/speedArenas/$(r.key)).data.get('rank', {}).get(r.uid, 0));
     }
+    // مكافأة العودة: اللغز لازم يكون في خزنة الغلطات ولسه ما اتحلّش، والغلطة عدّى عليها نص ساعة
+    function dojoVaultOk(r) {
+      let v = get(/databases/$(database)/documents/users/$(r.uid)/mistakeVault/$(r.key)).data;
+      return v.resolved == false && v.failedAt < request.time - duration.value(30, 'm');
+    }
+    function dojoPrev(a, day) { return a.get('dj', {}).get('d', '') == day ? a.get('dj', {}).get('n', 0) : 0; }
+    function dojoCapOk(r, oldA, newA) {
+      return dojoPrev(oldA, r.day) < 5 && newA.get('dj', {}) == {'d': r.day, 'n': dojoPrev(oldA, r.day) + 1};
+    }
     // عجلة الحظ: الجايزة من بصمة الحساب واليوم، فمفيش اختيار ولا إعادة لف
     function spinHex(uid, day) { return hashing.sha256(uid + '|' + day).toHexString().lower()[0:1]; }
     function spinStars(h) { return h in ['0','1','2','3','4','5'] ? 1 : h in ['6','7','8','9'] ? 2 : h in ['a','b','c'] ? 3 : 5; }
@@ -237,6 +246,8 @@ service cloud.firestore {
               && r.xpDelta == loginStars(r.day) * 20 && r.missionBonus == false)
         : r.source == 'arena'
           ? (r.key.matches('[A-Za-z0-9-]{1,40}') && id == 'arena-' + r.key && r.missionBonus == false && arenaPayOk(r))
+        : r.source == 'dojo'
+          ? (r.key.matches('[A-Za-z0-9]{3,20}') && id == 'dojo-' + r.key && r.starsDelta == 2 && r.xpDelta == 40 && r.missionBonus == false && dojoVaultOk(r))
         : r.source == 'spin'
           ? (r.key == r.day && id == 'spin-' + r.day && r.missionBonus == false && spinOk(r, u))
         : r.source == 'duel'
@@ -297,6 +308,7 @@ service cloud.firestore {
         && missionOk(r, oldA, newA)
         && (r.source == 'coach' ? coachOk(r, oldA, newA) : oldA.get('cb', {}) == newA.get('cb', {}))
         && (r.source == 'arena' ? listGrantOk(oldA.get('tr', []), newA.get('tr', []), r.key + '|' + string(arenaRankOfStars(r.starsDelta))) : oldA.get('tr', []) == newA.get('tr', []))
+        && (r.source == 'dojo' ? dojoCapOk(r, oldA, newA) : oldA.get('dj', {}) == newA.get('dj', {}))
         && (r.kind == 'chest' ? chestOk(id, r, oldA, newA, u.get('shop', {}).get('items', []), n.get('shop', {}).get('items', [])) : oldA.get('ch', 0) == newA.get('ch', 0))
         && economyKindOk(id, r, u);
     }
@@ -509,6 +521,28 @@ service cloud.firestore {
           && !exists(/databases/$(database)/documents/deleted/$(uid))) || purgeable(uid);
         allow create: if economyReceiptCreateOk(uid, eid);
         allow update: if false;
+        allow delete: if purgeable(uid);
+      }
+
+      // خزنة الغلطات: الطالب بيسجّل غلطاته بنفسه، ومكافأة العودة بتتفحص في قاعدة الإيصال
+      match /mistakeVault/{pid} {
+        allow read: if (notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))) || purgeable(uid);
+        allow create: if notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))
+          && pid.matches('[A-Za-z0-9]{3,20}')
+          && request.resource.data.keys().hasOnly(['puzzleId','motifs','stepLevel','failedAt','attempts','resolved','nextAt','rating'])
+          && request.resource.data.keys().hasAll(['puzzleId','motifs','stepLevel','failedAt','attempts','resolved','nextAt','rating'])
+          && request.resource.data.puzzleId == pid
+          && request.resource.data.motifs is list && request.resource.data.motifs.size() <= 8
+          && request.resource.data.stepLevel is int && request.resource.data.stepLevel >= 1 && request.resource.data.stepLevel <= 6
+          && request.resource.data.failedAt == request.time
+          && request.resource.data.attempts == 1 && request.resource.data.resolved == false
+          && request.resource.data.nextAt is timestamp && request.resource.data.rating is int;
+        allow update: if notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['attempts','failedAt','nextAt','resolved','motifs'])
+          && request.resource.data.motifs is list && request.resource.data.motifs.size() <= 8
+          && request.resource.data.resolved is bool && request.resource.data.nextAt is timestamp
+          && (request.resource.data.failedAt == resource.data.failedAt || request.resource.data.failedAt == request.time)
+          && (request.resource.data.attempts == resource.data.attempts || request.resource.data.attempts == resource.data.attempts + 1);
         allow delete: if purgeable(uid);
       }
 

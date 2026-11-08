@@ -274,6 +274,32 @@
       const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(uid + "|" + day));
       return (new Uint8Array(bytes)[0] >> 4).toString(16);
     }
+    // خزنة الغلطات (دوجو الانتقام)
+    const DOJO_GAPS = [30, 24 * 60, 3 * 24 * 60, 7 * 24 * 60];
+    const vaultRef = id => doc(firestore, "users", me.uid, "mistakeVault", id);
+    window.fbVaultList = async () => {
+      if (!me || me.role !== "student") return [];
+      const snap = await getDocs(query(collection(firestore, "users", me.uid, "mistakeVault"), where("resolved", "==", false), limit(200)));
+      return snap.docs.map(d => { const r = d.data(); return { id: d.id, motifs: Array.isArray(r.motifs) ? r.motifs : [], step: r.stepLevel, attempts: Number(r.attempts) || 1, rating: Number(r.rating) || 0, failedMs: r.failedAt && r.failedAt.toMillis ? r.failedAt.toMillis() : 0, nextMs: r.nextAt && r.nextAt.toMillis ? r.nextAt.toMillis() : 0 }; });
+    };
+    // غلطة جديدة أو غلطة تانية في نفس اللغز: المحاولات بتزيد والمراجعة الجاية بتبعد
+    window.fbVaultFail = async (id, info) => {
+      if (!me || me.role !== "student" || !/^[A-Za-z0-9]{3,20}$/.test(String(id))) return;
+      const ref = vaultRef(id), snap = await getDoc(ref);
+      if (!snap.exists()) {
+        if (!info) return;
+        await setDoc(ref, { puzzleId: id, motifs: (info.motifs || []).slice(0, 8), stepLevel: Math.min(6, Math.max(1, Number(info.step) || 1)), failedAt: serverTimestamp(), attempts: 1, resolved: false, nextAt: new Date(Date.now() + DOJO_GAPS[0] * 60000), rating: Math.round(Number(info.rating) || 0) });
+        return;
+      }
+      const attempts = (Number(snap.data().attempts) || 1) + 1;
+      const patch = { attempts, failedAt: serverTimestamp(), resolved: false, nextAt: new Date(Date.now() + DOJO_GAPS[Math.min(DOJO_GAPS.length - 1, attempts - 1)] * 60000) };
+      if (info && info.motifs && info.motifs.length) patch.motifs = info.motifs.slice(0, 8);
+      await updateDoc(ref, patch);
+    };
+    window.fbVaultResolve = async id => {
+      if (!me || me.role !== "student") return;
+      await updateDoc(vaultRef(id), { resolved: true });
+    };
     // صندوق الكنز: رقم الصندوق محفوظ في ملف الطالب، والجايزة من بصمة الحساب والرقم ده
     const CHEST_ITEMS = { a: "frame-silver", b: "frame-silver", c: "frame-gold", d: "frame-fire", e: "piece-ruby", f: "piece-crystal" };
     window.fbChest = async () => {
@@ -413,6 +439,7 @@
         else if (source === "arena" && /^[A-Za-z0-9-]{1,40}$/.test(key) && [1, 2, 3].includes(request.rank)) id = "arena-" + key;
         else if (source === "spin") { id = "spin-" + day; spinHex = await spinHexOf(uid, day); }
         else if (source === "duel" && /^[A-Za-z0-9]{10,40}$/.test(key)) id = "duel-" + day;
+        else if (source === "dojo" && /^[A-Za-z0-9]{3,20}$/.test(key)) id = "dojo-" + key;
         else if (source === "vision") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "vision-" + day; }
         else return { ok: false };
       } else if (op === "purchase") {
@@ -462,6 +489,16 @@
           }
           else if (source === "pawn") starsDelta = 2;
           else if (source === "duel") starsDelta = 3;
+          else if (source === "dojo") {
+            const vault = await tx.get(doc(firestore, "users", uid, "mistakeVault", key));
+            if (!vault.exists() || vault.data().resolved) return { ok: false, code: "dojo-resolved" };
+            const failed = vault.data().failedAt;
+            if (!failed || !failed.toMillis || Date.now() - failed.toMillis() < 30 * 60000) return { ok: false, code: "dojo-early" };
+            const prev = arena.dj && arena.dj.d === day ? Number(arena.dj.n) || 0 : 0;
+            if (prev >= 5) return { ok: false, code: "dojo-cap" };
+            arena.dj = { d: day, n: prev + 1 };
+            starsDelta = 2;
+          }
           else if (source === "arena") {
             starsDelta = { 1: 50, 2: 30, 3: 20 }[request.rank];
             arena.tr = [...(Array.isArray(arena.tr) ? arena.tr : []), key + "|" + request.rank];
@@ -1380,6 +1417,8 @@
     // المسح النهائي بضغطة من الأدمن بعد الـ 30 يوم. أول قراءة من السيرفر هي البوابة: القواعد بترفضها لو الـ 30 يوم ما عدّوش،
     // فساعة جهاز غلط مش ممكن تمسح طالب بدري. لو حصل فشل في النص، الأدمن يقدر يضغط تاني ويكمّل.
     async function purgeStudentData(uid) {
+      const vault = await getDocs(collection(firestore, "users", uid, "mistakeVault"));
+      for (const v of vault.docs) await deleteDoc(v.ref);
       const arenas = await getDocs(collection(firestore, "speedArenas"));
       for (const a of arenas.docs) await deleteDoc(doc(firestore, "speedArenas", a.id, "entries", uid));
       const economy = await getDocsFromServer(collection(firestore, "users", uid, "economy"));

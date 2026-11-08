@@ -389,7 +389,7 @@
         const j = await r.json();
         const g = new ChessCls(); g.loadPgn(j.game.pgn);
         Object.assign(Z, { game: g, sol: j.puzzle.solution || [], idx: 0, color: g.turn(), flip: g.turn() === "b", last: lastOf(g), counted: false, status: "play",
-          info: { id: String(j.puzzle.id).replace(/[^A-Za-z0-9]/g, ""), rating: Number(j.puzzle.rating) || 0, themes: (j.puzzle.themes || []).slice(0, 4).map(t => String(t).replace(/[^A-Za-z0-9]/g, "")) } });
+          info: { id: String(j.puzzle.id).replace(/[^A-Za-z0-9]/g, ""), rating: Number(j.puzzle.rating) || 0, themes: (j.puzzle.themes || []).slice(0, 8).map(t => String(t).replace(/[^A-Za-z0-9]/g, "")) } });
       } catch (e) {
         // Lichess رافض (غالباً 429 من كتر الطلبات) → لغز من البنك اللي جوه الموقع بنفس الصعوبة
         console.warn("Lichess puzzle failed, using built-in bank:", e);
@@ -414,7 +414,8 @@
       const diff = Z.diff;
       recordAttempt("arena", key, solved, u => {
         const a = u.arena = u.arena || {}; markActiveDay(u);
-        if (!solved && typeof reviewAdd === "function") reviewAdd(u, id, Z.info.rating);     // اللغز الغلط يدخل المراجعة
+        if (!solved && typeof reviewAdd === "function") reviewAdd(u, id, Z.info.rating);
+        if (window.ecaMotifCount) window.ecaMotifCount(a, Z.info.themes, solved);     // اللغز الغلط يدخل المراجعة
         a.puzTried = (a.puzTried || 0) + 1;
         if (solved) {
           if (window.ecaQuestBump) window.ecaQuestBump(a, "puzzles");
@@ -594,7 +595,7 @@
       const tb = (k, label) => `<button onclick="arenaSub('${k}')" class="flex-1 min-w-[140px] py-2.5 px-3 rounded-xl text-xs font-bold ${sub === k ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/20'}">${label}</button>`;
       const body = sub === "vision" ? arenaVisHTML()
         : !ChessCls ? `<div class="gold-card rounded-2xl p-8 text-center text-sm text-gray-400">جاري تحميل الرقعة...</div>`
-        : sub === "rush" ? arenaRushHTML() : sub === "duel" ? arenaDuelHTML() : sub === "speed" ? arenaSpeedHTML() : sub === "puzzles" ? arenaPuzHTML() : sub === "pawns" ? arenaPawnsHTML() : sub === "analysis" ? arenaAnaHTML() : arenaPlayHTML();
+        : sub === "rush" ? arenaRushHTML() : sub === "duel" ? arenaDuelHTML() : sub === "speed" ? arenaSpeedHTML() : sub === "cards" ? arenaCardsHTML() : sub === "puzzles" ? arenaPuzHTML() : sub === "pawns" ? arenaPawnsHTML() : sub === "analysis" ? arenaAnaHTML() : arenaPlayHTML();
       return `
         <div class="space-y-5">
           <div class="gold-card rounded-2xl p-5 flex flex-wrap justify-between items-center gap-3">
@@ -609,7 +610,7 @@
             </div>` : ''}
           </div>
           <div class="flex flex-wrap gap-2 bg-black/60 p-2 rounded-2xl border border-yellow-500/20">
-            ${tb("play", "العب ضد الكمبيوتر")}${tb("puzzles", "ألغاز على الرقعة")}${tb("rush", lang === "en" ? "⚡ Puzzle Rush" : "⚡ تحدي 60 ثانية")}${tb("duel", lang === "en" ? "⚔️ Live duel" : "⚔️ تحدي مباشر")}${tb("speed", lang === "en" ? "🏟️ Speed Arena" : "🏟️ بطولة السرعة")}${tb("pawns", "لعبة البيادق")}${tb("vision", "تدريب الرؤية")}${tb("analysis", "رقعة التحليل")}
+            ${tb("play", "العب ضد الكمبيوتر")}${tb("puzzles", "ألغاز على الرقعة")}${tb("rush", lang === "en" ? "⚡ Puzzle Rush" : "⚡ تحدي 60 ثانية")}${tb("duel", lang === "en" ? "⚔️ Live duel" : "⚔️ تحدي مباشر")}${tb("speed", lang === "en" ? "🏟️ Speed Arena" : "🏟️ بطولة السرعة")}${tb("cards", lang === "en" ? "🃏 Tactic cards" : "🃏 كروت التكتيك")}${tb("pawns", "لعبة البيادق")}${tb("vision", "تدريب الرؤية")}${tb("analysis", "رقعة التحليل")}
           </div>
           <div class="flex flex-wrap items-center gap-3 text-[11px] text-gray-400">
             <span>ألوان الرقعة:</span>
