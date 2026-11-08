@@ -274,7 +274,8 @@ function renderCommandView(u) {
   if (!isStaffUser(u)) return "";
   return `<div class="space-y-5 page-enter">
     <div class="gold-card rounded-2xl p-5"><h2 class="font-display font-bold text-xl gold-gradient-text">🛡️ ${CL("مركز قيادة الكوتش", "Coach Command Center")}</h2>
-      <p class="text-xs text-gray-400 mt-1">${CL("المجموعات، وواجب الزعيم بضغطة واحدة، وجوائز فورية أثناء الحصة.", "Groups, one-click boss homework, and instant rewards during class.")}</p></div>
+      <p class="text-xs text-gray-400 mt-1">${CL("المجموعات، وواجب الزعيم بضغطة واحدة، وجوائز فورية أثناء الحصة.", "Groups, one-click boss homework, and instant rewards during class.")}</p>
+      <button type="button" onclick="showSystemDiagnostics()" class="tap mt-3 rounded-lg px-3 text-xs font-bold bg-zinc-800 text-white border border-yellow-500/30">🩺 ${CL("فحص النظام (قراية بس)", "System check (read-only)")}</button></div>
     <div class="grid lg:grid-cols-2 gap-5 items-start">
       <div class="space-y-5">${cmdDropHTML()}${cmdBossFormHTML()}</div>
       <div class="space-y-5">

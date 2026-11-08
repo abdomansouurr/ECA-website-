@@ -1,6 +1,7 @@
 {
   "firestore": {
-    "rules": "firestore.rules"
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   },
   "emulators": {
     "auth": { "host": "127.0.0.1", "port": 9099 },
@@ -21,7 +22,8 @@
       "package-lock.json",
       "tailwind.config.js",
       "tailwind.input.css",
-      "firestore.rules"
+      "firestore.rules",
+      "firestore.indexes.json"
     ],
     "headers": [
       {

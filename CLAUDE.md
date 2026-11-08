@@ -11,6 +11,9 @@ Roles: `admin`, `coach` (`staff/`), `student` (`users/`), parents (`parentLinks`
 - `npm run test:rules:emulator` — run the real `firestore.rules` on the emulator, including Firestore's limits (MUST run after any rules edit; needs Java).
 - `npm run test:e2e` — run the real site code on the Auth + Firestore emulators with real accounts in Chrome (run after changing economy, shop, duel or leaderboard code; needs Java and Chrome).
 - `npm run vendor` — download self-hosted `vendor/chess.js` & `vendor/stockfish.js`.
+- `npm run audit` — static check: global name clashes, inline handlers that call missing functions, element ids, script tags vs the `sw.js` precache.
+- `npm run seed:emulator` — demo data (coach, 3 students, group, weekly challenge, boss homework, a live drop) for the LOCAL emulators only; start them first with `npx firebase emulators:start --only auth,firestore --project demo-eca`.
+- In the app: `runSystemDiagnostics()` in the console, or «🩺» in the Coach Command Center, runs a read-only health check.
 - Deploy Firestore rules manually via Console or `firebase deploy --only firestore:rules`.
 
 ## Architecture

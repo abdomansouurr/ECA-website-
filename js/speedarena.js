@@ -245,7 +245,11 @@ function saLifecycle() {
     return;
   }
   if (window.__authLoading || !window.fbArenaWatchOpen) return;
-  if (!saOpenUnsub) saOpenUnsub = window.fbArenaWatchOpen(rows => { S.arenas = rows; saPaint(); }, () => {});
+  // القايمة بتتسمع بس في الرئيسية (كارت الكؤوس) وتاب البطولة، والترتيب المباشر في تاب البطولة بس
+  const need = here || (tab === "home" && u.role === "student");
+  if (!here) saBoardWatch("");
+  if (need && !saOpenUnsub) saOpenUnsub = window.fbArenaWatchOpen(rows => { S.arenas = rows; saPaint(); }, () => {});
+  else if (!need && saOpenUnsub) { saOpenUnsub(); saOpenUnsub = null; }
   if (!saEnsured) { saEnsured = true; const slot = saNextSlot(Date.now()); window.fbArenaEnsure(slot.id, slot.startsAt, slot.endsAt).catch(e => { console.warn("Speed arena schedule:", e && e.code); saEnsured = false; }); }
   if (u.role === "student") saClaimWins(u);
   if (u.role === "coach" && Date.now() > saCloseAt) { saCloseAt = Date.now() + 60000; if (window.fbArenaCloseDue) window.fbArenaCloseDue().catch(e => console.warn("Speed arena close:", e && e.code)); }

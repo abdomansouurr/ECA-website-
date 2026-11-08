@@ -172,6 +172,14 @@ service cloud.firestore {
         && (!changed.hasAny(['arena','shop','lastEconomy']) || economyUpdateOk());
     }
 
+    // مهمة الدرس اليومية: العدّاد بيزيد واحد بس، ومع حل صح متسجّل في دفتر المحاولات في نفس العملية
+    // بيتفحص بس مع كتابة محاولة لغز في الساحة (countersOk)، فمش بيكلّف باقي الكتابات حاجة
+    // اليوم لازم يكون آخر يوم تمرين (daysOk بيتأكد إنه النهاردة)
+    // والحل لازم يكون صح (arenaStep بيربط زيادة puzSolved بمحاولة صح)
+    function lessonStepOk(o, n, a, b) {
+      return n.n == (o.get('d', '') == n.d && o.get('k', '') == n.k ? o.get('n', 0) : 0) + 1
+        && n.d == a.days[a.days.size() - 1] && n.k is string && num(a, 'puzSolved') == num(b, 'puzSolved') + 1;
+    }
     function botStars(key) {
       return key == '0' ? 1 : key == '1' ? 2 : key == '2' ? 3 : key == '3' ? 4
         : key == '4' ? 5 : key == '5' ? 6 : key == '6' ? 7 : key == '7' ? 8 : 0;
@@ -245,7 +253,8 @@ service cloud.firestore {
               && r.starsDelta == rushStars(r.score) && r.xpDelta == rushStars(r.score) * 20 && r.missionBonus == false)
         : r.source == 'quest'
           ? (r.key in ['daily','puzzles','win','lesson'] && id == 'quest-' + r.day + '-' + r.key
-              && r.starsDelta == questStars(r.key) && r.xpDelta == questStars(r.key) * 20 && r.missionBonus == false)
+              && r.starsDelta == questStars(r.key) && r.xpDelta == questStars(r.key) * 20 && r.missionBonus == false
+              && (r.key != 'lesson' || (u.get('arena', {}).get('ql', {}).get('d', '') == r.day && u.get('arena', {}).get('ql', {}).get('n', 0) >= 10)))
         : r.source == 'login'
           ? (r.key == r.day && id == 'login-' + r.day && r.starsDelta == loginStars(r.day)
               && r.xpDelta == loginStars(r.day) * 20 && r.missionBonus == false)
@@ -405,9 +414,11 @@ service cloud.firestore {
       let np = request.resource.data.get('puz', {});
       let oa = resource.data.get('arena', {});
       let na = request.resource.data.get('arena', {});
+      // عدّاد مهمة الدرس (ql) بيتغير بس مع حل لغز في الساحة
       return puzSame(op, np)
-        ? (arenaSame(oa, na) ? true : (newAttempt('arena') && arenaStep(oa, na)))
-        : (arenaSame(oa, na) && newAttempt('daily') && dailyStep(op, np));
+        ? (arenaSame(oa, na) ? oa.get('ql', {}) == na.get('ql', {})
+          : (newAttempt('arena') && arenaStep(oa, na) && (oa.get('ql', {}) == na.get('ql', {}) || lessonStepOk(oa.get('ql', {}), na.get('ql', {}), na, oa))))
+        : (arenaSame(oa, na) && oa.get('ql', {}) == na.get('ql', {}) && newAttempt('daily') && dailyStep(op, np));
     }
 
     // أيام التمرين (السلاسل): يوم واحد جديد بس في كل مرة، وتاريخه قريب من النهاردة
@@ -850,7 +861,12 @@ service cloud.firestore {
         && request.resource.data.a == request.auth.uid && request.resource.data.status == 'open'
         && request.resource.data.created == request.time
         && request.resource.data.step is int && request.resource.data.step >= 1 && request.resource.data.step <= 6
-        && request.resource.data.puzzles is list && request.resource.data.puzzles.size() == 5
+        && request.resource.data.puzzles is list && request.resource.data.puzzles.size() == 5 && request.resource.data.puzzles.toSet().size() == 5
+        && request.resource.data.puzzles[0] is string && request.resource.data.puzzles[0].matches('[A-Za-z0-9]{3,20}')
+        && request.resource.data.puzzles[1] is string && request.resource.data.puzzles[1].matches('[A-Za-z0-9]{3,20}')
+        && request.resource.data.puzzles[2] is string && request.resource.data.puzzles[2].matches('[A-Za-z0-9]{3,20}')
+        && request.resource.data.puzzles[3] is string && request.resource.data.puzzles[3].matches('[A-Za-z0-9]{3,20}')
+        && request.resource.data.puzzles[4] is string && request.resource.data.puzzles[4].matches('[A-Za-z0-9]{3,20}')
         && duelNickOk(request.resource.data.an);
       allow update: if notAnon() && !exists(/databases/$(database)/documents/deleted/$(request.auth.uid)) && (fdJoinOk() || fdProgressOk());
       allow delete: if isAdmin() || (notAnon() && request.auth.uid == resource.data.a && resource.data.status == 'open');

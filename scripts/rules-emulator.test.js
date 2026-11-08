@@ -104,9 +104,19 @@ async function runSuite(label, rules, quiet) {
   await T("quest daily", true, fresh, db => quest(db, "daily", 1));
   await T("quest puzzles on a legacy account", true, legacy, db => quest(db, "puzzles", 2));
   await T("quest win", true, fresh, db => quest(db, "win", 2));
-  await T("quest lesson puzzles", true, fresh, db => quest(db, "lesson", 5));
-  await T("quest lesson puzzles with forged stars", false, fresh, db => quest(db, "lesson", 9));
-  await T("quest lesson puzzles twice a day", false, fresh, async db => { await quest(db, "lesson", 5); await quest(db, "lesson", 5); });
+  const withQl = (n, d = today) => Object.assign({}, legacy, { arena: Object.assign({}, legacy.arena, { ql: { d, k: "2-7", n } }) });
+  await T("quest lesson puzzles after 10 solves", true, withQl(10), db => quest(db, "lesson", 5));
+  await T("quest lesson puzzles after 9 solves", false, withQl(9), db => quest(db, "lesson", 5));
+  await T("quest lesson puzzles from yesterday's count", false, withQl(10, "2020-01-01"), db => quest(db, "lesson", 5));
+  await T("quest lesson puzzles with no count", false, fresh, db => quest(db, "lesson", 5));
+  await T("quest lesson puzzles with forged stars", false, withQl(10), db => quest(db, "lesson", 9));
+  await T("quest lesson puzzles twice a day", false, withQl(10), async db => { await quest(db, "lesson", 5); await quest(db, "lesson", 5); });
+  const lessonSolve = (ok, ql) => db => attempt(db, "arena", "LeSsOn1", ok, u => { const a = u.arena; const st = ok ? a.puzStreak + 1 : 0; return { arena: Object.assign({}, a, { puzTried: a.puzTried + 1, puzSolved: a.puzSolved + (ok ? 1 : 0), puzStreak: st, puzBestStreak: Math.max(a.puzBestStreak, st), ql, days: dayPush(u) }) }; });
+  await T("lesson count grows with a solved puzzle", true, withQl(3), lessonSolve(true, { d: today, k: "2-7", n: 4 }));
+  await T("lesson count starts over on a new lesson", true, withQl(3), lessonSolve(true, { d: today, k: "3-1", n: 1 }));
+  await T("lesson count grows with a wrong answer", false, withQl(3), lessonSolve(false, { d: today, k: "2-7", n: 4 }));
+  await T("lesson count jumps ahead", false, withQl(3), lessonSolve(true, { d: today, k: "2-7", n: 10 }));
+  await T("lesson count written with no puzzle", false, withQl(3), db => patch(db, { arena: Object.assign({}, withQl(3).arena, { ql: { d: today, k: "2-7", n: 4 } }) }));
   await T("quest with forged stars", false, fresh, db => quest(db, "win", 9));
   await T("quest with an unknown key", false, fresh, db => quest(db, "free", 2));
   await T("same quest twice a day", false, fresh, async db => { await quest(db, "win", 2); await quest(db, "win", 2); });
@@ -364,7 +374,7 @@ async function runSuite(label, rules, quiet) {
   await T("emote: read another student's cheers", false, rich, db => db.collection("users").doc(other).collection("emotes").get(), withOther);
   // friend challenge links
   const FID = "friendAAAAAAAAAAAAAAA", fRef = db => db.collection("friendDuels").doc(FID);
-  const P5 = ["p1", "p2", "p3", "p4", "p5"];
+  const P5 = ["p1aaa", "p2bbb", "p3ccc", "p4ddd", "p5eee"];
   const fBase = (x = {}) => Object.assign({ a: uid, an: "", step: 2, puzzles: P5, status: "open", created: tsAgo(60000) }, x);
   const fSeed = d => async s => { await withOther(s); await s.collection("friendDuels").doc(FID).set(d); };
   const res = (n, solved, ms) => ({ n, solved, ms, done: n === 5 });

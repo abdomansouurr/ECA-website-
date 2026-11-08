@@ -181,7 +181,10 @@ function arenaFriendHTML() {
   render = function () {
     const F = arena.friend, here = tab === "arena" && arena.sub === "friend";
     if (!here && F.status === "play") { F.status = "lobby"; F.game = null; }
+    // متابعة التحدي بتقف لما الطالب يسيب التاب، وبترجع لما يرجعله
+    if (!here && F.unsub) { F.unsub(); F.unsub = null; }
     const out = _r.apply(this, arguments), u = currUser();
+    if (here && F.id && !F.unsub && u && !window.__authLoading && window.fbFriendWatch) fdOpen(F.id);
     if (u && u.role === "student" && !window.__authLoading && window.fbFriendWatch) {
       let pending = "";
       try { pending = sessionStorage.getItem("ECA_FDUEL") || ""; if (pending) sessionStorage.removeItem("ECA_FDUEL"); } catch (_) {}

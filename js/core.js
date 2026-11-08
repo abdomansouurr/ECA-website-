@@ -2,6 +2,7 @@
     const MODULE_SOURCES = Object.assign({
       puzzles: "puzzles.js",
       themes: "puzzles-themes.js",
+      diagnostics: "js/diagnostics.js",
       homework: "js/homework.js",
       today: "js/today.js",
       reports: "js/reports.js",
@@ -27,6 +28,9 @@
       return pending;
     }
     window.loadModule = loadModule;
+    // فحص النظام (قراية بس): من الكونسول أو من زرار في مركز الكوتش
+    window.runSystemDiagnostics = () => loadModule("diagnostics").then(() => window.ecaDiagnosticsRun());
+    window.showSystemDiagnostics = () => loadModule("diagnostics").then(() => window.ecaDiagnosticsShow());
     function loadModules(names) {
       return names.reduce((pending, name) => pending.then(() => loadModule(name)), Promise.resolve());
     }

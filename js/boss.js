@@ -37,7 +37,15 @@ async function ecaBossFind(id) {
   const idx = bossHwIndex();
   if (idx && idx[id]) return idx[id];
   const b = window.ecaPzFind ? await ecaPzFind(id) : null;
-  return b ? { fen: b.fen, moves: b.moves, setup: true } : null;
+  if (b) return { fen: b.fen, moves: b.moves, setup: true };
+  try {
+    const tb = window.loadThemeBank ? await loadThemeBank() : null;
+    for (const t of Object.keys((tb && tb.themes) || {})) for (const level of tb.themes[t]) {
+      const row = level.find(r => r.split("|")[0] === id);
+      if (row) { const p = row.split("|"); return { fen: p[1], moves: p[2], setup: true }; }
+    }
+  } catch (_) {}
+  return null;
 }
 window.ecaBossFind = ecaBossFind;
 

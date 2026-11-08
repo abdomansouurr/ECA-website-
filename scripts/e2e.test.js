@@ -640,6 +640,27 @@ async function login(p, id) {
     check("report: coach sends the summary to the parent's WhatsApp", /^https:\/\/wa\.me\/201100000000\?text=/.test(await pg.ev("window.__wa")));
     await pg.ev("prCoachClose()");
 
+    // ---------- system check (read-only) and listener cleanup ----------
+    await pa.send("Page.bringToFront");
+    await pa.ev("switchTab('arena'); arena.sub='friend'; render();"); await sleep(800);
+    await pa.ev("arena.sub='speed'; render();"); await sleep(800);
+    await pa.ev("switchTab('home')"); await sleep(800);
+    const openA = await pa.ev("ecaListeners().map(l => l.name)");
+    check("listeners: closed views stop listening", !openA.includes("friendDuel") && !openA.includes("speedArenaBoard") && !openA.includes("duelLobby") && !openA.includes("leaderboard"), openA);
+    check("listeners: no duplicates", new Set(openA).size === openA.length, openA);
+    await pa.ev("switchTab('arena'); arena.sub='lessons'; render();");
+    await until(() => pa.ev("!!ChessCls"), 15000);
+    const diagA = await pa.ev("runSystemDiagnostics().then(r => ({ pass: r.pass, fail: r.fail, failed: r.results.filter(x => x.result === 'FAIL').map(x => x.check + ': ' + x.detail) }))");
+    check("diagnostics: student check passes", !!diagA && diagA.fail === 0 && diagA.pass >= 20, diagA);
+    await pa.ev("switchTab('home')");
+    await pg.send("Page.bringToFront");
+    await pg.ev("switchTab('command')");
+    const diagG = await pg.ev("runSystemDiagnostics().then(r => ({ pass: r.pass, fail: r.fail, failed: r.results.filter(x => x.result === 'FAIL').map(x => x.check + ': ' + x.detail) }))");
+    check("diagnostics: coach check passes", !!diagG && diagG.fail === 0 && diagG.pass >= 10, diagG);
+    await pg.ev("showSystemDiagnostics()");
+    check("diagnostics: coach panel shows the results", !!(await until(() => pg.ev("!!document.getElementById('ecaDiagModal') && /PASS/.test(document.getElementById('ecaDiagModal').textContent)"), 20000)));
+    await pg.ev("document.getElementById('ecaDiagModal').remove()");
+
     // ---------- companion and achievements persist ----------
     await pc.ev("switchTab('home'); ecaPetPick('cat')");
     check("companion saved", !!(await until(async () => (await U(C)).arena.pet === "cat")));
@@ -655,6 +676,11 @@ async function login(p, id) {
     check("deleted student leaves the board", !!(await until(async () => !(await read("leaderboard/" + B)))));
     const res = await pd.ev(`window.fbRestoreStudent(${JSON.stringify(B)}).then(r=>JSON.stringify(r))`);
     check("admin restore works", JSON.parse(res).ok === true, res);
+
+    // ---------- logout closes every listener ----------
+    await pc.send("Page.bringToFront");
+    await pc.ev("logout()");
+    check("listeners: logout closes them all", !!(await until(() => pc.ev("!currUser() && ecaListeners().length === 0"), 10000)), await pc.ev("ecaListeners().map(l => l.name)"));
 
     // ---------- problems seen in any browser ----------
     for (const p of Object.values(sessions)) {

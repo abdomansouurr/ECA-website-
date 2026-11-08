@@ -1,7 +1,7 @@
 // ECA — firebase.js (اتفصل من index.html في eca-v3)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, linkWithPopup, deleteUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { initializeFirestore, writeBatch, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocs, getDocsFromServer, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot, serverTimestamp, orderBy, limit, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { initializeFirestore, writeBatch, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocFromServer, getDocs, getDocsFromServer, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot, serverTimestamp, orderBy, limit, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDofyiWsg2HmOQgigWeqUpOaSupoMQ1GKc",
@@ -67,8 +67,22 @@
       else setTimeout(flush, 0);
     }
 
+    // ===================== مدير الاستماع اللحظي =====================
+    // كل onSnapshot بيتسجل هنا باسمه. أي تغيير في الدخول بيقفلهم كلهم مرة واحدة (مفيش استماع قديم بيفضل شغال
+    // ويصرف قراءات)، والشاشات بتقفل اللي بتاعها لما الطالب يسيبها. ecaListeners() بيعرض المفتوح دلوقتي.
+    const liveListeners = new Map();
+    let liveSeq = 0;
+    function listen(name, ...args) {
+      const id = ++liveSeq, stop = onSnapshot(...args);
+      liveListeners.set(id, { name, since: Date.now(), stop });
+      return () => { const l = liveListeners.get(id); if (!l) return; liveListeners.delete(id); try { l.stop(); } catch (_) {} };
+    }
+    function stopAllListeners() { for (const [id, l] of [...liveListeners]) { liveListeners.delete(id); try { l.stop(); } catch (_) {} } }
+    window.ecaListeners = () => [...liveListeners.values()].map(l => ({ name: l.name, seconds: Math.round((Date.now() - l.since) / 1000) }));
+
     function resetState() {
       unsubs.forEach(u => { try { u(); } catch (_) {} }); unsubs = [];
+      stopAllListeners();
       clearInterval(dailyNotificationTimer); dailyNotificationTimer = null; dailyNotificationAttemptDate = "";
       loginRewardDay = ""; loginRewardTries = 0; freezeCheckDay = "";
       window.ecaNotifications = [];
@@ -267,7 +281,7 @@
       }
     }
     function boardPublishSoon() { clearTimeout(boardTimer); boardTimer = setTimeout(boardPublish, 4000); }
-    window.fbBoardWatch = (onRows, onError) => onSnapshot(query(collection(firestore, "leaderboard"), orderBy("xp", "desc"), limit(500)),
+    window.fbBoardWatch = (onRows, onError) => listen("leaderboard", query(collection(firestore, "leaderboard"), orderBy("xp", "desc"), limit(500)),
       snap => onRows(snap.docs.map(d => Object.assign(cleanDeep(d.data()), { id: d.id }))),
       err => { console.warn("Leaderboard read failed:", err && err.code); onError(); });
     async function spinHexOf(uid, day) {
@@ -289,7 +303,7 @@
     };
     window.fbEmoteWatch = onItems => {
       if (!me) return () => {};
-      return onSnapshot(query(collection(firestore, "users", me.uid, "emotes"), orderBy("at", "desc"), limit(10)), snap => {
+      return listen("emotes", query(collection(firestore, "users", me.uid, "emotes"), orderBy("at", "desc"), limit(10)), snap => {
         const items = snap.docs.filter(d => !d.metadata.hasPendingWrites).map(d => ({ id: d.id, from: d.data().from, n: cleanDeep(d.data().n || ""), e: d.data().e }));
         if (items.length) onItems(items);
       }, err => console.warn("Emotes failed:", err && err.code));
@@ -303,7 +317,7 @@
       await setDoc(ref, { a: me.uid, an: (maps.core[me.uid] || {}).nickname || "", step, puzzles, status: "open", created: serverTimestamp() });
       return ref.id;
     };
-    window.fbFriendWatch = (id, onDoc) => onSnapshot(doc(firestore, "friendDuels", id), snap => onDoc(snap.exists() ? fdView(snap.id, snap.data()) : null), err => { if (auth.currentUser) console.warn("Friend duel watch failed:", err && err.code); });
+    window.fbFriendWatch = (id, onDoc) => listen("friendDuel", doc(firestore, "friendDuels", id), snap => onDoc(snap.exists() ? fdView(snap.id, snap.data()) : null), err => { if (auth.currentUser) console.warn("Friend duel watch failed:", err && err.code); });
     window.fbFriendJoin = id => runTransaction(firestore, async tx => {
       const ref = doc(firestore, "friendDuels", id), snap = await tx.get(ref);
       if (!snap.exists() || snap.data().status !== "open" || snap.data().a === me.uid) return false;
@@ -346,12 +360,12 @@
         try { const s = await getDoc(doc(firestore, "coachChallenges", wk, "attempts", me.uid)); att = s.exists() ? { n: Number(s.data().n) || 0, solved: !!s.data().solved } : { n: 0, solved: false }; } catch (_) { att = { n: 0, solved: false }; }
         emit();
       };
-      const u1 = onSnapshot(doc(firestore, "coachChallenges", wk), snap => {
+      const u1 = listen("weeklyChallenge", doc(firestore, "coachChallenges", wk), snap => {
         gotDoc = true;
         docData = snap.exists() ? { title: cleanDeep(snap.data().title || ""), fen: snap.data().fen, moves: snap.data().moves, setup: !!snap.data().setup } : null;
         emit(); loadAtt();
       }, err => { console.warn("Weekly challenge failed:", err && err.code); gotDoc = true; emit(); });
-      const u2 = onSnapshot(query(collection(firestore, "coachChallenges", wk, "hallOfFame"), orderBy("ms", "asc"), limit(20)), snap => {
+      const u2 = listen("hallOfFame", query(collection(firestore, "coachChallenges", wk, "hallOfFame"), orderBy("ms", "asc"), limit(20)), snap => {
         hof = snap.docs.map(d => ({ uid: d.data().uid, n: cleanDeep(d.data().n || ""), a: d.data().a || "", f: d.data().f || "", ms: Number(d.data().ms) || 0 }));
         emit();
       }, err => console.warn("Hall of Fame failed:", err && err.code));
@@ -462,17 +476,17 @@
       return ref.id;
     };
     window.fbBossDelete = id => deleteDoc(doc(firestore, "assignments", id));
-    window.fbBossWatchAll = (onRows, onError) => onSnapshot(query(collection(firestore, "assignments"), orderBy("at", "desc"), limit(30)),
+    window.fbBossWatchAll = (onRows, onError) => listen("assignments", query(collection(firestore, "assignments"), orderBy("at", "desc"), limit(30)),
       snap => onRows(snap.docs.map(d => bossView(d.id, d.data()))),
       err => { if (auth.currentUser) console.warn("Assignments failed:", err && err.code); if (onError) onError(); });
-    window.fbBossProgressWatch = (aid, onRows) => onSnapshot(collection(firestore, "assignments", aid, "progress"),
+    window.fbBossProgressWatch = (aid, onRows) => listen("assignmentProgress", collection(firestore, "assignments", aid, "progress"),
       snap => onRows(snap.docs.map(d => ({ uid: d.id, solved: Array.isArray(d.data().solved) ? d.data().solved.length : 0, done: d.data().done === true, atMs: tsMs(d.data().at) }))),
       err => { if (auth.currentUser) console.warn("Assignment progress failed:", err && err.code); });
     // الطالب: واجبات مجموعته، ومع كل واجب الألغاز اللي حلها
     window.fbBossMine = (group, onRows) => {
       if (!me || me.role !== "student" || !group) return () => {};
       let alive = true;
-      const unsub = onSnapshot(query(collection(firestore, "assignments"), where("group", "==", group), limit(20)), async snap => {
+      const unsub = listen("bossHomework", query(collection(firestore, "assignments"), where("group", "==", group), limit(20)), async snap => {
         const rows = await Promise.all(snap.docs.map(async d => {
           const row = bossView(d.id, d.data());
           try {
@@ -483,7 +497,14 @@
           return row;
         }));
         if (alive) onRows(rows);
-      }, err => { if (auth.currentUser) console.warn("Boss homework failed:", err && err.code); });
+      }, async err => {
+        if (!auth.currentUser) return;
+        // الكوتش نقل الطالب لمجموعة تانية: السيرفر بيقفل الاستماع القديم، والصفحة بتفتح واحد جديد على المجموعة الجديدة
+        if (err && err.code === "permission-denied") {
+          try { const p = await getDocFromServer(doc(firestore, "users", me.uid)); if (p.exists() && String(p.data().group || "") !== group) return; } catch (_) {}
+        }
+        console.warn("Boss homework failed:", err && err.code);
+      });
       return () => { alive = false; unsub(); };
     };
     // ضربة في الزعيم = لغز واحد من الواجب اتحل
@@ -497,6 +518,22 @@
       tx.set(ref, { solved, done, at: serverTimestamp() });
       return { solved, done };
     });
+
+    // ================= فحص النظام (قراية بس من السيرفر، عشان القواعد تتفحص فعلاً ومش الكاش) =================
+    window.fbDiagRead = async (path, opts = {}) => {
+      if (!me) return { ok: false, code: "signed-out" };
+      const parts = String(path).split("/").filter(Boolean);
+      if (!parts.length || parts.some(p => !/^[A-Za-z0-9_-]{1,128}$/.test(p))) return { ok: false, code: "bad-path" };
+      try {
+        if (parts.length % 2 === 0) {
+          const s = await getDocFromServer(doc(firestore, ...parts));
+          return { ok: true, exists: s.exists(), data: opts.data && s.exists() ? cleanDeep(s.data()) : undefined };
+        }
+        const c = collection(firestore, ...parts), n = Math.min(20, opts.limit || 1);
+        const s = await getDocsFromServer(opts.where ? query(c, where(opts.where[0], "==", opts.where[1]), limit(n)) : query(c, limit(n)));
+        return { ok: true, n: s.size, ids: s.docs.map(d => d.id) };
+      } catch (e) { return { ok: false, code: e && e.code }; }
+    };
 
     // ================= تقرير ولي الأمر =================
     // خزنة الغلطات، وجوايز الكوتش في الحصة، وواجبات الزعيم: للطالب نفسه أو للكوتش
@@ -539,7 +576,7 @@
     };
     window.fbDropWatch = onItems => {
       if (!me || me.role !== "student") return () => {};
-      return onSnapshot(collection(firestore, "liveDrops", me.uid, "drops"), snap => {
+      return listen("liveDrops", collection(firestore, "liveDrops", me.uid, "drops"), snap => {
         const items = snap.docs.filter(d => !d.metadata.hasPendingWrites)
           .map(d => ({ id: d.id, type: d.data().type, amount: Number(d.data().amount) || 0, note: cleanDeep(d.data().note || ""), atMs: tsMs(d.data().at) }));
         if (items.length) onItems(items.sort((x, y) => x.atMs - y.atMs));
@@ -548,7 +585,7 @@
 
     // بطولة السرعة
     const msOf = t => (t && t.toMillis ? t.toMillis() : 0);
-    window.fbArenaWatchOpen = (onRows, onError) => onSnapshot(query(collection(firestore, "speedArenas"), where("closed", "==", false), limit(10)),
+    window.fbArenaWatchOpen = (onRows, onError) => listen("speedArenas", query(collection(firestore, "speedArenas"), where("closed", "==", false), limit(10)),
       snap => onRows(snap.docs.map(d => ({ id: d.id, startsMs: msOf(d.data().startsAt), endsMs: msOf(d.data().endsAt) }))),
       err => { if (auth.currentUser) console.warn("Speed arena list failed:", err && err.code); onError(); });
     window.fbArenaEnsure = async (id, startsAt, endsAt) => {
@@ -563,7 +600,7 @@
       const now = Date.now();
       await setDoc(doc(firestore, "speedArenas", "live-" + now), { startsAt: new Date(now), endsAt: new Date(now + minutes * 60000), closed: false });
     };
-    window.fbArenaBoard = (id, size, onRows, onError) => onSnapshot(query(collection(firestore, "speedArenas", id, "entries"), orderBy("score", "desc"), limit(size)),
+    window.fbArenaBoard = (id, size, onRows, onError) => listen("speedArenaBoard", query(collection(firestore, "speedArenas", id, "entries"), orderBy("score", "desc"), limit(size)),
       snap => onRows(snap.docs.map(d => { const r = d.data(); return { id: d.id, n: cleanDeep(r.n || ""), a: r.a || "", score: Number(r.score) || 0, atMs: msOf(r.at) }; })),
       err => { if (auth.currentUser) console.warn("Speed arena board failed:", err && err.code); onError(); });
     // بيرجع للطالب نتيجته لو كان دخل قبل كده في نفس البطولة
@@ -595,10 +632,10 @@
       }
     };
     // التحدي المباشر
-    window.fbDuelLobby = (onRows, onError) => onSnapshot(query(collection(firestore, "duels"), where("status", "==", "open"), limit(20)),
+    window.fbDuelLobby = (onRows, onError) => listen("duelLobby", query(collection(firestore, "duels"), where("status", "==", "open"), limit(20)),
       snap => onRows(snap.docs.map(d => { const r = d.data(); return { id: d.id, a: r.a, an: cleanDeep(r.an || ""), createdMs: r.created && r.created.toMillis ? r.created.toMillis() : 0 }; })),
       err => { console.warn("Duel lobby failed:", err && err.code); onError(); });
-    window.fbDuelWatch = (id, onDoc) => onSnapshot(doc(firestore, "duels", id),
+    window.fbDuelWatch = (id, onDoc) => listen("duel", doc(firestore, "duels", id),
       snap => { if (snap.exists()) { const r = snap.data(); onDoc({ id: snap.id, a: r.a, an: r.an, b: r.b, bn: r.bn, fen: r.fen, moves: r.moves, status: r.status, winner: r.winner }); } else onDoc(null); },
       err => console.warn("Duel watch failed:", err && err.code));
     window.fbDuelCreate = async (fen, moves) => {
@@ -1101,19 +1138,19 @@
     function startListeners() {
       if (!me) return;
       if (isStaffRole(me.role)) {
-        unsubs.push(onSnapshot(collection(firestore, "users"), s => applyColl("core", s), onErr("users")));
-        unsubs.push(onSnapshot(collection(firestore, "deleted"), applyDeletedStudents, onErr("deleted students")));
-        unsubs.push(onSnapshot(collection(firestore, "private"), s => applyColl("priv", s), onErr("private")));
-        if (me.role === "admin") unsubs.push(onSnapshot(collection(firestore, "finance"), s => applyColl("fin", s), onErr("finance")));
-        unsubs.push(onSnapshot(collection(firestore, "attendance"), applyAtt, onErr("attendance")));
+        unsubs.push(listen("users", collection(firestore, "users"), s => applyColl("core", s), onErr("users")));
+        unsubs.push(listen("deleted", collection(firestore, "deleted"), applyDeletedStudents, onErr("deleted students")));
+        unsubs.push(listen("private", collection(firestore, "private"), s => applyColl("priv", s), onErr("private")));
+        if (me.role === "admin") unsubs.push(listen("finance", collection(firestore, "finance"), s => applyColl("fin", s), onErr("finance")));
+        unsubs.push(listen("attendance", collection(firestore, "attendance"), applyAtt, onErr("attendance")));
       } else if (me.role === "student") {
-        unsubs.push(onSnapshot(doc(firestore, "deleted", me.uid), snap => {
+        unsubs.push(listen("deletedSelf", doc(firestore, "deleted", me.uid), snap => {
           if (snap.exists()) {
             toast("هذا الحساب محذوف ولا يمكن الدخول إليه.");
             signOut(auth);
           }
         }, onErr("deleted account")));
-        unsubs.push(onSnapshot(doc(firestore, "users", me.uid), { includeMetadataChanges: true }, snap => {
+        unsubs.push(listen("profile", doc(firestore, "users", me.uid), { includeMetadataChanges: true }, snap => {
           if (snap.exists()) {
             const profile = cleanDeep(snap.data());
             const changed = !loaded.core || JSON.stringify(maps.core[me.uid]) !== JSON.stringify(profile);
@@ -1128,7 +1165,7 @@
           }
         }, onErr("users")));
         window.ecaNotifications = [];
-        unsubs.push(onSnapshot(query(collection(firestore, "users", me.uid, "notifications"), orderBy("createdAt", "desc")), snap => {
+        unsubs.push(listen("notifications", query(collection(firestore, "users", me.uid, "notifications"), orderBy("createdAt", "desc")), snap => {
           const next = snap.docs.map(d => {
             const data = d.data() || {};
             return {
@@ -1155,15 +1192,15 @@
         setTimeout(checkStreakFreeze, 2500);
         dailyNotificationTimer = setInterval(() => { checkDailyPuzzleNotification(); checkDailyLoginReward(); checkStreakFreeze(); }, 60 * 1000);
       }
-      unsubs.push(onSnapshot(doc(firestore, "meta", "groups"), applyGroups, onErr("groups")));
-      unsubs.push(onSnapshot(doc(firestore, "meta", "announcements"), snap => {
+      unsubs.push(listen("groups", doc(firestore, "meta", "groups"), applyGroups, onErr("groups")));
+      unsubs.push(listen("announcements", doc(firestore, "meta", "announcements"), snap => {
         const next = snap.exists() && Array.isArray(snap.data().items) ? cleanDeep(snap.data().items) : [];
         const changed = JSON.stringify(db.announcements) !== JSON.stringify(next);
         db.announcements = next;
         if (changed && tab === "home") scheduleRemoteRender();
       }, err => console.warn("announcements not readable:", err && err.code)));
       // البطولات: الكوتش بيكتب، والطلبة بيقروا (الترتيب ونتايجهم)
-      unsubs.push(onSnapshot(collection(firestore, "tournaments"), snap => {
+      unsubs.push(listen("tournaments", collection(firestore, "tournaments"), snap => {
         const list = []; snap.forEach(d => list.push(Object.assign(cleanDeep(d.data()), { id: d.id })));
         const next = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         const changed = JSON.stringify(db.tournaments) !== JSON.stringify(next);
@@ -1171,7 +1208,7 @@
         if (changed && (tab === "tournaments" || tab === "home")) scheduleRemoteRender();
       }, err => console.warn("tournaments not readable:", err && err.code)));
       // قائمة الشرف: الكوتش بيحدّثها، والطلبة بيقروها (الطالب مايقدرش يقرا بيانات زمايله مباشرة)
-      unsubs.push(onSnapshot(doc(firestore, "meta", "honor"), s => {
+      unsubs.push(listen("honor", doc(firestore, "meta", "honor"), s => {
         const next = s.exists() ? cleanDeep(s.data()) : null;
         const changed = JSON.stringify(window.honorData) !== JSON.stringify(next);
         window.honorData = next;
