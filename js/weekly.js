@@ -153,7 +153,7 @@ function wkHomeCardHTML(stu) {
   return `<section class="gold-card rounded-2xl p-4 flex items-center justify-between gap-3 border border-yellow-500/40">
     <div class="min-w-0"><h3 class="font-bold text-sm text-yellow-300">🎯 ${WL("تحدي الكوتش الأسبوعي", "Coach's weekly challenge")}</h3>
       <p class="text-xs text-gray-300 truncate">${esc(W.doc.title)}${done ? " • 🏅" : ""}</p></div>
-    <button type="button" onclick="arena.sub='weekly'; switchTab('arena')" class="tap rounded-lg px-3 text-xs font-bold gold-btn">${done ? WL("القاعة", "Hall") : WL("حلّه", "Solve")}</button>
+    <button type="button" onclick="arena.sub='weekly'; switchTab('arena')" class="tap min-w-[44px] rounded-lg px-3 text-xs font-bold gold-btn">${done ? WL("القاعة", "Hall") : WL("حلّه", "Solve")}</button>
   </section>`;
 }
 {

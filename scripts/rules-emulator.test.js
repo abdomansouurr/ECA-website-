@@ -401,7 +401,8 @@ async function runSuite(label, rules, quiet) {
   await T("weekly: first attempt", true, rich, db => wRef(db, "attempts").set({ n: 1, solved: false, at: ts() }), wSeed());
   await T("weekly: second attempt", true, rich, db => wRef(db, "attempts").update({ n: 2, at: ts() }), wSeed({ n: 1, solved: false, at: tsAgo(60000) }));
   await T("weekly: third attempt", false, rich, db => wRef(db, "attempts").update({ n: 3, at: ts() }), wSeed({ n: 2, solved: false, at: tsAgo(60000) }));
-  await T("weekly: solve into the Hall of Fame", true, rich, db => { const b = db.batch(); b.update(wRef(db, "attempts"), { solved: true }); b.set(wRef(db, "hallOfFame"), hof()); return b.commit(); }, wSeed({ n: 1, solved: false, at: tsAgo(60000) }));
+  await T("weekly: solve into the Hall of Fame", true, rich, db => { const b = db.batch(); b.update(wRef(db, "attempts"), { solved: true }); b.set(wRef(db, "hallOfFame"), hof({ ms: 58000 })); return b.commit(); }, wSeed({ n: 1, solved: false, at: tsAgo(60000) }));
+  await T("weekly: Hall of Fame with a faked fast time", false, rich, db => { const b = db.batch(); b.update(wRef(db, "attempts"), { solved: true }); b.set(wRef(db, "hallOfFame"), hof({ ms: 8000 })); return b.commit(); }, wSeed({ n: 1, solved: false, at: tsAgo(60000) }));
   await T("weekly: Hall of Fame without solving", false, rich, db => wRef(db, "hallOfFame").set(hof()), wSeed({ n: 1, solved: false, at: tsAgo(60000) }));
   await T("weekly: Hall of Fame with a legal name", false, rich, db => { const b = db.batch(); b.update(wRef(db, "attempts"), { solved: true }); b.set(wRef(db, "hallOfFame"), hof({ n: "Ali" })); return b.commit(); }, wSeed({ n: 1, solved: false, at: tsAgo(60000) }));
   await T("weekly: Hall of Fame for someone else", false, rich, db => wRef(db, "hallOfFame", other).set(hof({ uid: other })), wSeed({ n: 1, solved: false, at: tsAgo(60000) }));

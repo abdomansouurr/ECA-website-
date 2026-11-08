@@ -849,6 +849,35 @@
       } catch (e) { console.warn("attempts read:", e && e.code); return null; }
     };
 
+    {
+      const ecoNow = window.fbEconomy, queued = new Map();
+      const offlineErr = e => !navigator.onLine || (e && (e.code === "unavailable" || e.code === "deadline-exceeded"));
+      // أول ما النت يرجع Firestore بياخد شوية لحد ما يتصل، فبنعيد كل 5 ثواني (لحد دقيقتين) لحد ما الطابور يفضى
+      let flushing = false, tries = 0;
+      const flush = async () => {
+        if (flushing) return; flushing = true;
+        let again = false;
+        for (const [k, q] of [...queued]) {
+          if (!me || me.uid !== q.uid) { queued.delete(k); continue; }
+          try { await ecoNow(q.req); queued.delete(k); }
+          catch (e) { if (offlineErr(e)) { again = true; break; } console.warn("Queued reward failed:", e && e.code); queued.delete(k); }
+        }
+        flushing = false;
+        if (again && navigator.onLine && ++tries < 24) setTimeout(flush, 5000); else tries = 0;
+      };
+      addEventListener("online", () => { tries = 0; setTimeout(flush, 1500); });
+      window.ecaPendingRewards = () => queued.size;
+      window.fbEconomy = async request => {
+        try { return await ecoNow(request); }
+        catch (e) {
+          if (!me || !request || request.op !== "earn" || !offlineErr(e)) throw e;
+          queued.set(me.uid + "|" + JSON.stringify(request), { uid: me.uid, req: request });
+          if (window.toast) toast(document.documentElement.lang === "en" ? "No internet: the reward will be saved when you're back online." : "مفيش نت: الجايزة هتتسجّل أول ما النت يرجع.");
+          return { ok: false, code: "offline-queued" };
+        }
+      };
+    }
+
     // ===================== إعلانات الأكاديمية (meta/announcements) =====================
     function cairoDayKey() {
       const parts = new Intl.DateTimeFormat("en", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());

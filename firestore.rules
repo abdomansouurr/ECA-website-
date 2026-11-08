@@ -901,6 +901,8 @@ service cloud.firestore {
           && request.resource.data.uid == uid && request.resource.data.at == request.time
           && request.resource.data.ms is int && request.resource.data.ms >= 1000 && request.resource.data.ms <= 3600000
           && getAfter(/databases/$(database)/documents/coachChallenges/$(wid)/attempts/$(uid)).data.solved == true
+          // الوقت مش أقل من الوقت الحقيقي من بداية المحاولة على السيرفر (سماح 30 ثانية للنت)، فمحدش يكتب وقت مزيّف
+          && request.resource.data.ms >= request.time.toMillis() - getAfter(/databases/$(database)/documents/coachChallenges/$(wid)/attempts/$(uid)).data.at.toMillis() - 30000
           && hofProfileOk(request.resource.data);
         allow delete: if isStaff();
       }

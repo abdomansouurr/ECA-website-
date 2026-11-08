@@ -640,6 +640,46 @@ async function login(p, id) {
     check("report: coach sends the summary to the parent's WhatsApp", /^https:\/\/wa\.me\/201100000000\?text=/.test(await pg.ev("window.__wa")));
     await pg.ev("prCoachClose()");
 
+    // ---------- connection drops: banner, and a reward earned offline is saved once, when it is back ----------
+    await pa.send("Page.bringToFront");
+    const aStars0 = (await U(A)).arena.stars;
+    const net = offline => pa.send("Network.emulateNetworkConditions", { offline, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+    await net(true);
+    check("offline: banner shows", !!(await until(() => pa.ev("!!document.getElementById('ecaNetBanner')"), 5000)));
+    const offR = await pa.ev('Promise.race([window.fbEconomy({op:"earn",source:"pawn",key:todayISO(),day:todayISO()}).then(r=>r&&(r.code||(r.ok?"ok":"no"))).catch(e=>"threw "+(e&&e.code)), new Promise(r=>setTimeout(()=>r("pending"),25000))])');
+    await net(false);
+    check("offline: the reward is queued, not lost", ["offline-queued", "ok", "pending"].includes(offR), offR);
+    check("offline: saved when the connection is back", !!(await until(async () => (await U(A)).arena.stars === aStars0 + 2, 40000)), { before: aStars0, after: (await U(A)).arena.stars, offR, pending: await pa.ev("window.ecaPendingRewards ? ecaPendingRewards() : -1"), errors: pa.errors.slice(-3) });
+    await sleep(3000);
+    check("offline: saved only once", (await U(A)).arena.stars === aStars0 + 2, (await U(A)).arena.stars - aStars0);
+    check("offline: banner goes away", !!(await until(() => pa.ev("!document.getElementById('ecaNetBanner')"), 5000)));
+
+    // ---------- small phones (320px): no sideways scroll, touch targets >= 44px ----------
+    await pa.send("Page.bringToFront");
+    await pa.send("Emulation.setDeviceMetricsOverride", { width: 320, height: 640, deviceScaleFactor: 1, mobile: true });
+    const fit = `(() => { const W = innerWidth, wide = document.documentElement.scrollWidth > W + 1;
+      const small = [...document.querySelectorAll("#mainView button, #mainView [onclick], #navButtons button, .eca-hud button, #ecaHud button")].filter(e => {
+        if (e.closest(".eca-board") || e.disabled) return false; const r = e.getBoundingClientRect(); if (!r.width || !r.height) return false;
+        const st = getComputedStyle(e); if (st.visibility === "hidden" || st.display === "none") return false;
+        return r.height < 43.5 || r.width < 43.5; }).map(e => (e.getAttribute("onclick") || e.title || e.textContent || e.tagName).trim().slice(0, 40) + " " + Math.round(e.getBoundingClientRect().width) + "x" + Math.round(e.getBoundingClientRect().height));
+      return { wide: wide ? document.documentElement.scrollWidth : 0, small: [...new Set(small)].slice(0, 40) }; })()`;
+    const views = [["home", "switchTab('home')"]].concat(["play", "puzzles", "lessons", "rush", "vision", "pawns", "duel", "friend", "speed", "weekly", "boss", "cards", "analysis"].map(v => [v, `switchTab('arena'); arena.sub='${v}'; render();`]));
+    const fitBad = [];
+    for (const [name, go] of views) { await pa.ev(go); await sleep(700); const r = await pa.ev(fit); if (r.wide || r.small.length) fitBad.push({ view: name, ...r }); }
+    check("320px: no sideways scroll on any view", !fitBad.some(r => r.wide), fitBad.filter(r => r.wide));
+    check("320px: touch targets are 44px or more", !fitBad.some(r => r.small.length), fitBad.filter(r => r.small.length));
+    await pa.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+    await pa.ev("switchTab('home')");
+    const hb = await U(A), hs = hb.arena.stars, hh = (hb.shop && hb.shop.hints) || 0;
+    if (hs >= 20) {
+      await pa.ev("buyShopItem('hint'); buyShopItem('hint');");
+      await until(async () => ((await U(A)).shop.hints || 0) > hh, 15000); await sleep(3000);
+      const ha = await U(A);
+      check("shop: a double tap buys once", (ha.shop.hints || 0) === hh + 1 && ha.arena.stars === hs - 20, { hints: (ha.shop.hints || 0) - hh, stars: ha.arena.stars - hs });
+    } else check("shop: a double tap buys once (needs 20 stars)", false, hs);
+    check("audio: one shared sound context", await pa.ev("typeof ecaAudio === 'function'"));
+    check("system check: students can't run it on the real site", await pa.ev("ecaDiagAllowed('eca-website-for-coach.vercel.app') === false"));
+
     // ---------- system check (read-only) and listener cleanup ----------
     await pa.send("Page.bringToFront");
     await pa.ev("switchTab('arena'); arena.sub='friend'; render();"); await sleep(800);

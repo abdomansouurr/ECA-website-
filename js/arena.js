@@ -592,7 +592,7 @@
     function renderArenaView(u) {
       if (arena.sub !== "vision") loadChess();
       const sub = arena.sub, a = (u.role === "student" && u.arena) || {}, gm = a.games || { w: 0, l: 0, d: 0 };
-      const tb = (k, label) => `<button onclick="arenaSub('${k}')" class="flex-1 min-w-[140px] py-2.5 px-3 rounded-xl text-xs font-bold ${sub === k ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/20'}">${label}</button>`;
+      const tb = (k, label) => `<button onclick="arenaSub('${k}')" class="tap flex-1 min-w-[140px] py-2.5 px-3 rounded-xl text-xs font-bold ${sub === k ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/20'}">${label}</button>`;
       const body = sub === "vision" ? arenaVisHTML()
         : !ChessCls ? `<div class="gold-card rounded-2xl p-8 text-center text-sm text-gray-400">جاري تحميل الرقعة...</div>`
         : sub === "rush" ? arenaRushHTML() : sub === "duel" ? arenaDuelHTML() : sub === "speed" ? arenaSpeedHTML() : sub === "cards" ? arenaCardsHTML() : sub === "friend" ? arenaFriendHTML() : sub === "weekly" ? arenaWeeklyHTML() : sub === "boss" && typeof arenaBossHTML === "function" ? arenaBossHTML() : sub === "lessons" && typeof arenaLessonsHTML === "function" ? arenaLessonsHTML() : sub === "puzzles" ? arenaPuzHTML() : sub === "pawns" ? arenaPawnsHTML() : sub === "analysis" ? arenaAnaHTML() : arenaPlayHTML();

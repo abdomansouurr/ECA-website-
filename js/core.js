@@ -29,8 +29,9 @@
     }
     window.loadModule = loadModule;
     // فحص النظام (قراية بس): من الكونسول أو من زرار في مركز الكوتش
-    window.runSystemDiagnostics = () => loadModule("diagnostics").then(() => window.ecaDiagnosticsRun());
-    window.showSystemDiagnostics = () => loadModule("diagnostics").then(() => window.ecaDiagnosticsShow());
+    window.ecaDiagAllowed = (host = location.hostname) => isStaffUser(currUser()) || /^(127.0.0.1|localhost)$/.test(String(host));
+    window.runSystemDiagnostics = () => ecaDiagAllowed() ? loadModule("diagnostics").then(() => window.ecaDiagnosticsRun()) : Promise.reject(new Error("staff-only"));
+    window.showSystemDiagnostics = () => ecaDiagAllowed() ? loadModule("diagnostics").then(() => window.ecaDiagnosticsShow()) : Promise.reject(new Error("staff-only"));
     function loadModules(names) {
       return names.reduce((pending, name) => pending.then(() => loadModule(name)), Promise.resolve());
     }
@@ -418,6 +419,9 @@
       const item = ECA_SHOP_ITEMS.find(x => x.id === id), u = currUser();
       if (!item || !u || u.role !== "student") return;
       if (!window.fbEconomy) return toast(lang === "en" ? "Shop service is not ready. Try again." : "المتجر غير جاهز الآن. حاول مرة أخرى.");
+      // ضغطتين ورا بعض ما يشتروش الحاجة مرتين
+      if (shopBuying.has(item.id)) return;
+      shopBuying.add(item.id);
       window.fbEconomy({ op: "purchase", item: item.id }).then(result => {
         if (!result.ok) return toast(result.code === "insufficient-stars"
           ? (lang === "en" ? "You need more stars" : "تحتاج نجومًا أكثر")
@@ -431,8 +435,9 @@
       }).catch(error => {
         console.error("Shop purchase failed:", error);
         toast(lang === "en" ? "Purchase failed. Check your connection." : "فشل الشراء. تحقق من الاتصال.");
-      });
+      }).finally(() => shopBuying.delete(item.id));
     }
+    const shopBuying = new Set();
     window.buyShopItem = buyShopItem;
     function setStudentTitle(value) {
       const u = currUser(), shop = u && u.shop || {};
@@ -524,11 +529,9 @@
       pop.textContent = "⭐ +" + (Number(count) || 1);
       document.body.appendChild(pop);
       setTimeout(() => pop.remove(), 1000);
-      if (window.ecaSfxMuted) return;
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) return;
+      const audio = window.ecaAudio ? window.ecaAudio() : null;
+      if (!audio) return;
       try {
-        const audio = new AudioContextClass();
         [880, 1174, 1568].forEach((frequency, index) => {
           const oscillator = audio.createOscillator(), gain = audio.createGain(), start = audio.currentTime + index * 0.09;
           oscillator.type = "sine"; oscillator.frequency.value = frequency;
@@ -538,7 +541,6 @@
           oscillator.connect(gain); gain.connect(audio.destination);
           oscillator.start(start); oscillator.stop(start + 0.15);
         });
-        setTimeout(() => audio.close().catch(() => {}), 500);
       } catch (e) { console.warn("Reward sound unavailable:", e); }
     }
     function showStudentReward(reward) {
@@ -2158,8 +2160,17 @@
       if (deferredInstall) { deferredInstall.prompt(); deferredInstall.userChoice.finally(() => { deferredInstall = null; showInstallBtn(false); }); }
       else toast("على الآيفون: اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»");
     }
-    window.addEventListener("offline", () => toast("لا يوجد إنترنت — الموقع يعمل والبيانات محفوظة على جهازك"));
-    window.addEventListener("online", () => toast("عاد الاتصال بالإنترنت"));
+    const ecaNetBanner = () => {
+      let el = document.getElementById("ecaNetBanner");
+      if (navigator.onLine) { if (el) el.remove(); return; }
+      if (el) return;
+      el = document.createElement("div"); el.id = "ecaNetBanner"; el.className = "eca-net-banner"; el.setAttribute("role", "status");
+      el.textContent = lang === "en" ? "📴 No internet. Keep going: your progress is saved when you're back online." : "📴 مفيش إنترنت. كمّل عادي، وتقدّمك هيتحفظ أول ما النت يرجع.";
+      document.body.appendChild(el);
+    };
+    window.addEventListener("offline", ecaNetBanner);
+    window.addEventListener("online", () => { ecaNetBanner(); toast("عاد الاتصال بالإنترنت"); });
+    ecaNetBanner();
     if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
       window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
     }
@@ -2190,7 +2201,10 @@
       vy: -(0.12 + Math.random() * 0.22), vx: (Math.random() - 0.5) * 0.12, rot: (Math.random() - 0.5) * 0.7, vr: (Math.random() - 0.5) * 0.0025,
       a: 0.10 + Math.random() * 0.10, ph: Math.random() * 6.28
     }));
+    let bgLast = 0;
     function anim(now) {
+      if (!bgStill && now && now - bgLast < 32) { requestAnimationFrame(anim); return; }
+      bgLast = now || 0;
       ctx.clearRect(0, 0, cv.width, cv.height);
       const rgb = bgRGB(), mv = bgStill ? 0 : 1, tm = now || 0, lite = bgRoot.classList.contains("light");
       bgPieces.forEach(p => {
@@ -2215,7 +2229,7 @@
           if (d < 19600) { ctx.strokeStyle = "rgba(" + rgb + "," + (0.2 * (1 - d / 19600)) + ")"; ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.stroke(); }
         }
       }
-      requestAnimationFrame(anim);
+      if (bgStill) setTimeout(() => requestAnimationFrame(anim), 1000); else requestAnimationFrame(anim);
     }
     requestAnimationFrame(anim);
     const h0 = (location.hash || "#home").slice(1);

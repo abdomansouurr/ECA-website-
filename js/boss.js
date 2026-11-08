@@ -150,7 +150,15 @@ async function bossMove(mv) {
   const wait = B.lastHit + 2300 - Date.now();
   await new Promise(r => setTimeout(r, Math.max(700, wait)));
   try {
-    const res = await window.fbBossHit(a.id, B.pid);
+    let res = null;
+    for (let tries = 0; ; tries++) {
+      try { res = await window.fbBossHit(a.id, B.pid); break; }
+      catch (e) {
+        if (tries >= 3 || !(!navigator.onLine || (e && e.code === "unavailable"))) throw e;
+        if (tries === 0) toast(BL("مفيش نت: الضربة هتتسجّل أول ما يرجع.", "No internet: the hit will be saved when you're back online."));
+        await new Promise(r => { if (navigator.onLine) setTimeout(r, 3000); else addEventListener("online", () => setTimeout(r, 1500), { once: true }); });
+      }
+    }
     B.lastHit = Date.now();
     a.solved = res.solved.map(String); a.done = !!res.done;
   } catch (e) {

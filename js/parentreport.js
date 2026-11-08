@@ -202,7 +202,7 @@ function prStudent(sid) { return (db.users || []).find(u => u.id === sid && u.ro
 function renderParentReport(stu, opts) {
   opts = opts || {};
   const en = lang === "en", C = prCompute(stu), D = prData(stu), s = calcStats(stu);
-  const loading = `<p class="pr-muted">${PRL("بنحمّل...", "Loading...")}</p>`;
+  const loading = `<div class="eca-skel-block" role="status" aria-label="${PRL("بنحمّل...", "Loading...")}"><span class="eca-skel"></span><span class="eca-skel"></span><span class="eca-skel"></span></div>`;
   const wl = C.weeks.map(prDayLabel), acc = C.acc(C.cur), spm = C.spm(C.cur), prevSpm = C.spm(C.prev);
   const trend = spm !== null && prevSpm !== null ? (spm < prevSpm ? `<span class="pr-up">▲ ${PRL("أسرع", "faster")}</span>` : spm > prevSpm ? `<span class="pr-down">▼ ${PRL("أبطأ", "slower")}</span>` : "") : "";
   const kpi = (label, value, sub, extra) => `<div class="pr-kpi"><span class="pr-kpi-label">${label}</span><b class="pr-kpi-value">${value}</b><span class="pr-kpi-sub">${sub}${extra || ""}</span></div>`;

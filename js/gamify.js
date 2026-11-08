@@ -7,13 +7,30 @@ let sfxCtx = null;
 window.ecaSfxMuted = false;
 try { window.ecaSfxMuted = localStorage.getItem(SFX_KEY) === "1"; } catch (_) {}
 
-function sfxNotes(notes, gap, length, volume) {
-  if (window.ecaSfxMuted) return;
+// سياق صوت واحد للموقع كله. iOS Safari وكروم أندرويد بيبدأوه "suspended" لحد أول لمسة
+function ecaAudio() {
+  if (window.ecaSfxMuted) return null;
   const Ctx = window.AudioContext || window.webkitAudioContext;
-  if (!Ctx) return;
+  if (!Ctx) return null;
   try {
     sfxCtx = sfxCtx || new Ctx();
-    if (sfxCtx.state === "suspended") sfxCtx.resume().catch(() => {});
+    if (sfxCtx.state !== "running") sfxCtx.resume().catch(() => {});
+    return sfxCtx;
+  } catch (_) { return null; }
+}
+// أول لمسة (وبعد ما iOS يقطع الصوت بمكالمة أو رجوع من الخلفية) بتصحّي الصوت بصوت فاضي
+(function () {
+  const wake = () => {
+    if (window.ecaSfxMuted || (sfxCtx && sfxCtx.state === "running")) return;
+    const c = ecaAudio(); if (!c) return;
+    try { const s = c.createBufferSource(); s.buffer = c.createBuffer(1, 1, 22050); s.connect(c.destination); s.start(0); } catch (_) {}
+  };
+  ["pointerdown", "touchstart", "keydown"].forEach(e => addEventListener(e, wake, { capture: true, passive: true }));
+})();
+
+function sfxNotes(notes, gap, length, volume) {
+  try {
+    if (!ecaAudio()) return;
     notes.forEach((frequency, i) => {
       const osc = sfxCtx.createOscillator(), gain = sfxCtx.createGain(), start = sfxCtx.currentTime + i * gap;
       osc.type = "triangle";
@@ -153,6 +170,10 @@ function lbWatch() {
     lbUnsub(); lbUnsub = null; lbRows = null; lbFailed = false;
   }
 }
+function ecaLbSkeleton(en) {
+  const row = `<li class="eca-lb-row" aria-hidden="true"><span class="eca-skel eca-skel-dot"></span><span class="eca-skel eca-skel-line"></span><span class="eca-skel eca-skel-num"></span></li>`;
+  return `<ol class="space-y-2" role="status" aria-label="${en ? "Loading the leaderboard" : "بنحمّل اللوحة"}">${row.repeat(5)}</ol>`;
+}
 function lbPaint() {
   const el = document.getElementById("ecaLiveBoard"), u = currUser();
   if (el && u) el.outerHTML = ecaLiveBoardHTML(u);
@@ -189,7 +210,7 @@ function ecaLiveBoardHTML(u) {
       ${myIndex >= 0 ? `<span class="text-xs font-bold text-yellow-300">${en ? "Your rank" : "ترتيبك"}: #${myIndex + 1}</span>` : ""}
     </div>
     <div class="flex flex-wrap gap-2" role="tablist">${tabs.map(t => `<button type="button" role="tab" aria-selected="${active === t[0]}" onclick="lbTabSet('${t[0]}')" class="tap rounded-lg px-3 text-xs font-bold ${active === t[0] ? "gold-btn" : "bg-zinc-900 text-gray-300 border border-yellow-500/20"}">${t[1]}</button>`).join("")}</div>
-    ${list.length ? `<ol class="space-y-2">${list.slice(0, LB_TOP).map(row).join("")}${myIndex >= LB_TOP ? row(list[myIndex], myIndex) : ""}</ol>` : `<p class="text-sm text-gray-400 text-center py-4">${empty}</p>`}
+    ${list.length ? `<ol class="space-y-2">${list.slice(0, LB_TOP).map(row).join("")}${myIndex >= LB_TOP ? row(list[myIndex], myIndex) : ""}</ol>` : !lbRows && !lbFailed ? ecaLbSkeleton(en) : `<p class="text-sm text-gray-400 text-center py-4">${empty}</p>`}
     <p class="text-xs text-gray-500 text-center">${en ? "Ranked by training XP from puzzles, games and rewards. Only nicknames are shown." : "الترتيب بخبرة التدريب من الألغاز والألعاب والجوايز، وبتظهر الأسماء المستعارة بس."}</p>
   </section>`;
 }

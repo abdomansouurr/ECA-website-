@@ -111,6 +111,7 @@
   const CMD_BAD_SAFE = g => /[<>"'`]/.test(String(g || ""));
 
   window.ecaDiagnosticsRun = async function () {
+    if (!window.ecaDiagAllowed || !ecaDiagAllowed()) throw new Error("staff-only");
     results.length = 0;
     const u = currUser(), t0 = Date.now();
     await checkApp(u);

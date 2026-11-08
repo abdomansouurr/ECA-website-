@@ -1,0 +1,12 @@
+# ما يتنشرش على Vercel: سكربتات الاختبار وبيانات التجربة والإعدادات والمستندات
+scripts/
+rules-sim.js
+rules-sim.test.js
+bump-version.js
+*.md
+firestore.rules
+firestore.indexes.json
+firebase.json
+*.log
+.vscode/
+.claudeignore
