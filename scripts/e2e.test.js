@@ -582,6 +582,64 @@ async function login(p, id) {
     check("drop: chest prize revealed", !!(await until(() => pa.ev("!!document.getElementById('ecaDropModal') && /XP|Frame|frame|pieces|إطار|قطع|خبرة/.test(document.getElementById('ecaDropModal').textContent)"), 10000)));
     await pa.ev("dropClose()");
 
+    // ---------- lesson puzzles and the daily lesson mission ----------
+    await pc.send("Page.bringToFront");
+    await until(() => pc.ev("!document.getElementById('ecaDropModal') || (dropClose(), false)"), 10000);
+    await pc.ev("switchTab('home'); while(document.getElementById('ecaMilestone')) ecaMilestoneClose();");
+    const dailyLesson = await pc.ev("lpDailyLesson(currUser())");
+    check("quests: lesson mission replaces today's puzzle", await pc.ev("ECA_QUESTS[0].key==='lesson' && !ECA_QUESTS.some(q=>q.key==='daily') && document.getElementById('mainView').textContent.includes(lpTitle(lpDailyLesson(currUser())))"), dailyLesson);
+    await pc.ev("arena.sub='lessons'; switchTab('arena')");
+    check("lesson puzzles tab lists the curriculum lessons", !!(await until(() => pc.ev("!!ChessCls && document.querySelectorAll('#mainView [onclick^=\"lpStart\"]').length > 5"), 20000)));
+    const solvedBefore = Number(((await U(C)).arena || {}).puzSolved) || 0;
+    await pc.ev(`lpStart(${JSON.stringify(dailyLesson)})`);
+    const lessonRun = await pc.ev(`(async()=>{ const Z=arena.puz, sleep=ms=>new Promise(r=>setTimeout(r,ms)); let solved=0, last='', lastAt=0, themesOk=true, levelOk=true;
+      for (let guard=0; guard<2000 && solved<10; guard++) {
+        if (Z.status==='solved' && Z.info && Z.info.id!==last) { last=Z.info.id; solved++; lastAt=Date.now(); themesOk = themesOk && (ECA_LESSON_THEMES[Z.lesson]||[]).includes(Z.info.themes[0]); }
+        else if (Z.status==='play' && Z.game && Date.now()-lastAt > 3600) { const m=Z.sol[Z.idx]; if (m) puzPlay(m.length>4?{from:m.slice(0,2),to:m.slice(2,4),promotion:m[4]}:{from:m.slice(0,2),to:m.slice(2,4)}); }
+        await sleep(150);
+      }
+      const ql=currUser().arena.ql||{}; return { solved, themesOk, n: ql.n, k: ql.k, lesson: Z.lesson, banner: /Today's mission|مهمة النهاردة/.test(document.getElementById('mainView').textContent) }; })()`);
+    check("lesson puzzles come from the lesson's themes", !!lessonRun && lessonRun.solved === 10 && lessonRun.themesOk && lessonRun.banner, lessonRun);
+    check("lesson mission counts 10 solves", !!(await until(async () => { const a = (await U(C)).arena || {}; return a.ql && a.ql.n === 10 && a.ql.k === dailyLesson && a.puzSolved === solvedBefore + 10; }, 15000)));
+    await pc.ev("arenaSub('puzzles')");
+    check("the normal puzzles tab leaves lesson mode", await pc.ev("!arena.puz.lesson"));
+    await pc.ev("switchTab('home'); ecaClaimQuest('lesson')");
+    const lessonPay = await until(async () => { const id = (await list(`users/${C}/economy`)).find(x => /^quest-.*-lesson$/.test(x)); return id ? read(`users/${C}/economy/${id}`) : null; }, 15000);
+    check("lesson mission pays stars and XP", !!lessonPay && lessonPay.starsDelta === 5 && lessonPay.xpDelta === 100, lessonPay && { s: lessonPay.starsDelta, x: lessonPay.xpDelta });
+
+    // ---------- parent analytics report ----------
+    await pa.send("Page.bringToFront");
+    await pa.ev("while(document.getElementById('ecaDropModal')) dropClose(); while(document.getElementById('ecaMilestone')) ecaMilestoneClose(); prPending = 600; ecaTrainingFlush();");
+    check("report: focused training time saved", !!(await until(async () => ((((await U(A)).arena || {}).tm || {})[dayOf(0)] || 0) >= 600)));
+    check("report: puzzle accuracy and speed are logged per day", await pa.ev("(()=>{ const r=(currUser().arena.ps||{})[todayISO()]; return Array.isArray(r) && r.length===4 && r[0]>=1; })()"));
+    await pa.ev("switchTab('parent')");
+    const reportOk = await until(() => pa.ev("(()=>{ const r=document.querySelector('.eca-pr'); if(!r||PRD.busy||!PRD.data) return false; const t=r.textContent; return { charts: r.querySelectorAll('svg.pr-chart').length, praise: t.includes('Brilliant move'), boss: t.includes('Fork Dragon'), done: /Completed|خلّص/.test(t), time: /10 د|10m/.test(t), donut: !!r.querySelector('svg.pr-donut') }; })()"), 20000);
+    check("report: executive view with SVG charts", !!reportOk && reportOk.charts >= 3, reportOk);
+    check("report: training time shown", !!reportOk && reportOk.time);
+    check("report: coach praise from class is listed", !!reportOk && reportOk.praise);
+    check("report: boss homework status is listed", !!reportOk && reportOk.boss && reportOk.done);
+    check("report: mistake vault resolution rate", !!reportOk && reportOk.donut);
+    const summary = await pa.ev("prSummaryText(currUser())");
+    check("report: WhatsApp summary text", /Egypt Chess Academy/.test(summary) && summary.includes("Real Name stud_a") && summary.includes("Brilliant move") && /Fork Dragon|1 /.test(summary), summary.slice(0, 160));
+    await pa.ev("window.confirm = () => true; document.querySelector('.pr-pin').open = true; document.getElementById('prPinNew').value='4826'; document.getElementById('prPinNew2').value='4826'; prPinSet();");
+    await until(() => pa.ev("!!localStorage.getItem('ECA_PARENT_PIN_' + currUser().id)"), 5000);
+    await pa.ev("sessionStorage.removeItem('ECA_PARENT_OK_' + currUser().id); render();");
+    check("report: PIN gate locks the report", await pa.ev("!!document.getElementById('prPin') && !document.querySelector('.eca-pr .pr-kpis')"));
+    await pa.ev("document.getElementById('prPin').value='1111'; prPinTry();"); await sleep(400);
+    check("report: wrong PIN keeps it locked", await pa.ev("!!document.getElementById('prPin')"));
+    await pa.ev("document.getElementById('prPin').value='4826'; prPinTry();");
+    check("report: right PIN opens it", !!(await until(() => pa.ev("!!document.querySelector('.eca-pr .pr-kpis')"), 5000)));
+    await pa.ev("prPinClear()");
+    await pg.send("Page.bringToFront");
+    await pg.ev("switchTab('command')");
+    await until(() => pg.ev("!!document.getElementById('prCoachPick')"), 10000);
+    await pg.ev(`document.getElementById('prCoachPick').value=${JSON.stringify(A)}; prCoachOpen();`);
+    const coachReport = await until(() => pg.ev("(()=>{ const r=document.querySelector('.eca-pr'); if(!r||PRD.busy||!PRD.data) return false; return { name: r.textContent.includes('Real Name stud_a'), praise: r.textContent.includes('Brilliant move'), vault: !!PRD.data.vault }; })()"), 20000);
+    check("report: coach opens a student's report", !!coachReport && coachReport.name && coachReport.praise && coachReport.vault, coachReport);
+    await pg.ev(`window.__wa=''; window.open=(u)=>{ window.__wa=u; }; prWhatsApp(${JSON.stringify(A)});`);
+    check("report: coach sends the summary to the parent's WhatsApp", /^https:\/\/wa\.me\/201100000000\?text=/.test(await pg.ev("window.__wa")));
+    await pg.ev("prCoachClose()");
+
     // ---------- companion and achievements persist ----------
     await pc.ev("switchTab('home'); ecaPetPick('cat')");
     check("companion saved", !!(await until(async () => (await U(C)).arena.pet === "cat")));

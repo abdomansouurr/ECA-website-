@@ -1,6 +1,7 @@
 // ECA — core.js (اتفصل من index.html في eca-v3)
     const MODULE_SOURCES = Object.assign({
       puzzles: "puzzles.js",
+      themes: "puzzles-themes.js",
       homework: "js/homework.js",
       today: "js/today.js",
       reports: "js/reports.js",
@@ -568,7 +569,7 @@
         score = Math.floor(Number(score) || 0);
         stars = Math.min(5, Math.floor(score / 3));
       } else if (source === "quest") {
-        stars = { daily: 1, puzzles: 2, win: 2 }[key] || 0;
+        stars = { daily: 1, puzzles: 2, win: 2, lesson: 5 }[key] || 0;
       } else if (source === "pawn") stars = 2;
       else if (source === "vision") {
         score = Math.floor(Number(score) || 0);

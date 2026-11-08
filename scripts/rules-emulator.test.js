@@ -104,6 +104,9 @@ async function runSuite(label, rules, quiet) {
   await T("quest daily", true, fresh, db => quest(db, "daily", 1));
   await T("quest puzzles on a legacy account", true, legacy, db => quest(db, "puzzles", 2));
   await T("quest win", true, fresh, db => quest(db, "win", 2));
+  await T("quest lesson puzzles", true, fresh, db => quest(db, "lesson", 5));
+  await T("quest lesson puzzles with forged stars", false, fresh, db => quest(db, "lesson", 9));
+  await T("quest lesson puzzles twice a day", false, fresh, async db => { await quest(db, "lesson", 5); await quest(db, "lesson", 5); });
   await T("quest with forged stars", false, fresh, db => quest(db, "win", 9));
   await T("quest with an unknown key", false, fresh, db => quest(db, "free", 2));
   await T("same quest twice a day", false, fresh, async db => { await quest(db, "win", 2); await quest(db, "win", 2); });
@@ -506,12 +509,12 @@ async function runSuite(label, rules, quiet) {
   await T("drop: message with HTML", false, null, () => dropRef(adminCtx()).set(dropDoc({ note: "<img src=x>" })), dropSeed());
   await T("drop: chest with stars inside", false, null, () => dropRef(adminCtx()).set(dropDoc({ type: "chest", amount: 5 })), dropSeed());
   await T("drop: to an account that does not exist", false, null, () => dropRef(adminCtx(), "ghost1").set(dropDoc()), dropSeed());
-  const dropClaim = (db, stars, xp, del = true, id = DRID) => { const ur = db.collection("users").doc(uid), rr = ur.collection("economy").doc("drop-" + id), dr = dropRef(db, uid, id); return db.runTransaction(async tx => {
+  const dropClaim = (db, stars, xp, del = true, id = DRID, note = "Great move") => { const ur = db.collection("users").doc(uid), rr = ur.collection("economy").doc("drop-" + id), dr = dropRef(db, uid, id); return db.runTransaction(async tx => {
     const p = (await tx.get(ur)).data(); await tx.get(rr); await tx.get(dr);
     const arena = Object.assign({}, p.arena || {}); arena.stars = (Number(arena.stars) || 0) + stars; arena.xp = (Number(arena.xp) || 0) + xp;
     if (del) tx.delete(dr);
     tx.update(ur, { arena, lastEconomy: "drop-" + id });
-    tx.set(rr, { uid, kind: "earn", source: "drop", key: id, day: today, item: "", score: 0, starsDelta: stars, xpDelta: xp, missionBonus: false, at: ts() });
+    tx.set(rr, Object.assign({ uid, kind: "earn", source: "drop", key: id, day: today, item: "", score: 0, starsDelta: stars, xpDelta: xp, missionBonus: false, at: ts() }, note === null ? {} : { note }));
   }); };
   await T("drop: student claims the stars", true, rich, db => dropClaim(db, 10, 0), dropSeed({}));
   await T("drop: claims more stars than sent", false, rich, db => dropClaim(db, 30, 0), dropSeed({}));
@@ -519,6 +522,12 @@ async function runSuite(label, rules, quiet) {
   await T("drop: claims a drop that was never sent", false, rich, db => dropClaim(db, 10, 0), dropSeed());
   await T("drop: claims the XP boost", true, rich, db => dropClaim(db, 0, 200), dropSeed({ type: "xp", amount: 200 }));
   await T("drop: XP boost claimed as stars", false, rich, db => dropClaim(db, 200, 0), dropSeed({ type: "xp", amount: 200 }));
+  await T("drop: claim with a forged coach message", false, rich, db => dropClaim(db, 10, 0, true, DRID, "You are the best player ever"), dropSeed({}));
+  await T("drop: claim without the coach message", false, rich, db => dropClaim(db, 10, 0, true, DRID, null), dropSeed({}));
+  await T("drop: message on a receipt that is not a drop is ignored", true, fresh, db => db.runTransaction(async tx => { const ur = db.collection("users").doc(uid), rr = ur.collection("economy").doc("lesson-1-0"); await tx.get(ur); await tx.get(rr); tx.update(ur, { arena: { stars: 1, xp: 20 }, lastEconomy: "lesson-1-0" }); tx.set(rr, { uid, kind: "earn", source: "lesson", key: "1-0", day: today, item: "", score: 0, starsDelta: 1, xpDelta: 20, missionBonus: false, at: ts(), note: "Coach says hi" }); }));
+  await T("report: coach reads a student's receipts", true, null, () => adminCtx().collection("users").doc(uid).collection("economy").get(), dropSeed());
+  await T("report: coach reads a student's mistake vault", true, null, () => adminCtx().collection("users").doc(uid).collection("mistakeVault").get(), dropSeed());
+  await T("report: another student reads the receipts", false, rich, db => db.collection("users").doc(other).collection("economy").get(), async s => { await s.collection("users").doc(other).set(fresh); });
   await T("drop: student reads their drops", true, rich, db => db.collection("liveDrops").doc(uid).collection("drops").get(), dropSeed({}));
   await T("drop: student reads someone else's drops", false, rich, db => db.collection("liveDrops").doc(other).collection("drops").get(), dropSeed({}));
   await T("drop: student deletes someone else's drop", false, rich, db => dropRef(db, other).delete(), async s => { await dropSeed({})(s); await s.collection("liveDrops").doc(other).collection("drops").doc(DRID).set(dropDoc({ at: tsAgo(1000) })); });
@@ -528,7 +537,7 @@ async function runSuite(label, rules, quiet) {
     arena.stars = (Number(arena.stars) || 0) + stars; arena.xp = (Number(arena.xp) || 0) + xp; arena.ch = (Number(arena.ch) || 0) + 1; arena.chx = (Number(arena.chx) || 0) + xp;
     if (x.keep !== true) tx.delete(dr);
     tx.update(ur, { arena, lastEconomy: "chest-0" });
-    tx.set(rr, { uid: who, kind: "chest", source: "drop", key: DRID, day: today, item: "", score: 0, starsDelta: stars, xpDelta: xp, missionBonus: false, at: ts() });
+    tx.set(rr, { uid: who, kind: "chest", source: "drop", key: DRID, day: today, item: "", score: 0, starsDelta: stars, xpDelta: xp, missionBonus: false, at: ts(), note: "Great move" });
   }); };
   { const who = chestUser("2"), sendChest = (type = "chest") => seedAs(s => s.collection("liveDrops").doc(who).collection("drops").doc(DRID).set(dropDoc({ type, amount: type === "chest" ? 0 : 10, at: tsAgo(1000) })));
     await spinT("drop: free chest from the coach", true, who, rich, async db => { await sendChest(); return chestDrop(db, who, { xp: 150 }); });

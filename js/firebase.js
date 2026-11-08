@@ -424,7 +424,8 @@
         const arena = Object.assign({}, profile.arena || {}), shop = Object.assign({}, profile.shop || {});
         const count = Number(arena.ch) || 0, id = "chest-" + count, receiptRef = doc(firestore, "users", uid, "economy", id);
         if ((await tx.get(receiptRef)).exists()) return { ok: false, code: "stale" };
-        if (fromDrop) { const drop = await tx.get(dropRef); if (!drop.exists() || drop.data().type !== "chest") return { ok: false, code: "drop-gone" }; }
+        let dropNote = "";
+        if (fromDrop) { const drop = await tx.get(dropRef); if (!drop.exists() || drop.data().type !== "chest") return { ok: false, code: "drop-gone" }; dropNote = String(drop.data().note || ""); }
         else if ((Number(arena.stars) || 0) < 40) return { ok: false, code: "insufficient-stars" };
         const hex = await spinHexOf(uid, String(count));
         let item = CHEST_ITEMS[hex] || "", xpDelta = 0, duplicate = false;
@@ -440,7 +441,7 @@
         const starsDelta = cost ? -cost : 0;
         if (fromDrop) tx.delete(dropRef);
         tx.update(userRef, Object.assign({ arena, shop, lastEconomy: id }, fix));
-        tx.set(receiptRef, { uid, kind: "chest", source: fromDrop ? "drop" : "", key: fromDrop ? dropId : "", day: cairoDayKey(), item: "", score: 0, starsDelta, xpDelta, missionBonus: false, at: serverTimestamp() });
+        tx.set(receiptRef, Object.assign({ uid, kind: "chest", source: fromDrop ? "drop" : "", key: fromDrop ? dropId : "", day: cairoDayKey(), item: "", score: 0, starsDelta, xpDelta, missionBonus: false, at: serverTimestamp() }, fromDrop ? { note: dropNote } : {}));
         return { ok: true, item, xpDelta, duplicate, starsDelta, profile: Object.assign({}, profile, fix, { arena, shop, lastEconomy: id }) };
       }).catch(err => { reportEconomyDenied(err, "chest", cairoDayKey(), lastProfile); throw err; });
       if (result.ok && result.profile) {
@@ -496,6 +497,33 @@
       tx.set(ref, { solved, done, at: serverTimestamp() });
       return { solved, done };
     });
+
+    // ================= تقرير ولي الأمر =================
+    // خزنة الغلطات، وجوايز الكوتش في الحصة، وواجبات الزعيم: للطالب نفسه أو للكوتش
+    window.fbReportData = async (sid, group) => {
+      if (!me || !(me.uid === sid || isStaffRole(me.role)) || !/^[A-Za-z0-9_-]{1,128}$/.test(String(sid))) return null;
+      const out = { vault: null, drops: null, bosses: null };
+      await Promise.all([
+        getDocs(query(collection(firestore, "users", sid, "mistakeVault"), limit(400))).then(snap => {
+          const rows = snap.docs.map(d => d.data());
+          out.vault = { total: rows.length, resolved: rows.filter(r => r.resolved === true).length, retried: rows.filter(r => (Number(r.attempts) || 1) > 1).length };
+        }).catch(e => console.warn("Report vault failed:", e && e.code)),
+        getDocs(query(collection(firestore, "users", sid, "economy"), where("source", "==", "drop"), limit(60))).then(snap => {
+          out.drops = snap.docs.map(d => { const r = d.data(); return { kind: r.kind, stars: Number(r.starsDelta) || 0, xp: Number(r.xpDelta) || 0, note: cleanDeep(String(r.note || "")), atMs: tsMs(r.at) }; })
+            .sort((x, y) => y.atMs - x.atMs);
+        }).catch(e => console.warn("Report drops failed:", e && e.code)),
+        (group ? getDocs(query(collection(firestore, "assignments"), where("group", "==", group), limit(20))).then(async snap => {
+          out.bosses = await Promise.all(snap.docs.map(async d => {
+            const row = bossView(d.id, d.data());
+            try { const p = await getDoc(doc(firestore, "assignments", d.id, "progress", sid)); row.solved = p.exists() && Array.isArray(p.data().solved) ? p.data().solved.length : 0; row.done = p.exists() && p.data().done === true; }
+            catch (_) { row.solved = 0; row.done = false; }
+            return row;
+          }));
+          out.bosses.sort((x, y) => y.atMs - x.atMs);
+        }) : Promise.resolve(out.bosses = [])).catch(e => console.warn("Report homework failed:", e && e.code))
+      ]);
+      return out;
+    };
 
     // ================= جوائز الحصة المباشرة =================
     window.fbDropSend = async (uids, drop) => {
@@ -621,7 +649,7 @@
         else if (source === "coach" && /^([1-9]|10)$/.test(key)) id = "coach-" + day + "-" + key;
         else if (source === "login") id = "login-" + day;
         else if (source === "rush") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "rush-" + day; key = day; }
-        else if (source === "quest" && ["daily", "puzzles", "win"].includes(key)) id = "quest-" + day + "-" + key;
+        else if (source === "quest" && ["daily", "puzzles", "win", "lesson"].includes(key)) id = "quest-" + day + "-" + key;
         else if (source === "pawn") id = "pawn-" + day;
         else if (source === "arena" && /^[A-Za-z0-9-]{1,40}$/.test(key) && [1, 2, 3].includes(request.rank)) id = "arena-" + key;
         else if (source === "spin") { id = "spin-" + day; spinHex = await spinHexOf(uid, day); }
@@ -654,7 +682,7 @@
         lastProfile = userSnap.data();
         const profile = userSnap.data(), arena = Object.assign({}, profile.arena || {}), shop = Object.assign({ titles: [], bots: [], hints: 0, activeTitle: "" }, profile.shop || {});
         const oldStars = Number(arena.stars) || 0;
-        let nextShop = Object.assign({}, shop), missionBonus = false, receiptKind = op, dropXp = 0;
+        let nextShop = Object.assign({}, shop), missionBonus = false, receiptKind = op, dropXp = 0, dropNote = null;
         if (op === "earn") {
           if (source === "lesson" && (!profile.att || profile.att[key] !== true)) return { ok: false, code: "not-attended" };
           if (source === "lesson") starsDelta = 1;
@@ -672,7 +700,7 @@
           else if (source === "login") starsDelta = loginRewardStars(day);
           else if (source === "rush") starsDelta = Math.min(5, Math.floor(score / 3));
           else if (source === "quest") {
-            starsDelta = { daily: 1, puzzles: 2, win: 2 }[key];
+            starsDelta = { daily: 1, puzzles: 2, win: 2, lesson: 5 }[key];
             const claimed = arena.qc && arena.qc.d === day && Array.isArray(arena.qc.k) ? arena.qc.k : [];
             arena.qc = { d: day, k: [...claimed, key] };
           }
@@ -712,6 +740,7 @@
             if (!drop.exists() || !["stars", "xp"].includes(drop.data().type)) return { ok: false, code: "drop-gone" };
             starsDelta = drop.data().type === "stars" ? Number(drop.data().amount) || 0 : 0;
             dropXp = drop.data().type === "xp" ? Number(drop.data().amount) || 0 : 0;
+            dropNote = String(drop.data().note || "");
             tx.delete(dropRef);
           }
           xpDelta = source === "spin" && spinHex === "e" ? 100 : (source === "puzzle" && missionBonus ? starsDelta - 1 : starsDelta) * 20;
@@ -752,9 +781,9 @@
         arena.xp = (Number(arena.xp) || 0) + xpDelta;
         const fix = selfFieldsFix(profile);
         tx.update(userRef, Object.assign({ arena, shop: nextShop, lastEconomy: id }, fix));
-        tx.set(receiptRef, {
+        tx.set(receiptRef, Object.assign({
           uid, kind: receiptKind, source, key, day, item, score, starsDelta, xpDelta, missionBonus, at: serverTimestamp()
-        });
+        }, dropNote === null ? {} : { note: dropNote }));
         return { ok: true, duplicate: false, starsDelta, xpDelta, missionBonus, profile: Object.assign({}, profile, fix, { arena, shop: nextShop, lastEconomy: id }) };
       }).catch(err => { reportEconomyDenied(err, source || op, day, lastProfile); throw err; });
       if (result.ok && !result.duplicate && result.profile) {

@@ -7,9 +7,9 @@
   <link rel="manifest" href="manifest.json" />
   <!-- لوجو الأكاديمية على تاب المتصفح: ICO في الجذر (الفولباك الأضمن — المتصفحات بتطلبه من /favicon.ico مباشرة)
        + PNG للتاب الحديث + apple-touch للآيفون — كلهم بنفس اللوجو ومع رقم نسخة يكسر الكاش -->
-  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v74" />
-  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v74" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v74" />
+  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v75" />
+  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v75" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v75" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ECA Chess" />
@@ -300,7 +300,7 @@
     @keyframes ecaRewardPop { 0% { opacity: 0; transform: translateY(12px) scale(.8); } 25% { opacity: 1; transform: translateY(0) scale(1.08); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px) scale(1); } }
     @media (prefers-reduced-motion: reduce) { .eca-reward-pop { animation: none; } }
 
-    /* ===== eca-v74: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
+    /* ===== eca-v75: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
     @keyframes ecaItemIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     .stagger-in > *, .st-item { animation-duration: .24s; }
     .stagger-in > *:nth-child(1) { animation-delay: 0.045s }
@@ -562,6 +562,73 @@
     @keyframes ecaRays { to { transform: rotate(360deg); } }
     @keyframes ecaDropIn { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
     @keyframes ecaDropBounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    /* تقرير ولي الأمر: شكل فاتح ورسمي خاص بيه، مستقل عن ألوان الموقع */
+    .eca-pr { --pr-bg: #f6f7f9; --pr-card: #ffffff; --pr-ink: #0f172a; --pr-muted: #64748b; --pr-line: #e2e8f0; --pr-navy: #1e3a8a; --pr-teal: #0f766e; --pr-gold: #b7791f; --pr-green: #15803d; --pr-red: #b91c1c;
+      background: var(--pr-bg); color: var(--pr-ink); border: 1px solid var(--pr-line); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 16px; font-size: 14px; line-height: 1.55; box-shadow: 0 10px 30px rgba(15,23,42,.08); }
+    .eca-pr h2 { font-size: 20px; font-weight: 800; color: var(--pr-ink); margin: 0; }
+    .eca-pr h3 { font-size: 15px; font-weight: 700; color: var(--pr-navy); margin: 0 0 10px; }
+    .eca-pr small { font-size: 12px; }
+    .eca-pr .pr-muted { color: var(--pr-muted); font-size: 13px; }
+    .pr-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 2px solid var(--pr-navy); }
+    .pr-brand { display: flex; align-items: center; gap: 12px; }
+    .pr-logo { width: 52px; height: 52px; border-radius: 12px; object-fit: contain; background: #fff; border: 1px solid var(--pr-line); }
+    .pr-eyebrow { display: block; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pr-gold); }
+    .pr-who { display: flex; flex-direction: column; gap: 2px; text-align: end; font-size: 13px; color: var(--pr-muted); }
+    .pr-who b { font-size: 17px; color: var(--pr-ink); }
+    .pr-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pr-btn { min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--pr-line); background: var(--pr-card); color: var(--pr-ink); font-size: 13px; font-weight: 700; cursor: pointer; }
+    .pr-btn:hover { border-color: var(--pr-navy); }
+    .pr-btn-main { background: var(--pr-navy); border-color: var(--pr-navy); color: #fff; }
+    .pr-btn-wa { background: #15803d; border-color: #15803d; color: #fff; }
+    .pr-btn-sm { min-height: 44px; padding: 0 10px; font-size: 12px; }
+    .pr-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    @media (min-width: 900px) { .pr-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+    .pr-kpi { background: var(--pr-card); border: 1px solid var(--pr-line); border-top: 4px solid var(--pr-navy); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+    .pr-kpi:nth-child(2) { border-top-color: var(--pr-green); } .pr-kpi:nth-child(3) { border-top-color: var(--pr-gold); } .pr-kpi:nth-child(4) { border-top-color: var(--pr-teal); }
+    .pr-kpi-label { font-size: 12px; font-weight: 700; color: var(--pr-muted); text-transform: uppercase; letter-spacing: .03em; }
+    .pr-kpi-value { font-size: 26px; font-weight: 800; color: var(--pr-ink); }
+    .pr-kpi-sub { font-size: 12px; color: var(--pr-muted); }
+    .pr-up { color: var(--pr-green); font-weight: 700; } .pr-down { color: var(--pr-red); font-weight: 700; }
+    .pr-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    @media (min-width: 900px) { .pr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .pr-card { background: var(--pr-card); border: 1px solid var(--pr-line); border-radius: 14px; padding: 14px 16px; min-width: 0; }
+    .pr-chart { width: 100%; height: auto; display: block; }
+    .pr-donut { width: 110px; height: 110px; flex-shrink: 0; }
+    .pr-dojo { display: flex; align-items: center; gap: 14px; }
+    .pr-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    .pr-bars li { display: grid; grid-template-columns: minmax(90px, 30%) 1fr auto; align-items: center; gap: 10px; font-size: 13px; }
+    .pr-bar-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pr-bar-track { display: block; height: 10px; border-radius: 999px; background: var(--pr-line); overflow: hidden; }
+    .pr-bar-track > i { display: block; height: 100%; border-radius: 999px; }
+    .pr-bar-val { font-weight: 700; white-space: nowrap; } .pr-bar-val small { color: var(--pr-muted); font-weight: 400; }
+    .pr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .pr-table th { text-align: start; font-size: 12px; color: var(--pr-muted); font-weight: 700; border-bottom: 1px solid var(--pr-line); padding: 6px 4px; }
+    .pr-table td { border-bottom: 1px solid var(--pr-line); padding: 7px 4px; }
+    .pr-table tr.pr-cur td { font-weight: 700; color: var(--pr-navy); }
+    .pr-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--pr-line); color: var(--pr-muted); }
+    .pr-ok { background: #dcfce7; color: var(--pr-green); } .pr-bad { background: #fee2e2; color: var(--pr-red); } .pr-wait { background: #fef3c7; color: #92400e; }
+    .pr-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    .pr-feed li { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; }
+    .pr-feed li > div { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+    .pr-feed-icon { width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px; background: var(--pr-bg); display: flex; align-items: center; justify-content: center; font-size: 17px; }
+    .pr-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+    .pr-split > div { display: flex; flex-direction: column; gap: 4px; } .pr-split b { font-size: 18px; }
+    .pr-lessons { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow-y: auto; }
+    .pr-lessons li { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--pr-line); font-size: 13px; }
+    .pr-certs { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; font-size: 13px; }
+    .pr-foot { text-align: center; font-size: 12px; color: var(--pr-muted); border-top: 1px solid var(--pr-line); padding-top: 10px; }
+    .pr-gate { max-width: 420px; margin: 0 auto; } .pr-gate .pr-card { display: flex; flex-direction: column; gap: 10px; text-align: center; }
+    .pr-input { min-height: 44px; border-radius: 10px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; padding: 0 12px; font-size: 18px; letter-spacing: .4em; text-align: center; }
+    .pr-pin { border: 1px solid #cbd5e1; border-radius: 14px; padding: 10px 14px; background: #f8fafc; color: #0f172a; font-size: 13px; }
+    .pr-pin summary { cursor: pointer; font-weight: 700; min-height: 32px; } .pr-pin .pr-muted { color: #64748b; }
+    .pr-pin-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; } .pr-pin-row .pr-input { width: 110px; }
+    @media print {
+      body.eca-printing * { visibility: hidden !important; }
+      body.eca-printing .eca-pr, body.eca-printing .eca-pr * { visibility: visible !important; }
+      body.eca-printing .eca-pr { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; border: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body.eca-printing .eca-pr-noprint { display: none !important; }
+      .pr-card, .pr-kpi { break-inside: avoid; }
+    }
     @media (prefers-reduced-motion: reduce) { .eca-boss-disc, .eca-boss-face.is-hit, .eca-boss-face.is-block, .eca-boss-slash, .eca-boss-dmg, .eca-drop-rays, .eca-drop-box, .eca-drop-icon { animation: none; } .eca-boss-hp > i, .eca-boss-bar > i { transition: none; } }
     .eca-hud-avatar { font-size: 24px; line-height: 1; flex-shrink: 0; }
     .eca-hud-avatar[hidden] { display: none; }
@@ -575,8 +642,8 @@
     html[data-ecap="piece-gold"] .eca-pc.w, .eca-skin-piece-gold .eca-pc.w { color: #fde68a; text-shadow: 0 0 1px #78350f, 0 0 1px #78350f, 0 1px 3px rgba(0,0,0,.5); }
     html[data-ecap="piece-gold"] .eca-pc.b, .eca-skin-piece-gold .eca-pc.b { color: #7c2d12; text-shadow: 0 0 1px #fde047, 0 1px 2px rgba(0,0,0,.45); }
   </style>
-  <script>window.ECA_VERSION = "eca-v74";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v74" />
+  <script>window.ECA_VERSION = "eca-v75";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v75" />
 </head>
 <body class="min-h-screen flex flex-col relative">
   <a href="#mainView" class="skip-link">تخطّي إلى المحتوى</a>
@@ -740,39 +807,41 @@
     } catch (_) {}
   </script>
   <script type="application/json" id="ecaLazyModules">{"finance":"js/finance.js"}</script>
-  <script src="js/core.js?v=eca-v74"></script>
+  <script src="js/core.js?v=eca-v75"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v74"></script>
+  <script src="js/arena.js?v=eca-v75"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v74"></script>
-  <script src="js/streaks.js?v=eca-v74"></script>
-  <script src="js/review.js?v=eca-v74"></script>
-  <script src="js/quality.js?v=eca-v74"></script>
-  <script src="js/announce.js?v=eca-v74"></script>
-  <script src="js/progress.js?v=eca-v74"></script>
-  <script src="js/arena2.js?v=eca-v74"></script>
+  <script src="js/extras.js?v=eca-v75"></script>
+  <script src="js/streaks.js?v=eca-v75"></script>
+  <script src="js/review.js?v=eca-v75"></script>
+  <script src="js/quality.js?v=eca-v75"></script>
+  <script src="js/announce.js?v=eca-v75"></script>
+  <script src="js/progress.js?v=eca-v75"></script>
+  <script src="js/arena2.js?v=eca-v75"></script>
   <!-- homework, coach dashboards, tournaments, and placement test load on demand via loadModule -->
-  <script src="js/ux.js?v=eca-v74"></script>
-  <script src="js/annotate.js?v=eca-v74"></script>
-  <script src="js/gamify.js?v=eca-v74"></script>
-  <script src="js/adventure.js?v=eca-v74"></script>
-  <script src="js/duel.js?v=eca-v74"></script>
-  <script src="js/fx.js?v=eca-v74"></script>
-  <script src="js/speedarena.js?v=eca-v74"></script>
-  <script src="js/loot.js?v=eca-v74"></script>
-  <script src="js/dojo.js?v=eca-v74"></script>
-  <script src="js/cards.js?v=eca-v74"></script>
-  <script src="js/stamina.js?v=eca-v74"></script>
-  <script src="js/social.js?v=eca-v74"></script>
-  <script src="js/friendduel.js?v=eca-v74"></script>
-  <script src="js/weekly.js?v=eca-v74"></script>
-  <script src="js/boss.js?v=eca-v74"></script>
-  <script src="js/command.js?v=eca-v74"></script>
+  <script src="js/ux.js?v=eca-v75"></script>
+  <script src="js/annotate.js?v=eca-v75"></script>
+  <script src="js/gamify.js?v=eca-v75"></script>
+  <script src="js/adventure.js?v=eca-v75"></script>
+  <script src="js/duel.js?v=eca-v75"></script>
+  <script src="js/fx.js?v=eca-v75"></script>
+  <script src="js/speedarena.js?v=eca-v75"></script>
+  <script src="js/loot.js?v=eca-v75"></script>
+  <script src="js/dojo.js?v=eca-v75"></script>
+  <script src="js/cards.js?v=eca-v75"></script>
+  <script src="js/stamina.js?v=eca-v75"></script>
+  <script src="js/social.js?v=eca-v75"></script>
+  <script src="js/friendduel.js?v=eca-v75"></script>
+  <script src="js/weekly.js?v=eca-v75"></script>
+  <script src="js/boss.js?v=eca-v75"></script>
+  <script src="js/command.js?v=eca-v75"></script>
+  <script src="js/lessonpuz.js?v=eca-v75"></script>
+  <script src="js/parentreport.js?v=eca-v75"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v74"></script>
+  <script type="module" src="js/firebase.js?v=eca-v75"></script>
 </body>
 </html>

@@ -180,7 +180,7 @@ service cloud.firestore {
       return score >= 15 ? 5 : score >= 12 ? 4 : score >= 9 ? 3 : score >= 6 ? 2 : 1;
     }
     function questStars(key) {
-      return key == 'daily' ? 1 : key == 'puzzles' || key == 'win' ? 2 : 0;
+      return key == 'daily' ? 1 : key == 'puzzles' || key == 'win' ? 2 : key == 'lesson' ? 5 : 0;
     }
     function loginStars(day) {
       return int(day.split('-')[2]) % 7 == 0 ? 3 : int(day.split('-')[2]) % 3 == 0 ? 2 : 1;
@@ -244,7 +244,7 @@ service cloud.firestore {
           ? (r.key == r.day && id == 'rush-' + r.day && r.score >= 3 && r.score <= 1000
               && r.starsDelta == rushStars(r.score) && r.xpDelta == rushStars(r.score) * 20 && r.missionBonus == false)
         : r.source == 'quest'
-          ? (r.key in ['daily','puzzles','win'] && id == 'quest-' + r.day + '-' + r.key
+          ? (r.key in ['daily','puzzles','win','lesson'] && id == 'quest-' + r.day + '-' + r.key
               && r.starsDelta == questStars(r.key) && r.xpDelta == questStars(r.key) * 20 && r.missionBonus == false)
         : r.source == 'login'
           ? (r.key == r.day && id == 'login-' + r.day && r.starsDelta == loginStars(r.day)
@@ -277,11 +277,17 @@ service cloud.firestore {
     // جايزة الكوتش المباشرة: بتتصرف مرة واحدة، لأنها بتتمسح في نفس العملية
     function dropDoc(r) { return /databases/$(database)/documents/liveDrops/$(r.uid)/drops/$(r.key); }
     function dropPayOk(r) {
-      let d = get(dropDoc(r)).data;
-      return !existsAfter(dropDoc(r))
+      let p = dropDoc(r);
+      let d = get(p).data;
+      // رسالة الكوتش بتتحفظ في الإيصال لتقرير ولي الأمر، ولازم تطابق الجايزة (التقرير بيعرض رسايل الجوايز بس)
+      return !existsAfter(p) && r.get('note', '') == d.note
         && (d.type == 'stars' ? (r.starsDelta == d.amount && r.xpDelta == 0) : (d.type == 'xp' && r.starsDelta == 0 && r.xpDelta == d.amount));
     }
-    function dropChestOk(r) { return get(dropDoc(r)).data.type == 'chest' && !existsAfter(dropDoc(r)); }
+    function dropChestOk(r) {
+      let p = dropDoc(r);
+      let d = get(p).data;
+      return d.type == 'chest' && r.get('note', '') == d.note && !existsAfter(p);
+    }
     function economyKindOk(id, r, u) {
       return r.kind == 'earn'
         ? (r.item == '' && (r.source == 'vision' || r.source == 'rush' || r.score == 0) && economyEarnOk(id, r, u))
@@ -352,7 +358,7 @@ service cloud.firestore {
       let userPath = /databases/$(database)/documents/users/$(uid);
       let r = request.resource.data;
       return notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))
-        && r.keys().hasOnly(['uid','kind','source','key','day','item','score','starsDelta','xpDelta','missionBonus','at'])
+        && r.keys().hasOnly(['uid','kind','source','key','day','item','score','starsDelta','xpDelta','missionBonus','at','note'])
         && r.uid == uid && r.kind in ['earn','purchase','spend-hint','spend-freeze','chest']
         && r.source is string && r.key is string && r.day is string && r.item is string
         && r.score is int && r.starsDelta is int && r.xpDelta is int && r.missionBonus is bool
@@ -542,7 +548,7 @@ service cloud.firestore {
 
       match /economy/{eid} {
         allow read: if (notAnon() && request.auth.uid == uid
-          && !exists(/databases/$(database)/documents/deleted/$(uid))) || purgeable(uid);
+          && !exists(/databases/$(database)/documents/deleted/$(uid))) || (isStaff() && !exists(/databases/$(database)/documents/deleted/$(uid))) || purgeable(uid);
         allow create: if economyReceiptCreateOk(uid, eid);
         allow update: if false;
         allow delete: if purgeable(uid);
@@ -563,7 +569,7 @@ service cloud.firestore {
       }
       // خزنة الغلطات: الطالب بيسجّل غلطاته بنفسه، ومكافأة العودة بتتفحص في قاعدة الإيصال
       match /mistakeVault/{pid} {
-        allow read: if (notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))) || purgeable(uid);
+        allow read: if (notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))) || (isStaff() && !exists(/databases/$(database)/documents/deleted/$(uid))) || purgeable(uid);
         allow create: if notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))
           && pid.matches('[A-Za-z0-9]{3,20}')
           && request.resource.data.keys().hasOnly(['puzzleId','motifs','stepLevel','failedAt','attempts','resolved','nextAt','rating'])
