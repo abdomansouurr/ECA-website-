@@ -595,7 +595,7 @@
       const tb = (k, label) => `<button onclick="arenaSub('${k}')" class="flex-1 min-w-[140px] py-2.5 px-3 rounded-xl text-xs font-bold ${sub === k ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/20'}">${label}</button>`;
       const body = sub === "vision" ? arenaVisHTML()
         : !ChessCls ? `<div class="gold-card rounded-2xl p-8 text-center text-sm text-gray-400">جاري تحميل الرقعة...</div>`
-        : sub === "rush" ? arenaRushHTML() : sub === "duel" ? arenaDuelHTML() : sub === "speed" ? arenaSpeedHTML() : sub === "cards" ? arenaCardsHTML() : sub === "friend" ? arenaFriendHTML() : sub === "weekly" ? arenaWeeklyHTML() : sub === "puzzles" ? arenaPuzHTML() : sub === "pawns" ? arenaPawnsHTML() : sub === "analysis" ? arenaAnaHTML() : arenaPlayHTML();
+        : sub === "rush" ? arenaRushHTML() : sub === "duel" ? arenaDuelHTML() : sub === "speed" ? arenaSpeedHTML() : sub === "cards" ? arenaCardsHTML() : sub === "friend" ? arenaFriendHTML() : sub === "weekly" ? arenaWeeklyHTML() : sub === "boss" && typeof arenaBossHTML === "function" ? arenaBossHTML() : sub === "puzzles" ? arenaPuzHTML() : sub === "pawns" ? arenaPawnsHTML() : sub === "analysis" ? arenaAnaHTML() : arenaPlayHTML();
       return `
         <div class="space-y-5">
           <div class="gold-card rounded-2xl p-5 flex flex-wrap justify-between items-center gap-3">
@@ -610,7 +610,7 @@
             </div>` : ''}
           </div>
           <div class="flex flex-wrap gap-2 bg-black/60 p-2 rounded-2xl border border-yellow-500/20">
-            ${tb("play", "العب ضد الكمبيوتر")}${tb("puzzles", "ألغاز على الرقعة")}${tb("rush", lang === "en" ? "⚡ Puzzle Rush" : "⚡ تحدي 60 ثانية")}${tb("duel", lang === "en" ? "⚔️ Live duel" : "⚔️ تحدي مباشر")}${tb("speed", lang === "en" ? "🏟️ Speed Arena" : "🏟️ بطولة السرعة")}${tb("cards", lang === "en" ? "🃏 Tactic cards" : "🃏 كروت التكتيك")}${tb("friend", lang === "en" ? "🤝 Challenge a friend" : "🤝 تحدي صاحبك")}${tb("weekly", lang === "en" ? "🎯 Coach's challenge" : "🎯 تحدي الكوتش")}${tb("pawns", "لعبة البيادق")}${tb("vision", "تدريب الرؤية")}${tb("analysis", "رقعة التحليل")}
+            ${tb("play", "العب ضد الكمبيوتر")}${tb("puzzles", "ألغاز على الرقعة")}${tb("rush", lang === "en" ? "⚡ Puzzle Rush" : "⚡ تحدي 60 ثانية")}${tb("duel", lang === "en" ? "⚔️ Live duel" : "⚔️ تحدي مباشر")}${tb("speed", lang === "en" ? "🏟️ Speed Arena" : "🏟️ بطولة السرعة")}${tb("cards", lang === "en" ? "🃏 Tactic cards" : "🃏 كروت التكتيك")}${tb("friend", lang === "en" ? "🤝 Challenge a friend" : "🤝 تحدي صاحبك")}${tb("weekly", lang === "en" ? "🎯 Coach's challenge" : "🎯 تحدي الكوتش")}${u.role === "student" ? tb("boss", lang === "en" ? "👹 Boss homework" : "👹 واجب الزعيم") : ""}${tb("pawns", "لعبة البيادق")}${tb("vision", "تدريب الرؤية")}${tb("analysis", "رقعة التحليل")}
           </div>
           <div class="flex flex-wrap items-center gap-3 text-[11px] text-gray-400">
             <span>ألوان الرقعة:</span>

@@ -893,6 +893,7 @@
       if (staff && tab === "placeresults") return ["placement-data", "placement"];
       if (staff && tab === "tracker") return ["homework", "reports", "placement-data", "placement"];
       if (staff && tab === "today") return ["today"];
+      if (staff && tab === "command") return ["homework"];
       if (staff && tab === "finance") return ["finance"];
       if (tab === "tournaments" || (u.role === "student" && ["ranks", "parent"].includes(tab))) return ["tournaments"];
       if (u.role === "student" && tab === "home" && (db.tournaments || []).some(t => (t.players || []).some(p => p.id === u.id))) return ["tournaments"];
@@ -1025,7 +1026,7 @@
       // ===== القائمة الجانبية الرأسية: نفس تابات الدور بتتحط في الدرج (عربي يمين / إنجليزي شمال)
       // وزر ☰ في الهيدر هو اللي بيفتحها ويقفلها — شريط التابات الأفقي بيختفي للمدخلين.
       const tabsHtml = isStaffUser(u)
-        ? T("home", "الرئيسية") + T("today", "جدول اليوم") + T("attendance", "تسجيل الحضور") + T("tracker", "متابعة الطلاب") + T("finance", "الحسابات")
+        ? T("home", "الرئيسية") + T("today", "جدول اليوم") + T("command", lang === "en" ? "🛡️ Command Center" : "🛡️ مركز الكوتش") + T("attendance", "تسجيل الحضور") + T("tracker", "متابعة الطلاب") + T("finance", "الحسابات")
           + T("lessons", "المنهج") + T("arena", "ساحة التدريب") + T("tournaments", "البطولات") + T("honor", "لوحة المتصدرين") + T("ranks", "الرتب والشارات") + T("placeresults", "اختبار المستوى")
         : T("home", "الرئيسية") + T("lessons", "دروسي") + T("arena", "ساحة التدريب") + T("tournaments", "البطولات") + T("ranks", "الرتب والشارات")
           + T("honor", "لوحة المتصدرين") + T("certs", "شهاداتي", certN ? `<span class="badge">${certN}</span>` : "") + T("parent", "تقرير ولي الأمر");
@@ -1077,6 +1078,7 @@
       if (tab === "lessons") main.innerHTML = renderLessonsView(u);
       else if (tab === "homework" && typeof renderHomeworkPlayer === "function") main.innerHTML = renderHomeworkPlayer(u);
       else if (tab === "today" && isStaffUser(u)) main.innerHTML = renderTodayView(u);
+      else if (tab === "command" && isStaffUser(u) && typeof renderCommandView === "function") main.innerHTML = renderCommandView(u);
       else if (tab === "tracker" && isStaffUser(u)) main.innerHTML = renderTrackerView();
       else if (tab === "attendance" && isStaffUser(u)) main.innerHTML = renderAttendanceView();
       else if (tab === "finance" && isStaffUser(u)) main.innerHTML = renderFinanceDashboardView();

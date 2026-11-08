@@ -411,9 +411,11 @@
     };
     // صندوق الكنز: رقم الصندوق محفوظ في ملف الطالب، والجايزة من بصمة الحساب والرقم ده
     const CHEST_ITEMS = { a: "frame-silver", b: "frame-silver", c: "frame-gold", d: "frame-fire", e: "piece-ruby", f: "piece-crystal" };
-    window.fbChest = async () => {
+    window.fbChest = async dropId => {
       if (!me || me.role !== "student") return { ok: false };
       const uid = me.uid, userRef = doc(firestore, "users", uid);
+      const fromDrop = typeof dropId === "string" && /^[A-Za-z0-9]{6,40}$/.test(dropId), cost = fromDrop ? 0 : 40;
+      const dropRef = fromDrop ? doc(firestore, "liveDrops", uid, "drops", dropId) : null;
       let lastProfile = null;
       const result = await runTransaction(firestore, async tx => {
         const userSnap = await tx.get(userRef);
@@ -422,21 +424,24 @@
         const arena = Object.assign({}, profile.arena || {}), shop = Object.assign({}, profile.shop || {});
         const count = Number(arena.ch) || 0, id = "chest-" + count, receiptRef = doc(firestore, "users", uid, "economy", id);
         if ((await tx.get(receiptRef)).exists()) return { ok: false, code: "stale" };
-        if ((Number(arena.stars) || 0) < 40) return { ok: false, code: "insufficient-stars" };
+        if (fromDrop) { const drop = await tx.get(dropRef); if (!drop.exists() || drop.data().type !== "chest") return { ok: false, code: "drop-gone" }; }
+        else if ((Number(arena.stars) || 0) < 40) return { ok: false, code: "insufficient-stars" };
         const hex = await spinHexOf(uid, String(count));
         let item = CHEST_ITEMS[hex] || "", xpDelta = 0, duplicate = false;
         const items = Array.isArray(shop.items) ? shop.items : [];
         if (!item) xpDelta = "012345".includes(hex) ? 150 : 300;
         else if (items.includes(item)) { duplicate = true; xpDelta = 300; item = ""; }
         else shop.items = [...items, item];
-        arena.stars = (Number(arena.stars) || 0) - 40;
+        arena.stars = (Number(arena.stars) || 0) - cost;
         arena.xp = (Number(arena.xp) || 0) + xpDelta;
         arena.ch = count + 1;
         arena.chx = (Number(arena.chx) || 0) + xpDelta;   // خبرة الصندوق لوحدها، عشان ما تتحسبش في لوحة الصدارة
         const fix = selfFieldsFix(profile);
+        const starsDelta = cost ? -cost : 0;
+        if (fromDrop) tx.delete(dropRef);
         tx.update(userRef, Object.assign({ arena, shop, lastEconomy: id }, fix));
-        tx.set(receiptRef, { uid, kind: "chest", source: "", key: "", day: cairoDayKey(), item: "", score: 0, starsDelta: -40, xpDelta, missionBonus: false, at: serverTimestamp() });
-        return { ok: true, item, xpDelta, duplicate, starsDelta: -40, profile: Object.assign({}, profile, fix, { arena, shop, lastEconomy: id }) };
+        tx.set(receiptRef, { uid, kind: "chest", source: fromDrop ? "drop" : "", key: fromDrop ? dropId : "", day: cairoDayKey(), item: "", score: 0, starsDelta, xpDelta, missionBonus: false, at: serverTimestamp() });
+        return { ok: true, item, xpDelta, duplicate, starsDelta, profile: Object.assign({}, profile, fix, { arena, shop, lastEconomy: id }) };
       }).catch(err => { reportEconomyDenied(err, "chest", cairoDayKey(), lastProfile); throw err; });
       if (result.ok && result.profile) {
         maps.core[uid] = cleanDeep(result.profile);
@@ -445,6 +450,74 @@
       }
       return result;
     };
+    // ================= واجب الزعيم =================
+    const tsMs = t => (t && t.toMillis ? t.toMillis() : 0);
+    const bossView = (id, r) => ({ id, title: cleanDeep(r.title || ""), group: cleanDeep(r.group || ""), step: Number(r.step) || 1, motif: String(r.motif || "").replace(/[^A-Za-z0-9]/g, ""),
+      puzzles: Array.isArray(r.puzzles) ? r.puzzles.map(x => String(x).replace(/[^A-Za-z0-9]/g, "")).filter(Boolean) : [], dueMs: tsMs(r.due), atMs: tsMs(r.at) });
+    window.fbBossCreate = async data => {
+      if (!me || !isStaffRole(me.role)) throw new Error("not-staff");
+      const ref = doc(collection(firestore, "assignments"));
+      await setDoc(ref, { title: data.title, group: data.group, step: data.step, motif: data.motif, puzzles: data.puzzles, due: data.due, by: me.uid, at: serverTimestamp() });
+      return ref.id;
+    };
+    window.fbBossDelete = id => deleteDoc(doc(firestore, "assignments", id));
+    window.fbBossWatchAll = (onRows, onError) => onSnapshot(query(collection(firestore, "assignments"), orderBy("at", "desc"), limit(30)),
+      snap => onRows(snap.docs.map(d => bossView(d.id, d.data()))),
+      err => { if (auth.currentUser) console.warn("Assignments failed:", err && err.code); if (onError) onError(); });
+    window.fbBossProgressWatch = (aid, onRows) => onSnapshot(collection(firestore, "assignments", aid, "progress"),
+      snap => onRows(snap.docs.map(d => ({ uid: d.id, solved: Array.isArray(d.data().solved) ? d.data().solved.length : 0, done: d.data().done === true, atMs: tsMs(d.data().at) }))),
+      err => { if (auth.currentUser) console.warn("Assignment progress failed:", err && err.code); });
+    // الطالب: واجبات مجموعته، ومع كل واجب الألغاز اللي حلها
+    window.fbBossMine = (group, onRows) => {
+      if (!me || me.role !== "student" || !group) return () => {};
+      let alive = true;
+      const unsub = onSnapshot(query(collection(firestore, "assignments"), where("group", "==", group), limit(20)), async snap => {
+        const rows = await Promise.all(snap.docs.map(async d => {
+          const row = bossView(d.id, d.data());
+          try {
+            const p = await getDoc(doc(firestore, "assignments", d.id, "progress", me.uid));
+            row.solved = p.exists() && Array.isArray(p.data().solved) ? p.data().solved.map(String) : [];
+            row.done = p.exists() && p.data().done === true;
+          } catch (_) { row.solved = []; row.done = false; }
+          return row;
+        }));
+        if (alive) onRows(rows);
+      }, err => { if (auth.currentUser) console.warn("Boss homework failed:", err && err.code); });
+      return () => { alive = false; unsub(); };
+    };
+    // ضربة في الزعيم = لغز واحد من الواجب اتحل
+    window.fbBossHit = (aid, pid) => runTransaction(firestore, async tx => {
+      const ref = doc(firestore, "assignments", aid, "progress", me.uid);
+      const [aSnap, pSnap] = await Promise.all([tx.get(doc(firestore, "assignments", aid)), tx.get(ref)]);
+      if (!aSnap.exists()) throw new Error("missing");
+      const all = Array.isArray(aSnap.data().puzzles) ? aSnap.data().puzzles : [], old = pSnap.exists() && Array.isArray(pSnap.data().solved) ? pSnap.data().solved : [];
+      if (!all.includes(pid) || old.includes(pid)) return { solved: old, done: old.length === all.length };
+      const solved = [...old, pid], done = solved.length === all.length;
+      tx.set(ref, { solved, done, at: serverTimestamp() });
+      return { solved, done };
+    });
+
+    // ================= جوائز الحصة المباشرة =================
+    window.fbDropSend = async (uids, drop) => {
+      if (!me || !isStaffRole(me.role)) throw new Error("not-staff");
+      const list = uids.filter(x => /^[A-Za-z0-9_-]{1,128}$/.test(String(x)));
+      // القواعد بتقرا ملف كل طالب ووثيقة الحذف بتاعته، وحد الـ batch عشرين قراية
+      for (let i = 0; i < list.length; i += 8) {
+        const batch = writeBatch(firestore);
+        list.slice(i, i + 8).forEach(uid => batch.set(doc(collection(firestore, "liveDrops", uid, "drops")), { type: drop.type, amount: drop.amount, note: drop.note, by: me.uid, at: serverTimestamp() }));
+        await batch.commit();
+      }
+      return list.length;
+    };
+    window.fbDropWatch = onItems => {
+      if (!me || me.role !== "student") return () => {};
+      return onSnapshot(collection(firestore, "liveDrops", me.uid, "drops"), snap => {
+        const items = snap.docs.filter(d => !d.metadata.hasPendingWrites)
+          .map(d => ({ id: d.id, type: d.data().type, amount: Number(d.data().amount) || 0, note: cleanDeep(d.data().note || ""), atMs: tsMs(d.data().at) }));
+        if (items.length) onItems(items.sort((x, y) => x.atMs - y.atMs));
+      }, err => { if (auth.currentUser) console.warn("Live drops failed:", err && err.code); });
+    };
+
     // بطولة السرعة
     const msOf = t => (t && t.toMillis ? t.toMillis() : 0);
     window.fbArenaWatchOpen = (onRows, onError) => onSnapshot(query(collection(firestore, "speedArenas"), where("closed", "==", false), limit(10)),
@@ -540,6 +613,7 @@
       if (op === "earn") {
         source = String(request.source || ""); key = String(request.key || ""); day = String(request.day || "");
         if (source === "login" || source === "spin") { day = cairoDayKey(); key = day; }
+        if (source === "boss" || source === "drop") day = cairoDayKey();
         if (!dayOk(day)) return { ok: false };
         if (source === "lesson" && /^[1-6]-[0-9]{1,2}$/.test(key)) id = "lesson-" + key;
         else if (source === "puzzle" && ["daily","easiest","easier","normal","harder","hardest"].includes(key)) id = "puzzle-" + day + "-" + key;
@@ -555,6 +629,7 @@
         else if (source === "dojo" && /^[A-Za-z0-9]{3,20}$/.test(key)) id = "dojo-" + key;
         else if (source === "fduel" && /^[A-Za-z0-9]{10,40}$/.test(key)) id = "fduel-" + day;
         else if (source === "vision") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "vision-" + day; }
+        else if ((source === "boss" || source === "drop") && /^[A-Za-z0-9]{6,40}$/.test(key)) id = source + "-" + key;
         else return { ok: false };
       } else if (op === "purchase") {
         item = String(request.item || "");
@@ -579,7 +654,7 @@
         lastProfile = userSnap.data();
         const profile = userSnap.data(), arena = Object.assign({}, profile.arena || {}), shop = Object.assign({ titles: [], bots: [], hints: 0, activeTitle: "" }, profile.shop || {});
         const oldStars = Number(arena.stars) || 0;
-        let nextShop = Object.assign({}, shop), missionBonus = false, receiptKind = op;
+        let nextShop = Object.assign({}, shop), missionBonus = false, receiptKind = op, dropXp = 0;
         if (op === "earn") {
           if (source === "lesson" && (!profile.att || profile.att[key] !== true)) return { ok: false, code: "not-attended" };
           if (source === "lesson") starsDelta = 1;
@@ -626,7 +701,21 @@
             } else if (spinHex !== "e") starsDelta = "012345".includes(spinHex) ? 1 : "6789".includes(spinHex) ? 2 : "abc".includes(spinHex) ? 3 : 5;
           }
           else if (source === "vision") starsDelta = Math.min(10, Math.floor(score / 3));
+          else if (source === "boss") {
+            const prog = await tx.get(doc(firestore, "assignments", key, "progress", uid));
+            if (!prog.exists() || prog.data().done !== true) return { ok: false, code: "boss-alive" };
+            starsDelta = 10;
+          }
+          else if (source === "drop") {
+            // الجايزة بتتمسح مع الإيصال في نفس العملية، فمش ممكن تتصرف مرتين
+            const dropRef = doc(firestore, "liveDrops", uid, "drops", key), drop = await tx.get(dropRef);
+            if (!drop.exists() || !["stars", "xp"].includes(drop.data().type)) return { ok: false, code: "drop-gone" };
+            starsDelta = drop.data().type === "stars" ? Number(drop.data().amount) || 0 : 0;
+            dropXp = drop.data().type === "xp" ? Number(drop.data().amount) || 0 : 0;
+            tx.delete(dropRef);
+          }
           xpDelta = source === "spin" && spinHex === "e" ? 100 : (source === "puzzle" && missionBonus ? starsDelta - 1 : starsDelta) * 20;
+          if (source === "drop") xpDelta = dropXp;
         } else if (op === "purchase") {
           const catalogItem = window.ecaShopCatalog.find(x => x.id === item);
           if (!catalogItem) return { ok: false };
@@ -1544,6 +1633,10 @@
       }
       const vault = await getDocs(collection(firestore, "users", uid, "mistakeVault"));
       for (const v of vault.docs) await deleteDoc(v.ref);
+      const bosses = await getDocs(collection(firestore, "assignments"));
+      for (const a of bosses.docs) await deleteDoc(doc(firestore, "assignments", a.id, "progress", uid)).catch(() => {});
+      const drops = await getDocs(collection(firestore, "liveDrops", uid, "drops"));
+      for (const v of drops.docs) await deleteDoc(v.ref);
       const arenas = await getDocs(collection(firestore, "speedArenas"));
       for (const a of arenas.docs) await deleteDoc(doc(firestore, "speedArenas", a.id, "entries", uid));
       const economy = await getDocsFromServer(collection(firestore, "users", uid, "economy"));

@@ -509,6 +509,79 @@ async function login(p, id) {
     check("weekly: two attempts only", !!(await until(() => pb.ev("arena.weekly.att && arena.weekly.att.n===2 && !arena.weekly.att.solved && document.getElementById('mainView').textContent.match(/No attempts left|خلّصت محاولاتك/)"), 8000)));
     check("weekly: the failed student is not in the Hall of Fame", !(await read(`coachChallenges/${wkNow}/hallOfFame/${B}`)));
 
+    // ---------- coach command center: groups, boss homework and live drops ----------
+    await pg.send("Page.bringToFront");
+    await pg.ev("window.confirm = () => true; switchTab('command')");
+    check("command center opens for staff", !!(await until(() => pg.ev("!!document.getElementById('cmdBossList') && !!window.ECA_HOMEWORK"), 20000)));
+    await pg.ev("(()=>{ for (const g of ['A', 'Lake House - Step 1']) { if (!(db.groups||[]).includes(g)) { document.getElementById('cmdNewGroup').value = g; cmdAddGroup(); } } })()");
+    check("groups: coach adds groups", !!(await until(async () => { const m = await read("meta/groups"); return m && m.list.includes("A") && m.list.includes("Lake House - Step 1"); })));
+    await pg.ev(`cmdSetGroup(${JSON.stringify(F)}, String(db.groups.indexOf('Lake House - Step 1')))`);
+    check("groups: coach moves a student", !!(await until(async () => (await U(F)).group === "Lake House - Step 1")));
+    await pg.ev(`cmdSetGroup(${JSON.stringify(F)}, String(db.groups.indexOf('A')))`);
+    await until(async () => (await U(F)).group === "A");
+    await pg.ev("CMD.draft = { title: 'Fork Dragon', group: String(db.groups.indexOf('A')), step: '2', motif: 'fork', count: '5', due: cmdIsoIn(7), puzzles: [] }; cmdPick();");
+    check("boss: pack picked by step and motif", await pg.ev("CMD.draft.puzzles.length === 5 && CMD.draft.puzzles.every(id => cmdPool(2).some(p => p.id === id && p.themes.includes('fork')))"));
+    await pg.ev("cmdBossSend()");
+    const bossId = await until(async () => (await list("assignments"))[0], 15000);
+    const bossDoc = bossId && await read("assignments/" + bossId);
+    check("boss: assigned to the whole group with one click", !!bossDoc && bossDoc.group === "A" && bossDoc.puzzles.length === 5 && bossDoc.motif === "fork", bossDoc && { group: bossDoc.group, n: bossDoc.puzzles.length });
+    await pa.send("Page.bringToFront");
+    await pa.ev("switchTab('home'); while(document.getElementById('ecaMilestone')) ecaMilestoneClose();");
+    check("boss: shows on the student's adventure map", !!(await until(() => pa.ev("!!document.querySelector('.eca-map .eca-boss-node') && document.querySelector('.eca-boss-node').textContent.includes('Fork Dragon')"), 15000)));
+    check("boss: health bar starts full", await pa.ev("(()=>{ const b=document.querySelector('.eca-boss-node [role=progressbar]'); return b && b.getAttribute('aria-valuenow')==='5' && b.getAttribute('aria-valuemax')==='5'; })()"));
+    check("boss: classmate sees it too", !!(await until(() => pb.ev("(arena.boss.list||[]).some(a => a.title === 'Fork Dragon')"), 15000)));
+    const starsBeforeBoss = (await U(A)).arena.stars;
+    await pa.ev(`ecaBossOpen(${JSON.stringify(bossId)})`);
+    await until(() => pa.ev("!!ChessCls && tab==='arena' && arena.sub==='boss'"), 15000);
+    const fight = await pa.ev(`(async()=>{ const B=arena.boss, sleep=ms=>new Promise(r=>setTimeout(r,ms)); let tried=false, hp=[];
+      for (let guard=0; guard<700; guard++) {
+        const a=bossCur(); if (!a) return 'no-boss';
+        if (a.done) return { done: true, solved: a.solved.length, blocked: !!window.__bossBlocked, hp };
+        if (B.status==='idle' && !B.busy) { hp.push(bossHP(a)); bossNext(); }
+        else if (B.status==='play' && !B.busy) {
+          if (!tried) { tried=true; const g=B.game, want=B.sol[B.idx]; const m=g.moves({verbose:true}).find(m=>m.from+m.to!==want.slice(0,4)&&!m.promotion&&(()=>{const c=new ChessCls(g.fen());c.move(m);return !c.isCheckmate()})());
+            if (m) { const before=bossHP(a); bossMove({from:m.from,to:m.to}); window.__bossBlocked = B.status==='block' && bossHP(a)===before; await sleep(1100); continue; } }
+          const m=B.sol[B.idx]; if (m) bossMove(m.length>4?{from:m.slice(0,2),to:m.slice(2,4),promotion:m[4]}:{from:m.slice(0,2),to:m.slice(2,4)});
+        }
+        await sleep(120);
+      } return 'timeout:' + B.status; })()`);
+    check("boss: every solve takes 1 HP until it falls", fight && fight.done === true && fight.solved === 5, fight);
+    check("boss: a wrong move is blocked without losing anything", !!(fight && fight.blocked));
+    const prog = await read(`assignments/${bossId}/progress/${A}`);
+    check("boss: progress saved on the server", !!prog && prog.done === true && prog.solved.length === 5);
+    const bossPay = await until(() => read(`users/${A}/economy/boss-${bossId}`), 15000);
+    check("boss: defeat pays the bonus", !!bossPay && bossPay.starsDelta === 10 && bossPay.xpDelta === 200);
+    check("boss: stars credited", (await until(async () => (await U(A)).arena.stars === starsBeforeBoss + 10 ? true : null, 10000)) === true);
+    check("boss: defeat celebration", !!(await until(() => pa.ev("!!document.getElementById('ecaMilestone') && /Boss defeated|هزمت الزعيم/.test(document.getElementById('ecaMilestone').textContent)"), 8000)));
+    await pa.ev("while(document.getElementById('ecaMilestone')) ecaMilestoneClose();");
+    await pg.send("Page.bringToFront");
+    await pg.ev(`cmdToggle(${JSON.stringify(bossId)})`);
+    check("boss: coach sees the student completed", !!(await until(() => pg.ev("/Completed|خلّص/.test(document.getElementById('cmdBossList').textContent) && /[^0-9]1[^0-9]/.test(document.getElementById('cmdBossList').querySelector('p').textContent)"), 15000)));
+
+    // live drops
+    const dropTo = async (to, type, amount, note) => { await pg.ev(`Object.assign(CMD, { dropTo: ${JSON.stringify(to)}, dropType: ${JSON.stringify(type)}, dropAmt: ${JSON.stringify(String(amount))}, dropNote: ${JSON.stringify(note)} }); cmdDropSend();`); };
+    const dropReceipts = async who => (await list(`users/${who}/economy`)).filter(x => x.startsWith("drop-"));
+    const starsBeforeDrop = (await U(A)).arena.stars;
+    await pa.send("Page.bringToFront");
+    await dropTo("s:" + A, "stars", 7, "Brilliant move");
+    check("drop: popup appears on the student's screen", !!(await until(() => pa.ev("!!document.getElementById('ecaDropModal') && document.getElementById('ecaDropModal').textContent.includes('+7') && document.getElementById('ecaDropNote').textContent.includes('Brilliant move')"), 15000)));
+    check("drop: stars credited once", (await until(async () => (await U(A)).arena.stars === starsBeforeDrop + 7 ? true : null, 10000)) === true && (await dropReceipts(A)).length === 1);
+    check("drop: claimed drop is gone", !!(await until(async () => (await list(`liveDrops/${A}/drops`)).length === 0)));
+    await pa.ev("dropClose()");
+    const xpA = (await U(A)).arena.xp, xpB = (await U(B)).arena.xp;
+    await dropTo("g:" + await pg.ev("db.groups.indexOf('A')"), "xp", 100, "");
+    check("drop: whole group gets the XP boost", !!(await until(async () => (await U(A)).arena.xp === xpA + 100 && (await U(B)).arena.xp === xpB + 100, 20000)));
+    check("drop: classmate sees the popup too", !!(await until(() => pb.ev("!!document.getElementById('ecaDropModal') && document.getElementById('ecaDropModal').textContent.includes('+100 XP')"), 15000)));
+    await pb.ev("dropClose()");
+    await until(() => pa.ev("!!document.getElementById('ecaDropModal')"), 10000);
+    await pa.ev("dropClose()");
+    const chBefore = Number((await U(A)).arena.ch) || 0, starsBeforeChest = (await U(A)).arena.stars;
+    await dropTo("s:" + A, "chest", 0, "");
+    const freeChest = await until(() => read(`users/${A}/economy/chest-${chBefore}`), 15000);
+    check("drop: free mystery chest", !!freeChest && freeChest.source === "drop" && freeChest.starsDelta === 0 && (await U(A)).arena.stars === starsBeforeChest, freeChest && { source: freeChest.source, stars: freeChest.starsDelta });
+    check("drop: chest prize revealed", !!(await until(() => pa.ev("!!document.getElementById('ecaDropModal') && /XP|Frame|frame|pieces|إطار|قطع|خبرة/.test(document.getElementById('ecaDropModal').textContent)"), 10000)));
+    await pa.ev("dropClose()");
+
     // ---------- companion and achievements persist ----------
     await pc.ev("switchTab('home'); ecaPetPick('cat')");
     check("companion saved", !!(await until(async () => (await U(C)).arena.pet === "cat")));

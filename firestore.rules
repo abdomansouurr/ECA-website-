@@ -264,16 +264,32 @@ service cloud.firestore {
         : r.source == 'vision'
           ? (r.key == r.day && id == 'vision-' + r.day && r.score >= 3 && r.score <= 1000
               && r.starsDelta == visionStars(r.score) && r.xpDelta == visionStars(r.score) * 20 && r.missionBonus == false)
+        : r.source == 'boss'
+          ? (r.key.matches('[A-Za-z0-9]{6,40}') && id == 'boss-' + r.key && r.starsDelta == 10 && r.xpDelta == 200 && r.missionBonus == false && bossDone(r))
+        : r.source == 'drop'
+          ? (r.key.matches('[A-Za-z0-9]{6,40}') && id == 'drop-' + r.key && r.missionBonus == false && dropPayOk(r))
         : false;
     }
+    // واجب الزعيم: الجايزة بعد ما الطالب يحل كل ألغاز الواجب
+    function bossDone(r) {
+      return get(/databases/$(database)/documents/assignments/$(r.key)/progress/$(r.uid)).data.done == true;
+    }
+    // جايزة الكوتش المباشرة: بتتصرف مرة واحدة، لأنها بتتمسح في نفس العملية
+    function dropDoc(r) { return /databases/$(database)/documents/liveDrops/$(r.uid)/drops/$(r.key); }
+    function dropPayOk(r) {
+      let d = get(dropDoc(r)).data;
+      return !existsAfter(dropDoc(r))
+        && (d.type == 'stars' ? (r.starsDelta == d.amount && r.xpDelta == 0) : (d.type == 'xp' && r.starsDelta == 0 && r.xpDelta == d.amount));
+    }
+    function dropChestOk(r) { return get(dropDoc(r)).data.type == 'chest' && !existsAfter(dropDoc(r)); }
     function economyKindOk(id, r, u) {
       return r.kind == 'earn'
         ? (r.item == '' && (r.source == 'vision' || r.source == 'rush' || r.score == 0) && economyEarnOk(id, r, u))
-        : r.source == '' && r.score == 0 && r.missionBonus == false
+        : (r.source == '' || (r.kind == 'chest' && r.source == 'drop')) && r.score == 0 && r.missionBonus == false
           && (r.kind == 'purchase'
             ? (r.key == '' && id.matches('buy-' + r.item + '-[A-Za-z0-9]{8,40}'))
             : r.kind == 'chest'
-              ? (r.key == '' && r.item == '')
+              ? (r.item == '' && (r.source == '' ? r.key == '' : dropChestOk(r)))
             : r.kind == 'spend-freeze'
               ? (r.item == '' && id == 'freeze-' + r.key)
               : (r.kind == 'spend-hint' && r.key == '' && id.matches('hint-use-[A-Za-z0-9]{8,40}') && r.item == ''));
@@ -303,7 +319,7 @@ service cloud.firestore {
         : (r.xpDelta == 0 && listGrantOk(oi, ni, item));
     }
     function chestOk(id, r, oldA, newA, oi, ni) {
-      return id == 'chest-' + string(oldA.get('ch', 0)) && newA.get('ch', 0) == oldA.get('ch', 0) + 1 && r.starsDelta == -40
+      return id == 'chest-' + string(oldA.get('ch', 0)) && newA.get('ch', 0) == oldA.get('ch', 0) + 1 && r.starsDelta == (r.source == 'drop' ? 0 : -40)
         && newA.get('chx', 0) == oldA.get('chx', 0) + r.xpDelta
         && chestPrizeOk(r, chestHex(r, oldA), chestItem(chestHex(r, oldA)), oi, ni);
     }
@@ -886,6 +902,63 @@ service cloud.firestore {
       allow update: if notAnon() && !exists(/databases/$(database)/documents/deleted/$(request.auth.uid)) && (duelJoinOk() || duelWinOk());
       allow delete: if isAdmin() || (notAnon() && request.auth.uid == resource.data.a
         && (resource.data.status != 'live' || request.time > resource.data.started + duration.value(10, 'm')));
+    }
+
+    // ---------- واجب الزعيم: الكوتش بيدي باقة ألغاز لمجموعة كاملة، وكل حل صح بيشيل نقطة من صحة الزعيم ----------
+    function assignmentOk(d) {
+      return d.keys().hasOnly(['title','group','step','motif','puzzles','due','by','at']) && d.keys().hasAll(['title','group','step','motif','puzzles','due','by','at'])
+        && safeText(d.title, 80) && d.title.size() >= 2
+        && safeText(d.group, 80) && d.group.size() >= 1
+        && d.step is int && d.step >= 1 && d.step <= 6
+        && d.motif is string && d.motif.matches('[A-Za-z0-9]{0,30}')
+        && d.puzzles is list && d.puzzles.size() >= 3 && d.puzzles.size() <= 20 && d.puzzles.toSet().size() == d.puzzles.size()
+        && d.due is timestamp && d.due > request.time && d.due < request.time + duration.value(61, 'd')
+        && d.by == request.auth.uid && d.at == request.time;
+    }
+    // كل كتابة بتضيف لغز واحد من ألغاز الواجب لآخر القايمة، قبل آخر ميعاد
+    function bossHitOk(a, old, d) {
+      return d.keys().hasOnly(['solved','done','at']) && d.solved is list
+        && d.solved.size() == old.size() + 1 && (old.size() == 0 || d.solved[0:old.size()] == old)
+        && d.solved[old.size()] in a.puzzles && !(d.solved[old.size()] in old)
+        && d.done == (d.solved.size() == a.puzzles.size())
+        && d.at == request.time && request.time < a.due;
+    }
+    function bossMember(aid) {
+      let u = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return u.role == 'student' && u.get('group', '') == get(/databases/$(database)/documents/assignments/$(aid)).data.group;
+    }
+    match /assignments/{aid} {
+      allow read: if isStaff() || (notAnon() && resource.data.group == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('group', ''));
+      allow create: if isStaff() && aid.matches('[A-Za-z0-9]{6,40}') && assignmentOk(request.resource.data);
+      allow update: if false;
+      allow delete: if isStaff();
+      match /progress/{uid} {
+        allow read: if isStaff() || (notAnon() && request.auth.uid == uid);
+        allow create: if notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))
+          && bossMember(aid)
+          && bossHitOk(get(/databases/$(database)/documents/assignments/$(aid)).data, [], request.resource.data);
+        allow update: if notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))
+          && request.time > resource.data.at + duration.value(2, 's')
+          && bossHitOk(get(/databases/$(database)/documents/assignments/$(aid)).data, resource.data.solved, request.resource.data);
+        allow delete: if isStaff();
+      }
+    }
+
+    // ---------- جوائز الحصة المباشرة: الكوتش بيبعت، والطالب بيستلمها مرة واحدة بإيصال ----------
+    function dropOk(uid, d) {
+      return d.keys().hasOnly(['type','amount','note','by','at']) && d.keys().hasAll(['type','amount','note','by','at'])
+        && (d.type == 'stars' ? (d.amount is int && d.amount >= 1 && d.amount <= 50)
+          : d.type == 'xp' ? (d.amount is int && d.amount >= 10 && d.amount <= 500)
+          : (d.type == 'chest' && d.amount == 0))
+        && safeText(d.note, 80) && d.by == request.auth.uid && d.at == request.time
+        && get(/databases/$(database)/documents/users/$(uid)).data.role == 'student'
+        && !exists(/databases/$(database)/documents/deleted/$(uid));
+    }
+    match /liveDrops/{uid}/drops/{did} {
+      allow read: if isStaff() || (notAnon() && request.auth.uid == uid);
+      allow create: if isStaff() && did.matches('[A-Za-z0-9]{6,40}') && dropOk(uid, request.resource.data);
+      allow update: if false;
+      allow delete: if isStaff() || (notAnon() && request.auth.uid == uid);
     }
 
     match /meta/{id} {

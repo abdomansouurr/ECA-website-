@@ -456,6 +456,88 @@ async function runSuite(label, rules, quiet) {
   await T("placement: dotted answer save", true, null, db => pt(db).update({ "answers.3": { k: "p", ok: 1, c: "e2e4", s: 3, q: "x" } }), seedPT);
   await T("placement: XSS string in score", false, null, db => pt(db).update({ status: "done", score: "<img src=x onerror=1>" }), seedPT);
   await T("placement: XSS string in suggested", false, null, db => pt(db).update({ status: "done", suggested: "1);alert(1);(" }), seedPT);
+  // boss homework: the coach assigns a pack to a group, every solve takes 1 HP
+  const BID = "bossAAAA1", PZ = ["p1aaa", "p2bbb", "p3ccc"];
+  const bossDoc = (x = {}) => Object.assign({ title: "Fork Dragon", group: "A", step: 2, motif: "fork", puzzles: PZ, due: TS.fromMillis(Date.now() + 7 * 864e5), by: "admin1", at: ts() }, x);
+  const bossRef = db => db.collection("assignments").doc(BID), progRef = (db, who = uid) => bossRef(db).collection("progress").doc(who);
+  const bossSeed = (prog, x = {}) => async s => { await staffSeed(s); await s.collection("assignments").doc(BID).set(bossDoc(Object.assign({ at: tsAgo(60000) }, x))); if (prog) await s.collection("assignments").doc(BID).collection("progress").doc(uid).set(prog); };
+  const hit = (solved, done, x = {}) => Object.assign({ solved, done, at: ts() }, x);
+  await T("boss: coach assigns a pack to a group", true, null, () => bossRef(adminCtx()).set(bossDoc()), staffSeed);
+  await T("boss: student assigns homework", false, rich, db => bossRef(db).set(bossDoc({ by: uid })), staffSeed);
+  await T("boss: title with HTML", false, null, () => bossRef(adminCtx()).set(bossDoc({ title: "<b>x</b>" })), staffSeed);
+  await T("boss: only 2 puzzles", false, null, () => bossRef(adminCtx()).set(bossDoc({ puzzles: ["a1a", "b2b"] })), staffSeed);
+  await T("boss: the same puzzle twice", false, null, () => bossRef(adminCtx()).set(bossDoc({ puzzles: ["p1aaa", "p1aaa", "p3ccc"] })), staffSeed);
+  await T("boss: deadline in the past", false, null, () => bossRef(adminCtx()).set(bossDoc({ due: tsAgo(60000) })), staffSeed);
+  await T("boss: deadline after 2 months", false, null, () => bossRef(adminCtx()).set(bossDoc({ due: TS.fromMillis(Date.now() + 90 * 864e5) })), staffSeed);
+  await T("boss: posted in someone else's name", false, null, () => bossRef(adminCtx()).set(bossDoc({ by: "coach9" })), staffSeed);
+  await T("boss: coach edits a sent homework", false, null, () => bossRef(adminCtx()).update({ title: "New" }), bossSeed());
+  await T("boss: student lists their group's homework", true, rich, db => db.collection("assignments").where("group", "==", "A").get(), bossSeed());
+  await T("boss: student lists another group's homework", false, rich, db => db.collection("assignments").where("group", "==", "B").get(), bossSeed());
+  await T("boss: student lists all homework", false, rich, db => db.collection("assignments").get(), bossSeed());
+  await T("boss: first hit", true, rich, db => progRef(db).set(hit(["p1aaa"], false)), bossSeed());
+  await T("boss: first hit with a puzzle from outside the pack", false, rich, db => progRef(db).set(hit(["zzzzz"], false)), bossSeed());
+  await T("boss: two hits at once", false, rich, db => progRef(db).set(hit(["p1aaa", "p2bbb"], false)), bossSeed());
+  await T("boss: student from another group", false, Object.assign({}, rich, { group: "B" }), db => progRef(db).set(hit(["p1aaa"], false)), bossSeed());
+  await T("boss: hit after the deadline", false, rich, db => progRef(db).set(hit(["p1aaa"], false)), bossSeed(null, { due: tsAgo(1000) }));
+  await T("boss: hit for another student", false, rich, db => progRef(db, other).set(hit(["p1aaa"], false)), bossSeed());
+  await T("boss: second hit", true, rich, db => progRef(db).set(hit(["p1aaa", "p2bbb"], false)), bossSeed({ solved: ["p1aaa"], done: false, at: tsAgo(5000) }));
+  await T("boss: hits too fast", false, rich, db => progRef(db).set(hit(["p1aaa", "p2bbb"], false)), bossSeed({ solved: ["p1aaa"], done: false, at: tsAgo(500) }));
+  await T("boss: the same puzzle hits twice", false, rich, db => progRef(db).set(hit(["p1aaa", "p1aaa"], false)), bossSeed({ solved: ["p1aaa"], done: false, at: tsAgo(5000) }));
+  await T("boss: earlier hits rewritten", false, rich, db => progRef(db).set(hit(["p2bbb", "p3ccc"], false)), bossSeed({ solved: ["p1aaa"], done: false, at: tsAgo(5000) }));
+  await T("boss: final hit defeats the boss", true, rich, db => progRef(db).set(hit(PZ, true)), bossSeed({ solved: ["p1aaa", "p2bbb"], done: false, at: tsAgo(5000) }));
+  await T("boss: final hit not marked done", false, rich, db => progRef(db).set(hit(PZ, false)), bossSeed({ solved: ["p1aaa", "p2bbb"], done: false, at: tsAgo(5000) }));
+  await T("boss: marked done early", false, rich, db => progRef(db).set(hit(["p1aaa", "p2bbb"], true)), bossSeed({ solved: ["p1aaa"], done: false, at: tsAgo(5000) }));
+  await T("boss: student reads another student's progress", false, rich, db => progRef(db, other).get(), bossSeed());
+  await T("boss: coach reads the progress", true, null, () => bossRef(adminCtx()).collection("progress").get(), bossSeed({ solved: ["p1aaa"], done: false, at: tsAgo(5000) }));
+  const bossPay = (db, stars = 10, xp = 200) => econ(db, { kind: "earn", source: "boss", key: BID, starsDelta: stars, xpDelta: xp, id: "boss-" + BID });
+  await T("boss: reward after defeating the boss", true, rich, db => bossPay(db), bossSeed({ solved: PZ, done: true, at: tsAgo(5000) }));
+  await T("boss: reward while the boss is alive", false, rich, db => bossPay(db), bossSeed({ solved: ["p1aaa"], done: false, at: tsAgo(5000) }));
+  await T("boss: forged reward", false, rich, db => bossPay(db, 50, 1000), bossSeed({ solved: PZ, done: true, at: tsAgo(5000) }));
+  await T("boss: reward twice", false, rich, async db => { await bossPay(db); await bossPay(db); }, bossSeed({ solved: PZ, done: true, at: tsAgo(5000) }));
+  // live class drops: the coach sends, the student claims once
+  const DRID = "dropAAAA1", dropRef = (db, who = uid, id = DRID) => db.collection("liveDrops").doc(who).collection("drops").doc(id);
+  const dropDoc = (x = {}) => Object.assign({ type: "stars", amount: 10, note: "Great move", by: "admin1", at: ts() }, x);
+  const dropSeed = d => async s => { await staffSeed(s); await s.collection("users").doc(uid).set(rich); if (d) await s.collection("liveDrops").doc(uid).collection("drops").doc(DRID).set(Object.assign(dropDoc(), { at: tsAgo(1000) }, d)); };
+  await T("drop: coach sends stars", true, null, () => dropRef(adminCtx()).set(dropDoc()), dropSeed());
+  await T("drop: coach sends an XP boost", true, null, () => dropRef(adminCtx()).set(dropDoc({ type: "xp", amount: 200 })), dropSeed());
+  await T("drop: coach sends a mystery chest", true, null, () => dropRef(adminCtx()).set(dropDoc({ type: "chest", amount: 0 })), dropSeed());
+  await T("drop: student sends a drop", false, rich, db => dropRef(db, other).set(dropDoc({ by: uid })), async s => { await s.collection("users").doc(other).set(fresh); });
+  await T("drop: 999 stars", false, null, () => dropRef(adminCtx()).set(dropDoc({ amount: 999 })), dropSeed());
+  await T("drop: message with HTML", false, null, () => dropRef(adminCtx()).set(dropDoc({ note: "<img src=x>" })), dropSeed());
+  await T("drop: chest with stars inside", false, null, () => dropRef(adminCtx()).set(dropDoc({ type: "chest", amount: 5 })), dropSeed());
+  await T("drop: to an account that does not exist", false, null, () => dropRef(adminCtx(), "ghost1").set(dropDoc()), dropSeed());
+  const dropClaim = (db, stars, xp, del = true, id = DRID) => { const ur = db.collection("users").doc(uid), rr = ur.collection("economy").doc("drop-" + id), dr = dropRef(db, uid, id); return db.runTransaction(async tx => {
+    const p = (await tx.get(ur)).data(); await tx.get(rr); await tx.get(dr);
+    const arena = Object.assign({}, p.arena || {}); arena.stars = (Number(arena.stars) || 0) + stars; arena.xp = (Number(arena.xp) || 0) + xp;
+    if (del) tx.delete(dr);
+    tx.update(ur, { arena, lastEconomy: "drop-" + id });
+    tx.set(rr, { uid, kind: "earn", source: "drop", key: id, day: today, item: "", score: 0, starsDelta: stars, xpDelta: xp, missionBonus: false, at: ts() });
+  }); };
+  await T("drop: student claims the stars", true, rich, db => dropClaim(db, 10, 0), dropSeed({}));
+  await T("drop: claims more stars than sent", false, rich, db => dropClaim(db, 30, 0), dropSeed({}));
+  await T("drop: claims and keeps the drop", false, rich, db => dropClaim(db, 10, 0, false), dropSeed({}));
+  await T("drop: claims a drop that was never sent", false, rich, db => dropClaim(db, 10, 0), dropSeed());
+  await T("drop: claims the XP boost", true, rich, db => dropClaim(db, 0, 200), dropSeed({ type: "xp", amount: 200 }));
+  await T("drop: XP boost claimed as stars", false, rich, db => dropClaim(db, 200, 0), dropSeed({ type: "xp", amount: 200 }));
+  await T("drop: student reads their drops", true, rich, db => db.collection("liveDrops").doc(uid).collection("drops").get(), dropSeed({}));
+  await T("drop: student reads someone else's drops", false, rich, db => db.collection("liveDrops").doc(other).collection("drops").get(), dropSeed({}));
+  await T("drop: student deletes someone else's drop", false, rich, db => dropRef(db, other).delete(), async s => { await dropSeed({})(s); await s.collection("liveDrops").doc(other).collection("drops").doc(DRID).set(dropDoc({ at: tsAgo(1000) })); });
+  const chestDrop = (db, who, x = {}) => { const ur = db.collection("users").doc(who), rr = ur.collection("economy").doc("chest-0"), dr = dropRef(db, who); return db.runTransaction(async tx => {
+    const p = (await tx.get(ur)).data(); await tx.get(rr); await tx.get(dr);
+    const arena = Object.assign({}, p.arena || {}), stars = x.stars || 0, xp = x.xp || 0;
+    arena.stars = (Number(arena.stars) || 0) + stars; arena.xp = (Number(arena.xp) || 0) + xp; arena.ch = (Number(arena.ch) || 0) + 1; arena.chx = (Number(arena.chx) || 0) + xp;
+    if (x.keep !== true) tx.delete(dr);
+    tx.update(ur, { arena, lastEconomy: "chest-0" });
+    tx.set(rr, { uid: who, kind: "chest", source: "drop", key: DRID, day: today, item: "", score: 0, starsDelta: stars, xpDelta: xp, missionBonus: false, at: ts() });
+  }); };
+  { const who = chestUser("2"), sendChest = (type = "chest") => seedAs(s => s.collection("liveDrops").doc(who).collection("drops").doc(DRID).set(dropDoc({ type, amount: type === "chest" ? 0 : 10, at: tsAgo(1000) })));
+    await spinT("drop: free chest from the coach", true, who, rich, async db => { await sendChest(); return chestDrop(db, who, { xp: 150 }); });
+    await spinT("drop: chest from the coach still charges stars", false, who, rich, async db => { await sendChest(); return chestDrop(db, who, { stars: -40, xp: 150 }); });
+    await spinT("drop: free chest with no drop", false, who, rich, db => chestDrop(db, who, { xp: 150 }));
+    await spinT("drop: free chest from a stars drop", false, who, rich, async db => { await sendChest("stars"); return chestDrop(db, who, { xp: 150 }); });
+    await spinT("drop: free chest that keeps the drop", false, who, rich, async db => { await sendChest(); return chestDrop(db, who, { xp: 150, keep: true }); });
+    await spinT("drop: free chest with a bigger prize", false, who, rich, async db => { await sendChest(); return chestDrop(db, who, { xp: 300 }); }); }
+
   // staff: notification batch sizes
   const notif = () => ({ type: "announcement", titleAr: "t", titleEn: "t", bodyAr: "b", bodyEn: "b", createdAt: ts(), read: false });
   const seedStudents = async s => { await staffSeed(s); for (let i = 0; i < 12; i++) await s.collection("users").doc("s" + i).set(fresh); };
