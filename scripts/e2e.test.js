@@ -78,7 +78,8 @@ async function openPage(label, viewport) {
   sessions[sessionId] = page;
   const send = (m, p) => bsend(m, p, sessionId);
   page.send = send;
-  page.ev = async expr => { const r = await send("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true }); if (r.exceptionDetails) throw new Error(label + " eval: " + (r.exceptionDetails.exception?.description || r.exceptionDetails.text).slice(0, 400) + " :: " + expr.slice(0, 80)); return r.result.value; };
+  // كل استدعاء في الصفحة ليه حد أقصى: لو علّق نعرف فين بدل ما الاختبار يقف ساعات
+  page.ev = async expr => { let tm; const r = await Promise.race([send("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true }), new Promise((_, no) => { tm = setTimeout(() => no(new Error(label + " eval timed out after 7 min :: " + expr.slice(0, 160))), 7 * 60000); })]).finally(() => clearTimeout(tm)); if (r.exceptionDetails) throw new Error(label + " eval: " + (r.exceptionDetails.exception?.description || r.exceptionDetails.text).slice(0, 400) + " :: " + expr.slice(0, 80)); return r.result.value; };
   await send("Runtime.enable"); await send("Page.enable"); await send("Network.enable");
   await send("Emulation.setFocusEmulationEnabled", { enabled: true });   // keeps animation running on pages in the background
   await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });   // headless Chrome asks for reduced motion by default
@@ -742,6 +743,35 @@ async function login(p, id) {
     check("fun: solving the golden puzzle first try pays its reward", solvedGold === "solved" && !!(await until(() => read("users/" + A + "/economy/golden-" + cday), 15000)), solvedGold);
     check("fun: five in a row opens the streak chest", !!(await until(() => read("users/" + A + "/economy/combo-" + cday), 15000)));
     await pa.ev("lpExit(); switchTab('home')");
+
+    // ---------- assist: first-run tour, back where you left off, comfort settings ----------
+    const tour = await pa.ev(`(() => { const u = currUser(), a = u.arena, keep = { t: a.puzTried, d: a.days }; a.puzTried = 0; a.days = [];
+      localStorage.removeItem('ECA_TOUR_' + u.id); const old = document.getElementById('ecaTour'); if (old) old.remove(); switchTab('home');
+      const shown = !!document.getElementById('ecaTour'); asTourNext(); asTourNext(); const last = document.getElementById('ecaTour').textContent;
+      asTourEnd(false); a.puzTried = keep.t; a.days = keep.d; a.puzTried = 0; const again = asTourDue(); a.puzTried = keep.t;
+      return { shown, last: /العب دلوقتي|Play now/.test(last), gone: !document.getElementById('ecaTour'), again }; })()`);
+    check("assist: first-run tour shows three steps once and can be closed", tour.shown && tour.last && tour.gone && tour.again === false, tour);
+    const back = await pa.ev("(() => { const u = currUser(); asPlaceReady = ''; localStorage.setItem('ECA_LAST_PLACE', JSON.stringify({ uid: u.id, at: Date.now(), tab: 'arena', sub: 'cards', lesson: '' })); switchTab('home'); const where = tab + '|' + arena.sub; switchTab('home'); return where; })()");
+    check("assist: opening again brings the student back where they were", back === "arena|cards", back);
+    const comfort = await pa.ev(`(() => { const h = document.documentElement, out = {};
+      out.menu = document.body.innerHTML.includes('asComfortOpen()');
+      asComfortOpen(); out.modal = !!document.getElementById('ecaComfort');
+      asComfortToggle('big'); asComfortToggle('cb'); asComfortToggle('text'); out.on = h.classList.contains('eca-big-board') && h.classList.contains('eca-cb') && h.classList.contains('eca-big-text');
+      asComfortToggle('calm'); document.querySelectorAll('.eca-fx-canvas').forEach(e => e.remove()); ecaConfetti(20); out.calm = h.classList.contains('eca-calm') && !document.querySelector('.eca-fx-canvas');
+      ['big', 'cb', 'text', 'calm'].forEach(k => asComfortToggle(k)); out.off = !['eca-big-board', 'eca-cb', 'eca-big-text', 'eca-calm'].some(c => h.classList.contains(c));
+      asComfortClose(); out.closed = !document.getElementById('ecaComfort'); return out; })()`);
+    check("assist: comfort settings turn on and off from the account menu", comfort.menu && comfort.modal && comfort.on && comfort.calm && comfort.off && comfort.closed, comfort);
+    await pg.send("Page.bringToFront");
+    await pg.ev("switchTab('command')");
+    check("assist: the coach sees «need your attention»", !!(await until(() => pg.ev("!!document.getElementById('asAlerts')"), 10000)));
+    const alerts = await pg.ev(`(() => { db.users.push({ id: 'flowFake1', role: 'student', name: 'Test Kid', group: 'A', arena: { days: ['2020-01-01'], mot: { fork: { t: 10, s: 2 } } } });
+      const mine = asAlerts().filter(x => x.s.id === 'flowFake1').map(x => x.icon); db.users.pop();
+      const first = cmdStudents()[0]; asCheer(first.id); const picked = CMD.dropTo === 's:' + first.id;
+      const text = prSummaryText(first); return { mine, picked, encourage: text.includes('💬') }; })()`);
+    check("assist: an absent student and a weak idea both raise an alert", alerts.mine.includes("💤") && alerts.mine.includes("🧩"), alerts);
+    check("assist: 🎁 picks the student in the live reward box", alerts.picked, alerts);
+    check("assist: the parent summary ends with something to encourage", alerts.encourage, alerts);
+    await pa.send("Page.bringToFront");
     await pa.ev("lpExit(); switchTab('home')");
 
     // ---------- connection drops: banner, and a reward earned offline is saved once, when it is back ----------

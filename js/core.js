@@ -1074,6 +1074,7 @@
           </div>
           ${!ai.google ? mi("linkGoogle()", "ربط حساب Google", '<svg viewBox="0 0 24 24" class="w-4 h-4" aria-hidden="true"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.9-5.5 3.9-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.3 14.6 2.3 12 2.3 6.6 2.3 2.3 6.6 2.3 12s4.3 9.7 9.7 9.7c5.6 0 9.3-3.9 9.3-9.5 0-.6-.1-1.1-.2-1.6H12z"/></svg>') : ""}
           ${ai.password ? mi("changeMyPassword()", "تغيير كلمة السر", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3m-3 3 2 2m-5 1 2 2"/></svg>') : ""}
+          ${mi("asComfortOpen()", "راحة العين والحركة", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>')}
           ${mi("logout()", "تسجيل الخروج", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11"/></svg>', "text-red-300")}
         </div>
       </div>`;
@@ -2203,10 +2204,11 @@
     }));
     let bgLast = 0;
     function anim(now) {
-      if (!bgStill && now && now - bgLast < 32) { requestAnimationFrame(anim); return; }
+      const still = bgStill || bgRoot.classList.contains("eca-calm");
+      if (!still && now && now - bgLast < 32) { requestAnimationFrame(anim); return; }
       bgLast = now || 0;
       ctx.clearRect(0, 0, cv.width, cv.height);
-      const rgb = bgRGB(), mv = bgStill ? 0 : 1, tm = now || 0, lite = bgRoot.classList.contains("light");
+      const rgb = bgRGB(), mv = still ? 0 : 1, tm = now || 0, lite = bgRoot.classList.contains("light");
       bgPieces.forEach(p => {
         p.y += p.vy * mv; p.x += (p.vx + Math.sin(tm * 0.0004 + p.ph) * 0.15) * mv; p.rot += p.vr * mv;
         if (p.y < -p.s) { p.y = cv.height + p.s; p.x = Math.random() * cv.width; }
@@ -2229,7 +2231,7 @@
           if (d < 19600) { ctx.strokeStyle = "rgba(" + rgb + "," + (0.2 * (1 - d / 19600)) + ")"; ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.stroke(); }
         }
       }
-      if (bgStill) setTimeout(() => requestAnimationFrame(anim), 1000); else requestAnimationFrame(anim);
+      if (still) setTimeout(() => requestAnimationFrame(anim), 1000); else requestAnimationFrame(anim);
     }
     requestAnimationFrame(anim);
     const h0 = (location.hash || "#home").slice(1);

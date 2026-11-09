@@ -7,9 +7,9 @@
   <link rel="manifest" href="manifest.json" />
   <!-- لوجو الأكاديمية على تاب المتصفح: ICO في الجذر (الفولباك الأضمن — المتصفحات بتطلبه من /favicon.ico مباشرة)
        + PNG للتاب الحديث + apple-touch للآيفون — كلهم بنفس اللوجو ومع رقم نسخة يكسر الكاش -->
-  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v79" />
-  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v79" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v79" />
+  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v80" />
+  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v80" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v80" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ECA Chess" />
@@ -306,7 +306,7 @@
     @keyframes ecaRewardPop { 0% { opacity: 0; transform: translateY(12px) scale(.8); } 25% { opacity: 1; transform: translateY(0) scale(1.08); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px) scale(1); } }
     @media (prefers-reduced-motion: reduce) { .eca-reward-pop { animation: none; } }
 
-    /* ===== eca-v79: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
+    /* ===== eca-v80: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
     @keyframes ecaItemIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     .stagger-in > *, .st-item { animation-duration: .24s; }
     .stagger-in > *:nth-child(1) { animation-delay: 0.045s }
@@ -524,6 +524,18 @@
     @media (prefers-reduced-motion: reduce) { .eca-play-icon { animation: none; } }
     .eca-golden { background: linear-gradient(135deg, #f59e0b, #facc15); color: #422006; box-shadow: 0 6px 20px rgba(245,158,11,.4); }
     .eca-golden span { color: #422006; }
+    /* جولة أول مرة */
+    .eca-tour-icon { font-size: 56px; line-height: 1; }
+    .eca-tour-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(128,128,128,.4); }
+    .eca-tour-dot.is-on { background: #facc15; width: 20px; border-radius: 4px; }
+    /* إعدادات الراحة (اختيارية من قايمة الحساب) */
+    html.eca-big-board .eca-board { max-width: min(96vw, 720px); }
+    html.eca-big-text { font-size: 112.5%; }
+    html.eca-calm *, html.eca-calm *::before, html.eca-calm *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+    html.eca-cb .eca-board { --sq-l: #eef2f7; --sq-d: #7a93b4; }
+    html.eca-cb .eca-sq.good::before { background: rgba(37,99,235,.55); }
+    html.eca-cb .eca-sq.bad::before { background: rgba(249,115,22,.65); }
+    html.eca-cb .eca-sq.hint::before { box-shadow: inset 0 0 0 4px #2563eb; }
     .eca-install-card { position: fixed; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 70; width: min(440px, calc(100vw - 24px)); display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 18px; background: linear-gradient(135deg, #1d4ed8, #7c3aed); color: #fff; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
     .eca-install-card b, .eca-install-card span, .eca-install-card button:not(.gold-btn) { color: #fff; }
     .eca-net-banner { position: fixed; top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 90; max-width: calc(100vw - 24px); padding: 6px 14px; border-radius: 999px; background: #7c2d12; color: #fff; font-size: 12px; font-weight: 700; text-align: center; box-shadow: 0 6px 18px rgba(0,0,0,.35); pointer-events: none; }
@@ -673,8 +685,8 @@
     html[data-ecap="piece-gold"] .eca-pc.w, .eca-skin-piece-gold .eca-pc.w { color: #fde68a; text-shadow: 0 0 1px #78350f, 0 0 1px #78350f, 0 1px 3px rgba(0,0,0,.5); }
     html[data-ecap="piece-gold"] .eca-pc.b, .eca-skin-piece-gold .eca-pc.b { color: #7c2d12; text-shadow: 0 0 1px #fde047, 0 1px 2px rgba(0,0,0,.45); }
   </style>
-  <script>window.ECA_VERSION = "eca-v79";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v79" />
+  <script>window.ECA_VERSION = "eca-v80";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v80" />
 </head>
 <body class="min-h-screen flex flex-col relative">
   <a href="#mainView" class="skip-link">تخطّي إلى المحتوى</a>
@@ -838,44 +850,45 @@
     } catch (_) {}
   </script>
   <script type="application/json" id="ecaLazyModules">{"finance":"js/finance.js"}</script>
-  <script src="js/core.js?v=eca-v79"></script>
+  <script src="js/core.js?v=eca-v80"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v79"></script>
+  <script src="js/arena.js?v=eca-v80"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v79"></script>
-  <script src="js/streaks.js?v=eca-v79"></script>
-  <script src="js/review.js?v=eca-v79"></script>
-  <script src="js/quality.js?v=eca-v79"></script>
-  <script src="js/announce.js?v=eca-v79"></script>
-  <script src="js/progress.js?v=eca-v79"></script>
-  <script src="js/arena2.js?v=eca-v79"></script>
+  <script src="js/extras.js?v=eca-v80"></script>
+  <script src="js/streaks.js?v=eca-v80"></script>
+  <script src="js/review.js?v=eca-v80"></script>
+  <script src="js/quality.js?v=eca-v80"></script>
+  <script src="js/announce.js?v=eca-v80"></script>
+  <script src="js/progress.js?v=eca-v80"></script>
+  <script src="js/arena2.js?v=eca-v80"></script>
   <!-- homework, coach dashboards, tournaments, and placement test load on demand via loadModule -->
-  <script src="js/ux.js?v=eca-v79"></script>
-  <script src="js/annotate.js?v=eca-v79"></script>
-  <script src="js/gamify.js?v=eca-v79"></script>
-  <script src="js/adventure.js?v=eca-v79"></script>
-  <script src="js/duel.js?v=eca-v79"></script>
-  <script src="js/fx.js?v=eca-v79"></script>
-  <script src="js/speedarena.js?v=eca-v79"></script>
-  <script src="js/loot.js?v=eca-v79"></script>
-  <script src="js/dojo.js?v=eca-v79"></script>
-  <script src="js/cards.js?v=eca-v79"></script>
-  <script src="js/stamina.js?v=eca-v79"></script>
-  <script src="js/social.js?v=eca-v79"></script>
-  <script src="js/friendduel.js?v=eca-v79"></script>
-  <script src="js/weekly.js?v=eca-v79"></script>
-  <script src="js/boss.js?v=eca-v79"></script>
-  <script src="js/command.js?v=eca-v79"></script>
-  <script src="js/lessonpuz.js?v=eca-v79"></script>
-  <script src="js/parentreport.js?v=eca-v79"></script>
-  <script src="js/care.js?v=eca-v79"></script>
-  <script src="js/fun.js?v=eca-v79"></script>
-  <script src="js/flow.js?v=eca-v79"></script>
+  <script src="js/ux.js?v=eca-v80"></script>
+  <script src="js/annotate.js?v=eca-v80"></script>
+  <script src="js/gamify.js?v=eca-v80"></script>
+  <script src="js/adventure.js?v=eca-v80"></script>
+  <script src="js/duel.js?v=eca-v80"></script>
+  <script src="js/fx.js?v=eca-v80"></script>
+  <script src="js/speedarena.js?v=eca-v80"></script>
+  <script src="js/loot.js?v=eca-v80"></script>
+  <script src="js/dojo.js?v=eca-v80"></script>
+  <script src="js/cards.js?v=eca-v80"></script>
+  <script src="js/stamina.js?v=eca-v80"></script>
+  <script src="js/social.js?v=eca-v80"></script>
+  <script src="js/friendduel.js?v=eca-v80"></script>
+  <script src="js/weekly.js?v=eca-v80"></script>
+  <script src="js/boss.js?v=eca-v80"></script>
+  <script src="js/command.js?v=eca-v80"></script>
+  <script src="js/lessonpuz.js?v=eca-v80"></script>
+  <script src="js/parentreport.js?v=eca-v80"></script>
+  <script src="js/care.js?v=eca-v80"></script>
+  <script src="js/fun.js?v=eca-v80"></script>
+  <script src="js/flow.js?v=eca-v80"></script>
+  <script src="js/assist.js?v=eca-v80"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v79"></script>
+  <script type="module" src="js/firebase.js?v=eca-v80"></script>
 </body>
 </html>
