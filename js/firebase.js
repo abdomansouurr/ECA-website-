@@ -683,7 +683,7 @@
       let id = "", source = "", key = "", day = "", item = "", score = 0, starsDelta = 0, xpDelta = 0, spinHex = "";
       if (op === "earn") {
         source = String(request.source || ""); key = String(request.key || ""); day = String(request.day || "");
-        if (source === "login" || source === "spin") { day = cairoDayKey(); key = day; }
+        if (source === "login" || source === "spin" || source === "golden" || source === "combo") { day = cairoDayKey(); key = day; }
         if (source === "boss" || source === "drop") day = cairoDayKey();
         if (!dayOk(day)) return { ok: false };
         if (source === "lesson" && /^[1-6]-[0-9]{1,2}$/.test(key)) id = "lesson-" + key;
@@ -692,7 +692,9 @@
         else if (source === "coach" && /^([1-9]|10)$/.test(key)) id = "coach-" + day + "-" + key;
         else if (source === "login") id = "login-" + day;
         else if (source === "rush") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "rush-" + day; key = day; }
-        else if (source === "quest" && ["daily", "puzzles", "win", "lesson"].includes(key)) id = "quest-" + day + "-" + key;
+        else if (source === "quest" && ["daily", "puzzles", "win", "lesson", "streak3", "rush6"].includes(key)) id = "quest-" + day + "-" + key;
+        else if (source === "golden" || source === "combo") id = source + "-" + day;
+        else if (source === "event" && /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(key)) id = "event-" + key;
         else if (source === "pawn") id = "pawn-" + day;
         else if (source === "arena" && /^[A-Za-z0-9-]{1,40}$/.test(key) && [1, 2, 3].includes(request.rank)) id = "arena-" + key;
         else if (source === "spin") { id = "spin-" + day; spinHex = await spinHexOf(uid, day); }
@@ -743,7 +745,7 @@
           else if (source === "login") starsDelta = loginRewardStars(day);
           else if (source === "rush") starsDelta = Math.min(5, Math.floor(score / 3));
           else if (source === "quest") {
-            starsDelta = { daily: 1, puzzles: 2, win: 2, lesson: 5 }[key];
+            starsDelta = { daily: 1, puzzles: 2, win: 2, lesson: 5, streak3: 2, rush6: 2 }[key];
             const claimed = arena.qc && arena.qc.d === day && Array.isArray(arena.qc.k) ? arena.qc.k : [];
             arena.qc = { d: day, k: [...claimed, key] };
           }
@@ -772,6 +774,8 @@
             } else if (spinHex !== "e") starsDelta = "012345".includes(spinHex) ? 1 : "6789".includes(spinHex) ? 2 : "abc".includes(spinHex) ? 3 : 5;
           }
           else if (source === "vision") starsDelta = Math.min(10, Math.floor(score / 3));
+          else if (source === "golden" || source === "combo") starsDelta = 3;
+          else if (source === "event") { starsDelta = 8; arena.evc = key; }
           else if (source === "boss") {
             const prog = await tx.get(doc(firestore, "assignments", key, "progress", uid));
             if (!prog.exists() || prog.data().done !== true) return { ok: false, code: "boss-alive" };
@@ -865,7 +869,7 @@
         let again = false;
         for (const [k, q] of [...queued]) {
           if (!me || me.uid !== q.uid) { queued.delete(k); continue; }
-          try { await ecoNow(q.req); queued.delete(k); }
+          try { await ecoOne(q.req); queued.delete(k); }
           catch (e) { if (offlineErr(e)) { again = true; break; } console.warn("Queued reward failed:", e && e.code); queued.delete(k); }
         }
         flushing = false;
@@ -873,8 +877,12 @@
       };
       addEventListener("online", () => { tries = 0; setTimeout(flush, 1500); });
       window.ecaPendingRewards = () => queued.size;
+      // كل الجوايز بتتسجّل واحدة ورا التانية: لو اتنين اتبعتوا في نفس اللحظة (جايزة اللغز + اللغز الذهبي + الصندوق)
+      // التاني كان بيقرا رصيد قديم والقواعد بترفضه
+      let ecoChain = Promise.resolve();
+      const ecoOne = request => { const p = ecoChain.then(() => ecoNow(request)); ecoChain = p.catch(() => {}); return p; };
       window.fbEconomy = async request => {
-        try { return await ecoNow(request); }
+        try { return await ecoOne(request); }
         catch (e) {
           if (!me || !request || request.op !== "earn" || !offlineErr(e)) throw e;
           queued.set(me.uid + "|" + JSON.stringify(request), { uid: me.uid, req: request });

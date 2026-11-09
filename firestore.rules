@@ -188,7 +188,7 @@ service cloud.firestore {
       return score >= 15 ? 5 : score >= 12 ? 4 : score >= 9 ? 3 : score >= 6 ? 2 : 1;
     }
     function questStars(key) {
-      return key == 'daily' ? 1 : key == 'puzzles' || key == 'win' ? 2 : key == 'lesson' ? 5 : 0;
+      return key == 'daily' ? 1 : key == 'puzzles' || key == 'win' || key == 'streak3' || key == 'rush6' ? 2 : key == 'lesson' ? 5 : 0;
     }
     function loginStars(day) {
       return int(day.split('-')[2]) % 7 == 0 ? 3 : int(day.split('-')[2]) % 3 == 0 ? 2 : 1;
@@ -236,7 +236,9 @@ service cloud.firestore {
     }
     // كل مكافأة بتتفحص بمسارها بس (عشان حد الـ 1000 عملية في الطلب)
     function economyEarnOk(id, r, u) {
-      return r.source == 'lesson'
+      // الجوايز الجديدة بتتفحص في الأول وبتعدّي السلسلة كلها (حد الـ 1000 عملية مع ملف طالب كبير)
+      return r.source in ['golden','combo','event'] ? economyFunOk(id, r)
+        : r.source == 'lesson'
           ? (r.key.matches('[1-6]-[0-9]{1,2}') && id == 'lesson-' + r.key && u.get('att', {}).get(r.key, false) == true
               && r.starsDelta == 1 && r.xpDelta == 20 && r.missionBonus == false)
         : r.source == 'puzzle'
@@ -252,7 +254,7 @@ service cloud.firestore {
           ? (r.key == r.day && id == 'rush-' + r.day && r.score >= 3 && r.score <= 1000
               && r.starsDelta == rushStars(r.score) && r.xpDelta == rushStars(r.score) * 20 && r.missionBonus == false)
         : r.source == 'quest'
-          ? (r.key in ['daily','puzzles','win','lesson'] && id == 'quest-' + r.day + '-' + r.key
+          ? (r.key in ['daily','puzzles','win','lesson','streak3','rush6'] && id == 'quest-' + r.day + '-' + r.key
               && r.starsDelta == questStars(r.key) && r.xpDelta == questStars(r.key) * 20 && r.missionBonus == false
               && (r.key != 'lesson' || (u.get('arena', {}).get('ql', {}).get('d', '') == r.day && u.get('arena', {}).get('ql', {}).get('n', 0) >= 10)))
         : r.source == 'login'
@@ -278,6 +280,17 @@ service cloud.firestore {
         : r.source == 'drop'
           ? (r.key.matches('[A-Za-z0-9]{6,40}') && id == 'drop-' + r.key && r.missionBonus == false && dropPayOk(r))
         : false;
+    }
+    // اللغز الذهبي وصندوق الـ 5 ورا بعض: 3 نجوم مرة في اليوم. حدث الأسبوع: 8 نجوم مرة في الأسبوع
+    function economyFunOk(id, r) {
+      return r.missionBonus == false && (r.source == 'event'
+        ? (r.key.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') && id == 'event-' + r.key && r.starsDelta == 8 && r.xpDelta == 160 && eventWeekOk(r.key))
+        : (r.key == r.day && id == r.source + '-' + r.day && r.starsDelta == 3 && r.xpDelta == 60));
+    }
+    // حدث الأسبوع: الجايزة مرة لكل أسبوع، ومفتاحها سبت الأسبوع ده بس (مش أي تاريخ، عشان ما تتصرفش كل يوم)
+    function eventWeekOk(k) {
+      let t = timestamp.date(int(k.split('-')[0]), int(k.split('-')[1]), int(k.split('-')[2]));
+      return t.dayOfWeek() == 6 && request.time > t - duration.value(1, 'd') && request.time < t + duration.value(8, 'd');
     }
     // واجب الزعيم: الجايزة بعد ما الطالب يحل كل ألغاز الواجب
     function bossDone(r) {

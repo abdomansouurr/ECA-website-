@@ -38,6 +38,9 @@ function flNext(u) {
   // جوايز خلصت ومستنية الاستلام
   const ready = (typeof ECA_QUESTS !== "undefined" ? ECA_QUESTS : []).find(q => ecaQuestProgress(u, q.key) >= q.goal && !ecaQuestClaimed(u, q.key));
   if (ready) return { key: "claim", icon: "🎁", title: FLL("جوايزك مستنياك", "Your rewards are waiting"), sub: FLL(`استلم ⭐ ${ready.stars} من أهداف النهاردة`, `Claim ⭐ ${ready.stars} from today's quests`), q: ready.key };
+  // حدث الأسبوع خلص ومستني الاستلام
+  const ev = window.funEventState ? funEventState(u) : null;
+  if (ev && ev.done && !ev.claimed) return { key: "eventClaim", icon: "🎪", title: FLL("كسبت حدث الأسبوع!", "You won the weekly event!"), sub: FLL("استلم جايزتك", "Claim your reward") };
   // واجب الزعيم
   const boss = ((arena.boss && arena.boss.list) || []).find(b => !b.done && b.dueMs > Date.now() && (b.solved || []).length < b.puzzles.length);
   if (boss) { const hp = boss.puzzles.length - (boss.solved || []).length; return { key: "boss", icon: "🐉", title: FLL("واجب الزعيم: ", "Boss homework: ") + boss.title, sub: FLL(`باقي ${hp} ضربة`, `${hp} hits to go`), id: boss.id }; }
@@ -49,6 +52,8 @@ function flNext(u) {
   // تحدي الأسبوع
   const W = arena.weekly;
   if (W && W.doc && W.att && !W.att.solved && (Number(W.att.n) || 0) < 2) return { key: "weekly", icon: "🏅", title: FLL("تحدي الأسبوع", "Challenge of the week"), sub: FLL("حلّه وادخل قاعة المشاهير", "Solve it to enter the Hall of Fame") };
+  // حدث الأسبوع
+  if (ev && !ev.done) return { key: "event", icon: "🎪", title: FLL("حدث الأسبوع: ", "Weekly event: ") + lpThemeName(ev.theme), sub: FLL(`${ev.n} من ${FUN_EVENT_GOAL} لغز`, `${ev.n} of ${FUN_EVENT_GOAL} puzzles`) };
   // الدوجو: ألغاز غلط جه وقت الانتقام منها
   const due = typeof dojoDue === "function" ? dojoDue().length : 0;
   if (due) return { key: "dojo", icon: "🥋", title: FLL("دوجو الانتقام", "Dojo Revenge"), sub: FLL(`${due} لغز تقدر تنتقم منه دلوقتي`, `${due} puzzles ready for revenge`) };
@@ -63,6 +68,7 @@ window.flNext = flNext;
 function flHere(n) {
   if (!n || tab !== "arena") return false;
   if (n.key === "lesson" || n.key === "more") return arena.sub === "puzzles" && !!arena.puz.lesson;
+  if (n.key === "event") return arena.sub === "puzzles" && arena.puz.lesson === "ev";
   return { boss: "boss", weekly: "weekly", bot: "play", dojo: "puzzles", resume: "play" }[n.key] === arena.sub;
 }
 
@@ -72,6 +78,8 @@ function ecaPlayNow() {
   if (!n) return;
   if (window.ecaSfx) ecaSfx("ting");
   if (n.key === "resume") return careResume();
+  if (n.key === "eventClaim") return funEventClaim();
+  if (n.key === "event") return funEventStart();
   if (n.key === "claim") { if (tab !== "home") switchTab("home"); return ecaClaimQuest(n.q); }
   if (n.key === "lesson") return lpStart(n.lesson);
   if (n.key === "more") return lpStart(flRandomLesson(u));

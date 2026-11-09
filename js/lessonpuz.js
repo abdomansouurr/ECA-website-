@@ -99,6 +99,8 @@ function lpTitle(key) {
   const [s, i] = String(key).split("-").map(Number), st = STEPS.find(x => x.step === s), les = st && st.lessons[i];
   return les ? String(les.t).replace(/\s*\(\s*step\s*\d\s*\)\s*$/i, "").replace(/^\d+-/, "").trim() : String(key);
 }
+// أفكار الدرس، أو فكرة حدث الأسبوع لو المفتاح "ev" (fun.js)
+function lpThemesOf(key) { return key === "ev" ? (window.funEventTheme ? [funEventTheme()] : []) : ECA_LESSON_THEMES[key] || null; }
 function lpStepOf(key) { return Number(String(key).split("-")[0]) || 1; }
 
 // ================= المستوى الذكي: تقييم ألغاز لكل طالب بيعلى ويوطى مع كل لغز (زي Elo) =================
@@ -191,7 +193,7 @@ function lpDailyCount(u) {
 
 // ================= تشغيل ألغاز الدرس في «ألغاز على الرقعة» =================
 function lpStart(key) {
-  if (!ECA_LESSON_THEMES[key]) return;
+  if (!(lpThemesOf(key) || []).length) return;
   const Z = arena.puz, u = currUser();
   Z.lesson = key;
   Z.lessonLv = Z.lessonLv || Math.min(6, Math.max(1, Number(u && u.level) || 1));
@@ -222,7 +224,7 @@ window.lpExit = lpExit;
     Z.status = "loading"; Z.sel = null; Z.hint = null; Z.flash = null; arenaRefresh();
     try {
       const bank = await loadThemeBank(), seen = new Set(), pool = [];
-      const at = lv => { const out = []; (ECA_LESSON_THEMES[Z.lesson] || []).forEach(t => (((bank.themes || {})[t] || [])[lv - 1] || []).forEach(row => out.push([row, t]))); return out; };
+      const at = lv => { const out = []; (lpThemesOf(Z.lesson) || []).forEach(t => (((bank.themes || {})[t] || [])[lv - 1] || []).forEach(row => out.push([row, t]))); return out; };
       // بعض الأفكار (زي التبييت) ألغازها قليلة في المستويات السهلة: بنروح لأقرب مستوى فيه ألغاز
       const auto = Z.lessonAuto !== false && !!currUser();
       let lv = Z.lessonLv || 1;
@@ -253,8 +255,8 @@ window.lpExit = lpExit;
     const daily = u && u.role === "student" && Z.lesson === lpDailyLesson(u), n = daily ? Math.min(LP_GOAL, lpDailyCount(u)) : 0;
     const banner = `<div class="gold-card rounded-2xl p-4 space-y-3 mb-4">
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <div class="min-w-0"><h3 class="font-bold text-yellow-300 truncate">📚 ${esc(lpTitle(Z.lesson))} <span class="text-xs text-gray-400">• Step ${lpStepOf(Z.lesson)}</span></h3>
-          <p class="text-xs text-gray-300">${(ECA_LESSON_THEMES[Z.lesson] || []).map(t => esc(lpThemeName(t))).join(" • ")}</p></div>
+        <div class="min-w-0"><h3 class="font-bold text-yellow-300 truncate">📚 ${esc(lpTitle(Z.lesson))} ${Z.lesson === "ev" ? "" : `<span class="text-xs text-gray-400">• Step ${lpStepOf(Z.lesson)}</span>`}</h3>
+          <p class="text-xs text-gray-300">${(lpThemesOf(Z.lesson) || []).map(t => esc(lpThemeName(t))).join(" • ")}</p></div>
         <button type="button" onclick="lpExit()" class="tap rounded-lg px-3 text-xs font-bold bg-zinc-800 text-white border border-yellow-500/30">${LPL("خروج من الدرس", "Leave the lesson")}</button>
       </div>
       ${daily ? `<div><div class="flex justify-between text-xs text-gray-300"><span>🎯 ${LPL("مهمة النهاردة", "Today's mission")}</span><span dir="ltr">${n}/${LP_GOAL}</span></div>

@@ -104,6 +104,29 @@ async function runSuite(label, rules, quiet) {
   await T("quest daily", true, fresh, db => quest(db, "daily", 1));
   await T("quest puzzles on a legacy account", true, legacy, db => quest(db, "puzzles", 2));
   await T("quest win", true, fresh, db => quest(db, "win", 2));
+  await T("quest three in a row", true, fresh, db => quest(db, "streak3", 2));
+  await T("quest rush score", true, fresh, db => quest(db, "rush6", 2));
+  await T("quest rush score with forged stars", false, fresh, db => quest(db, "rush6", 5));
+  await T("quest that does not exist", false, fresh, db => quest(db, "vision9", 2));
+  // golden puzzle and the five-in-a-row chest: fixed reward, once a day
+  await T("golden puzzle", true, fresh, db => earn(db, "golden", today, 3));
+  await T("golden puzzle on a full profile", true, rich, db => earn(db, "golden", today, 3));
+  await T("five in a row chest on a full profile", true, rich, db => earn(db, "combo", today, 3));
+  await T("golden puzzle twice a day", false, fresh, async db => { await earn(db, "golden", today, 3); await earn(db, "golden", today, 3); });
+  await T("golden puzzle with forged stars", false, fresh, db => earn(db, "golden", today, 9));
+  await T("golden puzzle for another day", false, fresh, db => earn(db, "golden", "2020-01-01", 3, { id: "golden-2020-01-01" }));
+  await T("five in a row chest", true, fresh, db => earn(db, "combo", today, 3));
+  await T("five in a row chest twice a day", false, fresh, async db => { await earn(db, "combo", today, 3); await earn(db, "combo", today, 3); });
+  // weekly theme event: once a week, keyed by this week's Saturday only
+  const dayShift = (iso, n) => { const t = new Date(iso + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+  const satKey = dayShift(today, -((new Date(today + "T12:00:00Z").getUTCDay() + 1) % 7));
+  const ev = (key, stars = 8) => db => earn(db, "event", key, stars, { id: "event-" + key });
+  await T("weekly event reward", true, fresh, ev(satKey));
+  await T("weekly event reward twice", false, fresh, async db => { await ev(satKey)(db); await ev(satKey)(db); });
+  await T("weekly event with forged stars", false, fresh, ev(satKey, 20));
+  await T("weekly event keyed by a day that is not Saturday", false, fresh, ev(dayShift(satKey, 1)));
+  await T("weekly event from an old week", false, fresh, ev(dayShift(satKey, -14)));
+  await T("weekly event for a future week", false, fresh, ev(dayShift(satKey, 7)));
   const withQl = (n, d = today) => Object.assign({}, legacy, { arena: Object.assign({}, legacy.arena, { ql: { d, k: "2-7", n } }) });
   await T("quest lesson puzzles after 10 solves", true, withQl(10), db => quest(db, "lesson", 5));
   await T("quest lesson puzzles after 9 solves", false, withQl(9), db => quest(db, "lesson", 5));

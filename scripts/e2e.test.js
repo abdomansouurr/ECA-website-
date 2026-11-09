@@ -711,6 +711,37 @@ async function login(p, id) {
     check("calm: saying no counts the game as a loss, like leaving", !!(await until(async () => ((((await U(A)).arena || {}).games || {}).l || 0) === lost0 + 1, 15000)), lost0);
     const inst = await pa.ev("(() => { localStorage.setItem('ECA_VISIT_DAYS', JSON.stringify(['2026-01-01', '2026-01-02'])); localStorage.removeItem('ECA_INSTALL_LATER'); deferredInstall = { prompt() {}, userChoice: Promise.resolve() }; const shown = careInstallCheck(); const card = !!document.getElementById('ecaInstallCard'); careInstallLater(); const again = careInstallCheck(); deferredInstall = null; return { shown, card, gone: !document.getElementById('ecaInstallCard'), again }; })()");
     check("calm: install card on the third visit day, and «not now» hides it", inst.shown && inst.card && inst.gone && inst.again === false, inst);
+
+    // ---------- fun: rotating quests, weekly event, golden puzzle, five-in-a-row chest ----------
+    const qs = await pa.ev("(() => { funQuestSync(); const keys = ECA_QUESTS.map(q => q.key), want = ['lesson'].concat(funQuestsToday(currUser()).map(q => q.key)); const a = { puzStreak: 2 }; ecaQuestBump(a, 'puzzles'); return { keys, want, qs: a.qs, qsd: a.qsd === todayISO() }; })()");
+    check("fun: today's quests are the lesson mission plus two from the pool", qs.keys.join() === qs.want.join() && qs.keys.length === 3 && new Set(qs.keys).size === 3, qs);
+    check("fun: three in a row is tracked inside the puzzle save", qs.qs === 3 && qs.qsd, qs);
+    const qsStars = (await U(A)).arena.stars;
+    await pa.ev("window.fbEconomy({ op: 'earn', source: 'quest', key: 'streak3', day: todayISO() })");
+    check("fun: a new quest pays its stars", !!(await until(async () => (await U(A)).arena.stars === qsStars + 2, 15000)));
+    await pa.ev("funEventStart()");
+    const evp = await until(() => pa.ev("arena.puz.lesson === 'ev' && arena.puz.status === 'play' && arena.puz.info ? { theme: arena.puz.info.themes[0], want: funEventTheme(), title: document.getElementById('mainView').textContent.includes(lpThemeName(funEventTheme())) } : null"), 15000);
+    check("fun: the weekly event serves puzzles of this week's idea", !!evp && evp.theme === evp.want && evp.title, evp);
+    await pa.ev("lpExit(); switchTab('home')");
+    await pa.ev("(() => { const u = currUser(); u.arena.ev = { w: ecaWeekKey(), n: 15 }; save(); })()");
+    await until(async () => ((((await U(A)).arena || {}).ev) || {}).n === 15, 15000);
+    const evStars = (await U(A)).arena.stars;
+    check("fun: the event card offers the reward when it is done", !!(await until(() => pa.ev("document.getElementById('mainView').innerHTML.includes('funEventClaim()')"), 10000)));
+    await pa.ev("funEventClaim()");
+    check("fun: the weekly event pays 8 stars once and is marked done", !!(await until(async () => { const x = (await U(A)).arena; return x.stars === evStars + 8 && x.evc === await pa.ev("ecaWeekKey()"); }, 15000)));
+    await pa.ev("funEventClaim()"); await sleep(2000);
+    check("fun: the weekly event cannot be claimed twice", (await U(A)).arena.stars === evStars + 8);
+    await sleep(3500);
+    await pa.ev("arena.puz.forceGold = true; lpStart(lpDailyLesson(currUser()))");
+    await until(() => pa.ev("arena.puz.status === 'play' && !!arena.puz.golden && arena.puz.golden === arena.puz.game"), 15000);
+    check("fun: a golden puzzle shows its banner", await pa.ev("!!document.querySelector('.eca-golden')"));
+    const solvedGold = await pa.ev(`(async () => { const Z = arena.puz; Z.prRun = 4;
+      for (let g = 0; g < 200 && Z.status !== 'solved'; g++) { if (Z.status === 'play' && Z.sol[Z.idx]) { const m = Z.sol[Z.idx]; puzPlay(m.length > 4 ? { from: m.slice(0, 2), to: m.slice(2, 4), promotion: m[4] } : { from: m.slice(0, 2), to: m.slice(2, 4) }); } await new Promise(r => setTimeout(r, 150)); }
+      return Z.status; })()`);
+    const cday = await pa.ev("window.ecaCairoDay()");
+    check("fun: solving the golden puzzle first try pays its reward", solvedGold === "solved" && !!(await until(() => read("users/" + A + "/economy/golden-" + cday), 15000)), solvedGold);
+    check("fun: five in a row opens the streak chest", !!(await until(() => read("users/" + A + "/economy/combo-" + cday), 15000)));
+    await pa.ev("lpExit(); switchTab('home')");
     await pa.ev("lpExit(); switchTab('home')");
 
     // ---------- connection drops: banner, and a reward earned offline is saved once, when it is back ----------
