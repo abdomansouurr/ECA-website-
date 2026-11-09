@@ -597,21 +597,18 @@
         : !ChessCls ? `<div class="gold-card rounded-2xl p-8 text-center text-sm text-gray-400">جاري تحميل الرقعة...</div>`
         : sub === "rush" ? arenaRushHTML() : sub === "duel" ? arenaDuelHTML() : sub === "speed" ? arenaSpeedHTML() : sub === "cards" ? arenaCardsHTML() : sub === "friend" ? arenaFriendHTML() : sub === "weekly" ? arenaWeeklyHTML() : sub === "boss" && typeof arenaBossHTML === "function" ? arenaBossHTML() : sub === "lessons" && typeof arenaLessonsHTML === "function" ? arenaLessonsHTML() : sub === "puzzles" ? arenaPuzHTML() : sub === "pawns" ? arenaPawnsHTML() : sub === "analysis" ? arenaAnaHTML() : arenaPlayHTML();
       return `
-        <div class="space-y-5">
-          <div class="gold-card rounded-2xl p-5 flex flex-wrap justify-between items-center gap-3">
-            <div>
-              <h2 class="font-display font-bold text-xl gold-gradient-text">ساحة التدريب</h2>
-              <p class="text-xs text-gray-400 mt-1">العب ضد الكمبيوتر، حل ألغاز حقيقية على الرقعة، ودرّب عينك على المربعات.</p>
-            </div>
+        <div class="space-y-4">
+          <div class="gold-card rounded-2xl p-3 sm:p-4 flex flex-wrap items-center gap-3">
+            <button type="button" onclick="arenaSub('lobby')" class="tap rounded-xl px-3 text-xs font-bold bg-zinc-900 text-gray-200 border border-yellow-500/30">${lang === "en" ? "← Lobby" : "→ اللوبي"}</button>
+            <h2 class="font-display font-bold text-lg gold-gradient-text min-w-0 flex-1 truncate">${window.ecaModeName ? esc(ecaModeName(sub)) : "ساحة التدريب"}</h2>
             ${u.role === "student" ? `<div class="flex flex-wrap gap-2 text-[11px]">
               <span dir="ltr" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">${gm.w} ✓ · ${gm.d} = · ${gm.l} ✗</span>
               <span class="px-2.5 py-1 rounded-lg bg-yellow-500/15 text-yellow-300 border border-yellow-500/30">${a.puzSolved || 0}</span>
-              <span class="px-2.5 py-1 rounded-lg bg-sky-500/15 text-sky-400 border border-sky-500/30">${a.visionBest || 0}</span>
             </div>` : ''}
           </div>
-          <div class="flex flex-wrap gap-2 bg-black/60 p-2 rounded-2xl border border-yellow-500/20">
-            ${tb("play", "العب ضد الكمبيوتر")}${tb("puzzles", "ألغاز على الرقعة")}${tb("lessons", lang === "en" ? "📚 Lesson puzzles" : "📚 ألغاز الدروس")}${tb("rush", lang === "en" ? "⚡ Puzzle Rush" : "⚡ تحدي 60 ثانية")}${tb("duel", lang === "en" ? "⚔️ Live duel" : "⚔️ تحدي مباشر")}${tb("speed", lang === "en" ? "🏟️ Speed Arena" : "🏟️ بطولة السرعة")}${tb("cards", lang === "en" ? "🃏 Tactic cards" : "🃏 كروت التكتيك")}${tb("friend", lang === "en" ? "🤝 Challenge a friend" : "🤝 تحدي صاحبك")}${tb("weekly", lang === "en" ? "🎯 Coach's challenge" : "🎯 تحدي الكوتش")}${u.role === "student" ? tb("boss", lang === "en" ? "👹 Boss homework" : "👹 واجب الزعيم") : ""}${tb("pawns", "لعبة البيادق")}${tb("vision", "تدريب الرؤية")}${tb("analysis", "رقعة التحليل")}
-          </div>
+          <details class="lb-looks rounded-2xl bg-black/30 border border-yellow-500/15 px-3">
+            <summary class="tap flex items-center text-xs font-bold text-gray-300">🎨 ${lang === "en" ? "Board and pieces" : "شكل الرقعة والقطع"}</summary>
+            <div class="space-y-3 pb-3">
           <div class="flex flex-wrap items-center gap-3 text-[11px] text-gray-400">
             <span>ألوان الرقعة:</span>
             <label class="flex items-center gap-1">فاتح <input type="color" value="${boardColors.l}" onchange="setBoardColor('l', this.value)" class="w-8 h-6 rounded bg-transparent border-0 cursor-pointer" /></label>
@@ -622,6 +619,8 @@
             <span>شكل القطع:</span>
             ${PIECE_SETS.map(ps => `<button onclick="setPieceSet('${ps[0]}')" aria-pressed="${pieceSet === ps[0]}" class="px-3 py-1.5 rounded-lg text-[11px] font-bold ${pieceSet === ps[0] ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/20'}">${ps[1]}</button>`).join("")}
           </div>
+            </div>
+          </details>
           ${body}
         </div>`;
     }

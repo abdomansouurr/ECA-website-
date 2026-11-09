@@ -246,7 +246,7 @@ function saLifecycle() {
   }
   if (window.__authLoading || !window.fbArenaWatchOpen) return;
   // القايمة بتتسمع بس في الرئيسية (كارت الكؤوس) وتاب البطولة، والترتيب المباشر في تاب البطولة بس
-  const need = here || (tab === "home" && u.role === "student");
+  const need = here || (tab === "home" && u.role === "student") || (tab === "arena" && arena.sub === "lobby");
   if (!here) saBoardWatch("");
   if (need && !saOpenUnsub) saOpenUnsub = window.fbArenaWatchOpen(rows => { S.arenas = rows; saPaint(); }, () => {});
   else if (!need && saOpenUnsub) { saOpenUnsub(); saOpenUnsub = null; }

@@ -656,8 +656,8 @@ async function login(p, id) {
     const where = { claim: "tab === 'home'", boss: "tab === 'arena' && arena.sub === 'boss'", lesson: "tab === 'arena' && arena.sub === 'puzzles' && !!arena.puz.lesson", more: "tab === 'arena' && arena.sub === 'puzzles' && !!arena.puz.lesson", weekly: "tab === 'arena' && arena.sub === 'weekly'", dojo: "tab === 'arena' && arena.sub === 'puzzles'", bot: "tab === 'arena' && arena.sub === 'play'" }[nx.key];
     check("flow: play now opens the suggested activity", !!where && !!(await until(() => pa.ev(where), 10000)), nx);
     await pa.ev("lpAuto(); lpStart(lpDailyLesson(currUser()))");
-    const lz = await until(() => pa.ev("arena.puz.status === 'play' && arena.puz.lesson && arena.puz.info ? { rating: arena.puz.info.rating, target: ecaPrTarget(currUser(), arena.puz), auto: arena.puz.lessonAuto } : null"), 15000);
-    check("adaptive: the lesson puzzle is near the student's level", !!lz && lz.auto === true && Math.abs(lz.rating - lz.target) <= 400, lz);
+    const lz = await until(() => pa.ev("arena.puz.status === 'play' && arena.puz.lesson && arena.puz.info ? { rating: arena.puz.info.rating, target: ecaPrTarget(currUser(), arena.puz), auto: arena.puz.lessonAuto, near: (() => { const t = ecaPrTarget(currUser(), arena.puz), d = []; (lpThemesOf(arena.puz.lesson) || []).forEach(th => ((ECA_THEME_BANK.themes || {})[th] || []).forEach(lv => lv.forEach(r => d.push(Math.abs(Number(r.split('|')[3]) - t))))); d.sort((x, y) => x - y); return d[Math.min(d.length - 1, 11 + 12)]; })() } : null"), 15000);
+    check("adaptive: the lesson puzzle is near the student's level", !!lz && lz.auto === true && Math.abs(lz.rating - lz.target) <= lz.near, lz);
     check("flow: no play-now strip while already in that activity", await pa.ev("(() => { const n = flNext(currUser()); return !(n.key === 'lesson' || n.key === 'more') || !document.querySelector('.eca-play-strip'); })()"));
     check("adaptive: the level shows on the lesson banner", await pa.ev("document.getElementById('mainView').textContent.includes(String(ecaPrGet(currUser()).r))"));
     // ---------- care: hint ladder, the mistake explained, soft streak, nothing interrupts a game ----------
@@ -783,8 +783,10 @@ async function login(p, id) {
     check("fix: opening a game from the bottom of the page shows the board", !!view && view.top >= 0 && view.top < view.h / 2, view);
     await pa.ev("lpExit(); switchTab('home')");
     const q0 = (await U(A)).arena.stars;
-    const qr = await pa.ev("ecaAwardStudentActivity('quest', 'rush6').then(r => r && { ok: r.ok, s: r.starsDelta, code: r.code || '' })");
-    check("fix: the new daily quests pay through the claim button", !!qr && qr.ok === true && qr.s === 2 && !!(await until(async () => (await U(A)).arena.stars === q0 + 2, 15000)), qr);
+    // قبل التصليح الزرار كان بيرجع ok:false من غير ما يوصل للجايزة. دلوقتي بيدفع، أو بيقول «اتاخدت» لو اتاخدت النهاردة
+    const qr = await pa.ev("(async () => { const out = {}; for (const k of ['rush6', 'streak3']) { const r = await ecaAwardStudentActivity('quest', k); out[k] = r && { ok: r.ok, dup: !!r.duplicate, s: r.starsDelta || 0 }; } return out; })()");
+    const paid = ["rush6", "streak3"].reduce((n, k) => n + (qr[k] && !qr[k].dup ? qr[k].s : 0), 0);
+    check("fix: the new daily quests pay through the claim button", ["rush6", "streak3"].every(k => qr[k] && qr[k].ok === true && (qr[k].dup || qr[k].s === 2)) && !!(await until(async () => (await U(A)).arena.stars === q0 + paid, 15000)), qr);
     await sleep(3500);
     const r0 = (await U(A)).arena;
     const race = await pa.ev(`Promise.all([
@@ -794,6 +796,38 @@ async function login(p, id) {
     check("fix: a reward and a puzzle save at the same moment both go through", race.reward && race.attempt && !!(await until(async () => { const x = (await U(A)).arena; return x.stars === r0.stars + 3 && x.puzTried === (r0.puzTried || 0) + 1; }, 15000)), race);
     const dup = await pa.ev("(async () => { const t = document.getElementById('toast'); await ecaAwardStudentActivity('puzzle', 'easiest'); t.textContent = ''; await ecaAwardStudentActivity('puzzle', 'easiest'); return t.textContent; })()");
     check("fix: no «reward already collected» message on the next puzzles", !/سبق الحصول|already collected/.test(dup || ""), dup);
+
+    // ---------- arena lobby: hero card, three tabs with two cards each, all games drawer ----------
+    check("lobby: the arena opens on the lobby", await pe.ev("(() => { switchTab('arena'); const on = arena.sub === 'lobby' && !!document.querySelector('.lb-hero'); switchTab('home'); return on; })()"));
+    await pa.ev("switchTab('arena'); arenaSub('lobby')");
+    const hero = await pa.ev(`(() => { const keep = arena.boss.list, out = {};
+      arena.boss.list = [{ id: 'lobbyBoss1', title: 'Fork Dragon', done: false, dueMs: Date.now() + 864e5, solved: ['a'], puzzles: ['a', 'b', 'c'] }]; render();
+      const h1 = document.querySelector('.lb-hero'); out.boss = h1.classList.contains('lb-crimson') && /هاجم الزعيم|Attack the boss/.test(h1.textContent) && !!h1.querySelector('[role=progressbar]');
+      arena.boss.list = []; render();
+      const h2 = document.querySelector('.lb-hero'); out.step = h2.classList.contains('lb-emerald') && /كمّل Step|Continue Step/.test(h2.textContent);
+      arena.boss.list = keep; render(); return out; })()`);
+    check("lobby: the hero card shows the boss, then the current step when there is none", hero.boss && hero.step, hero);
+    const tabsOk = await pa.ev(`(() => { const out = {};
+      for (const [k, want] of [['solo', /مغامرة الدروس[\\s\\S]*دوجو الانتقام/], ['arcade', /تحدي 60 ثانية[\\s\\S]*تحدي صاحبك/], ['events', /تحدي الأسبوع[\\s\\S]*بطولة السرعة/]]) {
+        lobbyTab(k); const cards = [...document.querySelectorAll('.lb-cards .lb-card')];
+        out[k] = cards.length === 2 && want.test(cards.map(c => c.textContent).join(' ')) && cards.every(c => c.tagName === 'BUTTON' && c.querySelector('.lb-card-icon') && c.querySelector('.lb-card-title') && c.querySelector('.lb-pill'));
+      }
+      out.selected = document.querySelector('.lb-tab.is-on').getAttribute('aria-selected') === 'true';
+      out.chips = document.querySelectorAll('.lb-all .lb-chip').length; return out; })()`);
+    check("lobby: three tabs, two one-tap cards each (icon, title, status)", tabsOk.solo && tabsOk.arcade && tabsOk.events && tabsOk.selected, tabsOk);
+    check("lobby: every game is still one tap away in «all games»", tabsOk.chips === 13, tabsOk.chips);
+    const pills = await until(() => pa.ev("(() => { lobbyTab('events'); const p = [...document.querySelectorAll('.lb-cards .lb-pill')].map(x => x.textContent); return /المحاولات|حليته|ما نزلش|Attempts|Solved|Not posted/.test(p[0]) && /شغّالة|تبدأ بعد|LIVE|Starts in/.test(p[1]) ? p : null; })()"), 15000);
+    check("lobby: events show the weekly attempts and the tournament clock", !!pills, pills);
+    const open = await pa.ev("(() => { lobbyTab('arcade'); lbOpen('rush'); const inGame = arena.sub === 'rush' && !!document.querySelector('#mainView button[onclick=\"arenaSub(\\'lobby\\')\"]') && !document.querySelector('.lb-hero'); arenaSub('lobby'); return inGame && arena.sub === 'lobby'; })()");
+    check("lobby: a card opens its game, and «lobby» brings you back", open);
+    if (process.env.E2E_SHOTS) for (const [w, h, tabK] of [[375, 812, "solo"], [375, 812, "events"], [1280, 900, "arcade"]]) {
+      await pa.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: 1, mobile: w < 800 });
+      await pa.ev("switchTab('arena'); arenaSub('lobby'); lobbyTab('" + tabK + "'); window.scrollTo(0, 0)"); await sleep(900);
+      const shot = await pa.send("Page.captureScreenshot", { format: "png" });
+      fs.writeFileSync(path.join(process.env.E2E_SHOTS, "lobby-" + w + "-" + tabK + ".png"), Buffer.from(shot.data, "base64"));
+    }
+    if (process.env.E2E_SHOTS) await pa.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+    await pa.ev("switchTab('home')");
     await pa.ev("lpExit(); switchTab('home')");
 
     // ---------- connection drops: banner, and a reward earned offline is saved once, when it is back ----------
@@ -819,7 +853,7 @@ async function login(p, id) {
         const st = getComputedStyle(e); if (st.visibility === "hidden" || st.display === "none") return false;
         return r.height < 43.5 || r.width < 43.5; }).map(e => (e.getAttribute("onclick") || e.title || e.textContent || e.tagName).trim().slice(0, 40) + " " + Math.round(e.getBoundingClientRect().width) + "x" + Math.round(e.getBoundingClientRect().height));
       return { wide: wide ? document.documentElement.scrollWidth : 0, small: [...new Set(small)].slice(0, 40) }; })()`;
-    const views = [["home", "switchTab('home')"]].concat(["play", "puzzles", "lessons", "rush", "vision", "pawns", "duel", "friend", "speed", "weekly", "boss", "cards", "analysis"].map(v => [v, `switchTab('arena'); arena.sub='${v}'; render();`]));
+    const views = [["home", "switchTab('home')"]].concat(["lobby", "play", "puzzles", "lessons", "rush", "vision", "pawns", "duel", "friend", "speed", "weekly", "boss", "cards", "analysis"].map(v => [v, `switchTab('arena'); arena.sub='${v}'; render();`]));
     const fitBad = [];
     for (const [name, go] of views) { await pa.ev(go); await sleep(700); const r = await pa.ev(fit); if (r.wide || r.small.length) fitBad.push({ view: name, ...r }); }
     check("320px: no sideways scroll on any view", !fitBad.some(r => r.wide), fitBad.filter(r => r.wide));

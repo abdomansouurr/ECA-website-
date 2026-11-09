@@ -9,7 +9,7 @@ const WL = (ar, en) => lang === "en" ? en : ar;
 function wkPaint() { if (tab === "arena" && arena.sub === "weekly") arenaRefresh(); else if (tab === "home") render(); }
 function wkLifecycle() {
   const W = arena.weekly, u = currUser();
-  const want = !!u && !window.__authLoading && !!window.fbWeeklyWatch && ((tab === "arena" && arena.sub === "weekly") || (tab === "home" && u.role === "student"));
+  const want = !!u && !window.__authLoading && !!window.fbWeeklyWatch && ((tab === "arena" && (arena.sub === "weekly" || arena.sub === "lobby")) || (tab === "home" && u.role === "student"));
   const wk = want ? ecaWeekKey() : "";
   if (wk === W.wk && (!want || W.unsub)) return;
   if (W.unsub) { W.unsub(); W.unsub = null; }

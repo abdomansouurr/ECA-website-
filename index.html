@@ -7,9 +7,9 @@
   <link rel="manifest" href="manifest.json" />
   <!-- لوجو الأكاديمية على تاب المتصفح: ICO في الجذر (الفولباك الأضمن — المتصفحات بتطلبه من /favicon.ico مباشرة)
        + PNG للتاب الحديث + apple-touch للآيفون — كلهم بنفس اللوجو ومع رقم نسخة يكسر الكاش -->
-  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v81" />
-  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v81" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v81" />
+  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v82" />
+  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v82" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v82" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ECA Chess" />
@@ -306,7 +306,7 @@
     @keyframes ecaRewardPop { 0% { opacity: 0; transform: translateY(12px) scale(.8); } 25% { opacity: 1; transform: translateY(0) scale(1.08); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px) scale(1); } }
     @media (prefers-reduced-motion: reduce) { .eca-reward-pop { animation: none; } }
 
-    /* ===== eca-v81: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
+    /* ===== eca-v82: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
     @keyframes ecaItemIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     .stagger-in > *, .st-item { animation-duration: .24s; }
     .stagger-in > *:nth-child(1) { animation-delay: 0.045s }
@@ -536,6 +536,60 @@
     html.eca-cb .eca-sq.good::before { background: rgba(37,99,235,.55); }
     html.eca-cb .eca-sq.bad::before { background: rgba(249,115,22,.65); }
     html.eca-cb .eca-sq.hint::before { box-shadow: inset 0 0 0 4px #2563eb; }
+    /* ===== لوبي ساحة التدريب (Bento) ===== */
+    .lb-top { display: grid; gap: 16px; }
+    @media (min-width: 1024px) { .lb-top { grid-template-columns: 3fr 2fr; align-items: stretch; } }
+    .lb-hero { position: relative; overflow: hidden; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 18px; border-radius: 20px; color: #fff; isolation: isolate; }
+    .lb-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: .9; }
+    .lb-hero.lb-crimson::before { background: radial-gradient(120% 140% at 0% 0%, #b91c1c 0%, #7f1d1d 45%, #1c0a0a 100%); }
+    .lb-hero.lb-emerald::before { background: radial-gradient(120% 140% at 0% 0%, #059669 0%, #065f46 45%, #04150f 100%); }
+    .lb-hero.lb-crimson { box-shadow: inset 0 0 0 2px rgba(250,204,21,.55); }
+    .lb-hero.lb-emerald { box-shadow: inset 0 0 0 2px rgba(250,204,21,.45); }
+    .lb-hero-icon { font-size: 56px; line-height: 1; animation: ecaPetFloat 2.6s ease-in-out infinite; }
+    .lb-hero-body { min-width: 0; flex: 1 1 180px; }
+    .lb-kicker { font-size: 12px; font-weight: 700; color: #fde68a; letter-spacing: .02em; }
+    .lb-hero-title { font-size: 22px; font-weight: 800; line-height: 1.25; color: #fff; overflow-wrap: anywhere; }
+    .lb-sub { font-size: 12px; color: rgba(255,255,255,.8); margin-top: 4px; }
+    .lb-hp { display: block; margin-top: 8px; }
+    .lb-cta { flex: 1 1 100%; min-height: 52px; border-radius: 14px; padding: 0 18px; font-size: 15px; font-weight: 800; color: #1a1205; background: linear-gradient(135deg, #fde047, #f59e0b); }
+    @media (min-width: 480px) { .lb-cta { flex: 0 0 auto; } }
+    .lb-pulse { animation: lbPulse 1.6s ease-in-out infinite; }
+    @keyframes lbPulse { 50% { transform: scale(1.04); } }
+    .lb-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 14px; border-radius: 20px; text-align: center; align-content: center; }
+    .lb-stats b { display: block; font-size: 20px; font-weight: 800; color: #facc15; }
+    .lb-stats span { display: block; font-size: 12px; color: #9ca3af; }
+    .lb-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 6px; border-radius: 999px; background: rgba(0,0,0,.45); border: 1px solid rgba(250,204,21,.2); }
+    .lb-tab { min-height: 44px; border-radius: 999px; font-size: 12px; font-weight: 800; color: #d1d5db; line-height: 1.2; padding: 0 6px; transition: background-color .2s, color .2s; }
+    .lb-tab.is-on { background: linear-gradient(135deg, #f3d266, #d4af37); color: #050507; }
+    .lb-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-height: 196px; }
+    @media (min-width: 360px) { .lb-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .lb-card { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 6px; min-height: 196px; padding: 16px 10px 14px; border-radius: 20px; text-align: center; color: #fff; isolation: isolate; overflow: hidden; transition: transform .18s ease; animation: lbIn .25s ease both; }
+    .lb-card::before { content: ""; position: absolute; inset: 0; z-index: -2; }
+    .lb-card::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; opacity: 0; transition: opacity .18s ease; }
+    .lb-card:hover, .lb-card:focus-visible { transform: translateY(-3px) scale(1.01); }
+    .lb-card:hover::after, .lb-card:focus-visible::after { opacity: 1; }
+    .lb-card:active { transform: scale(.98); }
+    @keyframes lbIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .lb-card.lb-crimson::before { background: linear-gradient(160deg, #7f1d1d, #2a0b0b); box-shadow: inset 0 0 0 2px rgba(250,204,21,.5); border-radius: inherit; }
+    .lb-card.lb-crimson::after { box-shadow: inset 0 0 24px rgba(248,113,113,.55); }
+    .lb-card.lb-cyan::before { background: linear-gradient(160deg, #0e7490, #3b0764); box-shadow: inset 0 0 0 2px rgba(103,232,249,.55); border-radius: inherit; }
+    .lb-card.lb-cyan::after { box-shadow: inset 0 0 24px rgba(168,85,247,.6); }
+    .lb-card.lb-emerald::before { background: linear-gradient(160deg, #047857, #1f2a05); box-shadow: inset 0 0 0 2px rgba(250,204,21,.5); border-radius: inherit; }
+    .lb-card.lb-emerald::after { box-shadow: inset 0 0 24px rgba(52,211,153,.55); }
+    .lb-card-icon { font-size: 44px; line-height: 1; }
+    .lb-card-title { font-size: 15px; font-weight: 800; line-height: 1.25; }
+    .lb-card-sub { font-size: 12px; color: rgba(255,255,255,.78); }
+    .lb-pill { display: inline-flex; align-items: center; justify-content: center; min-height: 32px; max-width: 100%; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 800; color: #1a1205; background: #fde68a; overflow-wrap: anywhere; }
+    .lb-live { background: #ef4444; color: #fff; animation: lbPulse 1.4s ease-in-out infinite; }
+    .lb-all { border-radius: 20px; padding: 0 14px; }
+    .lb-all summary, .lb-looks summary { min-height: 48px; display: flex; align-items: center; font-size: 13px; font-weight: 800; cursor: pointer; list-style: none; }
+    .lb-all summary::-webkit-details-marker, .lb-looks summary::-webkit-details-marker { display: none; }
+    .lb-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; padding-bottom: 14px; }
+    .lb-chip { min-height: 44px; border-radius: 12px; padding: 0 10px; font-size: 12px; font-weight: 700; text-align: start; background: rgba(0,0,0,.35); border: 1px solid rgba(250,204,21,.2); color: #e5e7eb; }
+    html.light .lb-chip, html.eca .lb-chip, html.kids .lb-chip { background: rgba(255,255,255,.7); color: #0f172a; }
+    html.light .lb-tabs, html.eca .lb-tabs, html.kids .lb-tabs { background: rgba(15,23,42,.08); }
+    html.light .lb-tab, html.eca .lb-tab, html.kids .lb-tab { color: #334155; }
+    @media (prefers-reduced-motion: reduce) { .lb-hero-icon, .lb-pulse, .lb-live, .lb-card { animation: none; } }
     .eca-install-card { position: fixed; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 70; width: min(440px, calc(100vw - 24px)); display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 18px; background: linear-gradient(135deg, #1d4ed8, #7c3aed); color: #fff; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
     .eca-install-card b, .eca-install-card span, .eca-install-card button:not(.gold-btn) { color: #fff; }
     .eca-net-banner { position: fixed; top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 90; max-width: calc(100vw - 24px); padding: 6px 14px; border-radius: 999px; background: #7c2d12; color: #fff; font-size: 12px; font-weight: 700; text-align: center; box-shadow: 0 6px 18px rgba(0,0,0,.35); pointer-events: none; }
@@ -685,8 +739,8 @@
     html[data-ecap="piece-gold"] .eca-pc.w, .eca-skin-piece-gold .eca-pc.w { color: #fde68a; text-shadow: 0 0 1px #78350f, 0 0 1px #78350f, 0 1px 3px rgba(0,0,0,.5); }
     html[data-ecap="piece-gold"] .eca-pc.b, .eca-skin-piece-gold .eca-pc.b { color: #7c2d12; text-shadow: 0 0 1px #fde047, 0 1px 2px rgba(0,0,0,.45); }
   </style>
-  <script>window.ECA_VERSION = "eca-v81";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v81" />
+  <script>window.ECA_VERSION = "eca-v82";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v82" />
 </head>
 <body class="min-h-screen flex flex-col relative">
   <a href="#mainView" class="skip-link">تخطّي إلى المحتوى</a>
@@ -850,45 +904,46 @@
     } catch (_) {}
   </script>
   <script type="application/json" id="ecaLazyModules">{"finance":"js/finance.js"}</script>
-  <script src="js/core.js?v=eca-v81"></script>
+  <script src="js/core.js?v=eca-v82"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v81"></script>
+  <script src="js/arena.js?v=eca-v82"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v81"></script>
-  <script src="js/streaks.js?v=eca-v81"></script>
-  <script src="js/review.js?v=eca-v81"></script>
-  <script src="js/quality.js?v=eca-v81"></script>
-  <script src="js/announce.js?v=eca-v81"></script>
-  <script src="js/progress.js?v=eca-v81"></script>
-  <script src="js/arena2.js?v=eca-v81"></script>
+  <script src="js/extras.js?v=eca-v82"></script>
+  <script src="js/streaks.js?v=eca-v82"></script>
+  <script src="js/review.js?v=eca-v82"></script>
+  <script src="js/quality.js?v=eca-v82"></script>
+  <script src="js/announce.js?v=eca-v82"></script>
+  <script src="js/progress.js?v=eca-v82"></script>
+  <script src="js/arena2.js?v=eca-v82"></script>
   <!-- homework, coach dashboards, tournaments, and placement test load on demand via loadModule -->
-  <script src="js/ux.js?v=eca-v81"></script>
-  <script src="js/annotate.js?v=eca-v81"></script>
-  <script src="js/gamify.js?v=eca-v81"></script>
-  <script src="js/adventure.js?v=eca-v81"></script>
-  <script src="js/duel.js?v=eca-v81"></script>
-  <script src="js/fx.js?v=eca-v81"></script>
-  <script src="js/speedarena.js?v=eca-v81"></script>
-  <script src="js/loot.js?v=eca-v81"></script>
-  <script src="js/dojo.js?v=eca-v81"></script>
-  <script src="js/cards.js?v=eca-v81"></script>
-  <script src="js/stamina.js?v=eca-v81"></script>
-  <script src="js/social.js?v=eca-v81"></script>
-  <script src="js/friendduel.js?v=eca-v81"></script>
-  <script src="js/weekly.js?v=eca-v81"></script>
-  <script src="js/boss.js?v=eca-v81"></script>
-  <script src="js/command.js?v=eca-v81"></script>
-  <script src="js/lessonpuz.js?v=eca-v81"></script>
-  <script src="js/parentreport.js?v=eca-v81"></script>
-  <script src="js/care.js?v=eca-v81"></script>
-  <script src="js/fun.js?v=eca-v81"></script>
-  <script src="js/flow.js?v=eca-v81"></script>
-  <script src="js/assist.js?v=eca-v81"></script>
+  <script src="js/ux.js?v=eca-v82"></script>
+  <script src="js/annotate.js?v=eca-v82"></script>
+  <script src="js/gamify.js?v=eca-v82"></script>
+  <script src="js/adventure.js?v=eca-v82"></script>
+  <script src="js/duel.js?v=eca-v82"></script>
+  <script src="js/fx.js?v=eca-v82"></script>
+  <script src="js/speedarena.js?v=eca-v82"></script>
+  <script src="js/loot.js?v=eca-v82"></script>
+  <script src="js/dojo.js?v=eca-v82"></script>
+  <script src="js/cards.js?v=eca-v82"></script>
+  <script src="js/stamina.js?v=eca-v82"></script>
+  <script src="js/social.js?v=eca-v82"></script>
+  <script src="js/friendduel.js?v=eca-v82"></script>
+  <script src="js/weekly.js?v=eca-v82"></script>
+  <script src="js/boss.js?v=eca-v82"></script>
+  <script src="js/command.js?v=eca-v82"></script>
+  <script src="js/lessonpuz.js?v=eca-v82"></script>
+  <script src="js/parentreport.js?v=eca-v82"></script>
+  <script src="js/care.js?v=eca-v82"></script>
+  <script src="js/fun.js?v=eca-v82"></script>
+  <script src="js/flow.js?v=eca-v82"></script>
+  <script src="js/assist.js?v=eca-v82"></script>
+  <script src="js/lobby.js?v=eca-v82"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v81"></script>
+  <script type="module" src="js/firebase.js?v=eca-v82"></script>
 </body>
 </html>
