@@ -820,6 +820,16 @@ async function login(p, id) {
     check("lobby: events show the weekly attempts and the tournament clock", !!pills, pills);
     const open = await pa.ev("(() => { lobbyTab('arcade'); lbOpen('rush'); const inGame = arena.sub === 'rush' && !!document.querySelector('#mainView button[onclick=\"arenaSub(\\'lobby\\')\"]') && !document.querySelector('.lb-hero'); arenaSub('lobby'); return inGame && arena.sub === 'lobby'; })()");
     check("lobby: a card opens its game, and «lobby» brings you back", open);
+    const pcs = await pb.ev(`(async () => {
+      const u = currUser(), keep = ((u.shop || {}).eq || {}).p || "", out = {}, imgs = () => document.querySelectorAll('#mainView .eca-board img.eca-pimg').length, glyphs = () => document.querySelectorAll('#mainView .eca-board .eca-pc').length;
+      ecaEquip('p', ''); switchTab('arena'); arenaSub('puzzles');
+      await new Promise(r => { const t = Date.now(); const w = () => (arena.puz.status === 'play' || Date.now() - t > 15000) ? r() : setTimeout(w, 200); w(); });
+      out.def = pieceSet === 'lichess' && imgs() > 0 && glyphs() === 0;
+      out.noChoice = !document.querySelector('#mainView [onclick^="setPieceSet"]') && !!document.querySelector('#mainView [onclick="ecaPieceShop()"]');
+      ecaEquip('p', 'piece-gold'); out.skin = pieceSet === 'classic' && document.documentElement.dataset.ecap === 'piece-gold' && glyphs() > 0 && imgs() === 0;
+      ecaEquip('p', ''); out.back = pieceSet === 'lichess' && imgs() > 0;
+      if (keep) ecaEquip('p', keep); switchTab('home'); return out; })()`);
+    check("pieces: Lichess pieces by default with no other choice, bought pieces replace them while worn", pcs.def && pcs.noChoice && pcs.skin && pcs.back, pcs);
     if (process.env.E2E_SHOTS) for (const [w, h, tabK] of [[375, 812, "solo"], [375, 812, "events"], [1280, 900, "arcade"]]) {
       await pa.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: 1, mobile: w < 800 });
       await pa.ev("switchTab('arena'); arenaSub('lobby'); lobbyTab('" + tabK + "'); window.scrollTo(0, 0)"); await sleep(900);

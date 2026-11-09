@@ -39,8 +39,8 @@
     // ================= شكل القطع (محفوظ على الجهاز) =================
     // "classic" = رموز النص الحالية، "lichess" = قطع cburnett (نفس قطع Lichess الافتراضية) — img/pieces/lichess
     const PIECE_SETS = [["classic", "Classic"], ["lichess", "Lichess"]];
-    let pieceSet = "classic";
-    try { const s = localStorage.getItem("ECA_PIECES"); if (PIECE_SETS.some(p => p[0] === s)) pieceSet = s; } catch (_) {}
+    // قطع Lichess هي الشكل الوحيد في كل الألعاب. لما الطالب يلبس قطع اشتراها من المتجر بتظهر هي بدلها (ecaCosmeticsApply في gamify.js)
+    let pieceSet = "lichess";
     function preloadPieces() { ["w", "b"].forEach(c => ["K", "Q", "R", "B", "N", "P"].forEach(t => { const im = new Image(); im.src = "img/pieces/lichess/" + c + t + ".svg"; })); }
     function setPieceSet(k) {
       if (!PIECE_SETS.some(p => p[0] === k)) return;
@@ -48,7 +48,7 @@
       if (k === "lichess") preloadPieces();
       arenaRefresh();
     }
-    if (pieceSet === "lichess") preloadPieces();
+    preloadPieces();
 
     function movesListHTML(g) {
       const hist = g ? g.history() : [];

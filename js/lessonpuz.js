@@ -219,7 +219,9 @@ window.lpExit = lpExit;
   puzLoad = async function () {
     const Z = arena.puz;
     if (!Z.lesson || Z.review) return _pl.apply(this, arguments);
-    if (!ChessCls || Z.status === "loading") return;
+    if (!ChessCls) return;
+    // آخر طلب هو اللي يكسب: لغز Lichess بطيء ما يعطّلش درس اتفتح بعده، ولما يوصل متأخر بيتجاهل
+    const tok = Z.loadTok = (Z.loadTok || 0) + 1;
     clearTimeout(Z.nextTimer); Z.nextTimer = null;
     Z.status = "loading"; Z.sel = null; Z.hint = null; Z.flash = null; arenaRefresh();
     try {
@@ -239,11 +241,12 @@ window.lpExit = lpExit;
       const [row, theme] = auto ? ecaPrPick(fresh, Z) : fresh[Math.floor(Math.random() * fresh.length)];
       const [id, fen, moves, rating] = row.split("|"), mv = moves.split(" ");
       const g = new ChessCls(fen), r0 = uciMove(g, mv[0]);
+      if (Z.loadTok !== tok) return;
       Z.lessonSeen.add(id);
       Object.assign(Z, { game: g, sol: mv.slice(1), idx: 0, color: g.turn(), flip: g.turn() === "b", last: [r0.from, r0.to], counted: false, status: "play",
         info: { id: id.replace(/[^A-Za-z0-9]/g, ""), rating: Number(rating) || 0, themes: [theme] } });
-    } catch (e) { console.warn("Lesson puzzles failed:", e && e.message); Z.status = "error"; }
-    arenaRefresh();
+    } catch (e) { if (Z.loadTok === tok) { console.warn("Lesson puzzles failed:", e && e.message); Z.status = "error"; } }
+    if (Z.loadTok === tok) arenaRefresh();
   };
   // التاب العادي بيرجّع الألغاز العادية
   const _sub = arenaSub;

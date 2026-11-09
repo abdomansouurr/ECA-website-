@@ -1433,7 +1433,6 @@ function renderHomeworkPlayer(u) {
     const on = boardColors.l === t[1] && boardColors.d === t[2];
     return `<button onclick="hwSetTheme('${t[1]}','${t[2]}')" title="${t[0]}" aria-pressed="${on}" class="w-7 h-7 rounded-lg border ${on ? "border-yellow-400 ring-2 ring-yellow-400/40" : "border-yellow-500/30"}" style="background:linear-gradient(135deg, ${t[1]} 50%, ${t[2]} 50%)"></button>`;
   }).join("");
-  const hwPieceBtns = (typeof PIECE_SETS !== "undefined" ? PIECE_SETS : []).map(pk => `<button onclick="hwSetPieces('${pk[0]}')" aria-pressed="${pieceSet === pk[0]}" class="px-2.5 py-1 rounded-lg text-[11px] font-bold ${pieceSet === pk[0] ? "gold-btn" : "bg-zinc-900 text-gray-300 border border-yellow-500/20"}">${pk[1]}</button>`).join("");
   const sideTxt = HW.color === "w" ? hwT("انت بالأبيض", "You are White") : hwT("انت بالأسود", "You are Black");
   const missChip = HW.miss > 0 && HW.status !== "solved" ? ` <span class="px-1.5 py-0.5 rounded-md bg-red-500/15 border border-red-500/40 text-red-300" dir="ltr">⚠ ${HW.miss}/3</span>` : "";
   const status = HW.autoMsg ? hwT("لعبنا لك النقلة الصح — كمّل الباقي بنفسك 💪", "We played the right move for you — keep going 💪")
@@ -1465,9 +1464,6 @@ function renderHomeworkPlayer(u) {
         <div class="gold-card rounded-2xl p-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-gray-400">
           <span class="font-bold text-yellow-300">${hwT("ثيم الرقعة:", "Board theme:")}</span>
           ${hwThemeBtns}
-          <span aria-hidden="true" class="w-px self-stretch bg-yellow-500/30"></span>
-          <span class="font-bold text-yellow-300">${hwT("القطع:", "Pieces:")}</span>
-          ${hwPieceBtns}
         </div>
         <div class="gold-card rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2">
           <span class="text-xs font-bold ${stCls}">${status}${missChip}</span>

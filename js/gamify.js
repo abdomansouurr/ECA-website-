@@ -225,7 +225,8 @@ function ecaEquipped(u, cat, slot) {
 function ecaCosmeticsApply() {
   const u = currUser(), root = document.documentElement.dataset, board = ecaEquipped(u, "board", "b"), piece = ecaEquipped(u, "piece", "p");
   if (board) root.ecab = board; else delete root.ecab;
-  if (piece) { root.ecap = piece; if (pieceSet === "lichess") pieceSet = "classic"; } else delete root.ecap;
+  // قطع المتجر بتتلوّن على رموز القطع، فلما تكون ملبوسة بنرسم الرموز. من غيرها قطع Lichess
+  if (piece) { root.ecap = piece; pieceSet = "classic"; } else { delete root.ecap; pieceSet = "lichess"; }
 }
 function ecaSetEq(slot, id) {
   const u = currUser(), shop = u.shop || {};
@@ -243,6 +244,13 @@ function ecaEquip(slot, id) {
   render();
 }
 window.ecaEquip = ecaEquip;
+// «غيّر شكل القطع»: يفتح المتجر على تاب القطع
+function ecaPieceShop() {
+  if (typeof ecaShopTab !== "undefined") ecaShopTab = "piece";
+  switchTab("home");
+  setTimeout(() => { const el = document.getElementById("ecaShopCard"); if (el) el.scrollIntoView({ block: "start", behavior: "smooth" }); }, 80);
+}
+window.ecaPieceShop = ecaPieceShop;
 // اختيار ألوان أو قطع يدويًا بيرجّع الاختيار اليدوي مكان اللي من المتجر
 {
   const _color = setBoardColor, _pieces = setPieceSet;

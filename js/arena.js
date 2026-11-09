@@ -379,7 +379,9 @@
     // ================= 2) ألغاز على الرقعة (من Lichess) =================
     async function puzLoad() {
       const Z = arena.puz;
-      if (!ChessCls || Z.status === "loading") return;
+      if (!ChessCls) return;
+      // آخر طلب هو اللي يكسب: لغز Lichess بطيء ما يعطّلش درس اتفتح بعده، ولما يوصل متأخر بيتجاهل
+      const tok = Z.loadTok = (Z.loadTok || 0) + 1;
       clearTimeout(Z.nextTimer); Z.nextTimer = null;
       Z.status = "loading"; Z.sel = null; Z.hint = null; Z.flash = null; arenaRefresh();
       try {
@@ -388,6 +390,7 @@
         if (!r.ok) throw new Error("HTTP " + r.status);
         const j = await r.json();
         const g = new ChessCls(); g.loadPgn(j.game.pgn);
+        if (Z.loadTok !== tok) return;
         Object.assign(Z, { game: g, sol: j.puzzle.solution || [], idx: 0, color: g.turn(), flip: g.turn() === "b", last: lastOf(g), counted: false, status: "play",
           info: { id: String(j.puzzle.id).replace(/[^A-Za-z0-9]/g, ""), rating: Number(j.puzzle.rating) || 0, themes: (j.puzzle.themes || []).slice(0, 8).map(t => String(t).replace(/[^A-Za-z0-9]/g, "")) } });
       } catch (e) {
@@ -395,15 +398,16 @@
         console.warn("Lichess puzzle failed, using built-in bank:", e);
         try {
           const bank = await loadPuzzleBank();
+          if (Z.loadTok !== tok) return;
           const pool = bank[Z.diff === "daily" ? "normal" : Z.diff] || [];
           const row = pool[Math.floor(Math.random() * pool.length)];
           const [id, fen, moves, rating] = row.split("|"), mv = moves.split(" ");
           const g = new ChessCls(fen), r0 = uciMove(g, mv[0]);
           Object.assign(Z, { game: g, sol: mv.slice(1), idx: 0, color: g.turn(), flip: g.turn() === "b", last: [r0.from, r0.to], counted: false, status: "play",
             info: { id: id.replace(/[^A-Za-z0-9]/g, ""), rating: Number(rating) || 0, themes: [] } });
-        } catch (_) { Z.status = "error"; }
+        } catch (_) { if (Z.loadTok === tok) Z.status = "error"; }
       }
-      arenaRefresh();
+      if (Z.loadTok === tok) arenaRefresh();
     }
     function puzCount(solved) {
       const Z = arena.puz; if (Z.counted) return; Z.counted = true;
@@ -615,10 +619,10 @@
             <label class="flex items-center gap-1">غامق <input type="color" value="${boardColors.d}" onchange="setBoardColor('d', this.value)" class="w-8 h-6 rounded bg-transparent border-0 cursor-pointer" /></label>
             ${BOARD_THEMES.map(t => `<button onclick="setBoardColor('l','${t[1]}'); setBoardColor('d','${t[2]}')" title="${t[0]}" class="w-6 h-6 rounded-md border border-yellow-500/30" style="background:linear-gradient(135deg, ${t[1]} 50%, ${t[2]} 50%)"></button>`).join("")}
           </div>
-          <div class="flex flex-wrap items-center gap-3 text-[11px] text-gray-400">
-            <span>شكل القطع:</span>
-            ${PIECE_SETS.map(ps => `<button onclick="setPieceSet('${ps[0]}')" aria-pressed="${pieceSet === ps[0]}" class="px-3 py-1.5 rounded-lg text-[11px] font-bold ${pieceSet === ps[0] ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border border-yellow-500/20'}">${ps[1]}</button>`).join("")}
-          </div>
+          ${u.role === "student" ? `<div class="flex flex-wrap items-center gap-3 text-[11px] text-gray-400">
+            <span>${lang === "en" ? "Pieces" : "القطع"}: <b class="text-gray-200">${window.ecaEquipped && ecaEquipped(u, "piece", "p") ? esc((ecaShopCatalog.find(x => x.id === ecaEquipped(u, "piece", "p")) || {})[lang === "en" ? "en" : "title"] || "") : "Lichess"}</b></span>
+            <button type="button" onclick="ecaPieceShop()" class="tap rounded-lg px-3 text-[11px] font-bold bg-zinc-900 text-yellow-300 border border-yellow-500/30">🛒 ${lang === "en" ? "New pieces in the shop" : "قطع جديدة من المتجر"}</button>
+          </div>` : ""}
             </div>
           </details>
           ${body}
