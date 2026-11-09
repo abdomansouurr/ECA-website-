@@ -628,7 +628,7 @@
     };
     function studentMissionCard(user) {
       const arenaData = user.arena || {}, done = dailyMissionDone(user), stars = Number(arenaData.stars) || 0;
-      return `<div class="gold-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+      return `<div data-hm="mission" class="gold-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <div class="font-bold text-yellow-300">${lang === "en" ? "Today's mission" : "مهمة اليوم"} ⭐</div>
           <p class="text-xs text-gray-400 mt-1">${done
@@ -1296,21 +1296,25 @@
       return `
         <div class="space-y-6">
           ${studentMissionCard(stu)}
-          <div class="gold-card rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
-            <div>
+          <div data-hm="player" class="gold-card hm-player rounded-2xl p-5 sm:p-6">
+            <div class="hm-player-top">
+              <div class="hm-avatar" aria-hidden="true"><span class="hm-ring"></span><span class="hm-face eca-frame ${ecaFrameOf(stu) ? "eca-frame-" + ecaFrameOf(stu) : ""} ${window.ecaEliteClass ? ecaEliteClass(stu.id) : ""}">${esc(ecaAvatarOf(stu) || "♟")}</span><span class="hm-lvl">${studentLevel}</span></div>
+            <div class="min-w-0 flex-1">
               <span class="px-2.5 py-1 rounded-full text-xs gold-btn">STEP ${stu.level} STUDENT</span>
-              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">${ecaAvatarOf(stu) || (window.ecaEliteRank && ecaEliteRank(stu.id)) ? `<span aria-hidden="true" class="eca-frame ${ecaFrameOf(stu) ? "eca-frame-" + ecaFrameOf(stu) : ""} ${window.ecaEliteClass ? ecaEliteClass(stu.id) : ""}">${esc(ecaAvatarOf(stu) || "♟")}</span> ` : ""}${lang === "en" ? "Welcome, " : "أهلاً يا "}${esc(ecaStudentAlias(stu))}${activeTitle ? ` <span class="text-sm text-yellow-300">${esc(lang === "en" ? activeTitle.en : activeTitle.title)}</span>` : ""}</h2>
+              <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">${lang === "en" ? "Welcome, " : "أهلاً يا "}${esc(ecaStudentAlias(stu))}${activeTitle ? ` <span class="text-sm text-yellow-300">${esc(lang === "en" ? activeTitle.en : activeTitle.title)}</span>` : ""}</h2>
+              <div class="hm-xp" role="progressbar" aria-valuemin="0" aria-valuemax="500" aria-valuenow="${xp % 500}" aria-label="${lang === "en" ? "Progress to the next level" : "الطريق للمستوى الجاي"}"><i style="width:${Math.round((xp % 500) / 5)}%"></i></div>
               <p class="text-xs text-sky-300 mt-1">${lang === "en" ? "Level" : "المستوى"} ${studentLevel} • ${xp} XP</p>
               <p class="text-xs text-gray-400 mt-1">حضرت ${s.attC}/${s.total} درس في Step ${stu.level} • متبقي ${s.rem} درس للامتحان</p>
+            </div>
+            </div>
               <label class="inline-flex flex-wrap items-center gap-2 mt-3 text-xs text-gray-400">
                 <span>${lang === "en" ? "Your student nickname" : "اسمك المستعار للطلاب"}</span>
                 <input aria-label="${lang === "en" ? "Choose your nickname" : "اكتب اسمك المستعار"}" value="${esc(stu.nickname || "")}" placeholder="${esc(ecaStudentAlias(stu))}" maxlength="24" onchange="setStudentAlias(this.value)" class="tap min-h-[44px] w-48 rounded-xl bg-black border border-yellow-500/40 px-3 text-sm text-white" />
               </label>
-            </div>
           </div>
           ${studentShopCard(stu)}
 
-          <div class="grid gap-6">
+          <div data-hm="lesson" class="grid gap-6">
             <!-- 2. Next Lesson Up -->
             <div class="gold-card rounded-2xl p-6 flex flex-col justify-between">
               <div>
@@ -2397,6 +2401,7 @@
       );
       return replaced;
     };
+    window.ecaHomeCore = renderStudentHome;   // محتوى الرئيسية الأساسي (home.js بيوزّعه في التصميم الجديد)
 
     function renderStudentCertificatesBox(stu) {
       const certs = stu.certificates || [];

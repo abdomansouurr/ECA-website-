@@ -830,6 +830,26 @@ async function login(p, id) {
       ecaEquip('p', ''); out.back = pieceSet === 'lichess' && imgs() > 0;
       if (keep) ecaEquip('p', keep); switchTab('home'); return out; })()`);
     check("pieces: Lichess pieces by default with no other choice, bought pieces replace them while worn", pcs.def && pcs.noChoice && pcs.skin && pcs.back, pcs);
+    // ---------- home: gaming lobby layout ----------
+    await pa.send("Page.bringToFront");
+    const hm = await pa.ev(`(() => { const out = {};
+      out.fns = ['ecaHomeCore', 'flCardHTML', 'ecaQuestsCardHTML', 'streakCardHTML', 'ecaMapHTML', 'ecaSpinCardHTML', 'ecaPetHTML', 'ecaAchHTML', 'liCardHTML', 'homeExtrasHTML', 'wkHomeCardHTML', 'funEventCardHTML', 'saTrophyCardHTML', 'annStudentHTML'].filter(n => typeof window[n] !== 'function');
+      switchTab('arena'); switchTab('home'); const m = document.getElementById('mainView');
+      out.intro = !!m.querySelector('.hm.hm-intro');
+      out.cards = { player: m.querySelectorAll('.hm-hero .hm-player').length, play: !!m.querySelector('.hm-hero .eca-play-now'), shop: !!m.querySelector('#ecaShopCard'), map: !!m.querySelector('.eca-map'),
+        mission: !!m.querySelector('[data-hm="mission"]'), lesson: !!m.querySelector('[data-hm="lesson"]'), sections: m.querySelectorAll('.hm-sec').length, xp: !!m.querySelector('.hm-player .hm-xp'), nick: !!m.querySelector('.hm-player input') };
+      render(); out.again = !document.querySelector('#mainView .hm-intro');
+      return out; })()`);
+    check("home: every card's function is there", hm.fns.length === 0, hm.fns);
+    check("home: player card, play now, quests, map, mission, lesson and shop each appear once in the new layout", hm.cards.player === 1 && hm.cards.play && hm.cards.shop && hm.cards.map && hm.cards.mission && hm.cards.lesson && hm.cards.sections >= 3 && hm.cards.xp && hm.cards.nick, hm.cards);
+    check("home: the intro plays when you open home, not on every update", hm.intro && hm.again, hm);
+    if (process.env.E2E_SHOTS) for (const [w, h] of [[375, 1500], [1280, 1500]]) {
+      await pa.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: 1, mobile: w < 800 });
+      await pa.ev("document.querySelectorAll('.eca-spin-modal,#ecaMilestone,.eca-drop-modal').forEach(e => e.remove()); render(); window.scrollTo(0, 0)"); await sleep(1200);
+      const shot = await pa.send("Page.captureScreenshot", { format: "png" });
+      fs.writeFileSync(path.join(process.env.E2E_SHOTS, "home-" + w + ".png"), Buffer.from(shot.data, "base64"));
+    }
+    if (process.env.E2E_SHOTS) await pa.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
     if (process.env.E2E_SHOTS) for (const [w, h, tabK] of [[375, 812, "solo"], [375, 812, "events"], [1280, 900, "arcade"]]) {
       await pa.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: 1, mobile: w < 800 });
       await pa.ev("switchTab('arena'); arenaSub('lobby'); lobbyTab('" + tabK + "'); window.scrollTo(0, 0)"); await sleep(900);
@@ -862,11 +882,15 @@ async function login(p, id) {
         if (e.closest(".eca-board") || e.disabled) return false; const r = e.getBoundingClientRect(); if (!r.width || !r.height) return false;
         const st = getComputedStyle(e); if (st.visibility === "hidden" || st.display === "none") return false;
         return r.height < 43.5 || r.width < 43.5; }).map(e => (e.getAttribute("onclick") || e.title || e.textContent || e.tagName).trim().slice(0, 40) + " " + Math.round(e.getBoundingClientRect().width) + "x" + Math.round(e.getBoundingClientRect().height));
-      return { wide: wide ? document.documentElement.scrollWidth : 0, small: [...new Set(small)].slice(0, 40) }; })()`;
+      const inScroller = e => { for (let p = e.parentElement; p && p.id !== "mainView"; p = p.parentElement) { const ox = getComputedStyle(p).overflowX; if (ox === "auto" || ox === "scroll") return true; } return false; };
+      const cut = [...document.querySelectorAll("#mainView *")].filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.right > W + 1 || r.left < -1) && !inScroller(e); })
+        .map(e => (e.id ? "#" + e.id : (typeof e.className === "string" ? e.className : e.tagName).slice(0, 50)) + " " + Math.round(e.getBoundingClientRect().left) + ".." + Math.round(e.getBoundingClientRect().right));
+      return { wide: wide ? document.documentElement.scrollWidth : 0, small: [...new Set(small)].slice(0, 40), cut: cut.slice(0, 8) }; })()`;
     const views = [["home", "switchTab('home')"]].concat(["lobby", "play", "puzzles", "lessons", "rush", "vision", "pawns", "duel", "friend", "speed", "weekly", "boss", "cards", "analysis"].map(v => [v, `switchTab('arena'); arena.sub='${v}'; render();`]));
     const fitBad = [];
-    for (const [name, go] of views) { await pa.ev(go); await sleep(700); const r = await pa.ev(fit); if (r.wide || r.small.length) fitBad.push({ view: name, ...r }); }
+    for (const [name, go] of views) { await pa.ev(go); await sleep(700); const r = await pa.ev(fit); if (r.wide || r.small.length || r.cut.length) fitBad.push({ view: name, ...r }); }
     check("320px: no sideways scroll on any view", !fitBad.some(r => r.wide), fitBad.filter(r => r.wide));
+    check("320px: nothing is cut off at the sides", !fitBad.some(r => r.cut.length), fitBad.filter(r => r.cut.length).map(r => ({ view: r.view, cut: r.cut })));
     check("320px: touch targets are 44px or more", !fitBad.some(r => r.small.length), fitBad.filter(r => r.small.length));
     await pa.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
     await pa.ev("switchTab('home')");
