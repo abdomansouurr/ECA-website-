@@ -7,9 +7,9 @@
   <link rel="manifest" href="manifest.json" />
   <!-- لوجو الأكاديمية على تاب المتصفح: ICO في الجذر (الفولباك الأضمن — المتصفحات بتطلبه من /favicon.ico مباشرة)
        + PNG للتاب الحديث + apple-touch للآيفون — كلهم بنفس اللوجو ومع رقم نسخة يكسر الكاش -->
-  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v77" />
-  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v77" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v77" />
+  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v78" />
+  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v78" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v78" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ECA Chess" />
@@ -23,9 +23,16 @@
   <meta property="og:title" content="Egypt Chess Academy — أكاديمية مصر للشطرنج" />
   <meta property="og:description" content="منهج تدريبي، ألغاز يومية، بوتات تدريب، امتحانات ترقية وشهادات، ومتابعة لولي الأمر." />
   <meta property="og:url" content="https://eca-website-for-coach.vercel.app/" />
-  <meta property="og:image" content="https://eca-website-for-coach.vercel.app/icon-512.png" />
+  <meta property="og:image" content="https://eca-website-for-coach.vercel.app/og-image.png" />
+  <meta property="og:image:secure_url" content="https://eca-website-for-coach.vercel.app/og-image.png" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="أكاديمية مصر للشطرنج — Egypt Chess Academy" />
   <meta property="og:locale" content="ar_EG" />
-  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Egypt Chess Academy — أكاديمية مصر للشطرنج" />
+  <meta name="twitter:image" content="https://eca-website-for-coach.vercel.app/og-image.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
@@ -298,7 +305,7 @@
     @keyframes ecaRewardPop { 0% { opacity: 0; transform: translateY(12px) scale(.8); } 25% { opacity: 1; transform: translateY(0) scale(1.08); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px) scale(1); } }
     @media (prefers-reduced-motion: reduce) { .eca-reward-pop { animation: none; } }
 
-    /* ===== eca-v77: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
+    /* ===== eca-v78: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
     @keyframes ecaItemIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     .stagger-in > *, .st-item { animation-duration: .24s; }
     .stagger-in > *:nth-child(1) { animation-delay: 0.045s }
@@ -655,8 +662,8 @@
     html[data-ecap="piece-gold"] .eca-pc.w, .eca-skin-piece-gold .eca-pc.w { color: #fde68a; text-shadow: 0 0 1px #78350f, 0 0 1px #78350f, 0 1px 3px rgba(0,0,0,.5); }
     html[data-ecap="piece-gold"] .eca-pc.b, .eca-skin-piece-gold .eca-pc.b { color: #7c2d12; text-shadow: 0 0 1px #fde047, 0 1px 2px rgba(0,0,0,.45); }
   </style>
-  <script>window.ECA_VERSION = "eca-v77";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v77" />
+  <script>window.ECA_VERSION = "eca-v78";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v78" />
 </head>
 <body class="min-h-screen flex flex-col relative">
   <a href="#mainView" class="skip-link">تخطّي إلى المحتوى</a>
@@ -820,41 +827,41 @@
     } catch (_) {}
   </script>
   <script type="application/json" id="ecaLazyModules">{"finance":"js/finance.js"}</script>
-  <script src="js/core.js?v=eca-v77"></script>
+  <script src="js/core.js?v=eca-v78"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v77"></script>
+  <script src="js/arena.js?v=eca-v78"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v77"></script>
-  <script src="js/streaks.js?v=eca-v77"></script>
-  <script src="js/review.js?v=eca-v77"></script>
-  <script src="js/quality.js?v=eca-v77"></script>
-  <script src="js/announce.js?v=eca-v77"></script>
-  <script src="js/progress.js?v=eca-v77"></script>
-  <script src="js/arena2.js?v=eca-v77"></script>
+  <script src="js/extras.js?v=eca-v78"></script>
+  <script src="js/streaks.js?v=eca-v78"></script>
+  <script src="js/review.js?v=eca-v78"></script>
+  <script src="js/quality.js?v=eca-v78"></script>
+  <script src="js/announce.js?v=eca-v78"></script>
+  <script src="js/progress.js?v=eca-v78"></script>
+  <script src="js/arena2.js?v=eca-v78"></script>
   <!-- homework, coach dashboards, tournaments, and placement test load on demand via loadModule -->
-  <script src="js/ux.js?v=eca-v77"></script>
-  <script src="js/annotate.js?v=eca-v77"></script>
-  <script src="js/gamify.js?v=eca-v77"></script>
-  <script src="js/adventure.js?v=eca-v77"></script>
-  <script src="js/duel.js?v=eca-v77"></script>
-  <script src="js/fx.js?v=eca-v77"></script>
-  <script src="js/speedarena.js?v=eca-v77"></script>
-  <script src="js/loot.js?v=eca-v77"></script>
-  <script src="js/dojo.js?v=eca-v77"></script>
-  <script src="js/cards.js?v=eca-v77"></script>
-  <script src="js/stamina.js?v=eca-v77"></script>
-  <script src="js/social.js?v=eca-v77"></script>
-  <script src="js/friendduel.js?v=eca-v77"></script>
-  <script src="js/weekly.js?v=eca-v77"></script>
-  <script src="js/boss.js?v=eca-v77"></script>
-  <script src="js/command.js?v=eca-v77"></script>
-  <script src="js/lessonpuz.js?v=eca-v77"></script>
-  <script src="js/parentreport.js?v=eca-v77"></script>
+  <script src="js/ux.js?v=eca-v78"></script>
+  <script src="js/annotate.js?v=eca-v78"></script>
+  <script src="js/gamify.js?v=eca-v78"></script>
+  <script src="js/adventure.js?v=eca-v78"></script>
+  <script src="js/duel.js?v=eca-v78"></script>
+  <script src="js/fx.js?v=eca-v78"></script>
+  <script src="js/speedarena.js?v=eca-v78"></script>
+  <script src="js/loot.js?v=eca-v78"></script>
+  <script src="js/dojo.js?v=eca-v78"></script>
+  <script src="js/cards.js?v=eca-v78"></script>
+  <script src="js/stamina.js?v=eca-v78"></script>
+  <script src="js/social.js?v=eca-v78"></script>
+  <script src="js/friendduel.js?v=eca-v78"></script>
+  <script src="js/weekly.js?v=eca-v78"></script>
+  <script src="js/boss.js?v=eca-v78"></script>
+  <script src="js/command.js?v=eca-v78"></script>
+  <script src="js/lessonpuz.js?v=eca-v78"></script>
+  <script src="js/parentreport.js?v=eca-v78"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v77"></script>
+  <script type="module" src="js/firebase.js?v=eca-v78"></script>
 </body>
 </html>

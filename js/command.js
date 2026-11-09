@@ -22,6 +22,30 @@ const CMD_MOTIFS = {
 };
 function cmdMotifName(m) { return m ? (CMD_MOTIFS[m] ? CMD_MOTIFS[m][lang === "en" ? 1 : 0] : m) : CL("كل الأفكار", "Any motif"); }
 window.cmdMotifName = cmdMotifName;
+
+// ================= نسخة احتياطية (JSON) على جهاز الكوتش =================
+// الطلاب (من غير كود ولي الأمر) والمجموعات ومواعيدها والحضور. بتتحمّل كملف ومش بتتبعت لأي مكان.
+function cmdBackupData() {
+  const u = currUser();
+  if (!isStaffUser(u)) return null;
+  const students = (db.users || []).filter(x => x.role === "student").map(x => { const o = JSON.parse(JSON.stringify(x)); delete o.parentCode; delete o.pass; return o; });
+  const groups = (db.groups || []).slice(), attendance = JSON.parse(JSON.stringify(db.attendance || {}));
+  return { app: "Egypt Chess Academy", kind: "backup", version: window.ECA_VERSION || "", exportedAt: new Date().toISOString(), exportedBy: u.username || u.name || "",
+    counts: { students: students.length, groups: groups.length, attendanceDays: Object.keys(attendance).length },
+    groups, groupSchedule: JSON.parse(JSON.stringify(db.groupSched || {})), students, attendance };
+}
+function cmdExportBackup() {
+  const data = cmdBackupData();
+  if (!data) return;
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = "eca-backup-" + todayISO() + ".json"; a.rel = "noopener";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  toast(CL(`اتحمّلت النسخة الاحتياطية: ${data.counts.students} طالب و${data.counts.groups} مجموعة.`, `Backup downloaded: ${data.counts.students} students and ${data.counts.groups} groups.`));
+}
+window.cmdBackupData = cmdBackupData;
+window.cmdExportBackup = cmdExportBackup;
 function cmdIsoIn(days) { const d = new Date(Date.now() + days * 864e5); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
 function cmdStudents() { return (db.users || []).filter(u => u.role === "student").sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ar")); }
 function cmdMembers(g) { return cmdStudents().filter(u => (u.group || "") === g); }
@@ -275,7 +299,8 @@ function renderCommandView(u) {
   return `<div class="space-y-5 page-enter">
     <div class="gold-card rounded-2xl p-5"><h2 class="font-display font-bold text-xl gold-gradient-text">🛡️ ${CL("مركز قيادة الكوتش", "Coach Command Center")}</h2>
       <p class="text-xs text-gray-400 mt-1">${CL("المجموعات، وواجب الزعيم بضغطة واحدة، وجوائز فورية أثناء الحصة.", "Groups, one-click boss homework, and instant rewards during class.")}</p>
-      <button type="button" onclick="showSystemDiagnostics()" class="tap mt-3 rounded-lg px-3 text-xs font-bold bg-zinc-800 text-white border border-yellow-500/30">🩺 ${CL("فحص النظام (قراية بس)", "System check (read-only)")}</button></div>
+      <button type="button" onclick="showSystemDiagnostics()" class="tap mt-3 rounded-lg px-3 text-xs font-bold bg-zinc-800 text-white border border-yellow-500/30">🩺 ${CL("فحص النظام (قراية بس)", "System check (read-only)")}</button>
+      <button type="button" onclick="cmdExportBackup()" class="tap mt-3 ms-2 rounded-lg px-3 text-xs font-bold bg-zinc-800 text-white border border-yellow-500/30">💾 ${CL("تصدير نسخة احتياطية (JSON)", "Export Backup (JSON)")}</button></div>
     <div class="grid lg:grid-cols-2 gap-5 items-start">
       <div class="space-y-5">${cmdDropHTML()}${cmdBossFormHTML()}</div>
       <div class="space-y-5">

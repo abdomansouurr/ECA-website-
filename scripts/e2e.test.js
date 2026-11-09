@@ -697,6 +697,11 @@ async function login(p, id) {
     await pg.ev("switchTab('command')");
     const diagG = await pg.ev("runSystemDiagnostics().then(r => ({ pass: r.pass, fail: r.fail, failed: r.results.filter(x => x.result === 'FAIL').map(x => x.check + ': ' + x.detail) }))");
     check("diagnostics: coach check passes", !!diagG && diagG.fail === 0 && diagG.pass >= 10, diagG);
+    const bk = await pg.ev("(() => { const d = cmdBackupData(); return d && { n: d.counts.students, g: d.counts.groups, hasGroups: Array.isArray(d.groups), noCodes: !JSON.stringify(d.students).includes('parentCode'), names: d.students.every(s => typeof s.name === 'string') }; })()");
+    check("backup: coach export has students and groups, no parent codes", !!bk && bk.n >= 3 && bk.hasGroups && bk.g >= 1 && bk.noCodes && bk.names, bk);
+    check("backup: the button downloads a JSON file", await pg.ev("(() => { let f = ''; const o = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { f = this.download + '|' + this.href.slice(0, 5); }; try { cmdExportBackup(); } finally { HTMLAnchorElement.prototype.click = o; } return /^eca-backup-[0-9]{4}-[0-9]{2}-[0-9]{2}[.]json[|]blob:$/.test(f); })()"));
+    check("weekly: the stored solution is not plain text", await (async () => { const d = await read("coachChallenges/" + wkNow); return !!d && typeof d.moves === "string" && d.moves.startsWith(" ") && d.moves.trim() !== wkMoves; })());
+    check("banks: solutions in the files are encoded", await pa.ev("fetch('puzzles.js').then(r => r.text()).then(t => t.includes('eca-enc:1') && !t.includes('0FCbL|8/7p/5kp1/r4p2/p7/R7/1N1K4/8 b - - 7 47|f6e5'))"));
     await pg.ev("showSystemDiagnostics()");
     check("diagnostics: coach panel shows the results", !!(await until(() => pg.ev("!!document.getElementById('ecaDiagModal') && /PASS/.test(document.getElementById('ecaDiagModal').textContent)"), 20000)));
     await pg.ev("document.getElementById('ecaDiagModal').remove()");

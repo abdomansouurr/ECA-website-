@@ -352,6 +352,12 @@
     };
 
     // تحدي الكوتش الأسبوعي وقاعة المشاهير
+    // حل تحدي الأسبوع بيتخزن متشفّر تشفير خفيف (نفس حروف النقلات بس متبدّلة) عشان ما يبانش نص صريح في الـ Network.
+    // المسافة في الأول علامة إنه متشفّر، والقديم من غيرها بيتقري زي ما هو. نفس الجدول بتاع scripts/obfuscate-puzzles.js.
+    const WK_F = "abcdefgh", WK_R = "12345678", WK_P = "qrbn", WK_f = "fcahdgbe", WK_r = "58371624", WK_p = "bnqr";
+    const wkSwap = (s, from, to) => String(s).trim().split(/\s+/).map(m => [...m].map((c, i) => i === 4 ? to[2][from[2].indexOf(c)] : i % 2 ? to[1][from[1].indexOf(c)] : to[0][from[0].indexOf(c)]).join("")).join(" ");
+    const wkEnc = s => " " + wkSwap(s, [WK_F, WK_R, WK_P], [WK_f, WK_r, WK_p]);
+    const wkDec = s => typeof s === "string" && s.startsWith(" ") ? wkSwap(s, [WK_f, WK_r, WK_p], [WK_F, WK_R, WK_P]) : s;
     window.fbWeeklyWatch = (wk, onChange) => {
       let docData = null, hof = null, att = null, gotDoc = false;
       const emit = () => { if (gotDoc) onChange(docData, hof || [], att); };
@@ -362,7 +368,7 @@
       };
       const u1 = listen("weeklyChallenge", doc(firestore, "coachChallenges", wk), snap => {
         gotDoc = true;
-        docData = snap.exists() ? { title: cleanDeep(snap.data().title || ""), fen: snap.data().fen, moves: snap.data().moves, setup: !!snap.data().setup } : null;
+        docData = snap.exists() ? { title: cleanDeep(snap.data().title || ""), fen: snap.data().fen, moves: wkDec(snap.data().moves), setup: !!snap.data().setup } : null;
         emit(); loadAtt();
       }, err => { console.warn("Weekly challenge failed:", err && err.code); gotDoc = true; emit(); });
       const u2 = listen("hallOfFame", query(collection(firestore, "coachChallenges", wk, "hallOfFame"), orderBy("ms", "asc"), limit(20)), snap => {
@@ -374,7 +380,7 @@
     };
     window.fbWeeklySave = async (wk, data) => {
       if (!me || !isStaffRole(me.role)) throw new Error("not-staff");
-      await setDoc(doc(firestore, "coachChallenges", wk), { title: data.title, fen: data.fen, moves: data.moves, setup: !!data.setup, by: me.uid, at: serverTimestamp() });
+      await setDoc(doc(firestore, "coachChallenges", wk), { title: data.title, fen: data.fen, moves: wkEnc(data.moves), setup: !!data.setup, by: me.uid, at: serverTimestamp() });
     };
     window.fbWeeklyAttempt = async wk => {
       const ref = doc(firestore, "coachChallenges", wk, "attempts", me.uid);
