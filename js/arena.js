@@ -501,7 +501,7 @@
                 ${Z.info.themes.map(t => `<span dir="ltr" class="px-2 py-0.5 rounded-lg bg-zinc-900 text-gray-300 border border-zinc-800">${t}</span>`).join("")}
               </div>` : ''}
               <div class="grid grid-cols-3 gap-2">
-                <button onclick="puzHint()" ${Z.status !== 'play' ? 'disabled' : ''} class="tap rounded-xl text-xs bg-zinc-900 border border-emerald-500/40 text-emerald-300 disabled:opacity-40">تلميح</button>
+                <button onclick="puzHint()" ${Z.status !== 'play' ? 'disabled' : ''} class="tap rounded-xl text-xs bg-zinc-900 border border-emerald-500/40 text-emerald-300 disabled:opacity-40">${window.puzHintLabel ? puzHintLabel() : "تلميح"}</button>
                 <button onclick="puzShow()" ${Z.status !== 'play' && Z.status !== 'wrong' ? 'disabled' : ''} class="tap rounded-xl text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300 disabled:opacity-40">الحل</button>
                 <button onclick="puzLoad()" ${busy ? 'disabled' : ''} class="tap rounded-xl text-xs gold-btn disabled:opacity-40">لغز جديد</button>
               </div>

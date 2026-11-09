@@ -101,6 +101,32 @@ function lpTitle(key) {
 }
 function lpStepOf(key) { return Number(String(key).split("-")[0]) || 1; }
 
+// ================= المستوى الذكي: تقييم ألغاز لكل طالب بيعلى ويوطى مع كل لغز (زي Elo) =================
+// بيتحفظ على الجهاز. الألغاز بتيجي قريبة من التقييم ده: بعد غلطتين ورا بعض أسهل شوية، وبعد 3 حلول صح ورا بعض أصعب شوية.
+const PR_START = [600, 900, 1200, 1500, 1800, 2000];
+function ecaPrKey(u) { return "ECA_PR_" + String((u && u.id) || ""); }
+function ecaPrGet(u) {
+  let o = null;
+  try { o = JSON.parse(localStorage.getItem(ecaPrKey(u)) || "null"); } catch (_) {}
+  if (!o || !(Number(o.r) > 0)) o = { r: PR_START[Math.min(6, Math.max(1, Number(u && u.level) || 1)) - 1], n: 0 };
+  return { r: Number(o.r), n: Number(o.n) || 0 };
+}
+function ecaPrUpdate(u, rating, solved) {
+  const o = ecaPrGet(u), rp = Number(rating) || o.r, expect = 1 / (1 + Math.pow(10, (rp - o.r) / 400)), k = o.n < 15 ? 60 : 32;
+  o.r = Math.round(Math.min(2800, Math.max(400, o.r + k * ((solved ? 1 : 0) - expect)))); o.n++;
+  try { localStorage.setItem(ecaPrKey(u), JSON.stringify(o)); } catch (_) {}
+  return o.r;
+}
+function ecaPrTarget(u, Z) { const run = Number(Z && Z.prRun) || 0; return ecaPrGet(u).r + (run <= -2 ? -200 : run >= 3 ? 100 : 0); }
+function ecaPrPick(pool, Z) {
+  const t = ecaPrTarget(currUser(), Z), rt = x => Number(String(x[0]).split("|")[3]) || 0;
+  const near = pool.slice().sort((a, b) => Math.abs(rt(a) - t) - Math.abs(rt(b) - t)).slice(0, 12);
+  return near[Math.floor(Math.random() * near.length)];
+}
+window.ecaPrGet = ecaPrGet;
+window.ecaPrTarget = ecaPrTarget;
+window.ecaPrUpdate = ecaPrUpdate;
+
 let lpBankP = null;
 function loadThemeBank() {
   if (window.ECA_THEME_BANK) return Promise.resolve(window.ECA_THEME_BANK);
@@ -169,6 +195,8 @@ function lpStart(key) {
   const Z = arena.puz, u = currUser();
   Z.lesson = key;
   Z.lessonLv = Z.lessonLv || Math.min(6, Math.max(1, Number(u && u.level) || 1));
+  if (Z.lessonAuto === undefined) Z.lessonAuto = true;
+  Z.prRun = 0;
   Z.lessonSeen = new Set();
   Z.review = false;
   arena.sub = "puzzles";
@@ -178,7 +206,9 @@ function lpStart(key) {
   go();
 }
 window.lpStart = lpStart;
-function lpLevel(n) { const Z = arena.puz; Z.lessonLv = Math.min(6, Math.max(1, Number(n) || 1)); Z.lessonSeen = new Set(); puzLoad(); }
+function lpAuto() { const Z = arena.puz; Z.lessonAuto = true; Z.prRun = 0; Z.lessonSeen = new Set(); puzLoad(); }
+window.lpAuto = lpAuto;
+function lpLevel(n) { const Z = arena.puz; Z.lessonAuto = false; Z.lessonLv = Math.min(6, Math.max(1, Number(n) || 1)); Z.lessonSeen = new Set(); puzLoad(); }
 window.lpLevel = lpLevel;
 function lpExit() { const Z = arena.puz; Z.lesson = ""; puzLoad(); }
 window.lpExit = lpExit;
@@ -194,14 +224,17 @@ window.lpExit = lpExit;
       const bank = await loadThemeBank(), seen = new Set(), pool = [];
       const at = lv => { const out = []; (ECA_LESSON_THEMES[Z.lesson] || []).forEach(t => (((bank.themes || {})[t] || [])[lv - 1] || []).forEach(row => out.push([row, t]))); return out; };
       // بعض الأفكار (زي التبييت) ألغازها قليلة في المستويات السهلة: بنروح لأقرب مستوى فيه ألغاز
+      const auto = Z.lessonAuto !== false && !!currUser();
       let lv = Z.lessonLv || 1;
-      for (const d of [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5]) { const v = lv + d; if (v >= 1 && v <= 6 && at(v).length >= 3) { lv = v; break; } }
-      Z.lessonLv = lv;
-      at(lv).forEach(([row, t]) => { const id = row.split("|")[0]; if (!seen.has(id)) { seen.add(id); pool.push([row, t]); } });
+      if (!auto) {
+        for (const d of [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5]) { const v = lv + d; if (v >= 1 && v <= 6 && at(v).length >= 3) { lv = v; break; } }
+        Z.lessonLv = lv;
+      }
+      (auto ? [1, 2, 3, 4, 5, 6] : [lv]).flatMap(at).forEach(([row, t]) => { const id = row.split("|")[0]; if (!seen.has(id)) { seen.add(id); pool.push([row, t]); } });
       if (!pool.length) throw new Error("empty");
       let fresh = pool.filter(([row]) => !Z.lessonSeen.has(row.split("|")[0]));
       if (!fresh.length) { Z.lessonSeen = new Set(); fresh = pool; }
-      const [row, theme] = fresh[Math.floor(Math.random() * fresh.length)];
+      const [row, theme] = auto ? ecaPrPick(fresh, Z) : fresh[Math.floor(Math.random() * fresh.length)];
       const [id, fen, moves, rating] = row.split("|"), mv = moves.split(" ");
       const g = new ChessCls(fen), r0 = uciMove(g, mv[0]);
       Z.lessonSeen.add(id);
@@ -227,8 +260,9 @@ window.lpExit = lpExit;
       ${daily ? `<div><div class="flex justify-between text-xs text-gray-300"><span>🎯 ${LPL("مهمة النهاردة", "Today's mission")}</span><span dir="ltr">${n}/${LP_GOAL}</span></div>
         <div class="eca-quest-track" role="progressbar" aria-valuemin="0" aria-valuemax="${LP_GOAL}" aria-valuenow="${n}" aria-label="${LPL("مهمة النهاردة", "Today's mission")}"><div style="width:${Math.round(n / LP_GOAL * 100)}%"></div></div></div>` : ""}
       <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="${LPL("المستوى", "Level")}"><span class="text-xs text-gray-400">${LPL("المستوى", "Level")}:</span>
-        ${LP_LEVELS.map((r, i) => `<button type="button" onclick="lpLevel(${i + 1})" aria-pressed="${Z.lessonLv === i + 1}" title="${r}" class="tap min-w-[44px] rounded-lg px-2 text-xs font-bold ${Z.lessonLv === i + 1 ? "gold-btn" : "bg-zinc-900 text-gray-300 border border-yellow-500/20"}">${i + 1}</button>`).join("")}
-        <span class="text-xs text-gray-400" dir="ltr">(${LP_LEVELS[(Z.lessonLv || 1) - 1]})</span></div>
+        <button type="button" onclick="lpAuto()" aria-pressed="${Z.lessonAuto !== false}" title="${LPL("الألغاز بتيجي على قد مستواك", "Puzzles match your level")}" class="tap min-w-[44px] rounded-lg px-2 text-xs font-bold ${Z.lessonAuto !== false ? "gold-btn" : "bg-zinc-900 text-gray-300 border border-yellow-500/20"}">🤖 ${LPL("تلقائي", "Auto")}</button>
+        ${LP_LEVELS.map((r, i) => `<button type="button" onclick="lpLevel(${i + 1})" aria-pressed="${Z.lessonAuto === false && Z.lessonLv === i + 1}" title="${r}" class="tap min-w-[44px] rounded-lg px-2 text-xs font-bold ${Z.lessonAuto === false && Z.lessonLv === i + 1 ? "gold-btn" : "bg-zinc-900 text-gray-300 border border-yellow-500/20"}">${i + 1}</button>`).join("")}
+        <span class="text-xs text-gray-400">${Z.lessonAuto !== false && u ? LPL("مستواك", "Your level") + ` <b dir="ltr" class="text-yellow-300">${ecaPrGet(u).r}</b>` : `<span dir="ltr">(${LP_LEVELS[(Z.lessonLv || 1) - 1]})</span>`}</span></div>
     </div>`;
     return banner + _az.apply(this, arguments);
   };
@@ -260,3 +294,20 @@ function arenaLessonsHTML() {
   </div>`;
 }
 window.arenaLessonsHTML = arenaLessonsHTML;
+
+// كل لغز درس اتحسب (صح أو غلط أو تلميح) بيحرّك المستوى، ومعاه رسالة صغيرة لما الصعوبة تتغير
+{
+  const _pc = puzCount;
+  puzCount = function (solved) {
+    const Z = arena.puz, u = currUser(), track = !Z.counted && !!Z.lesson && !Z.review && !!u && u.role === "student" && !!Z.info;
+    const out = _pc.apply(this, arguments);
+    if (track) {
+      ecaPrUpdate(u, Z.info.rating, solved);
+      const was = Number(Z.prRun) || 0;
+      Z.prRun = solved ? (was > 0 ? was + 1 : 1) : (was < 0 ? was - 1 : -1);
+      if (Z.lessonAuto !== false && Z.prRun === -2) toast(LPL("ولا يهمك 💪 اللغز الجاي أسهل شوية من نفس الفكرة.", "No worries 💪 the next one is a bit easier, same idea."));
+      else if (Z.lessonAuto !== false && Z.prRun === 3) toast(LPL("🔥 3 ورا بعض! اللغز الجاي أصعب شوية.", "🔥 3 in a row! The next one is a little harder."));
+    }
+    return out;
+  };
+}

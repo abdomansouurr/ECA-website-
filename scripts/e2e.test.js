@@ -640,6 +640,79 @@ async function login(p, id) {
     check("report: coach sends the summary to the parent's WhatsApp", /^https:\/\/wa\.me\/201100000000\?text=/.test(await pg.ev("window.__wa")));
     await pg.ev("prCoachClose()");
 
+    // ---------- flow: warm-up, adaptive lesson puzzles, «play now» ----------
+    check("flow: chess library and puzzle banks load in the background on the home page", !!(await until(() => pf.ev("typeof ChessCls !== 'undefined' && !!ChessCls && !!window.ECA_THEME_BANK && !!window.ECA_PUZZLE_BANK && tab === 'home'"), 30000)));
+    await pa.send("Page.bringToFront");
+    await pa.ev("switchTab('home')");
+    check("flow: home shows the play-now card", !!(await until(() => pa.ev("!!document.querySelector('.eca-play-now h2') && document.querySelector('.eca-play-now h2').textContent.trim().length > 2"), 10000)));
+    const pr = await pa.ev("(() => { const u = currUser(); localStorage.removeItem('ECA_PR_' + u.id); const r0 = ecaPrGet(u).r, r1 = ecaPrUpdate(u, r0, true), r2 = ecaPrUpdate(u, r1, false); const Z = { prRun: -2 }, easy = ecaPrTarget(u, Z), Z3 = { prRun: 3 }, hard = ecaPrTarget(u, Z3); return { r0, r1, r2, easy, hard, now: ecaPrGet(u).r }; })()");
+    check("adaptive: a solve raises the level, a miss lowers it", pr.r1 > pr.r0 && pr.r2 < pr.r1, pr);
+    check("adaptive: two misses ask for an easier puzzle, three solves for a harder one", pr.easy === pr.now - 200 && pr.hard === pr.now + 100, pr);
+    const order = await pa.ev("(() => { const u = currUser(), keep = arena.boss.list; arena.boss.list = [{ id: 'flowBoss1', title: 'T', done: false, dueMs: Date.now() + 864e5, solved: [], puzzles: ['a1b2c', 'd3e4f'] }]; const k1 = flNext(u).key; arena.boss.list = []; const k2 = flNext(u).key; arena.boss.list = keep; return [k1, k2]; })()");
+    check("flow: boss homework comes before the rest", ["claim", "boss"].includes(order[0]) && order[1] !== "boss", order);
+    const nx = await pa.ev("flNext(currUser())");
+    await pa.ev("ecaPlayNow()");
+    const where = { claim: "tab === 'home'", boss: "tab === 'arena' && arena.sub === 'boss'", lesson: "tab === 'arena' && arena.sub === 'puzzles' && !!arena.puz.lesson", more: "tab === 'arena' && arena.sub === 'puzzles' && !!arena.puz.lesson", weekly: "tab === 'arena' && arena.sub === 'weekly'", dojo: "tab === 'arena' && arena.sub === 'puzzles'", bot: "tab === 'arena' && arena.sub === 'play'" }[nx.key];
+    check("flow: play now opens the suggested activity", !!where && !!(await until(() => pa.ev(where), 10000)), nx);
+    await pa.ev("lpAuto(); lpStart(lpDailyLesson(currUser()))");
+    const lz = await until(() => pa.ev("arena.puz.status === 'play' && arena.puz.lesson && arena.puz.info ? { rating: arena.puz.info.rating, target: ecaPrTarget(currUser(), arena.puz), auto: arena.puz.lessonAuto } : null"), 15000);
+    check("adaptive: the lesson puzzle is near the student's level", !!lz && lz.auto === true && Math.abs(lz.rating - lz.target) <= 400, lz);
+    check("flow: no play-now strip while already in that activity", await pa.ev("(() => { const n = flNext(currUser()); return !(n.key === 'lesson' || n.key === 'more') || !document.querySelector('.eca-play-strip'); })()"));
+    check("adaptive: the level shows on the lesson banner", await pa.ev("document.getElementById('mainView').textContent.includes(String(ecaPrGet(currUser()).r))"));
+    // ---------- care: hint ladder, the mistake explained, soft streak, nothing interrupts a game ----------
+    await pa.ev("lpStart(lpDailyLesson(currUser()))");
+    await until(() => pa.ev("arena.puz.status === 'play' && !!arena.puz.game"), 15000);
+    check("care: a puzzle in progress counts as playing", await pa.ev("ecaIsPlaying() === true"));
+    const ladder = await pa.ev(`(async () => {
+      const Z = arena.puz, want = Z.sol[Z.idx], idx0 = Z.idx, out = {};
+      puzHint(); out.l1 = Z.hint === want.slice(0, 2) && !Z.flash; out.label2 = document.getElementById('mainView').textContent.includes('2/3');
+      puzHint(); out.l2 = Z.hint === want.slice(0, 2) && !!Z.flash && Z.flash[want.slice(2, 4)] === 'goal';
+      puzHint(); out.l3 = Z.idx > idx0 && !Z.hint;
+      return out; })()`);
+    check("care: hint 1 shows the piece, hint 2 the square, hint 3 plays the move", ladder.l1 && ladder.l2 && ladder.l3 && ladder.label2, ladder);
+    const why = await pa.ev(`(() => {
+      const fen = '6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1';
+      return { same: careWhy(fen, { from: 'a1', to: 'a7' }, 'a1a8'), mate: careWhy(fen, { from: 'g1', to: 'f1' }, 'a1a8'), take: careWhy('6k1/5ppp/8/8/8/8/r4PPP/R5K1 w - - 0 1', { from: 'g1', to: 'f1' }, 'a1a2') };
+    })()`);
+    check("care: a wrong move gets a reason (right piece / mate / capture)", /القطعة صح|Right piece/.test(why.same) && /كش مات|mate in one/.test(why.mate) && /تاكلها|take/.test(why.take), why);
+    const sk = await pa.ev(`(() => {
+      const d = n => { const t = new Date(todayISO() + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() - n); return t.toISOString().slice(0, 10); };
+      const six = [8, 7, 6, 5, 4, 3].map(d);
+      return { back: streaks(six.concat([d(0)]), []), waiting: streaks(six, []), long: streaks([12, 11, 10, 9, 8, 7].map(d).concat([d(0)]), []) };
+    })()`);
+    check("care: missing 2 days halves the streak instead of zeroing it", sk.back.current === 4 && sk.back.best === 6 && sk.waiting.current === 0 && sk.waiting.comeback === 4 && sk.long.current === 1, sk);
+    await pa.ev("lpExit(); switchTab('home')");
+    check("care: home is not playing", await pa.ev("ecaIsPlaying() === false"));
+
+    // ---------- no interruptions: popups wait for the game, a bot game survives a closed page, install card ----------
+    await pa.ev("lpStart(lpDailyLesson(currUser()))");
+    await until(() => pa.ev("arena.puz.status === 'play' && !!arena.puz.game"), 15000);
+    const held = await pa.ev("(async () => { window.__held = 0; ecaWhenFree(() => { window.__held = 1; }); document.querySelectorAll('.eca-emote-pop').forEach(e => e.remove()); ecaEmotePop({ e: '👏', from: 'flowX', n: 'Knight' }, 0); await new Promise(r => setTimeout(r, 1500)); return { held: window.__held, pop: !!document.querySelector('.eca-emote-pop'), fx: fxPlaying() }; })()");
+    check("calm: popups and cheers wait while a puzzle is being solved", held.held === 0 && !held.pop && held.fx === true, held);
+    await pa.ev("lpExit(); switchTab('home')");
+    check("calm: they show once the puzzle is over", !!(await until(() => pa.ev("window.__held === 1 && !!document.querySelector('.eca-emote-pop')"), 6000)));
+    const bot = await pa.ev(`(async () => {
+      const P = arena.play; switchTab('arena'); arenaSub('play');
+      await new Promise(r => { const t = Date.now(); const w = () => (typeof ChessCls !== 'undefined' && ChessCls) || Date.now() - t > 15000 ? r() : setTimeout(w, 200); w(); });
+      P.colorChoice = 'w'; P.tc = 0; P.level = 0; playStart(); playDo({ from: 'e2', to: 'e4' });
+      await new Promise(r => { const t = Date.now(); const w = () => P.game.history().length >= 2 || Date.now() - t > 15000 ? r() : setTimeout(w, 200); w(); });
+      const fen = P.game.fen(), saved = careSaveGame();
+      window.confirm = () => false; switchTab('home'); const stayed = tab === 'arena' && careGameLive();
+      P.game = null; P.over = ''; render();
+      const offered = !!careResumeData() && flNext(currUser()).key === 'resume' && document.getElementById('mainView').textContent.includes('كمّل الدور');
+      careResume();
+      const back = !!P.game && P.game.fen() === fen && !careResumeData();
+      return { saved, stayed, offered, back, moves: P.game ? P.game.history().length : 0 };
+    })()`);
+    check("calm: leaving a bot game by mistake asks first", bot.stayed === true, bot);
+    check("calm: a closed page keeps the game, and play-now offers to resume it", bot.saved && bot.offered && bot.back, bot);
+    const lost0 = (((await U(A)).arena || {}).games || {}).l || 0;
+    await pa.ev("(async () => { careSaveGame(); arena.play.game = null; arena.play.over = ''; await careResumeDecline(); window.confirm = () => true; switchTab('home'); })()");
+    check("calm: saying no counts the game as a loss, like leaving", !!(await until(async () => ((((await U(A)).arena || {}).games || {}).l || 0) === lost0 + 1, 15000)), lost0);
+    const inst = await pa.ev("(() => { localStorage.setItem('ECA_VISIT_DAYS', JSON.stringify(['2026-01-01', '2026-01-02'])); localStorage.removeItem('ECA_INSTALL_LATER'); deferredInstall = { prompt() {}, userChoice: Promise.resolve() }; const shown = careInstallCheck(); const card = !!document.getElementById('ecaInstallCard'); careInstallLater(); const again = careInstallCheck(); deferredInstall = null; return { shown, card, gone: !document.getElementById('ecaInstallCard'), again }; })()");
+    check("calm: install card on the third visit day, and «not now» hides it", inst.shown && inst.card && inst.gone && inst.again === false, inst);
+    await pa.ev("lpExit(); switchTab('home')");
+
     // ---------- connection drops: banner, and a reward earned offline is saved once, when it is back ----------
     await pa.send("Page.bringToFront");
     const aStars0 = (await U(A)).arena.stars;

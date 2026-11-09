@@ -293,10 +293,16 @@
     function ecaStreak(user) { return streaks((user && user.arena || {}).days, (user && user.shop || {}).frozen); }
     function streaks(days, frozen) {
       const ds = Array.from(new Set([...(days || []), ...(frozen || [])])).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
-      let best = 0, run = 0, prev = null;
-      ds.forEach(d => { const t = Date.parse(d + "T12:00:00Z"); run = prev !== null && t - prev === 864e5 ? run + 1 : 1; best = Math.max(best, run); prev = t; });
+      let best = 0, run = 0, real = 0, prev = null;
+      const soft = (r, gap) => gap >= 2 && gap <= 3 && r >= 4 ? Math.floor(r / 2) + 1 : 1;   // فات يوم أو يومين: النص بدل الصفر
+      ds.forEach(d => {
+        const t = Date.parse(d + "T12:00:00Z"), gap = prev === null ? 0 : Math.round((t - prev) / 864e5);
+        real = gap === 1 ? real + 1 : 1; best = Math.max(best, real);
+        run = gap === 1 ? run + 1 : soft(run, gap); prev = t;
+      });
       const last = ds.length ? Date.parse(ds[ds.length - 1] + "T12:00:00Z") : 0, today = Date.parse(todayISO() + "T12:00:00Z");
-      return { best, current: last && today - last <= 864e5 ? run : 0 };
+      const away = last ? Math.round((today - last) / 864e5) : 0, current = last && away <= 1 ? run : 0;
+      return { best, current, comeback: !current && last ? (soft(run, away) > 1 ? soft(run, away) : 0) : 0 };
     }
     function badgeList(s) {
       const a = s.arena || {}, g = a.games || {}, st = ecaStreak(s), bs = a.puzBestStreak || 0;

@@ -181,7 +181,8 @@
       P.game = null; P.over = ""; P.pre = null; P.promo = null; P.sel = null; P.thinking = false; P.clk = null;
     }
     { const _r = render; render = function () { playGuard(); return _r.apply(this, arguments); }; }
-    window.addEventListener("pagehide", () => { const P = arena.play; if (P.game && !P.over && P.game.history().length) playFinish("loss", "left"); });
+    // الصفحة بتتقفل: الدور بيتحفظ يكمّله خلال 15 دقيقة (care.js)، ولو الحفظ فشل بيتحسب خسارة زي الأول
+    window.addEventListener("pagehide", () => { const P = arena.play; if (P.game && !P.over && P.game.history().length && !(window.careSaveGame && careSaveGame())) playFinish("loss", "left"); });
     window.addEventListener("beforeunload", e => { const P = arena.play; if (P.game && !P.over && P.game.history().length) { e.preventDefault(); e.returnValue = ""; } });
 
     // رقعة اللعب: الساعات + الـ premove + اختيار الترقية

@@ -35,7 +35,8 @@
         : left <= daysLeft ? L(`فاضلك ${left} ${left === 1 ? "يوم" : left === 2 ? "يومين" : "أيام"} تمرين للأسبوع المنتظم`, `${left} more training day${left > 1 ? "s" : ""} for a regular week`)
         : L("الأسبوع ده فاته يبقى منتظم — ابدأ سلسلة جديدة النهاردة", "This week can't reach the goal — start a fresh streak today");
       const trainedToday = dots.some(x => x.today && x.on);
-      return `<div class="gold-card rounded-2xl p-5 space-y-4">
+      const comeback = st.comeback ? `<p class="rounded-xl bg-orange-500/10 border border-orange-500/30 px-3 py-2 text-xs font-bold text-orange-300">🔥 ${L(`اتمرّن النهاردة وسلسلتك ترجع ${st.comeback} يوم بدل ما تبدأ من 1!`, `Train today and your streak comes back at ${st.comeback} days instead of 1!`)}</p>` : "";
+      return `<div class="gold-card rounded-2xl p-5 space-y-4">${comeback}
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-3">
             <div class="w-12 h-12 rounded-xl flex items-center justify-center ${st.current ? "bg-orange-500/15 text-orange-400 border border-orange-500/40" : "bg-zinc-900 text-gray-600 border border-zinc-800"}">${ICON("flame", "w-7 h-7")}</div>

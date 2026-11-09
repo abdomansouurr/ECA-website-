@@ -192,6 +192,7 @@
     .eca-ghost { position: fixed; z-index: 200; pointer-events: none; transform: translate(-50%,-50%) scale(1.12); filter: drop-shadow(0 6px 8px rgba(0,0,0,.45)); }
     .eca-ghost .eca-pc { font-size: inherit; }
     .eca-sq.hint::before { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 4px #10b981; }
+    .eca-sq.goal::before { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 4px #38bdf8; background: rgba(56,189,248,.22); }
     .eca-sq.good::before { content: ""; position: absolute; inset: 0; background: rgba(16,185,129,.6); }
     .eca-sq.bad::before { content: ""; position: absolute; inset: 0; background: rgba(239,68,68,.65); }
     .eca-sq.chk::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle, rgba(239,68,68,.95) 0%, rgba(239,68,68,.35) 55%, transparent 75%); }
@@ -515,6 +516,14 @@
     .eca-skel-block .eca-skel { height: 12px; }
     .eca-skel-block .eca-skel:nth-child(2) { width: 80%; }
     .eca-skel-block .eca-skel:nth-child(3) { width: 60%; }
+    /* «العب دلوقتي»: كارت الصفحة الرئيسية وشريط الساحة */
+    .eca-play-now, .eca-play-strip { background: linear-gradient(135deg, #1d4ed8, #7c3aed); color: #fff; box-shadow: 0 10px 28px rgba(37,99,235,.35); }
+    .eca-play-now h2, .eca-play-now p, .eca-play-strip b, .eca-play-strip span { color: #fff; }
+    .eca-play-strip { display: flex; align-items: center; gap: 12px; min-height: 56px; }
+    .eca-play-icon { font-size: 40px; line-height: 1; animation: ecaPetFloat 2.4s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) { .eca-play-icon { animation: none; } }
+    .eca-install-card { position: fixed; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 70; width: min(440px, calc(100vw - 24px)); display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 18px; background: linear-gradient(135deg, #1d4ed8, #7c3aed); color: #fff; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+    .eca-install-card b, .eca-install-card span, .eca-install-card button:not(.gold-btn) { color: #fff; }
     .eca-net-banner { position: fixed; top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 90; max-width: calc(100vw - 24px); padding: 6px 14px; border-radius: 999px; background: #7c2d12; color: #fff; font-size: 12px; font-weight: 700; text-align: center; box-shadow: 0 6px 18px rgba(0,0,0,.35); pointer-events: none; }
     html[data-ecap="piece-ruby"] .eca-pc.w, .eca-skin-piece-ruby .eca-pc.w { color: #fecdd3; text-shadow: 0 0 1px #4c0519, 0 0 1px #4c0519, 0 0 6px #e11d48; }
     html[data-ecap="piece-ruby"] .eca-pc.b, .eca-skin-piece-ruby .eca-pc.b { color: #881337; text-shadow: 0 0 1px #fecdd3, 0 0 6px #fb7185; }
@@ -860,6 +869,8 @@
   <script src="js/command.js?v=eca-v78"></script>
   <script src="js/lessonpuz.js?v=eca-v78"></script>
   <script src="js/parentreport.js?v=eca-v78"></script>
+  <script src="js/care.js?v=eca-v78"></script>
+  <script src="js/flow.js?v=eca-v78"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
   <script type="module" src="js/firebase.js?v=eca-v78"></script>
