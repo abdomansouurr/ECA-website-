@@ -772,6 +772,28 @@ async function login(p, id) {
     check("assist: 🎁 picks the student in the live reward box", alerts.picked, alerts);
     check("assist: the parent summary ends with something to encourage", alerts.encourage, alerts);
     await pa.send("Page.bringToFront");
+
+    // ---------- fixes: board in view when a game opens, quest rewards, no "already collected" message ----------
+    await pa.ev("switchTab('arena'); arenaSub('lessons')");
+    await sleep(500);
+    await pa.ev("window.scrollTo(0, document.documentElement.scrollHeight)");
+    await sleep(300);
+    await pa.ev("lpStart(lpDailyLesson(currUser()))");
+    const view = await until(() => pa.ev("(() => { if (arena.puz.status !== 'play') return null; const b = document.querySelector('#mainView .eca-board'), r = b && b.getBoundingClientRect(); return r ? { top: Math.round(r.top), bottom: Math.round(r.bottom), h: innerHeight, y: Math.round(scrollY) } : null; })()"), 15000);
+    check("fix: opening a game from the bottom of the page shows the board", !!view && view.top >= 0 && view.top < view.h / 2, view);
+    await pa.ev("lpExit(); switchTab('home')");
+    const q0 = (await U(A)).arena.stars;
+    const qr = await pa.ev("ecaAwardStudentActivity('quest', 'rush6').then(r => r && { ok: r.ok, s: r.starsDelta, code: r.code || '' })");
+    check("fix: the new daily quests pay through the claim button", !!qr && qr.ok === true && qr.s === 2 && !!(await until(async () => (await U(A)).arena.stars === q0 + 2, 15000)), qr);
+    await sleep(3500);
+    const r0 = (await U(A)).arena;
+    const race = await pa.ev(`Promise.all([
+      window.fbEconomy({ op: 'earn', source: 'vision', key: todayISO(), day: todayISO(), score: 9 }),
+      recordAttempt('arena', 'raceTest' + Date.now().toString(36), true, u => { const a = u.arena; markActiveDay(u); a.puzTried = (a.puzTried || 0) + 1; a.puzSolved = (a.puzSolved || 0) + 1; a.puzStreak = (a.puzStreak || 0) + 1; a.puzBestStreak = Math.max(a.puzBestStreak || 0, a.puzStreak); })
+    ]).then(([e, t]) => ({ reward: !!(e && e.ok), attempt: !!(t && t.ok) }))`);
+    check("fix: a reward and a puzzle save at the same moment both go through", race.reward && race.attempt && !!(await until(async () => { const x = (await U(A)).arena; return x.stars === r0.stars + 3 && x.puzTried === (r0.puzTried || 0) + 1; }, 15000)), race);
+    const dup = await pa.ev("(async () => { const t = document.getElementById('toast'); await ecaAwardStudentActivity('puzzle', 'easiest'); t.textContent = ''; await ecaAwardStudentActivity('puzzle', 'easiest'); return t.textContent; })()");
+    check("fix: no «reward already collected» message on the next puzzles", !/سبق الحصول|already collected/.test(dup || ""), dup);
     await pa.ev("lpExit(); switchTab('home')");
 
     // ---------- connection drops: banner, and a reward earned offline is saved once, when it is back ----------

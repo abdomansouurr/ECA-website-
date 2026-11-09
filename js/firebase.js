@@ -209,6 +209,15 @@
       } catch (_) {}
     }
     // المحاولة + ملف الطالب في batch واحد: القواعد بتتأكد إن العدّادات زادت واحد بس ومع محاولة جديدة
+    // كل كتابة في ملف الطالب من المحاولات والجوايز بتمشي واحدة ورا التانية. لو مفيش حاجة شغّالة بتبدأ على طول (نفس اللحظة)
+    let writeChain = Promise.resolve(), writeBusy = 0;
+    window.fbSerial = fn => {
+      const start = () => { try { return Promise.resolve(fn()); } catch (e) { return Promise.reject(e); } };
+      const p = writeBusy ? writeChain.then(start) : start();
+      writeBusy++;
+      writeChain = p.catch(() => {}).then(() => { writeBusy--; });
+      return p;
+    };
     window.fbCommitAttempt = async (id, att) => {
       if (!me || me.role !== "student") return { ok: false };
       const u = db.users.find(x => x.id === me.uid); if (!u) return { ok: false };
@@ -879,8 +888,7 @@
       window.ecaPendingRewards = () => queued.size;
       // كل الجوايز بتتسجّل واحدة ورا التانية: لو اتنين اتبعتوا في نفس اللحظة (جايزة اللغز + اللغز الذهبي + الصندوق)
       // التاني كان بيقرا رصيد قديم والقواعد بترفضه
-      let ecoChain = Promise.resolve();
-      const ecoOne = request => { const p = ecoChain.then(() => ecoNow(request)); ecoChain = p.catch(() => {}); return p; };
+      const ecoOne = request => window.fbSerial(() => ecoNow(request));
       window.fbEconomy = async request => {
         try { return await ecoOne(request); }
         catch (e) {

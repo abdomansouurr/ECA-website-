@@ -320,12 +320,18 @@
     // قواعد Firestore بترفض أي زيادة في العدّادات من غير محاولة جديدة → مفيش إعادة ولا تزوير أرقام.
     function attemptKey(v) { return String(v || "").replace(/[^A-Za-z0-9-]/g, "").slice(0, 40); }
     function recordAttempt(kind, key, ok, mutate, extra) {
-      const u = currUser(); if (!u || u.role !== "student") return Promise.resolve({ ok: false });
+      const u0 = currUser(); if (!u0 || u0.role !== "student") return Promise.resolve({ ok: false });
       key = attemptKey(key); if (!key) return Promise.resolve({ ok: false });
-      mutate(u);
-      u.lastAttempt = u.id + "_" + kind + "_" + key;
-      if (!window.fbCommitAttempt) { save(); return Promise.resolve({ ok: true }); }
-      return window.fbCommitAttempt(u.lastAttempt, Object.assign({ kind, key, ok: !!ok }, extra || {}));
+      // بيتسجّل في نفس الطابور مع الجوايز: لو جايزة لسه بتتسجّل، المحاولة تستنى وتتحسب على الرصيد الجديد
+      // (قبل كده كانت بتكتب رصيد قديم والقواعد ترفضها، فالعدّاد ومهمة الدرس ما يتحسبوش)
+      const run = () => {
+        const u = currUser(); if (!u || u.id !== u0.id) return { ok: false };
+        mutate(u);
+        u.lastAttempt = u.id + "_" + kind + "_" + key;
+        if (!window.fbCommitAttempt) { save(); return { ok: true }; }
+        return window.fbCommitAttempt(u.lastAttempt, Object.assign({ kind, key, ok: !!ok }, extra || {}));
+      };
+      return window.fbSerial ? window.fbSerial(run) : Promise.resolve(run());
     }
     function currUser() { return db.users.find(u => u.id === db.currId) || null; }
     function toast(m) { const el = document.getElementById("toast"); el.textContent = trText(m); el.classList.remove("hidden"); setTimeout(() => el.classList.add("hidden"), 2800); }
@@ -575,7 +581,7 @@
         score = Math.floor(Number(score) || 0);
         stars = Math.min(5, Math.floor(score / 3));
       } else if (source === "quest") {
-        stars = { daily: 1, puzzles: 2, win: 2, lesson: 5 }[key] || 0;
+        stars = { daily: 1, puzzles: 2, win: 2, lesson: 5, streak3: 2, rush6: 2 }[key] || 0;
       } else if (source === "pawn") stars = 2;
       else if (source === "vision") {
         score = Math.floor(Number(score) || 0);
@@ -586,8 +592,8 @@
       try {
         const result = await window.fbEconomy({ op: "earn", source, key: String(key), day, score: score || 0, stars, xp });
         if (result.ok && !result.duplicate) showStudentReward(result);
-        else if (result.duplicate && source !== "lesson") {
-          toast(lang === "en" ? "You already collected today's reward for this activity." : "سبق الحصول على مكافأة هذا النشاط اليوم.");
+        else if (result.duplicate) {
+          // مكافأة النشاط ده اتاخدت النهاردة: اللعب بيكمّل عادي من غير رسالة
         } else if (result.code === "dojo-cap") {
           toast(lang === "en" ? "You reached today's 5 comeback bonuses." : "خدت مكافآت العودة الـ 5 بتوع النهاردة.");
         } else if (result.code === "coach-not-higher") {
@@ -1002,6 +1008,17 @@
       if (id) { const el = document.getElementById(id); if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); try { el.setSelectionRange(s, e); } catch (_) {} } }
       document.querySelectorAll("#mainView .overflow-y-auto").forEach((el, i) => { if (innerScrolls[i] !== undefined) el.scrollTop = innerScrolls[i]; });
       window.scrollTo(0, winY);
+      // لعبة اتفتحت أو اتغيرت (زرار البداية غالباً في آخر الصفحة): الرقعة تطلع قدامه بدل ما الصفحة تفضل تحت
+      const mvEl = document.getElementById("mainView"), live = !!(mvEl && mvEl.querySelector(".eca-board[data-h]"));
+      const place = tab + "|" + (tab === "arena" && typeof arena !== "undefined" ? arena.sub + "|" + (arena.puz.lesson || "") : "");
+      if ((render.__place !== undefined && render.__place !== place && tab === "arena") || (live && !render.__live)) {
+        const b = mvEl && mvEl.querySelector(".eca-board"), hd = document.querySelector("header.eca-header");
+        if (b) {
+          const r = b.getBoundingClientRect(), off = (hd ? hd.offsetHeight : 0) + 8;
+          if (r.top < off || r.bottom > innerHeight) window.scrollTo(0, Math.max(0, window.scrollY + r.top - off));
+        }
+      }
+      render.__place = place; render.__live = live;
     }
    function _render() {
       const u = currUser();
