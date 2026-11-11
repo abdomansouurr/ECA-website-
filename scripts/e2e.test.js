@@ -802,23 +802,28 @@ async function login(p, id) {
     await pa.ev("switchTab('arena'); arenaSub('lobby')");
     const hero = await pa.ev(`(() => { const keep = arena.boss.list, out = {};
       arena.boss.list = [{ id: 'lobbyBoss1', title: 'Fork Dragon', done: false, dueMs: Date.now() + 864e5, solved: ['a'], puzzles: ['a', 'b', 'c'] }]; render();
-      const h1 = document.querySelector('.lb-hero'); out.boss = h1.classList.contains('lb-crimson') && /هاجم الزعيم|Attack the boss/.test(h1.textContent) && !!h1.querySelector('[role=progressbar]');
+      const h1 = document.querySelector('.nf-billboard'); out.boss = h1.classList.contains('lb-crimson') && /Fork Dragon/.test(h1.textContent) && /واجب الكوتش|Coach homework/.test(h1.querySelector('.nf-badge').textContent) && !!h1.querySelector('.nf-btn-play') && !!h1.querySelector('.nf-btn-info') && !!h1.querySelector('.nf-bar i');
       arena.boss.list = []; render();
-      const h2 = document.querySelector('.lb-hero'); out.step = h2.classList.contains('lb-emerald') && /كمّل Step|Continue Step/.test(h2.textContent);
+      const h2 = document.querySelector('.nf-billboard'); out.step = h2.classList.contains('lb-emerald') && /Step/.test(h2.querySelector('.nf-bb-title').textContent);
       arena.boss.list = keep; render(); return out; })()`);
-    check("lobby: the hero card shows the boss, then the current step when there is none", hero.boss && hero.step, hero);
-    const tabsOk = await pa.ev(`(() => { const out = {};
-      for (const [k, want] of [['solo', /مغامرة الدروس[\\s\\S]*دوجو الانتقام/], ['arcade', /تحدي 60 ثانية[\\s\\S]*تحدي صاحبك/], ['events', /تحدي الأسبوع[\\s\\S]*بطولة السرعة/]]) {
-        lobbyTab(k); const cards = [...document.querySelectorAll('.lb-cards .lb-card')];
-        out[k] = cards.length === 2 && want.test(cards.map(c => c.textContent).join(' ')) && cards.every(c => c.tagName === 'BUTTON' && c.querySelector('.lb-card-icon') && c.querySelector('.lb-card-title') && c.querySelector('.lb-pill'));
-      }
-      out.selected = document.querySelector('.lb-tab.is-on').getAttribute('aria-selected') === 'true';
-      out.chips = document.querySelectorAll('.lb-all .lb-chip').length; return out; })()`);
-    check("lobby: three tabs, two one-tap cards each (icon, title, status)", tabsOk.solo && tabsOk.arcade && tabsOk.events && tabsOk.selected, tabsOk);
-    check("lobby: every game is still one tap away in «all games»", tabsOk.chips === 13, tabsOk.chips);
-    const pills = await until(() => pa.ev("(() => { lobbyTab('events'); const p = [...document.querySelectorAll('.lb-cards .lb-pill')].map(x => x.textContent); return /المحاولات|حليته|ما نزلش|Attempts|Solved|Not posted/.test(p[0]) && /شغّالة|تبدأ بعد|LIVE|Starts in/.test(p[1]) ? p : null; })()"), 15000);
+    check("lobby: the billboard spotlights the boss, then the current step when there is none", hero.boss && hero.step, hero);
+    const rows = await pa.ev(`(() => { const out = {}, row = k => document.querySelector('.nf-row[data-row="' + k + '"]'), text = k => (row(k) || {}).textContent || '';
+      out.rows = [...document.querySelectorAll('.nf-row')].map(r => r.dataset.row);
+      out.continue = /مغامرة الدروس/.test(text('continue')) && /دوجو الانتقام/.test(text('continue')) && !!row('continue').querySelector('.nf-bar');
+      out.pvp = /تحدي 60 ثانية/.test(text('pvp')) && /تحدي صاحبك/.test(text('pvp')) && /عجلة الحظ/.test(text('pvp'));
+      out.originals = /ECA ORIGINAL/.test(text('originals')) && /تحدي الأسبوع/.test(text('originals')) && /لوحة الشرف/.test(text('originals')) && !!document.getElementById('lbSaPill');
+      out.posters = row('top').querySelectorAll('.nf-num').length >= 1 && !!row('top').querySelector('.nf-poster');
+      out.all = row('all').querySelectorAll('.nf-card').length;
+      out.scroll = [...document.querySelectorAll('.nf-track')].every(t => getComputedStyle(t).overflowX === 'auto' && getComputedStyle(t).scrollSnapType.includes('x'));
+      out.oneTap = [...document.querySelectorAll('.nf-card')].every(c => c.tagName === 'BUTTON' && c.querySelector('.nf-card-title') && c.querySelector('.nf-card-tag'));
+      return out; })()`);
+    check("lobby: five swipeable rows (continue, speed and friends, coach originals, cards and shop, all games)", rows.rows.join() === "continue,pvp,originals,top,all" && rows.continue && rows.pvp && rows.originals && rows.posters && rows.scroll && rows.oneTap, rows);
+    check("lobby: every game is still one tap away in «all games»", rows.all === 13, rows.all);
+    const pills = await until(() => pa.ev("(() => { const p = [...document.querySelectorAll('.nf-row[data-row=\"originals\"] .nf-card-tag')].map(x => x.textContent); return /المحاولات|حليته|ما نزلش|Attempts|Solved|Not posted/.test(p[0]) && /شغّالة|تبدأ بعد|LIVE|Starts in/.test(p[1]) ? p : null; })()"), 15000);
     check("lobby: events show the weekly attempts and the tournament clock", !!pills, pills);
-    const open = await pa.ev("(() => { lobbyTab('arcade'); lbOpen('rush'); const inGame = arena.sub === 'rush' && !!document.querySelector('#mainView button[onclick=\"arenaSub(\\'lobby\\')\"]') && !document.querySelector('.lb-hero'); arenaSub('lobby'); return inGame && arena.sub === 'lobby'; })()");
+    const peek = await pa.ev("(() => { const t = document.querySelector('.nf-row[data-row=\"all\"] .nf-track'), c = t.querySelector('.nf-card'); return c.getBoundingClientRect().width < t.clientWidth * 0.95 && t.scrollWidth > t.clientWidth; })()");
+    check("lobby: rows peek past the edge so they look swipeable", peek);
+    const open = await pa.ev("(() => { lbOpen('rush'); const inGame = arena.sub === 'rush' && !!document.querySelector('#mainView button[onclick=\"arenaSub(\\'lobby\\')\"]') && !document.querySelector('.nf-billboard'); arenaSub('lobby'); return inGame && arena.sub === 'lobby'; })()");
     check("lobby: a card opens its game, and «lobby» brings you back", open);
     const pcs = await pb.ev(`(async () => {
       const u = currUser(), keep = ((u.shop || {}).eq || {}).p || "", out = {}, imgs = () => document.querySelectorAll('#mainView .eca-board img.eca-pimg').length, glyphs = () => document.querySelectorAll('#mainView .eca-board .eca-pc').length;
@@ -850,12 +855,13 @@ async function login(p, id) {
       fs.writeFileSync(path.join(process.env.E2E_SHOTS, "home-" + w + ".png"), Buffer.from(shot.data, "base64"));
     }
     if (process.env.E2E_SHOTS) await pa.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
-    if (process.env.E2E_SHOTS) for (const [w, h, tabK] of [[375, 812, "solo"], [375, 812, "events"], [1280, 900, "arcade"]]) {
+    if (process.env.E2E_SHOTS) for (const [w, h, theme] of [[375, 1400, "game"], [1280, 1100, "game"], [375, 1400, "kids"]]) {
       await pa.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: 1, mobile: w < 800 });
-      await pa.ev("switchTab('arena'); arenaSub('lobby'); lobbyTab('" + tabK + "'); window.scrollTo(0, 0)"); await sleep(900);
+      await pa.ev("(() => { document.querySelectorAll('.eca-spin-modal,#ecaMilestone,.eca-drop-modal').forEach(e => e.remove()); const keep = document.documentElement.className; if ('" + theme + "' === 'kids') { document.documentElement.className = 'kids'; } else applyTheme('" + theme + "'); switchTab('arena'); arenaSub('lobby'); window.scrollTo(0, 0); window.__keepTheme = window.__keepTheme || keep; })()"); await sleep(1200);
       const shot = await pa.send("Page.captureScreenshot", { format: "png" });
-      fs.writeFileSync(path.join(process.env.E2E_SHOTS, "lobby-" + w + "-" + tabK + ".png"), Buffer.from(shot.data, "base64"));
+      fs.writeFileSync(path.join(process.env.E2E_SHOTS, "lobby-" + w + "-" + theme + ".png"), Buffer.from(shot.data, "base64"));
     }
+    if (process.env.E2E_SHOTS) await pa.ev("document.documentElement.className = window.__keepTheme || document.documentElement.className; render();");
     if (process.env.E2E_SHOTS) await pa.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
     await pa.ev("switchTab('home')");
     await pa.ev("lpExit(); switchTab('home')");

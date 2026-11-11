@@ -7,9 +7,9 @@
   <link rel="manifest" href="manifest.json" />
   <!-- لوجو الأكاديمية على تاب المتصفح: ICO في الجذر (الفولباك الأضمن — المتصفحات بتطلبه من /favicon.ico مباشرة)
        + PNG للتاب الحديث + apple-touch للآيفون — كلهم بنفس اللوجو ومع رقم نسخة يكسر الكاش -->
-  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v84" />
-  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v84" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v84" />
+  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v85" />
+  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v85" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v85" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ECA Chess" />
@@ -306,7 +306,7 @@
     @keyframes ecaRewardPop { 0% { opacity: 0; transform: translateY(12px) scale(.8); } 25% { opacity: 1; transform: translateY(0) scale(1.08); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px) scale(1); } }
     @media (prefers-reduced-motion: reduce) { .eca-reward-pop { animation: none; } }
 
-    /* ===== eca-v84: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
+    /* ===== eca-v85: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
     @keyframes ecaItemIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     .stagger-in > *, .st-item { animation-duration: .24s; }
     .stagger-in > *:nth-child(1) { animation-delay: 0.045s }
@@ -432,20 +432,28 @@
       .eca-levelup { animation: none; opacity: 1; }
     }
 
-    /* ===== ثيم Game: داكن بلمسات نيون. بيتطبق فوق html.dark فمش بيغيّر ألوان أي ثيم تاني ===== */
-    html.game { --eca-brand: #38bdf8; --eca-brand-light: #7dd3fc; --eca-brand-soft: rgba(56,189,248,.14); --eca-brand-line: rgba(139,92,246,.45); }
-    html.game body { background-color: #070b1f; }
-    html.game .gold-gradient-text { background: linear-gradient(135deg,#7dd3fc 0%,#c4b5fd 55%,#fde047 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    html.game .text-yellow-200, html.game .text-yellow-300, html.game .text-yellow-400, html.game .hover\:text-yellow-300:hover { color: #fde047 !important; }
-    html.game .icon-btn { background: rgba(15,20,52,.9); color: #7dd3fc; }
+    /* ===== ثيم Game: سينمائي داكن (أسود مطفي، أزرار حمرا، أخضر للمكافآت، ذهبي لأول 3 والكؤوس بس). فوق html.dark ===== */
+    html.game { --bg-primary: #141414; --bg-elevated: #181818; --bg-surface-hover: #2F2F2F; --brand-primary: #E50914; --brand-hover: #F40612;
+      --accent-match: #46D369; --accent-gold: #F5C518; --text-primary: #FFFFFF; --text-secondary: #B3B3B3;
+      --eca-brand: #E50914; --eca-brand-light: #F40612; --eca-brand-soft: rgba(229,9,20,.14); --eca-brand-line: rgba(255,255,255,.08); }
+    html.game body { background-color: var(--bg-primary); color: var(--text-primary); }
+    html.game .gold-gradient-text { background: none; -webkit-text-fill-color: var(--text-primary); color: var(--text-primary); }
+    html.game .text-yellow-200, html.game .text-yellow-300, html.game .text-yellow-400, html.game .hover\:text-yellow-300:hover { color: var(--text-primary) !important; }
+    html.game .text-gray-300 { color: #D2D2D2 !important; } html.game .text-gray-400, html.game .text-gray-500 { color: var(--text-secondary) !important; }
+    html.game .text-emerald-300, html.game .text-emerald-400 { color: var(--accent-match) !important; }
+    html.game .icon-btn { background: var(--bg-elevated); color: var(--text-primary); }
     html.game .eca-hud-icon { filter: invert(1) brightness(1.1); }
     html.dark:not(.game) .eca-hud-icon { filter: invert(1); }
-    html.game .eca-header { background: rgba(9,13,38,.95); border-bottom-color: rgba(56,189,248,.45); box-shadow: 0 1px 14px rgba(56,189,248,.18); }
-    html.game .gold-card { background: rgba(15,20,52,.92); border: 1px solid rgba(139,92,246,.42); box-shadow: 0 0 18px rgba(99,102,241,.14); }
-    html.game .gold-btn, html.game .nav-tab.active { background: linear-gradient(135deg,#2563eb,#9333ea); color: #fff; }
-    html.game .eca-hud-fill, html.game .eca-quest-track div { background: linear-gradient(90deg,#38bdf8,#a855f7,#facc15); box-shadow: 0 0 8px rgba(56,189,248,.65); }
-    html.game .eca-hud-stat { color: #fde047; }
-    html.game .eca-hud-row { color: #e0e7ff; }
+    /* الشريط اللي فوق: تدرّج شفاف في أول الصفحة، وبيبقى أسود مصمت لما تنزل */
+    html.game .eca-header { background: #141414; border-bottom-color: transparent; box-shadow: none; transition: background-color .25s ease; }
+    html.game:not(.eca-scrolled) .eca-header { background: linear-gradient(180deg, rgba(0,0,0,.85) 0%, rgba(20,20,20,0) 100%); backdrop-filter: none; -webkit-backdrop-filter: none; }
+    html.game .gold-card { background: var(--bg-elevated); border: 1px solid rgba(255,255,255,.06); box-shadow: 0 4px 16px rgba(0,0,0,.45); border-radius: 8px; }
+    html.game .gold-btn, html.game .nav-tab.active { background: var(--brand-primary); color: #fff; }
+    html.game .gold-btn:hover { background: var(--brand-hover); filter: none; }
+    html.game [class*="border-yellow-500"] { border-color: rgba(255,255,255,.1) !important; }
+    html.game .eca-hud-fill, html.game .eca-quest-track div, html.game .hm-xp i { background: var(--brand-primary); box-shadow: none; }
+    html.game .eca-hud-stat { color: var(--text-primary); }
+    html.game .eca-hud-row { color: var(--text-primary); }
     .eca-lb-row { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 12px; border-radius: 12px; background: rgba(0,0,0,.28); border: 1px solid rgba(128,128,128,.22); }
     .eca-lb-pos { width: 28px; flex-shrink: 0; text-align: center; font-weight: 800; font-size: 15px; color: #fde047; }
     .eca-lb-av { width: 32px; flex-shrink: 0; text-align: center; font-size: 22px; line-height: 1; }
@@ -536,64 +544,71 @@
     html.eca-cb .eca-sq.good::before { background: rgba(37,99,235,.55); }
     html.eca-cb .eca-sq.bad::before { background: rgba(249,115,22,.65); }
     html.eca-cb .eca-sq.hint::before { box-shadow: inset 0 0 0 4px #2563eb; }
-    /* ===== لوبي ساحة التدريب (Bento) ===== */
-    .lb-top { display: grid; gap: 16px; }
-    @media (min-width: 1024px) { .lb-top { grid-template-columns: 3fr 2fr; align-items: stretch; } }
-    .lb-hero { position: relative; overflow: hidden; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 18px; border-radius: 20px; color: #fff; isolation: isolate; }
-    .lb-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: .9; }
-    .lb-hero.lb-crimson::before { background: radial-gradient(120% 140% at 0% 0%, #b91c1c 0%, #7f1d1d 45%, #1c0a0a 100%); }
-    .lb-hero.lb-emerald::before { background: radial-gradient(120% 140% at 0% 0%, #059669 0%, #065f46 45%, #04150f 100%); }
-    .lb-hero.lb-crimson { box-shadow: inset 0 0 0 2px rgba(250,204,21,.55); }
-    .lb-hero.lb-emerald { box-shadow: inset 0 0 0 2px rgba(250,204,21,.45); }
-    .lb-hero-icon { font-size: 56px; line-height: 1; animation: ecaPetFloat 2.6s ease-in-out infinite; }
-    .lb-hero-body { min-width: 0; flex: 1 1 180px; }
-    .lb-kicker { font-size: 12px; font-weight: 700; color: #fde68a; letter-spacing: .02em; }
-    .lb-hero-title { font-size: 22px; font-weight: 800; line-height: 1.25; color: #fff; overflow-wrap: anywhere; }
-    .lb-sub { font-size: 12px; color: rgba(255,255,255,.8); margin-top: 4px; }
-    .lb-hp { display: block; margin-top: 8px; }
-    .lb-cta { flex: 1 1 100%; min-height: 52px; border-radius: 14px; padding: 0 18px; font-size: 15px; font-weight: 800; color: #1a1205; background: linear-gradient(135deg, #fde047, #f59e0b); }
-    @media (min-width: 480px) { .lb-cta { flex: 0 0 auto; } }
-    .lb-pulse { animation: lbPulse 1.6s ease-in-out infinite; }
-    @keyframes lbPulse { 50% { transform: scale(1.04); } }
-    .lb-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 14px; border-radius: 20px; text-align: center; align-content: center; }
-    .lb-stats b { display: block; font-size: 20px; font-weight: 800; color: #facc15; }
-    .lb-stats span { display: block; font-size: 12px; color: #9ca3af; }
-    .lb-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 6px; border-radius: 999px; background: rgba(0,0,0,.45); border: 1px solid rgba(250,204,21,.2); }
-    .lb-tab { min-height: 44px; border-radius: 999px; font-size: 12px; font-weight: 800; color: #d1d5db; line-height: 1.2; padding: 0 6px; transition: background-color .2s, color .2s; }
-    .lb-tab.is-on { background: linear-gradient(135deg, #f3d266, #d4af37); color: #050507; }
-    .lb-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-height: 196px; }
-    @media (min-width: 360px) { .lb-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    .lb-card { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 6px; min-height: 196px; padding: 16px 10px 14px; border-radius: 20px; text-align: center; color: #fff; isolation: isolate; overflow: hidden; transition: transform .18s ease; animation: lbIn .25s ease both; }
-    .lb-card::before { content: ""; position: absolute; inset: 0; z-index: -2; }
-    .lb-card::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; opacity: 0; transition: opacity .18s ease; }
-    .lb-card:hover, .lb-card:focus-visible { transform: translateY(-3px) scale(1.01); }
-    .lb-card:hover::after, .lb-card:focus-visible::after { opacity: 1; }
-    .lb-card:active { transform: scale(.98); }
-    @keyframes lbIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-    .lb-card.lb-crimson::before { background: linear-gradient(160deg, #7f1d1d, #2a0b0b); box-shadow: inset 0 0 0 2px rgba(250,204,21,.5); border-radius: inherit; }
-    .lb-card.lb-crimson::after { box-shadow: inset 0 0 24px rgba(248,113,113,.55); }
-    .lb-card.lb-cyan::before { background: linear-gradient(160deg, #0e7490, #3b0764); box-shadow: inset 0 0 0 2px rgba(103,232,249,.55); border-radius: inherit; }
-    .lb-card.lb-cyan::after { box-shadow: inset 0 0 24px rgba(168,85,247,.6); }
-    .lb-card.lb-emerald::before { background: linear-gradient(160deg, #047857, #1f2a05); box-shadow: inset 0 0 0 2px rgba(250,204,21,.5); border-radius: inherit; }
-    .lb-card.lb-emerald::after { box-shadow: inset 0 0 24px rgba(52,211,153,.55); }
-    .lb-card-icon { font-size: 44px; line-height: 1; }
-    .lb-card-title { font-size: 15px; font-weight: 800; line-height: 1.25; }
-    .lb-card-sub { font-size: 12px; color: rgba(255,255,255,.78); }
-    .lb-pill { display: inline-flex; align-items: center; justify-content: center; min-height: 32px; max-width: 100%; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 800; color: #1a1205; background: #fde68a; overflow-wrap: anywhere; }
-    .lb-live { background: #ef4444; color: #fff; animation: lbPulse 1.4s ease-in-out infinite; }
-    .lb-all { border-radius: 20px; padding: 0 14px; }
-    .lb-all summary, .lb-looks summary { min-height: 48px; display: flex; align-items: center; font-size: 13px; font-weight: 800; cursor: pointer; list-style: none; }
-    .lb-all summary::-webkit-details-marker, .lb-looks summary::-webkit-details-marker { display: none; }
-    .lb-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; padding-bottom: 14px; }
-    .lb-chip { min-height: 44px; border-radius: 12px; padding: 0 10px; font-size: 12px; font-weight: 700; text-align: start; background: rgba(0,0,0,.35); border: 1px solid rgba(250,204,21,.2); color: #e5e7eb; }
-    html.light .lb-chip, html.eca .lb-chip, html.kids .lb-chip { background: rgba(255,255,255,.7); color: #0f172a; }
-    html.light .lb-tabs, html.eca .lb-tabs, html.kids .lb-tabs { background: rgba(15,23,42,.08); }
-    html.light .lb-tab, html.eca .lb-tab, html.kids .lb-tab { color: #334155; }
-    @media (prefers-reduced-motion: reduce) { .lb-hero-icon, .lb-pulse, .lb-live, .lb-card { animation: none; } }
+    /* ===== ساحة التدريب: بيلبورد سينمائي وصفوف أفقية (lobby.js) ===== */
+    .lb-looks summary { min-height: 48px; display: flex; align-items: center; font-size: 13px; font-weight: 800; cursor: pointer; list-style: none; }
+    .lb-looks summary::-webkit-details-marker { display: none; }
+    .nf-billboard { position: relative; overflow: hidden; isolation: isolate; min-height: 300px; display: flex; align-items: flex-end; padding: 22px 20px 28px; border-radius: 10px; color: #fff; background: #141414; }
+    .nf-billboard::before { content: ""; position: absolute; inset: 0; z-index: -2; }
+    .nf-billboard.lb-crimson::before { background: radial-gradient(90% 120% at 85% 15%, #8b0f16 0%, #3a0a0d 45%, #141414 80%); }
+    .nf-billboard.lb-emerald::before { background: radial-gradient(90% 120% at 85% 15%, #0f5a46 0%, #0b2a22 45%, #141414 80%); }
+    .nf-billboard::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(to top, #141414 10%, transparent 90%); pointer-events: none; }
+    .nf-art { position: absolute; top: 6%; inset-inline-end: 6%; z-index: -1; font-size: clamp(110px, 26vw, 220px); line-height: 1; filter: drop-shadow(0 20px 40px rgba(0,0,0,.6)); animation: nfFloat 6s ease-in-out infinite; }
+    @keyframes nfFloat { 50% { transform: translateY(-10px); } }
+    .nf-bb-body { position: relative; max-width: 560px; min-width: 0; }
+    .nf-badge { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: .1em; color: #e5e5e5; }
+    .nf-badge b { padding: 2px 6px; border-radius: 3px; background: #E50914; color: #fff; letter-spacing: .04em; }
+    .nf-bb-title { margin-top: 8px; font-size: clamp(26px, 6vw, 46px); font-weight: 900; line-height: 1.1; color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,.6); overflow-wrap: anywhere; }
+    .nf-bb-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; font-size: 14px; color: #d2d2d2; }
+    .nf-match { font-weight: 800; color: #46D369; }
+    .nf-bb-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .nf-btn-play, .nf-btn-info { min-height: 48px; padding: 0 24px; border-radius: 6px; font-size: 16px; font-weight: 800; transition: opacity .15s ease, transform .15s ease; }
+    .nf-btn-play { background: #fff; color: #000; }
+    .nf-btn-info { background: rgba(109,109,110,.7); color: #fff; }
+    .nf-btn-play:hover { opacity: .85; } .nf-btn-info:hover { opacity: .8; } .nf-btn-play:active, .nf-btn-info:active { transform: scale(.97); }
+    .nf-bar { position: absolute; inset-inline: 0; bottom: 0; height: 4px; background: rgba(255,255,255,.2); }
+    .nf-bar i { display: block; height: 100%; background: #E50914; }
+    .nf-row { margin-top: 18px; }
+    .nf-row-title { margin: 0 4px 6px; font-size: 18px; font-weight: 800; color: var(--hm-title); }
+    .nf-lane { position: relative; }
+    .nf-track { display: flex; gap: 10px; padding: 8px 2px 14px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; }
+    .nf-track::-webkit-scrollbar { display: none; }
+    .nf-item { flex: 0 0 auto; scroll-snap-align: start; }
+    .nf-card, .nf-poster { position: relative; isolation: isolate; overflow: hidden; color: #fff; text-align: start; border-radius: 6px; transition: transform .2s ease; }
+    .nf-card { display: block; width: min(78vw, 300px); aspect-ratio: 16 / 9; }
+    .nf-card::before, .nf-poster::before { content: ""; position: absolute; inset: 0; z-index: -1; }
+    .nf-card:hover, .nf-card:focus-visible, .nf-poster-wrap:hover .nf-poster, .nf-poster-wrap:focus-visible .nf-poster { transform: scale(1.04); }
+    .nf-red::before { background: linear-gradient(135deg, #8b0f16, #1f0a0b); }
+    .nf-violet::before { background: linear-gradient(135deg, #4c1d95, #120a1f); }
+    .nf-teal::before { background: linear-gradient(135deg, #0f5a46, #0a1f1a); }
+    .nf-gold::before { background: linear-gradient(135deg, #7a5a05, #1f1806); }
+    .nf-dark::before { background: linear-gradient(135deg, #3a3a3a, #181818); }
+    .nf-card-art { position: absolute; top: 10%; inset-inline-end: 8%; font-size: 52px; line-height: 1; }
+    .nf-card-info { position: absolute; inset-inline: 0; bottom: 0; display: flex; flex-direction: column; gap: 2px; padding: 28px 12px 12px; background: linear-gradient(to top, rgba(0,0,0,.88), transparent); }
+    .nf-card-title { overflow: hidden; font-size: 15px; font-weight: 800; line-height: 1.25; white-space: nowrap; text-overflow: ellipsis; }
+    .nf-card-tag { font-size: 12px; font-weight: 700; color: #46D369; }
+    .nf-live { color: #fff; }
+    .nf-live::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-inline-end: 6px; border-radius: 50%; background: #E50914; animation: nfBlink 1.2s ease-in-out infinite; }
+    @keyframes nfBlink { 50% { opacity: .25; } }
+    .nf-tag-red { position: absolute; top: 8px; inset-inline-start: 8px; padding: 3px 6px; border-radius: 3px; font-size: 10px; font-weight: 900; letter-spacing: .08em; background: #E50914; color: #fff; }
+    .nf-poster-wrap { display: flex; align-items: flex-end; }
+    .nf-num { position: relative; z-index: 0; margin-inline-end: -12px; font-size: 116px; font-weight: 900; line-height: .8; color: transparent; -webkit-text-stroke: 3px #8c8c8c; }
+    .nf-poster { z-index: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; width: 128px; aspect-ratio: 2 / 3; padding: 10px; }
+    .nf-poster .nf-card-art { top: 14%; inset-inline: 0; text-align: center; font-size: 56px; }
+    .nf-chev { display: none; }
+    @media (min-width: 768px) and (hover: hover) {
+      .nf-chev { position: absolute; top: 8px; bottom: 14px; z-index: 3; display: grid; place-items: center; width: 44px; min-height: 44px; border-radius: 4px; font-size: 34px; color: #fff; background: rgba(20,20,20,.6); opacity: 0; transition: opacity .2s ease; }
+      .nf-lane:hover .nf-chev, .nf-chev:focus-visible { opacity: 1; }
+      .nf-chev-prev { inset-inline-start: 0; } .nf-chev-next { inset-inline-end: 0; }
+      html[lang="ar"] .nf-chev { transform: scaleX(-1); }
+    }
+    @media (prefers-reduced-motion: reduce) { .nf-art, .nf-live::before { animation: none; } .nf-card, .nf-poster { transition: none; } }
+    html.eca-calm .nf-art, html.eca-calm .nf-live::before { animation: none; }
     /* ===== الرئيسية: لوبي ألعاب (home.js) ===== */
     :root { --hm-card: #0e0e15; --hm-title: #facc15; }
     html.light, html.eca, html.kids { --hm-card: #ffffff; --hm-title: #0f3d91; }
-    html.game { --hm-card: #0f1434; --hm-title: #c4b5fd; }
+    html.game { --hm-card: #181818; --hm-title: #FFFFFF; }
+    html.game .eca-play-now, html.game .eca-play-strip, html.game .eca-install-card { background: linear-gradient(135deg, #E50914, #7a0910); box-shadow: 0 10px 28px rgba(229,9,20,.25); }
+    html.game .hm-play-tile .eca-play-now::after { box-shadow: 0 0 34px 4px rgba(229,9,20,.6); }
     .hm { display: flex; flex-direction: column; gap: 26px; }
     .hm-hero { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
     @media (min-width: 1024px) { .hm-hero { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: stretch; } }
@@ -790,8 +805,8 @@
     html[data-ecap="piece-gold"] .eca-pc.w, .eca-skin-piece-gold .eca-pc.w { color: #fde68a; text-shadow: 0 0 1px #78350f, 0 0 1px #78350f, 0 1px 3px rgba(0,0,0,.5); }
     html[data-ecap="piece-gold"] .eca-pc.b, .eca-skin-piece-gold .eca-pc.b { color: #7c2d12; text-shadow: 0 0 1px #fde047, 0 1px 2px rgba(0,0,0,.45); }
   </style>
-  <script>window.ECA_VERSION = "eca-v84";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v84" />
+  <script>window.ECA_VERSION = "eca-v85";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v85" />
 </head>
 <body class="min-h-screen flex flex-col relative">
   <a href="#mainView" class="skip-link">تخطّي إلى المحتوى</a>
@@ -955,47 +970,47 @@
     } catch (_) {}
   </script>
   <script type="application/json" id="ecaLazyModules">{"finance":"js/finance.js"}</script>
-  <script src="js/core.js?v=eca-v84"></script>
+  <script src="js/core.js?v=eca-v85"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v84"></script>
+  <script src="js/arena.js?v=eca-v85"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v84"></script>
-  <script src="js/streaks.js?v=eca-v84"></script>
-  <script src="js/review.js?v=eca-v84"></script>
-  <script src="js/quality.js?v=eca-v84"></script>
-  <script src="js/announce.js?v=eca-v84"></script>
-  <script src="js/progress.js?v=eca-v84"></script>
-  <script src="js/arena2.js?v=eca-v84"></script>
+  <script src="js/extras.js?v=eca-v85"></script>
+  <script src="js/streaks.js?v=eca-v85"></script>
+  <script src="js/review.js?v=eca-v85"></script>
+  <script src="js/quality.js?v=eca-v85"></script>
+  <script src="js/announce.js?v=eca-v85"></script>
+  <script src="js/progress.js?v=eca-v85"></script>
+  <script src="js/arena2.js?v=eca-v85"></script>
   <!-- homework, coach dashboards, tournaments, and placement test load on demand via loadModule -->
-  <script src="js/ux.js?v=eca-v84"></script>
-  <script src="js/annotate.js?v=eca-v84"></script>
-  <script src="js/gamify.js?v=eca-v84"></script>
-  <script src="js/adventure.js?v=eca-v84"></script>
-  <script src="js/duel.js?v=eca-v84"></script>
-  <script src="js/fx.js?v=eca-v84"></script>
-  <script src="js/speedarena.js?v=eca-v84"></script>
-  <script src="js/loot.js?v=eca-v84"></script>
-  <script src="js/dojo.js?v=eca-v84"></script>
-  <script src="js/cards.js?v=eca-v84"></script>
-  <script src="js/stamina.js?v=eca-v84"></script>
-  <script src="js/social.js?v=eca-v84"></script>
-  <script src="js/friendduel.js?v=eca-v84"></script>
-  <script src="js/weekly.js?v=eca-v84"></script>
-  <script src="js/boss.js?v=eca-v84"></script>
-  <script src="js/command.js?v=eca-v84"></script>
-  <script src="js/lessonpuz.js?v=eca-v84"></script>
-  <script src="js/parentreport.js?v=eca-v84"></script>
-  <script src="js/care.js?v=eca-v84"></script>
-  <script src="js/fun.js?v=eca-v84"></script>
-  <script src="js/flow.js?v=eca-v84"></script>
-  <script src="js/assist.js?v=eca-v84"></script>
-  <script src="js/lobby.js?v=eca-v84"></script>
-  <script src="js/home.js?v=eca-v84"></script>
+  <script src="js/ux.js?v=eca-v85"></script>
+  <script src="js/annotate.js?v=eca-v85"></script>
+  <script src="js/gamify.js?v=eca-v85"></script>
+  <script src="js/adventure.js?v=eca-v85"></script>
+  <script src="js/duel.js?v=eca-v85"></script>
+  <script src="js/fx.js?v=eca-v85"></script>
+  <script src="js/speedarena.js?v=eca-v85"></script>
+  <script src="js/loot.js?v=eca-v85"></script>
+  <script src="js/dojo.js?v=eca-v85"></script>
+  <script src="js/cards.js?v=eca-v85"></script>
+  <script src="js/stamina.js?v=eca-v85"></script>
+  <script src="js/social.js?v=eca-v85"></script>
+  <script src="js/friendduel.js?v=eca-v85"></script>
+  <script src="js/weekly.js?v=eca-v85"></script>
+  <script src="js/boss.js?v=eca-v85"></script>
+  <script src="js/command.js?v=eca-v85"></script>
+  <script src="js/lessonpuz.js?v=eca-v85"></script>
+  <script src="js/parentreport.js?v=eca-v85"></script>
+  <script src="js/care.js?v=eca-v85"></script>
+  <script src="js/fun.js?v=eca-v85"></script>
+  <script src="js/flow.js?v=eca-v85"></script>
+  <script src="js/assist.js?v=eca-v85"></script>
+  <script src="js/lobby.js?v=eca-v85"></script>
+  <script src="js/home.js?v=eca-v85"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v84"></script>
+  <script type="module" src="js/firebase.js?v=eca-v85"></script>
 </body>
 </html>

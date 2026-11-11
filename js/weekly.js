@@ -6,7 +6,7 @@ const WK_ATTEMPTS = 2;
 arena.weekly = { wk: "", doc: undefined, hof: null, att: null, unsub: null, status: "idle", game: null, sol: [], idx: 0, color: "w", flip: false, sel: null, last: null, flash: null, start: 0, busy: false, draft: null };
 const WL = (ar, en) => lang === "en" ? en : ar;
 
-function wkPaint() { if (tab === "arena" && arena.sub === "weekly") arenaRefresh(); else if (tab === "home") render(); }
+function wkPaint() { if (tab === "arena" && (arena.sub === "weekly" || arena.sub === "lobby")) arenaRefresh(); else if (tab === "home") render(); }
 function wkLifecycle() {
   const W = arena.weekly, u = currUser();
   const want = !!u && !window.__authLoading && !!window.fbWeeklyWatch && ((tab === "arena" && (arena.sub === "weekly" || arena.sub === "lobby")) || (tab === "home" && u.role === "student"));

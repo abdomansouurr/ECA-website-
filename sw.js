@@ -1,5 +1,5 @@
 // ECA service worker — offline support. Bump VERSION to force clients to refresh the cache.
-const VERSION = "eca-v84";
+const VERSION = "eca-v85";
 const SHELL = [
   "./", "./index.html", "./manifest.json",
   "./favicon.ico", "./img/favicon.png", "./apple-touch-icon.png",   // لوجو الأكاديمية على التاب والأيفون — أوفلاين برضه
@@ -9,9 +9,9 @@ const SHELL = [
   "./img/pieces/lichess/bK.svg", "./img/pieces/lichess/bQ.svg", "./img/pieces/lichess/bR.svg", "./img/pieces/lichess/bB.svg", "./img/pieces/lichess/bN.svg", "./img/pieces/lichess/bP.svg",
   "./vendor/chess.js", "./vendor/stockfish.js",
   // ملفات الكود (لازم نفس ?v= اللي في index.html)
-  "./tailwind.css?v=eca-v84",
-  "./js/core.js?v=eca-v84", "./js/arena.js?v=eca-v84", "./js/extras.js?v=eca-v84", "./js/streaks.js?v=eca-v84", "./js/review.js?v=eca-v84", "./js/quality.js?v=eca-v84", "./js/announce.js?v=eca-v84", "./js/progress.js?v=eca-v84", "./js/arena2.js?v=eca-v84", "./js/ux.js?v=eca-v84", "./js/annotate.js?v=eca-v84", "./js/gamify.js?v=eca-v84", "./js/adventure.js?v=eca-v84", "./js/duel.js?v=eca-v84", "./js/fx.js?v=eca-v84", "./js/speedarena.js?v=eca-v84", "./js/loot.js?v=eca-v84", "./js/dojo.js?v=eca-v84", "./js/cards.js?v=eca-v84", "./js/stamina.js?v=eca-v84", "./js/social.js?v=eca-v84", "./js/friendduel.js?v=eca-v84", "./js/weekly.js?v=eca-v84", "./js/boss.js?v=eca-v84", "./js/command.js?v=eca-v84", "./js/lessonpuz.js?v=eca-v84", "./js/parentreport.js?v=eca-v84", "./js/care.js?v=eca-v84", "./js/fun.js?v=eca-v84", "./js/flow.js?v=eca-v84", "./js/assist.js?v=eca-v84", "./js/lobby.js?v=eca-v84", "./js/home.js?v=eca-v84", "./js/diagnostics.js?v=eca-v84", "./js/firebase.js?v=eca-v84", "./js/finance.js?v=eca-v84", "./js/homework.js?v=eca-v84", "./js/today.js?v=eca-v84", "./js/reports.js?v=eca-v84", "./js/tournaments.js?v=eca-v84", "./js/placement-data.js?v=eca-v84", "./js/placement.js?v=eca-v84",
-  "./puzzles.js?v=eca-v84", "./puzzles-themes.js?v=eca-v84"   // عشان الامتحان يشتغل أوفلاين
+  "./tailwind.css?v=eca-v85",
+  "./js/core.js?v=eca-v85", "./js/arena.js?v=eca-v85", "./js/extras.js?v=eca-v85", "./js/streaks.js?v=eca-v85", "./js/review.js?v=eca-v85", "./js/quality.js?v=eca-v85", "./js/announce.js?v=eca-v85", "./js/progress.js?v=eca-v85", "./js/arena2.js?v=eca-v85", "./js/ux.js?v=eca-v85", "./js/annotate.js?v=eca-v85", "./js/gamify.js?v=eca-v85", "./js/adventure.js?v=eca-v85", "./js/duel.js?v=eca-v85", "./js/fx.js?v=eca-v85", "./js/speedarena.js?v=eca-v85", "./js/loot.js?v=eca-v85", "./js/dojo.js?v=eca-v85", "./js/cards.js?v=eca-v85", "./js/stamina.js?v=eca-v85", "./js/social.js?v=eca-v85", "./js/friendduel.js?v=eca-v85", "./js/weekly.js?v=eca-v85", "./js/boss.js?v=eca-v85", "./js/command.js?v=eca-v85", "./js/lessonpuz.js?v=eca-v85", "./js/parentreport.js?v=eca-v85", "./js/care.js?v=eca-v85", "./js/fun.js?v=eca-v85", "./js/flow.js?v=eca-v85", "./js/assist.js?v=eca-v85", "./js/lobby.js?v=eca-v85", "./js/home.js?v=eca-v85", "./js/diagnostics.js?v=eca-v85", "./js/firebase.js?v=eca-v85", "./js/finance.js?v=eca-v85", "./js/homework.js?v=eca-v85", "./js/today.js?v=eca-v85", "./js/reports.js?v=eca-v85", "./js/tournaments.js?v=eca-v85", "./js/placement-data.js?v=eca-v85", "./js/placement.js?v=eca-v85",
+  "./puzzles.js?v=eca-v85", "./puzzles-themes.js?v=eca-v85"   // عشان الامتحان يشتغل أوفلاين
 ];
 const CDN = [
   "https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap"

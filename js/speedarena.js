@@ -16,7 +16,7 @@ function saNextSlot(now) {
 function saActive() { const now = Date.now(); return (arena.speed.arenas || []).find(a => a.startsMs <= now && now < a.endsMs) || null; }
 function saUpcoming() { const now = Date.now(); return (arena.speed.arenas || []).filter(a => a.startsMs > now).sort((x, y) => x.startsMs - y.startsMs)[0] || null; }
 function saWhen(ms) { return new Date(ms).toLocaleString(lang === "en" ? "en-GB" : "ar-EG", { weekday: "long", hour: "numeric", minute: "2-digit" }); }
-function saPaint() { if (tab === "arena" && arena.sub === "speed") arenaRefresh(); }
+function saPaint() { if (tab === "arena" && (arena.sub === "speed" || arena.sub === "lobby")) arenaRefresh(); }
 
 // ================= الترتيب المباشر: أول 20 بس، والرسم مجمّع عشان ما يقطعش اللعب =================
 function saBoardWatch(id) {
