@@ -77,7 +77,8 @@ const GameCardAnimator = (() => {
     const run = () => { idle = 0; hydrate(document.getElementById("mainView")); };
     idle = window.requestIdleCallback ? requestIdleCallback(run, { timeout: 400 }) : setTimeout(run, 60);
   }
-  const calm = () => document.documentElement.classList.contains("eca-calm") || !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  // «حركة أقل» اللي الطالب اختارها من الموقع بس. إعداد الأنيميشن بتاع ويندوز ما بيوقفش معاينة الكارت لما الطالب يقف عليه بنفسه
+  const calm = () => document.documentElement.classList.contains("eca-calm");
   const cardOf = t => (t && t.closest ? t.closest(".game-card") : null);
   function activate(card) {
     document.querySelectorAll(".game-card.hover-active").forEach(c => { if (c !== card) c.classList.remove("hover-active"); });
@@ -89,13 +90,24 @@ const GameCardAnimator = (() => {
   let lastTouch = 0, pending = 0;
   const TOUCH_MS = 900, DELAY_MS = 150;
   document.addEventListener("touchstart", e => { const card = cardOf(e.target); lastTouch = Date.now(); activate(card); }, { passive: true, capture: true });
-  document.addEventListener("mouseover", e => { if (Date.now() - lastTouch < TOUCH_MS) return; const card = cardOf(e.target); if (card) activate(card); });
-  document.addEventListener("mouseout", e => { if (Date.now() - lastTouch < TOUCH_MS) return; const card = cardOf(e.target); if (card && !card.contains(e.relatedTarget)) sleep(card); });
+  // الماوس: شغّال دايماً، حتى على أجهزة ويندوز اللي فيها شاشة لمس (maxTouchPoints > 0). مع الكروت اللي بتترسم بعدين كمان (الاستماع على الصفحة كلها)
+  const isMouse = e => e.pointerType === "mouse" || e.pointerType === "pen";
+  const enter = e => { const card = cardOf(e.target); if (card) activate(card); };
+  const leave = e => { const card = cardOf(e.target); if (card && !card.contains(e.relatedTarget)) sleep(card); };
+  document.addEventListener("pointerover", e => { if (isMouse(e)) enter(e); });
+  document.addEventListener("pointerout", e => { if (isMouse(e)) leave(e); });
+  ["pointerenter", "mouseenter"].forEach(n => document.addEventListener(n, e => { if (n === "mouseenter" || isMouse(e)) { if (e.target.classList && e.target.classList.contains("game-card")) activate(e.target); } }, true));
+  ["pointerleave", "mouseleave"].forEach(n => document.addEventListener(n, e => { if ((n === "mouseleave" && Date.now() - lastTouch > TOUCH_MS) || isMouse(e)) { if (e.target.classList && e.target.classList.contains("game-card")) sleep(e.target); } }, true));
+  // أحداث الماوس القديمة (متصفحات من غير pointer events). بعد اللمس على طول بنتجاهل الخروج عشان الكارت اللي اتلمس يفضل صاحي
+  document.addEventListener("mouseover", enter);
+  document.addEventListener("mouseout", e => { if (Date.now() - lastTouch < TOUCH_MS) return; leave(e); });
   document.addEventListener("focusin", e => { const card = cardOf(e.target); if (card && card.matches(":focus-visible")) activate(card); });
   document.addEventListener("focusout", e => { const card = cardOf(e.target); if (card && card.isConnected) sleep(card); });
   document.addEventListener("click", e => {
     const card = cardOf(e.target);
-    if (!card || Date.now() - lastTouch > TOUCH_MS + DELAY_MS) return;
+    // الانتظار للمس بس: ضغطة الماوس بتفتح على طول حتى لو الشاشة اتلمست من شوية
+    const touch = e.pointerType ? e.pointerType === "touch" : Date.now() - lastTouch <= TOUCH_MS + DELAY_MS;
+    if (!card || !touch) return;
     if (card.dataset.gcGo) { delete card.dataset.gcGo; return; }   // دي الضغطة الحقيقية بعد الانتظار
     e.preventDefault(); e.stopImmediatePropagation();
     if (pending) return;

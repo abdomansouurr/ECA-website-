@@ -602,11 +602,11 @@
         : sub === "rush" ? arenaRushHTML() : sub === "duel" ? arenaDuelHTML() : sub === "speed" ? arenaSpeedHTML() : sub === "cards" ? arenaCardsHTML() : sub === "friend" ? arenaFriendHTML() : sub === "weekly" ? arenaWeeklyHTML() : sub === "boss" && typeof arenaBossHTML === "function" ? arenaBossHTML() : sub === "lessons" && typeof arenaLessonsHTML === "function" ? arenaLessonsHTML() : sub === "puzzles" ? arenaPuzHTML() : sub === "pawns" ? arenaPawnsHTML() : sub === "analysis" ? arenaAnaHTML() : arenaPlayHTML();
       return `
         <div class="space-y-4">
-          <div class="gold-card rounded-2xl p-3 sm:p-4 flex flex-wrap items-center gap-3">
+          <div class="eca-arena-bar gold-card rounded-2xl p-3 sm:p-4 flex flex-wrap items-center gap-3">
             <button type="button" onclick="arenaSub('lobby')" class="tap rounded-xl px-3 text-xs font-bold bg-zinc-900 text-gray-200 border border-yellow-500/30">${lang === "en" ? "← Back to lobby" : "→ العودة لساحة التدريب"}</button>
             <h2 class="font-display font-bold text-lg gold-gradient-text min-w-0 flex-1 truncate">${window.ecaModeName ? esc(ecaModeName(sub)) : "ساحة التدريب"}</h2>
             ${typeof ecaFsBtnHTML === "function" && body.includes('class="eca-board') ? ecaFsBtnHTML() : ""}
-            ${u.role === "student" ? `<div class="flex flex-wrap gap-2 text-[11px]">
+            ${u.role === "student" ? `<div class="eca-arena-stats flex flex-wrap gap-2 text-[11px]">
               <span dir="ltr" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">${gm.w} ✓ · ${gm.d} = · ${gm.l} ✗</span>
               <span class="px-2.5 py-1 rounded-lg bg-yellow-500/15 text-yellow-300 border border-yellow-500/30">${a.puzSolved || 0}</span>
             </div>` : ''}

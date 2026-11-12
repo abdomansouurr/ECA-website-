@@ -7,9 +7,9 @@
   <link rel="manifest" href="manifest.json" />
   <!-- لوجو الأكاديمية على تاب المتصفح: ICO في الجذر (الفولباك الأضمن — المتصفحات بتطلبه من /favicon.ico مباشرة)
        + PNG للتاب الحديث + apple-touch للآيفون — كلهم بنفس اللوجو ومع رقم نسخة يكسر الكاش -->
-  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v89" />
-  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v89" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v89" />
+  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v90" />
+  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v90" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v90" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ECA Chess" />
@@ -152,7 +152,7 @@
     #sideNav.open #sideNavItems .nav-tab:nth-child(n+11) { animation-delay: .33s }
     :focus-visible { outline: 2px solid #d4af37 !important; outline-offset: 2px; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+    @media (prefers-reduced-motion: reduce) { :not(.game-card-media *), :not(.game-card-media *)::before, :not(.game-card-media *)::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
     html.light .text-gray-600 { color: #4b5563 !important; }
     html.light .text-yellow-200 { color: #6b4f0a !important; }
     html.light .text-sky-300, html.light .text-sky-200 { color: #075985 !important; }
@@ -306,7 +306,7 @@
     @keyframes ecaRewardPop { 0% { opacity: 0; transform: translateY(12px) scale(.8); } 25% { opacity: 1; transform: translateY(0) scale(1.08); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px) scale(1); } }
     @media (prefers-reduced-motion: reduce) { .eca-reward-pop { animation: none; } }
 
-    /* ===== eca-v89: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
+    /* ===== eca-v90: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
     @keyframes ecaItemIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     .stagger-in > *, .st-item { animation-duration: .24s; }
     .stagger-in > *:nth-child(1) { animation-delay: 0.045s }
@@ -603,34 +603,34 @@
     }
     @media (prefers-reduced-motion: reduce) { .nf-art, .nf-live::before { animation: none; } .nf-card, .nf-poster { transition: none; } }
     html.eca-calm .nf-art, html.eca-calm .nf-live::before { animation: none; }
-    /* ===== كروت الساحة اللي بتصحى (cardfx.js): خلفية + بطل ثابت + مؤثرات بتشتغل مع .hover-active بس. كل لعبة ليها حركة مختلفة ===== */
+    /* ===== كروت الساحة اللي بتصحى (cardfx.js): خلفية + بطل ثابت + مؤثرات بتشتغل مع :is(.hover-active, :hover) بس. كل لعبة ليها حركة مختلفة ===== */
     .game-card { --gc-glow: 229,9,20; }
     .game-card-map, .game-card-target, .game-card-pawns { --gc-glow: 70,211,105; }
     .game-card-knights, .game-card-vision, .game-card-bot { --gc-glow: 34,211,238; }
     .game-card-duel, .game-card-spin, .game-card-album, .game-card-pieces, .game-card-frame { --gc-glow: 168,85,247; }
     .game-card-coach, .game-card-arena, .game-card-honor, .game-card-chest, .game-card-avatar, .game-card-event, .game-card-analysis { --gc-glow: 245,197,24; }
     .game-card::after { content: ""; position: absolute; inset: 0; z-index: 3; border-radius: inherit; pointer-events: none; box-shadow: inset 0 0 0 2px rgba(var(--gc-glow),.95), inset 0 0 30px rgba(var(--gc-glow),.45); opacity: 0; transition: opacity .18s ease; }
-    .game-card.hover-active { transform: scale(1.04); } .game-card.hover-active::after { opacity: 1; }
-    .nf-poster-wrap.game-card::after { content: none; } .nf-poster-wrap.game-card.hover-active { transform: none; }
-    .nf-poster-wrap.game-card.hover-active .nf-poster { transform: scale(1.04); box-shadow: inset 0 0 0 2px rgba(var(--gc-glow),.95), inset 0 0 24px rgba(var(--gc-glow),.45); }
+    .game-card:is(.hover-active, :hover) { transform: scale(1.04); } .game-card:is(.hover-active, :hover)::after { opacity: 1; }
+    .nf-poster-wrap.game-card::after { content: none; } .nf-poster-wrap.game-card:is(.hover-active, :hover) { transform: none; }
+    .nf-poster-wrap.game-card:is(.hover-active, :hover) .nf-poster { transform: scale(1.04); box-shadow: inset 0 0 0 2px rgba(var(--gc-glow),.95), inset 0 0 24px rgba(var(--gc-glow),.45); }
     .nf-poster .nf-card-title, .nf-poster .nf-card-tag { position: relative; z-index: 1; }
     .game-card-media { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
     .gc-bg { position: absolute; top: -12%; bottom: -12%; inset-inline-end: -14%; width: 78%; background: radial-gradient(closest-side, rgba(var(--gc-glow),.42), transparent); opacity: .5; transition: opacity .2s ease; }
-    .game-card.hover-active .gc-bg { opacity: 1; }
+    .game-card:is(.hover-active, :hover) .gc-bg { opacity: 1; }
     .gc-hero, .gc-stage { position: absolute; top: 6%; inset-inline-end: 5%; width: 46%; height: 62%; }
     .nf-poster .gc-hero, .nf-poster .gc-stage { top: 6%; inset-inline: 6%; width: auto; height: 54%; }
     .nf-poster .gc-bg { inset: -10% -20% 30%; width: auto; }
     .gc-fx { position: absolute; inset: 0; opacity: 0; transition: opacity .15s ease; }
-    .game-card.hover-active .gc-fx { opacity: 1; }
+    .game-card:is(.hover-active, :hover) .gc-fx { opacity: 1; }
     .gc-hero > *, .gc-stage > *, .gc-fx > * { position: absolute; display: block; font-style: normal; }
     /* 1. مهمة الدرس: سهم بيخبط في الهدف وموجات خضرا */
     .gc-target { left: 50%; top: 4%; margin-left: -34px; font-size: 68px; line-height: 1; }
     .gc-arrow { left: 50%; top: calc(4% + 32px); width: 56px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, #F5C518 0 70%, #fff 70%); opacity: 0; }
     .gc-arrow::before { content: ""; position: absolute; left: -8px; top: -4px; border-style: solid; border-width: 6px 8px 6px 0; border-color: transparent #F5C518 transparent transparent; }
     .gc-ripple { left: calc(50% - 30px); top: calc(4% + 4px); width: 60px; height: 60px; border-radius: 50%; border: 3px solid #46D369; opacity: 0; }
-    .game-card-target.hover-active .gc-arrow { animation: tgFly 1.4s cubic-bezier(.2,.8,.2,1) infinite; }
-    .game-card-target.hover-active .gc-target { animation: tgWobble 1.4s ease-out infinite; }
-    .game-card-target.hover-active .gc-ripple { animation: tgRipple 1.4s ease-out var(--d) infinite; }
+    .game-card-target:is(.hover-active, :hover) .gc-arrow { animation: tgFly 1.4s cubic-bezier(.2,.8,.2,1) infinite; }
+    .game-card-target:is(.hover-active, :hover) .gc-target { animation: tgWobble 1.4s ease-out infinite; }
+    .game-card-target:is(.hover-active, :hover) .gc-ripple { animation: tgRipple 1.4s ease-out var(--d) infinite; }
     @keyframes tgFly { 0% { opacity: 0; transform: translate3d(120px,0,0); } 10% { opacity: 1; } 35%, 100% { opacity: 1; transform: translate3d(0,0,0); } }
     @keyframes tgWobble { 0%, 35%, 70%, 100% { transform: rotate(0); } 42% { transform: rotate(-7deg); } 52% { transform: rotate(5deg); } 60% { transform: rotate(-2deg); } }
     @keyframes tgRipple { 0%, 35% { opacity: 0; transform: scale(.5); } 45% { opacity: .9; } 100% { opacity: 0; transform: scale(1.8); } }
@@ -644,10 +644,10 @@
     .gc-needle { transform-box: fill-box; transform-origin: center; transform: rotate(35deg); }
     .gc-beacon { right: 0; top: -12%; width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle, rgba(245,197,24,.85), transparent 70%); opacity: 0; }
     .gc-beacon2 { animation-delay: .6s; }
-    .game-card-map.hover-active .gc-trail-gold { animation: mapDraw 1.6s ease-in-out infinite; }
-    .game-card-map.hover-active .gc-needle { animation: mapNeedle 1.6s cubic-bezier(.2,.8,.2,1) infinite; }
-    .game-card-map.hover-active .gc-castle { animation: mapCastle .8s ease-in-out infinite alternate; }
-    .game-card-map.hover-active .gc-beacon { animation: mapBeacon 1.2s ease-out infinite; } .game-card-map.hover-active .gc-beacon2 { animation-delay: .6s; }
+    .game-card-map:is(.hover-active, :hover) .gc-trail-gold { animation: mapDraw 1.6s ease-in-out infinite; }
+    .game-card-map:is(.hover-active, :hover) .gc-needle { animation: mapNeedle 1.6s cubic-bezier(.2,.8,.2,1) infinite; }
+    .game-card-map:is(.hover-active, :hover) .gc-castle { animation: mapCastle .8s ease-in-out infinite alternate; }
+    .game-card-map:is(.hover-active, :hover) .gc-beacon { animation: mapBeacon 1.2s ease-out infinite; } .game-card-map:is(.hover-active, :hover) .gc-beacon2 { animation-delay: .6s; }
     @keyframes mapDraw { 0% { stroke-dashoffset: 100; } 70%, 100% { stroke-dashoffset: 0; } }
     @keyframes mapNeedle { 0% { transform: rotate(35deg); } 45% { transform: rotate(400deg); } 60% { transform: rotate(345deg); } 75%, 100% { transform: rotate(360deg); } }
     @keyframes mapCastle { to { transform: translate3d(0,-3px,0); } }
@@ -659,11 +659,11 @@
     .gc-wave { left: calc(14% - 7px); bottom: -7px; width: 44px; height: 44px; border-radius: 50%; border: 3px solid rgba(229,9,20,.85); opacity: 0; }
     .gc-wave2 { border-color: rgba(245,197,24,.9); }
     .gc-frag { left: calc(14% + 12px); bottom: 14px; width: 7px; height: 11px; border: 2px solid #c9c9c9; border-radius: 4px; }
-    .game-card-dojo.hover-active .gc-bg { animation: gcRumble .12s linear infinite; }
-    .game-card-dojo.hover-active .gc-lock { animation: gcLockShake .3s linear infinite; }
-    .game-card-dojo.hover-active .gc-slash { animation: slashSweeper .9s cubic-bezier(.2,.8,.2,1) infinite; }
-    .game-card-dojo.hover-active .gc-wave { animation: gcWave .9s ease-out infinite; } .game-card-dojo.hover-active .gc-wave2 { animation-delay: .45s; }
-    .game-card-dojo.hover-active .gc-frag { animation: gcFrag .9s ease-in var(--d) infinite; }
+    .game-card-dojo:is(.hover-active, :hover) .gc-bg { animation: gcRumble .12s linear infinite; }
+    .game-card-dojo:is(.hover-active, :hover) .gc-lock { animation: gcLockShake .3s linear infinite; }
+    .game-card-dojo:is(.hover-active, :hover) .gc-slash { animation: slashSweeper .9s cubic-bezier(.2,.8,.2,1) infinite; }
+    .game-card-dojo:is(.hover-active, :hover) .gc-wave { animation: gcWave .9s ease-out infinite; } .game-card-dojo:is(.hover-active, :hover) .gc-wave2 { animation-delay: .45s; }
+    .game-card-dojo:is(.hover-active, :hover) .gc-frag { animation: gcFrag .9s ease-in var(--d) infinite; }
     @keyframes gcRumble { 50% { transform: translate3d(1px,-1px,0); } }
     @keyframes gcLockShake { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
     @keyframes slashSweeper { 0% { opacity: 0; transform: rotate(-24deg) translate3d(-60%,0,0) scaleX(.3); } 15% { opacity: 1; } 45%, 100% { opacity: 0; transform: rotate(-24deg) translate3d(30%,0,0) scaleX(1); } }
@@ -675,10 +675,10 @@
     .gc-hp i { display: block; width: 62%; height: 100%; background: linear-gradient(90deg, #b91c1c, #ef4444, #f97316); }
     .gc-breath { left: 8%; top: 26%; width: 40px; height: 40px; border-radius: 50%; border: 3px solid transparent; border-left-color: #ff7a00; border-top-color: rgba(229,9,20,.85); opacity: 0; }
     .gc-cinder { left: 40%; top: 40%; width: 5px; height: 5px; border-radius: 50%; background: #ff7a00; box-shadow: 0 0 6px #E50914; opacity: 0; }
-    .game-card-boss.hover-active .gc-dragon { animation: bsBreath 1.05s ease-in-out infinite; }
-    .game-card-boss.hover-active .gc-hp { animation: bsTremble .1s linear infinite; }
-    .game-card-boss.hover-active .gc-breath { animation: bsWave 1.05s ease-out var(--d) infinite; }
-    .game-card-boss.hover-active .gc-cinder { animation: bsCinder 1.25s ease-out var(--d) infinite; }
+    .game-card-boss:is(.hover-active, :hover) .gc-dragon { animation: bsBreath 1.05s ease-in-out infinite; }
+    .game-card-boss:is(.hover-active, :hover) .gc-hp { animation: bsTremble .1s linear infinite; }
+    .game-card-boss:is(.hover-active, :hover) .gc-breath { animation: bsWave 1.05s ease-out var(--d) infinite; }
+    .game-card-boss:is(.hover-active, :hover) .gc-cinder { animation: bsCinder 1.25s ease-out var(--d) infinite; }
     @keyframes bsBreath { 50% { transform: translate3d(0,-2px,0) scale(1.08); } }
     @keyframes bsTremble { 25% { transform: translate3d(-1.5px,1px,0); } 75% { transform: translate3d(1.5px,-1px,0); } }
     @keyframes bsWave { 0% { opacity: .9; transform: translate3d(30px,0,0) scale(.4); } 100% { opacity: 0; transform: translate3d(-10px,6px,0) scale(1.8); } }
@@ -691,11 +691,11 @@
     .gc-pawn { text-shadow: 0 2px 0 #000, 0 0 12px rgba(229,9,20,.7); }
     .gc-ghost { filter: blur(1.5px); opacity: 0; }
     .gc-line { right: 0; width: 42%; height: 2px; border-radius: 2px; background: linear-gradient(to left, transparent, rgba(255,255,255,.95)); filter: blur(.6px); opacity: 0; }
-    .game-card-speed.hover-active .gc-dclock { animation: clockShudder .14s linear infinite; }
-    .game-card-speed.hover-active .gc-roll { animation: spdCount 2s steps(9) infinite; }
-    .game-card-speed.hover-active .gc-pawn { animation: spdDash .3s ease-in-out infinite alternate; }
-    .game-card-speed.hover-active .gc-ghost { animation: spdGhost .32s linear infinite; } .game-card-speed.hover-active .gc-ghost2 { animation-delay: .16s; }
-    .game-card-speed.hover-active .gc-line { animation: speedStream .5s linear var(--d) infinite; }
+    .game-card-speed:is(.hover-active, :hover) .gc-dclock { animation: clockShudder .14s linear infinite; }
+    .game-card-speed:is(.hover-active, :hover) .gc-roll { animation: spdCount 2s steps(9) infinite; }
+    .game-card-speed:is(.hover-active, :hover) .gc-pawn { animation: spdDash .3s ease-in-out infinite alternate; }
+    .game-card-speed:is(.hover-active, :hover) .gc-ghost { animation: spdGhost .32s linear infinite; } .game-card-speed:is(.hover-active, :hover) .gc-ghost2 { animation-delay: .16s; }
+    .game-card-speed:is(.hover-active, :hover) .gc-line { animation: speedStream .5s linear var(--d) infinite; }
     @keyframes clockShudder { 0%, 100% { transform: translate3d(0,0,0) rotate(0); } 25% { transform: translate3d(-1.5px,1px,0) rotate(-3deg); } 75% { transform: translate3d(1.5px,-1px,0) rotate(3deg); } }
     @keyframes spdCount { to { transform: translate3d(0,-198px,0); } }
     @keyframes spdDash { from { transform: translate3d(0,0,0) skewX(0); } to { transform: translate3d(-6px,0,0) skewX(10deg); } }
@@ -708,10 +708,10 @@
     .gc-shock { left: 50%; top: 56%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; border: 3px solid #22d3ee; opacity: 0; }
     .gc-shock-r { border-color: #E50914; }
     .gc-flash { left: 50%; top: 56%; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%; background: radial-gradient(circle, #fff, rgba(34,211,238,.6) 40%, transparent 70%); opacity: 0; }
-    .game-card-knights.hover-active .gc-kn-l { animation: knChargeL .9s ease-in-out infinite; }
-    .game-card-knights.hover-active .gc-kn-r { animation: knChargeR .9s ease-in-out infinite; }
-    .game-card-knights.hover-active .gc-shock { animation: knShock .9s ease-out infinite; } .game-card-knights.hover-active .gc-shock-r { animation-delay: .08s; }
-    .game-card-knights.hover-active .gc-flash { animation: knFlash .9s ease-out infinite; }
+    .game-card-knights:is(.hover-active, :hover) .gc-kn-l { animation: knChargeL .9s ease-in-out infinite; }
+    .game-card-knights:is(.hover-active, :hover) .gc-kn-r { animation: knChargeR .9s ease-in-out infinite; }
+    .game-card-knights:is(.hover-active, :hover) .gc-shock { animation: knShock .9s ease-out infinite; } .game-card-knights:is(.hover-active, :hover) .gc-shock-r { animation-delay: .08s; }
+    .game-card-knights:is(.hover-active, :hover) .gc-flash { animation: knFlash .9s ease-out infinite; }
     @keyframes knChargeL { 0%, 100% { transform: translate3d(0,0,0) scaleX(-1); } 40% { transform: translate3d(22px,0,0) scaleX(-1); } 52% { transform: translate3d(10px,0,0) scaleX(-1); } }
     @keyframes knChargeR { 0%, 100% { transform: translate3d(0,0,0); } 40% { transform: translate3d(-22px,0,0); } 52% { transform: translate3d(-10px,0,0); } }
     @keyframes knShock { 0%, 38% { opacity: 0; transform: scale(.3); } 46% { opacity: 1; transform: scale(.7); } 100% { opacity: 0; transform: scale(2.2); } }
@@ -725,13 +725,13 @@
     .gc-bolt { top: 0; left: 8%; width: 14%; height: 100%; opacity: 0; filter: drop-shadow(0 0 4px #818cf8); }
     .gc-bolt2 { left: auto; right: 10%; }
     .gc-bolt polyline { fill: none; stroke: #c7d2fe; stroke-width: 2; stroke-linejoin: round; stroke-dasharray: 100; stroke-dashoffset: 100; }
-    .game-card-duel.hover-active .gc-bg { animation: gcStorm 1.2s steps(1) infinite; }
-    .game-card-duel.hover-active .gc-sword-r { animation: duelClash .8s ease-in-out infinite; }
-    .game-card-duel.hover-active .gc-sword-b { animation: duelClashB .8s ease-in-out infinite; }
-    .game-card-duel.hover-active .gc-clash i { animation: gcClash .8s ease-out infinite; }
-    .game-card-duel.hover-active .gc-bolt { animation: gcFlash 1.2s linear infinite; }
-    .game-card-duel.hover-active .gc-bolt polyline { animation: gcDraw 1.2s linear infinite; }
-    .game-card-duel.hover-active .gc-bolt2, .game-card-duel.hover-active .gc-bolt2 polyline { animation-delay: .6s; }
+    .game-card-duel:is(.hover-active, :hover) .gc-bg { animation: gcStorm 1.2s steps(1) infinite; }
+    .game-card-duel:is(.hover-active, :hover) .gc-sword-r { animation: duelClash .8s ease-in-out infinite; }
+    .game-card-duel:is(.hover-active, :hover) .gc-sword-b { animation: duelClashB .8s ease-in-out infinite; }
+    .game-card-duel:is(.hover-active, :hover) .gc-clash i { animation: gcClash .8s ease-out infinite; }
+    .game-card-duel:is(.hover-active, :hover) .gc-bolt { animation: gcFlash 1.2s linear infinite; }
+    .game-card-duel:is(.hover-active, :hover) .gc-bolt polyline { animation: gcDraw 1.2s linear infinite; }
+    .game-card-duel:is(.hover-active, :hover) .gc-bolt2, .game-card-duel:is(.hover-active, :hover) .gc-bolt2 polyline { animation-delay: .6s; }
     @keyframes duelClash { 0%, 100% { transform: rotate(32deg); } 40% { transform: rotate(44deg); } 52% { transform: rotate(26deg); } }
     @keyframes duelClashB { 0%, 100% { transform: rotate(-32deg); } 40% { transform: rotate(-44deg); } 52% { transform: rotate(-26deg); } }
     @keyframes gcClash { 0%, 34% { opacity: 0; transform: rotate(var(--a)) translate3d(2px,0,0) scaleX(0); } 42% { opacity: 1; transform: rotate(var(--a)) translate3d(5px,0,0) scaleX(1); } 62%, 100% { opacity: 0; transform: rotate(var(--a)) translate3d(14px,0,0) scaleX(.2); } }
@@ -743,8 +743,8 @@
     .gc-pin { left: 50%; top: 0; margin-left: -7px; font-size: 14px; line-height: 1; color: #fff; text-shadow: 0 0 6px #f0abfc; }
     .gc-loot { left: 50%; top: 52%; width: 6px; height: 6px; border-radius: 50%; background: #F5C518; box-shadow: 0 0 8px #f0abfc; opacity: 0; }
     .gc-loot:nth-of-type(odd) { background: #22d3ee; }
-    .game-card-spin.hover-active .gc-wheel { animation: spinWheel .8s linear infinite; }
-    .game-card-spin.hover-active .gc-loot { animation: spinLoot 1.2s ease-out var(--d) infinite; }
+    .game-card-spin:is(.hover-active, :hover) .gc-wheel { animation: spinWheel .8s linear infinite; }
+    .game-card-spin:is(.hover-active, :hover) .gc-loot { animation: spinLoot 1.2s ease-out var(--d) infinite; }
     @keyframes spinWheel { to { transform: rotate(360deg); } }
     @keyframes spinLoot { 0% { opacity: 0; transform: translate3d(0,0,0) scale(.5); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate3d(var(--x),var(--y),0) scale(1.2); } }
     /* 9. تحدي الأسبوع: تاج طاير فوق رقعة، حواليه رادار دهبي ونجوم طالعة */
@@ -752,9 +752,9 @@
     .gc-crown { right: 31%; top: -4%; font-size: 30px; line-height: 1; filter: drop-shadow(0 0 6px rgba(245,197,24,.7)); }
     .gc-radar { right: calc(31% - 8px); top: calc(-4% - 8px); width: 46px; height: 46px; border-radius: 50%; border: 2px solid rgba(245,197,24,.9); opacity: 0; }
     .gc-glint { font-size: 14px; line-height: 1; color: #fff3b0; text-shadow: 0 0 6px #F5C518; opacity: 0; }
-    .game-card-coach.hover-active .gc-crown { animation: coachFloat .7s ease-in-out infinite alternate; }
-    .game-card-coach.hover-active .gc-radar { animation: coachRadar 1.2s ease-out var(--d) infinite; }
-    .game-card-coach.hover-active .gc-glint { animation: coachGlint 1.6s ease-out var(--d) infinite; }
+    .game-card-coach:is(.hover-active, :hover) .gc-crown { animation: coachFloat .7s ease-in-out infinite alternate; }
+    .game-card-coach:is(.hover-active, :hover) .gc-radar { animation: coachRadar 1.2s ease-out var(--d) infinite; }
+    .game-card-coach:is(.hover-active, :hover) .gc-glint { animation: coachGlint 1.6s ease-out var(--d) infinite; }
     @keyframes coachFloat { to { transform: translate3d(0,-6px,0); } }
     @keyframes coachRadar { 0% { opacity: .9; transform: scale(.5); } 100% { opacity: 0; transform: scale(2); } }
     @keyframes coachGlint { 0% { opacity: 0; transform: translate3d(0,8px,0) scale(0) rotate(0); } 40% { opacity: 1; transform: translate3d(0,-6px,0) scale(1) rotate(90deg); } 100% { opacity: 0; transform: translate3d(0,-30px,0) scale(.4) rotate(180deg); } }
@@ -769,11 +769,11 @@
     .gc-burst { width: 0; height: 0; } .gc-burst-a { left: 10%; top: 16%; } .gc-burst-b { right: 10%; top: 22%; }
     .gc-burst i { position: absolute; left: 0; top: 0; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: #F5C518; opacity: 0; }
     .gc-burst i:nth-child(odd) { background: #E50914; } .gc-burst-b i:nth-child(odd) { background: #60a5fa; }
-    .game-card-arena.hover-active .gc-trophy { animation: trophyShine 1.6s ease-in-out infinite; }
-    .game-card-arena.hover-active .gc-glare::before { animation: gcGlare 1.6s ease-in-out infinite; }
-    .game-card-arena.hover-active .gc-beam { animation: gcBeam 1.4s ease-in-out infinite alternate; }
-    .game-card-arena.hover-active .gc-beam-b { animation-delay: -.5s; } .game-card-arena.hover-active .gc-beam-g { animation-delay: -1s; }
-    .game-card-arena.hover-active .gc-burst i { animation: gcBurst 1s ease-out var(--d) infinite; }
+    .game-card-arena:is(.hover-active, :hover) .gc-trophy { animation: trophyShine 1.6s ease-in-out infinite; }
+    .game-card-arena:is(.hover-active, :hover) .gc-glare::before { animation: gcGlare 1.6s ease-in-out infinite; }
+    .game-card-arena:is(.hover-active, :hover) .gc-beam { animation: gcBeam 1.4s ease-in-out infinite alternate; }
+    .game-card-arena:is(.hover-active, :hover) .gc-beam-b { animation-delay: -.5s; } .game-card-arena:is(.hover-active, :hover) .gc-beam-g { animation-delay: -1s; }
+    .game-card-arena:is(.hover-active, :hover) .gc-burst i { animation: gcBurst 1s ease-out var(--d) infinite; }
     @keyframes trophyShine { 0%, 100% { transform: perspective(300px) rotateY(-28deg) translate3d(0,0,0); } 50% { transform: perspective(300px) rotateY(28deg) translate3d(0,-8px,0); } }
     @keyframes gcGlare { 0% { opacity: 0; transform: translate3d(-150%,0,0) skewX(-18deg); } 30% { opacity: 1; } 60%, 100% { opacity: 0; transform: translate3d(380%,0,0) skewX(-18deg); } }
     @keyframes gcBeam { from { transform: rotate(-28deg); } to { transform: rotate(28deg); } }
@@ -785,9 +785,9 @@
     .gc-tent { left: 50%; bottom: 0; margin-left: -30px; font-size: 60px; line-height: 1; transform-origin: 50% 100%; }
     .gc-conf { width: 6px; height: 10px; border-radius: 1px; background: #F5C518; opacity: 0; }
     .gc-conf:nth-of-type(3n+1) { background: #E50914; } .gc-conf:nth-of-type(3n+2) { background: #22d3ee; }
-    .game-card-event.hover-active .gc-bunting { animation: evSway 1s ease-in-out infinite alternate; }
-    .game-card-event.hover-active .gc-tent { animation: evBounce .5s ease-in-out infinite alternate; }
-    .game-card-event.hover-active .gc-conf { animation: evFall 1.6s linear var(--d) infinite; }
+    .game-card-event:is(.hover-active, :hover) .gc-bunting { animation: evSway 1s ease-in-out infinite alternate; }
+    .game-card-event:is(.hover-active, :hover) .gc-tent { animation: evBounce .5s ease-in-out infinite alternate; }
+    .game-card-event:is(.hover-active, :hover) .gc-conf { animation: evFall 1.6s linear var(--d) infinite; }
     @keyframes evSway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
     @keyframes evBounce { to { transform: scale(1.05,.95); } }
     @keyframes evFall { 0% { opacity: 1; transform: translate3d(0,0,0) rotate(0); } 100% { opacity: 0; transform: translate3d(14px,190px,0) rotate(540deg); } }
@@ -798,11 +798,11 @@
     .gc-podium i:nth-child(1) { height: 66%; background: linear-gradient(#e2e8f0, #94a3b8); } .gc-podium i:nth-child(2) { height: 100%; background: linear-gradient(#fde68a, #ca8a04); } .gc-podium i:nth-child(3) { height: 46%; background: linear-gradient(#fdba74, #9a3412); }
     .gc-medal { left: 50%; top: 2%; margin-left: -17px; font-size: 34px; line-height: 1; transform-origin: 50% 0; }
     .gc-sparkle { font-size: 16px; line-height: 1; opacity: 0; }
-    .game-card-honor.hover-active .gc-rays { animation: honRays 5s linear infinite; }
-    .game-card-honor.hover-active .gc-medal { animation: honSwing 1.2s ease-in-out infinite alternate; }
-    .game-card-honor.hover-active .gc-podium i { animation: honRise .9s ease-in-out infinite alternate; }
-    .game-card-honor.hover-active .gc-podium i:nth-child(2) { animation-delay: .15s; } .game-card-honor.hover-active .gc-podium i:nth-child(3) { animation-delay: .3s; }
-    .game-card-honor.hover-active .gc-sparkle { animation: honSparkle 1.5s ease-in-out var(--d) infinite; }
+    .game-card-honor:is(.hover-active, :hover) .gc-rays { animation: honRays 5s linear infinite; }
+    .game-card-honor:is(.hover-active, :hover) .gc-medal { animation: honSwing 1.2s ease-in-out infinite alternate; }
+    .game-card-honor:is(.hover-active, :hover) .gc-podium i { animation: honRise .9s ease-in-out infinite alternate; }
+    .game-card-honor:is(.hover-active, :hover) .gc-podium i:nth-child(2) { animation-delay: .15s; } .game-card-honor:is(.hover-active, :hover) .gc-podium i:nth-child(3) { animation-delay: .3s; }
+    .game-card-honor:is(.hover-active, :hover) .gc-sparkle { animation: honSparkle 1.5s ease-in-out var(--d) infinite; }
     @keyframes honRays { to { transform: rotate(360deg); } }
     @keyframes honSwing { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }
     @keyframes honRise { from { transform: scaleY(.7); } to { transform: scaleY(1); } }
@@ -815,10 +815,10 @@
     .gc-stack i:nth-child(3) { background: linear-gradient(135deg, #0f5a46, #0a1f1a); transform: rotate(5deg); }
     .gc-shine { left: 50%; top: 4%; width: 54px; height: 76px; margin-left: -27px; overflow: hidden; border-radius: 7px; }
     .gc-shine::before { content: ""; position: absolute; top: -20%; left: 0; width: 35%; height: 140%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent); transform: translate3d(-150%,0,0) skewX(-16deg); }
-    .game-card-album.hover-active .gc-stack i:nth-child(1) { animation: albFanL .9s ease-in-out infinite alternate; }
-    .game-card-album.hover-active .gc-stack i:nth-child(2) { animation: albLift .9s ease-in-out infinite alternate; }
-    .game-card-album.hover-active .gc-stack i:nth-child(3) { animation: albFanR .9s ease-in-out infinite alternate; }
-    .game-card-album.hover-active .gc-shine::before { animation: albShine 1.8s ease-in-out infinite; }
+    .game-card-album:is(.hover-active, :hover) .gc-stack i:nth-child(1) { animation: albFanL .9s ease-in-out infinite alternate; }
+    .game-card-album:is(.hover-active, :hover) .gc-stack i:nth-child(2) { animation: albLift .9s ease-in-out infinite alternate; }
+    .game-card-album:is(.hover-active, :hover) .gc-stack i:nth-child(3) { animation: albFanR .9s ease-in-out infinite alternate; }
+    .game-card-album:is(.hover-active, :hover) .gc-shine::before { animation: albShine 1.8s ease-in-out infinite; }
     @keyframes albFanL { to { transform: translate3d(-14px,0,0) rotate(-24deg); } }
     @keyframes albFanR { to { transform: translate3d(14px,0,0) rotate(24deg); } }
     @keyframes albLift { to { transform: translate3d(0,-8px,0); } }
@@ -828,16 +828,16 @@
     .gc-bigknight { left: 50%; bottom: 10%; margin-left: -26px; font-size: 54px; line-height: 1; color: #fff; text-shadow: 0 0 12px rgba(168,85,247,.9), 0 2px 0 #000; }
     .gc-ltrail { inset: 0; width: 100%; height: 100%; }
     .gc-ltrail path { fill: none; stroke: #c084fc; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 100; stroke-dashoffset: 100; }
-    .game-card-pieces.hover-active .gc-bigknight { animation: pcHop 1.4s ease-in-out infinite; }
-    .game-card-pieces.hover-active .gc-ltrail path { animation: pcTrail 1.4s ease-in-out infinite; }
+    .game-card-pieces:is(.hover-active, :hover) .gc-bigknight { animation: pcHop 1.4s ease-in-out infinite; }
+    .game-card-pieces:is(.hover-active, :hover) .gc-ltrail path { animation: pcTrail 1.4s ease-in-out infinite; }
     @keyframes pcHop { 0%, 85%, 100% { transform: translate3d(0,0,0); } 25% { transform: translate3d(0,-28px,0); } 50%, 70% { transform: translate3d(18px,-28px,0); } }
     @keyframes pcTrail { 0% { stroke-dashoffset: 100; } 50%, 100% { stroke-dashoffset: 0; } }
     /* 15. رقع جديدة: المربعات بتتقلب موجة وفرشاة بتعدّي */
     .gc-tiles { left: 50%; top: 4%; width: 78px; height: 78px; margin-left: -39px; display: grid; grid-template-columns: repeat(3, 1fr); border: 2px solid #22d3ee; border-radius: 4px; overflow: hidden; }
     .gc-tiles i { display: block; background: #0e7490; } .gc-tiles i:nth-child(odd) { background: #e0f2fe; }
     .gc-brush { left: 0; top: 0; font-size: 26px; line-height: 1; opacity: 0; }
-    .game-card-boards.hover-active .gc-tiles i { animation: bdFlip 1.1s ease-in-out var(--d) infinite; }
-    .game-card-boards.hover-active .gc-brush { animation: bdBrush 1.1s ease-in-out infinite; }
+    .game-card-boards:is(.hover-active, :hover) .gc-tiles i { animation: bdFlip 1.1s ease-in-out var(--d) infinite; }
+    .game-card-boards:is(.hover-active, :hover) .gc-brush { animation: bdBrush 1.1s ease-in-out infinite; }
     @keyframes bdFlip { 50% { opacity: .5; transform: scale(.55) rotate(90deg); } }
     @keyframes bdBrush { 0% { opacity: 0; transform: translate3d(0,0,0); } 15%, 85% { opacity: 1; } 100% { opacity: 0; transform: translate3d(70px,60px,0); } }
     /* 16. أفاتار: أفاتار بينبض وحواليه أفاتارات تانية بتلف */
@@ -845,9 +845,9 @@
     .gc-orbit { left: 50%; top: calc(10% + 33px); width: 0; height: 0; }
     .gc-orbit i { position: absolute; left: -11px; top: -11px; width: 22px; font-size: 18px; line-height: 22px; text-align: center; font-style: normal; }
     .gc-orbit i:nth-child(1) { translate: 0 -50px; } .gc-orbit i:nth-child(2) { translate: 43px 25px; } .gc-orbit i:nth-child(3) { translate: -43px 25px; }
-    .game-card-avatar.hover-active .gc-ava { animation: avPop .6s ease-in-out infinite alternate; }
-    .game-card-avatar.hover-active .gc-orbit { animation: avOrbit 2.4s linear infinite; }
-    .game-card-avatar.hover-active .gc-orbit i { animation: avCounter 2.4s linear infinite; }
+    .game-card-avatar:is(.hover-active, :hover) .gc-ava { animation: avPop .6s ease-in-out infinite alternate; }
+    .game-card-avatar:is(.hover-active, :hover) .gc-orbit { animation: avOrbit 2.4s linear infinite; }
+    .game-card-avatar:is(.hover-active, :hover) .gc-orbit i { animation: avCounter 2.4s linear infinite; }
     @keyframes avPop { to { transform: scale(1.1); } }
     @keyframes avOrbit { to { transform: rotate(360deg); } }
     @keyframes avCounter { to { rotate: -360deg; } }
@@ -859,8 +859,8 @@
     .gc-gem { width: 9px; height: 9px; background: #22d3ee; opacity: 0; transform: rotate(45deg) scale(0); }
     .gc-gem:nth-of-type(1) { left: calc(50% - 37px); top: calc(4% + 1px); } .gc-gem:nth-of-type(2) { left: calc(50% + 28px); top: calc(4% + 1px); }
     .gc-gem:nth-of-type(3) { left: calc(50% + 28px); top: calc(4% + 66px); } .gc-gem:nth-of-type(4) { left: calc(50% - 37px); top: calc(4% + 66px); }
-    .game-card-frame.hover-active .gc-frm-line { animation: frDraw 1.4s ease-in-out infinite; }
-    .game-card-frame.hover-active .gc-gem { animation: frGem 1.2s ease-in-out var(--d) infinite; }
+    .game-card-frame:is(.hover-active, :hover) .gc-frm-line { animation: frDraw 1.4s ease-in-out infinite; }
+    .game-card-frame:is(.hover-active, :hover) .gc-gem { animation: frGem 1.2s ease-in-out var(--d) infinite; }
     @keyframes frDraw { 0% { stroke-dashoffset: 100; } 70%, 100% { stroke-dashoffset: 0; } }
     @keyframes frGem { 0%, 100% { opacity: 0; transform: rotate(45deg) scale(0); } 50% { opacity: 1; transform: rotate(45deg) scale(1.4); } }
     /* 18. متجر النجوم: صندوق كنز بيتهز وبيطلع عملات دهب */
@@ -868,10 +868,10 @@
     .gc-lid { transform-box: fill-box; transform-origin: 0% 100%; }
     .gc-glow { left: 50%; top: 10%; width: 70px; height: 50px; margin-left: -35px; border-radius: 50%; background: radial-gradient(ellipse, rgba(245,197,24,.75), transparent 70%); opacity: 0; }
     .gc-coin { left: 50%; top: 50%; width: 9px; height: 9px; margin-left: -4px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff3b0, #F5C518 60%, #a16207); opacity: 0; }
-    .game-card-chest.hover-active .gc-chest { animation: chRattle .16s linear infinite; }
-    .game-card-chest.hover-active .gc-lid { animation: chLid .32s ease-in-out infinite alternate; }
-    .game-card-chest.hover-active .gc-glow { animation: chGlow .64s ease-in-out infinite alternate; }
-    .game-card-chest.hover-active .gc-coin { animation: chCoin 1.1s ease-out var(--d) infinite; }
+    .game-card-chest:is(.hover-active, :hover) .gc-chest { animation: chRattle .16s linear infinite; }
+    .game-card-chest:is(.hover-active, :hover) .gc-lid { animation: chLid .32s ease-in-out infinite alternate; }
+    .game-card-chest:is(.hover-active, :hover) .gc-glow { animation: chGlow .64s ease-in-out infinite alternate; }
+    .game-card-chest:is(.hover-active, :hover) .gc-coin { animation: chCoin 1.1s ease-out var(--d) infinite; }
     @keyframes chRattle { 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
     @keyframes chLid { to { transform: rotate(-18deg); } }
     @keyframes chGlow { from { opacity: .3; } to { opacity: 1; } }
@@ -882,10 +882,10 @@
     .gc-lane i { position: absolute; left: 0; right: 0; bottom: 0; font-style: normal; font-size: 22px; line-height: 24px; text-align: center; color: #111; }
     .gc-think { right: 8%; top: -8%; display: flex; gap: 4px; }
     .gc-think i { display: block; width: 6px; height: 6px; border-radius: 50%; background: #fff; opacity: .2; }
-    .game-card-bot.hover-active .gc-bot { animation: botBob .5s ease-in-out infinite alternate; }
-    .game-card-bot.hover-active .gc-lane i { animation: botAdvance 2s steps(1, end) infinite; }
-    .game-card-bot.hover-active .gc-think i { animation: botThink .9s ease-in-out infinite; }
-    .game-card-bot.hover-active .gc-think i:nth-child(2) { animation-delay: .15s; } .game-card-bot.hover-active .gc-think i:nth-child(3) { animation-delay: .3s; }
+    .game-card-bot:is(.hover-active, :hover) .gc-bot { animation: botBob .5s ease-in-out infinite alternate; }
+    .game-card-bot:is(.hover-active, :hover) .gc-lane i { animation: botAdvance 2s steps(1, end) infinite; }
+    .game-card-bot:is(.hover-active, :hover) .gc-think i { animation: botThink .9s ease-in-out infinite; }
+    .game-card-bot:is(.hover-active, :hover) .gc-think i:nth-child(2) { animation-delay: .15s; } .game-card-bot:is(.hover-active, :hover) .gc-think i:nth-child(3) { animation-delay: .3s; }
     @keyframes botBob { to { transform: translate3d(0,-4px,0); } }
     @keyframes botAdvance { 0% { transform: translate3d(0,0,0); } 25% { transform: translate3d(0,-24px,0); } 50% { transform: translate3d(0,-48px,0); } 75%, 100% { transform: translate3d(0,-72px,0); } }
     @keyframes botThink { 50% { opacity: 1; transform: translate3d(0,-3px,0); } }
@@ -893,9 +893,9 @@
     .gc-piece { left: 50%; top: 8%; margin-left: -30px; font-size: 60px; line-height: 1; }
     .gc-mag { left: 50%; top: 30%; margin-left: -14px; font-size: 28px; line-height: 1; }
     .gc-bang { right: 4%; top: -4%; font-size: 30px; font-weight: 900; line-height: 1; color: #F5C518; text-shadow: 0 0 8px rgba(245,197,24,.8); opacity: 0; }
-    .game-card-puzzle.hover-active .gc-piece { animation: pzSnap 1.8s ease-in-out infinite; }
-    .game-card-puzzle.hover-active .gc-mag { animation: pzScan 1.8s ease-in-out infinite; }
-    .game-card-puzzle.hover-active .gc-bang { animation: pzBang 1.8s ease-out infinite; }
+    .game-card-puzzle:is(.hover-active, :hover) .gc-piece { animation: pzSnap 1.8s ease-in-out infinite; }
+    .game-card-puzzle:is(.hover-active, :hover) .gc-mag { animation: pzScan 1.8s ease-in-out infinite; }
+    .game-card-puzzle:is(.hover-active, :hover) .gc-bang { animation: pzBang 1.8s ease-out infinite; }
     @keyframes pzSnap { 0% { transform: translate3d(-10px,-8px,0) rotate(-18deg); } 35% { transform: translate3d(0,0,0) rotate(0) scale(1.08); } 45%, 100% { transform: translate3d(0,0,0) rotate(0) scale(1); } }
     @keyframes pzScan { 0%, 100% { transform: translate3d(-30px,-10px,0); } 25% { transform: translate3d(20px,-24px,0); } 50% { transform: translate3d(34px,10px,0); } 75% { transform: translate3d(-10px,24px,0); } }
     @keyframes pzBang { 0%, 40% { opacity: 0; transform: scale(.3); } 50% { opacity: 1; transform: scale(1.3); } 70% { transform: scale(1); } 90%, 100% { opacity: 0; } }
@@ -905,9 +905,9 @@
     .gc-sweep { background: conic-gradient(from 0deg, rgba(34,211,238,.6), transparent 70deg); }
     .gc-eye { left: 50%; top: 28px; margin-left: -21px; font-size: 40px; line-height: 1; }
     .gc-coord { font: 800 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: #67e8f9; text-shadow: 0 0 6px #22d3ee; opacity: 0; }
-    .game-card-vision.hover-active .gc-sweep { animation: viSweep 1.4s linear infinite; }
-    .game-card-vision.hover-active .gc-eye { animation: viBlink 2s ease-in-out infinite; }
-    .game-card-vision.hover-active .gc-coord { animation: viCoord 2s ease-out var(--d) infinite; }
+    .game-card-vision:is(.hover-active, :hover) .gc-sweep { animation: viSweep 1.4s linear infinite; }
+    .game-card-vision:is(.hover-active, :hover) .gc-eye { animation: viBlink 2s ease-in-out infinite; }
+    .game-card-vision:is(.hover-active, :hover) .gc-coord { animation: viCoord 2s ease-out var(--d) infinite; }
     @keyframes viSweep { to { transform: rotate(360deg); } }
     @keyframes viBlink { 0%, 44%, 52%, 100% { transform: scaleY(1); } 48% { transform: scaleY(.1); } }
     @keyframes viCoord { 0% { opacity: 0; transform: scale(.4); } 15% { opacity: 1; transform: scale(1.15); } 30% { transform: scale(1); } 45%, 100% { opacity: 0; } }
@@ -915,9 +915,9 @@
     .gc-march { left: 2%; right: 2%; bottom: 4%; display: flex; justify-content: space-around; align-items: flex-end; }
     .gc-march i { display: block; font-style: normal; font-size: 38px; line-height: 1; color: #fff; text-shadow: 0 2px 0 #000, 0 0 10px rgba(70,211,105,.6); }
     .gc-pcrown { right: 6%; bottom: calc(4% + 40px); font-size: 22px; line-height: 1; opacity: 0; }
-    .game-card-pawns.hover-active .gc-march i { animation: pwHop .7s ease-in-out infinite; }
-    .game-card-pawns.hover-active .gc-march i:nth-child(2) { animation-delay: .15s; } .game-card-pawns.hover-active .gc-march i:nth-child(3) { animation-delay: .3s; }
-    .game-card-pawns.hover-active .gc-pcrown { animation: pwCrown 1.4s ease-out infinite; }
+    .game-card-pawns:is(.hover-active, :hover) .gc-march i { animation: pwHop .7s ease-in-out infinite; }
+    .game-card-pawns:is(.hover-active, :hover) .gc-march i:nth-child(2) { animation-delay: .15s; } .game-card-pawns:is(.hover-active, :hover) .gc-march i:nth-child(3) { animation-delay: .3s; }
+    .game-card-pawns:is(.hover-active, :hover) .gc-pcrown { animation: pwCrown 1.4s ease-out infinite; }
     @keyframes pwHop { 50% { transform: translate3d(0,-16px,0); } }
     @keyframes pwCrown { 0%, 40% { opacity: 0; transform: translate3d(0,8px,0) scale(.3); } 55% { opacity: 1; transform: translate3d(0,0,0) scale(1.25); } 75% { transform: scale(1); } 100% { opacity: 0; } }
     /* 23. رقعة التحليل: أسهم خضرا (شوكة الحصان) ودهبي (تثبيت الفيل) بتترسم على رقعة صغيرة */
@@ -930,24 +930,30 @@
     .gc-an-n { left: calc(50% - 23px); top: 48px; } .gc-an-b { left: calc(50% + 23px); top: 71px; }
     .gc-tsq { width: 23px; height: 23px; background: rgba(229,9,20,.55); opacity: 0; }
     .gc-tsq-a { left: calc(50% - 46px); top: 2px; } .gc-tsq-b { left: calc(50% + 23px); top: 25px; }
-    .game-card-analysis.hover-active .gc-arrows line { animation: anDraw 1.8s ease-out infinite; }
-    .game-card-analysis.hover-active .gc-ar-g2 { animation-delay: .2s; } .game-card-analysis.hover-active .gc-ar-y { animation-delay: .5s; }
-    .game-card-analysis.hover-active .gc-tsq { animation: anPulse 1.8s ease-out infinite; } .game-card-analysis.hover-active .gc-tsq-b { animation-delay: .2s; }
+    .game-card-analysis:is(.hover-active, :hover) .gc-arrows line { animation: anDraw 1.8s ease-out infinite; }
+    .game-card-analysis:is(.hover-active, :hover) .gc-ar-g2 { animation-delay: .2s; } .game-card-analysis:is(.hover-active, :hover) .gc-ar-y { animation-delay: .5s; }
+    .game-card-analysis:is(.hover-active, :hover) .gc-tsq { animation: anPulse 1.8s ease-out infinite; } .game-card-analysis:is(.hover-active, :hover) .gc-tsq-b { animation-delay: .2s; }
     @keyframes anDraw { 0% { stroke-dashoffset: 100; } 35%, 100% { stroke-dashoffset: 0; } }
     @keyframes anPulse { 0%, 30% { opacity: 0; transform: scale(.8); } 45% { opacity: .9; transform: scale(1.08); } 100% { opacity: 0; transform: scale(1); } }
     /* أقل حركة: الكارت بينوّر بس من غير مؤثرات */
-    @media (prefers-reduced-motion: reduce) { html .game-card.hover-active .game-card-media *, html .game-card.hover-active .game-card-media *::before { animation: none; } html .game-card.hover-active .gc-fx { opacity: 0; } .game-card.hover-active, .nf-poster-wrap.game-card.hover-active .nf-poster { transform: none; } }
-    html.eca-calm .game-card.hover-active .game-card-media *, html.eca-calm .game-card.hover-active .game-card-media *::before { animation: none; } html.eca-calm .game-card.hover-active .gc-fx { opacity: 0; }
-    /* ===== تكبير الرقعة (gamenav.js) ===== */
+    html.eca-calm .game-card:is(.hover-active, :hover) .game-card-media *, html.eca-calm .game-card:is(.hover-active, :hover) .game-card-media *::before { animation: none; } html.eca-calm .game-card:is(.hover-active, :hover) .gc-fx { opacity: 0 !important; }
+    /* الكارت كله زرار واحد: اللي جواه ما يمسكش الماوس، فالـ hover بيوصل للكارت نفسه دايماً */
+    .game-card * { pointer-events: none; }
+    .game-card:is(.hover-active, :hover) .game-card-media * { animation-play-state: running !important; }
+    .game-card:is(.hover-active, :hover) .gc-fx { opacity: 1 !important; }
+    html.eca-calm .game-card:is(.hover-active, :hover) .gc-fx { opacity: 0 !important; }
+    /* ===== تكبير الرقعة (gamenav.js): الـ 64 مربع جوه الشاشة كلهم، في النص، ومن غير أي سكرول ===== */
     .eca-fs-btn { min-width: 44px; min-height: 44px; padding: 0 10px; border-radius: 12px; font-size: 20px; line-height: 1; color: #fff; background: #E50914; border: 1px solid rgba(255,255,255,.2); }
-    html.eca-board-fs body { overflow: hidden; }
-    #mainView.board-fullscreen-active { position: fixed; inset: 0; z-index: 60; width: 100vw; height: 100dvh; max-width: none; margin: 0; padding: max(8px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; background: #141414; }
-    #mainView.board-fullscreen-active > .space-y-4 > .gold-card:first-child { position: sticky; top: 0; z-index: 5; background: #181818; }
-    #mainView.board-fullscreen-active .lb-looks, #mainView.board-fullscreen-active .eca-play-strip { display: none; }
-    #mainView.board-fullscreen-active .grid.lg\:grid-cols-5 { grid-template-columns: minmax(0, 1fr); }
-    #mainView.board-fullscreen-active .grid.lg\:grid-cols-5 > * { grid-column: auto; }
-    #mainView.board-fullscreen-active .eca-board { width: min(94vw, 82dvh); max-width: none; }
-    @media (orientation: landscape), (min-width: 900px) { #mainView.board-fullscreen-active .eca-board { width: min(85dvh, 85vw); } }
+    html.eca-board-fs, html.eca-board-fs body { height: 100% !important; overflow: hidden !important; }
+    #mainView.board-fullscreen-active { position: fixed !important; inset: 0 !important; z-index: 65 !important; width: 100vw !important; height: 100vh !important; height: 100dvh !important; max-width: none !important; margin: 0 !important; padding: 12px !important; box-sizing: border-box !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 8px; background: #141414 !important; }
+    /* اللي مالوش علاقة بالرقعة أو بالشريط بيختفي، واللي حواليهم بيبقى من غير صندوق (display: contents) فالرقعة تبقى ابن مباشر للشاشة وفي النص */
+    #mainView.board-fullscreen-active *:not(.eca-board, .eca-board *, .eca-fs-keep, .eca-fs-keep *, :has(.eca-board), :has(.eca-fs-keep)) { display: none !important; }
+    #mainView.board-fullscreen-active :has(.eca-board, .eca-fs-keep):not(.eca-board, .eca-fs-keep) { display: contents !important; }
+    #mainView.board-fullscreen-active .eca-fs-keep { flex: 0 0 auto !important; width: 100% !important; max-width: 720px; margin: 0 !important; }
+    #mainView.board-fullscreen-active .eca-arena-bar { padding: 6px 8px !important; gap: 8px !important; flex-wrap: nowrap !important; }
+    #mainView.board-fullscreen-active .eca-arena-stats { display: none !important; }
+    #mainView.board-fullscreen-active .eca-board { --fs-side: min(var(--fs-board, 100vw), calc(100vw - 32px), calc(100vh - 110px)); --fs-side: min(var(--fs-board, 100vw), calc(100vw - 32px), calc(100dvh - 110px)); width: var(--fs-side) !important; height: var(--fs-side) !important; max-width: calc(100vw - 32px) !important; aspect-ratio: 1 / 1 !important; margin: 0 auto !important; flex: 0 0 auto !important; }
+    #mainView.board-fullscreen-active .eca-board > svg, #mainView.board-fullscreen-active .eca-board canvas { width: 100%; height: 100%; }
     /* ===== الرئيسية: لوبي ألعاب (home.js) ===== */
     :root { --hm-card: #0e0e15; --hm-title: #facc15; }
     html.light, html.eca, html.kids { --hm-card: #ffffff; --hm-title: #0f3d91; }
@@ -1219,8 +1225,8 @@
     html[data-ecap="piece-gold"] .eca-pc.w, .eca-skin-piece-gold .eca-pc.w { color: #fde68a; text-shadow: 0 0 1px #78350f, 0 0 1px #78350f, 0 1px 3px rgba(0,0,0,.5); }
     html[data-ecap="piece-gold"] .eca-pc.b, .eca-skin-piece-gold .eca-pc.b { color: #7c2d12; text-shadow: 0 0 1px #fde047, 0 1px 2px rgba(0,0,0,.45); }
   </style>
-  <script>window.ECA_VERSION = "eca-v89";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v89" />
+  <script>window.ECA_VERSION = "eca-v90";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v90" />
 </head>
 <body class="min-h-screen flex flex-col relative">
   <a href="#mainView" class="skip-link">تخطّي إلى المحتوى</a>
@@ -1384,49 +1390,49 @@
     } catch (_) {}
   </script>
   <script type="application/json" id="ecaLazyModules">{"finance":"js/finance.js"}</script>
-  <script src="js/core.js?v=eca-v89"></script>
+  <script src="js/core.js?v=eca-v90"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v89"></script>
+  <script src="js/arena.js?v=eca-v90"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v89"></script>
-  <script src="js/streaks.js?v=eca-v89"></script>
-  <script src="js/review.js?v=eca-v89"></script>
-  <script src="js/quality.js?v=eca-v89"></script>
-  <script src="js/announce.js?v=eca-v89"></script>
-  <script src="js/progress.js?v=eca-v89"></script>
-  <script src="js/arena2.js?v=eca-v89"></script>
+  <script src="js/extras.js?v=eca-v90"></script>
+  <script src="js/streaks.js?v=eca-v90"></script>
+  <script src="js/review.js?v=eca-v90"></script>
+  <script src="js/quality.js?v=eca-v90"></script>
+  <script src="js/announce.js?v=eca-v90"></script>
+  <script src="js/progress.js?v=eca-v90"></script>
+  <script src="js/arena2.js?v=eca-v90"></script>
   <!-- homework, coach dashboards, tournaments, and placement test load on demand via loadModule -->
-  <script src="js/ux.js?v=eca-v89"></script>
-  <script src="js/annotate.js?v=eca-v89"></script>
-  <script src="js/gamify.js?v=eca-v89"></script>
-  <script src="js/adventure.js?v=eca-v89"></script>
-  <script src="js/duel.js?v=eca-v89"></script>
-  <script src="js/fx.js?v=eca-v89"></script>
-  <script src="js/speedarena.js?v=eca-v89"></script>
-  <script src="js/loot.js?v=eca-v89"></script>
-  <script src="js/dojo.js?v=eca-v89"></script>
-  <script src="js/cards.js?v=eca-v89"></script>
-  <script src="js/stamina.js?v=eca-v89"></script>
-  <script src="js/social.js?v=eca-v89"></script>
-  <script src="js/friendduel.js?v=eca-v89"></script>
-  <script src="js/weekly.js?v=eca-v89"></script>
-  <script src="js/boss.js?v=eca-v89"></script>
-  <script src="js/command.js?v=eca-v89"></script>
-  <script src="js/lessonpuz.js?v=eca-v89"></script>
-  <script src="js/parentreport.js?v=eca-v89"></script>
-  <script src="js/care.js?v=eca-v89"></script>
-  <script src="js/fun.js?v=eca-v89"></script>
-  <script src="js/flow.js?v=eca-v89"></script>
-  <script src="js/assist.js?v=eca-v89"></script>
-  <script src="js/cardfx.js?v=eca-v89"></script>
-  <script src="js/lobby.js?v=eca-v89"></script>
-  <script src="js/gamenav.js?v=eca-v89"></script>
-  <script src="js/home.js?v=eca-v89"></script>
+  <script src="js/ux.js?v=eca-v90"></script>
+  <script src="js/annotate.js?v=eca-v90"></script>
+  <script src="js/gamify.js?v=eca-v90"></script>
+  <script src="js/adventure.js?v=eca-v90"></script>
+  <script src="js/duel.js?v=eca-v90"></script>
+  <script src="js/fx.js?v=eca-v90"></script>
+  <script src="js/speedarena.js?v=eca-v90"></script>
+  <script src="js/loot.js?v=eca-v90"></script>
+  <script src="js/dojo.js?v=eca-v90"></script>
+  <script src="js/cards.js?v=eca-v90"></script>
+  <script src="js/stamina.js?v=eca-v90"></script>
+  <script src="js/social.js?v=eca-v90"></script>
+  <script src="js/friendduel.js?v=eca-v90"></script>
+  <script src="js/weekly.js?v=eca-v90"></script>
+  <script src="js/boss.js?v=eca-v90"></script>
+  <script src="js/command.js?v=eca-v90"></script>
+  <script src="js/lessonpuz.js?v=eca-v90"></script>
+  <script src="js/parentreport.js?v=eca-v90"></script>
+  <script src="js/care.js?v=eca-v90"></script>
+  <script src="js/fun.js?v=eca-v90"></script>
+  <script src="js/flow.js?v=eca-v90"></script>
+  <script src="js/assist.js?v=eca-v90"></script>
+  <script src="js/cardfx.js?v=eca-v90"></script>
+  <script src="js/lobby.js?v=eca-v90"></script>
+  <script src="js/gamenav.js?v=eca-v90"></script>
+  <script src="js/home.js?v=eca-v90"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v89"></script>
+  <script type="module" src="js/firebase.js?v=eca-v90"></script>
 </body>
 </html>

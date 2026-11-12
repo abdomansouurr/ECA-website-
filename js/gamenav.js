@@ -30,11 +30,51 @@ function ecaBoardFs(on) {
   } catch (_) {}
   const b = document.getElementById("ecaFsBtn");
   if (b) b.outerHTML = ecaFsBtnHTML();
-  if (on) { const board = mv && mv.querySelector(".eca-board"); if (mv) mv.scrollTop = 0; if (board && board.scrollIntoView) board.scrollIntoView({ block: "nearest" }); }
+  if (on) { window.scrollTo(0, 0); if (mv) mv.scrollTop = 0; ecaFsLayout(); }
+  else { if (mv) mv.style.removeProperty("--fs-board"); if (ecaFsRo) ecaFsRo.disconnect(); }
 }
+// في وضع التكبير بيفضل ظاهر: الرقعة + شريط اللعبة (رجوع/تصغير) + العدّاد وأزرار التحليل وسطر الحالة بس.
+// كل حاجة تانية بتختفي بالـ CSS، وهنا بنحسب مقاس الرقعة من المساحة اللي فاضلة عشان الـ 64 مربع يبانوا كلهم من غير سكرول
+const ECA_FS_KEEP = ["#rushLeft", "#visLeft", "#duelLeft", "#saLeft", "#anaEval", 'button[onclick="anaUndo()"]', "[aria-live]"];
+function ecaFsLayout() {
+  const mv = document.getElementById("mainView");
+  if (!ecaFsOn || !mv) return;
+  const board = mv.querySelector(".eca-board");
+  if (!board) return;
+  const bar = mv.querySelector(".eca-arena-bar");
+  if (bar) bar.classList.add("eca-fs-keep");
+  ECA_FS_KEEP.forEach(sel => mv.querySelectorAll(sel).forEach(el => {
+    if (board.contains(el) || el.contains(board) || (bar && bar.contains(el))) return;
+    // الصف اللي فيه العنصر بس (صف العدّادات أو صف الأزرار)، مش العمود كله
+    const row = el.closest(".grid, .flex");
+    (row && mv.contains(row) && !row.contains(board) ? row : el).classList.add("eca-fs-keep");
+  }));
+  const cs = getComputedStyle(mv), gap = parseFloat(cs.rowGap) || 0;
+  const room = mv.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
+  const measure = () => {
+    const keep = [...mv.querySelectorAll(".eca-fs-keep")].filter(k => !k.parentElement.closest(".eca-fs-keep"));
+    return room - keep.reduce((s, k) => s + k.getBoundingClientRect().height, 0) - gap * keep.length;
+  };
+  let h = measure();
+  // شاشة قصيرة: الرقعة أهم من الصفوف الزيادة، فبنسيب شريط اللعبة بس
+  if (h < Math.min(window.innerWidth - 32, 320)) { mv.querySelectorAll(".eca-fs-keep").forEach(k => { if (k !== bar) k.classList.remove("eca-fs-keep"); }); h = measure(); }
+  const side = Math.floor(Math.max(160, Math.min(window.innerWidth - 32, h)));
+  mv.style.setProperty("--fs-board", side + "px");
+  // صف بيكبر لوحده بعدين (تقييم المحرك بيتكتب بعد ما الرقعة تترسم مثلاً): نعيد الحساب
+  if (window.ResizeObserver) {
+    if (!ecaFsRo) ecaFsRo = new ResizeObserver(() => ecaFsRelayout());
+    ecaFsRo.disconnect();
+    mv.querySelectorAll(".eca-fs-keep").forEach(k => ecaFsRo.observe(k));
+  }
+}
+let ecaFsRo = null;
+let ecaFsRaf = 0;
+const ecaFsRelayout = () => { if (!ecaFsOn || ecaFsRaf) return; ecaFsRaf = requestAnimationFrame(() => { ecaFsRaf = 0; ecaFsLayout(); }); };
 window.ecaBoardFs = ecaBoardFs;
 window.ecaFsBtnHTML = ecaFsBtnHTML;
-["fullscreenchange", "webkitfullscreenchange"].forEach(ev => document.addEventListener(ev, () => { if (!ecaFsNative() && ecaFsOn) ecaBoardFs(false); }));
+window.ecaFsLayout = ecaFsLayout;
+["fullscreenchange", "webkitfullscreenchange"].forEach(ev => document.addEventListener(ev, () => { if (!ecaFsNative() && ecaFsOn) ecaBoardFs(false); else ecaFsRelayout(); }));
+window.addEventListener("resize", ecaFsRelayout);
 document.addEventListener("keydown", e => { if (e.key === "Escape" && ecaFsOn) ecaBoardFs(false); });
 
 // ================= الرجوع للساحة =================
@@ -90,8 +130,9 @@ window.addEventListener("popstate", e => {
     if (tab !== "arena") { ecaBoardFs(false); return; }
     ecaNavQuiet = true;
     try {
-      if (st.view && st.view !== arena.sub) arenaSub(st.view);
-      else if (!st.view && arena.sub !== "lobby") arenaSub("lobby");
+      if (!st.view && arena.sub !== "lobby") arenaSub("lobby");
+      // خطوة لعبة قديمة (الطالب كان خرج منها): بنفضل في اللوبي بدل ما اللعبة القديمة ترجع تفتح
+      else if (st.view && arena.sub === "lobby") history.replaceState({ tab: "arena" }, "", "#arena");
     } finally { ecaNavQuiet = false; }
   }, 0);
 });
@@ -101,8 +142,34 @@ window.addEventListener("popstate", e => {
     const out = _r.apply(this, arguments);
     if (ecaFsOn) {
       if (tab !== "arena" || arena.sub !== ecaFsSub) ecaBoardFs(false);
-      else { const mv = document.getElementById("mainView"); if (mv) mv.classList.add("board-fullscreen-active"); }
+      else { const mv = document.getElementById("mainView"); if (mv) mv.classList.add("board-fullscreen-active"); ecaFsLayout(); }
     }
+    return out;
+  };
+}
+
+// ================= القايمة الرئيسية بترجّع الساحة للوبي =================
+// أي ضغطة على تاب في القايمة (الرئيسية، ساحة التدريب، البطولات...) وانت جوه لعبة: اللعبة بتتقفل وعدّاداتها بتقف،
+// والساحة ترجع للوبي. الكود اللي بيفتح لعبة بنفسه (switchTab ثم arenaSub) مش بيتأثر لأنه مش ضغطة على القايمة
+function returnToArenaLobby() {
+  if (typeof arena === "undefined" || arena.sub === "lobby") return false;
+  ecaGameTeardown();
+  if ((history.state || {}).view) history.replaceState({ tab: "arena" }, "", "#arena");
+  arena.sub = "lobby";
+  return true;
+}
+window.returnToArenaLobby = returnToArenaLobby;
+window.exitActiveGame = returnToArenaLobby;
+function ecaNavClick() {
+  const ev = window.event, t = ev && ev.target;
+  return !!(ev && ev.type === "click" && t && t.closest && t.closest(".nav-tab"));
+}
+{
+  const _st = switchTab;
+  switchTab = function (t) {
+    const nav = ecaNavClick(), out = _st.apply(this, arguments);
+    // بعد switchTab الأصلية: لو الطالب رفض يسيب دور شغّال (care.js) التاب ما اتغيرش ومش بنلمس حاجة
+    if (nav && tab === t && returnToArenaLobby() && t === "arena") render();
     return out;
   };
 }

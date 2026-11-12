@@ -859,9 +859,41 @@ async function login(p, id) {
     await sleep(1300);
     check("cards: a mouse or keyboard click still opens right away", await pa.ev("(() => { const keep = window.lbOpen; let n = 0; window.lbOpen = () => { n++; }; try { document.querySelector('#mainView .game-card-coach').click(); return n === 1; } finally { window.lbOpen = keep; } })()"));
     await pa.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
-    const gcCalm = await pa.ev("(() => { const c = document.querySelector('#mainView .game-card-speed'); GameCardAnimator.activate(c); const r = { fx: getComputedStyle(c.querySelector('.gc-fx')).opacity, clock: getComputedStyle(c.querySelector('.gc-dclock')).animationName, lit: c.classList.contains('hover-active') }; GameCardAnimator.sleep(c); return r; })()");
+    const gcOs = await pa.ev("(() => { const c = document.querySelector('#mainView .game-card-speed'); c.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' })); const fx = c.querySelector('.gc-fx'); fx.getAnimations().forEach(t => t.finish()); const cl = getComputedStyle(c.querySelector('.gc-dclock')); const r = { lit: c.classList.contains('hover-active'), fx: getComputedStyle(fx).opacity, clock: cl.animationName, state: cl.animationPlayState, dur: cl.animationDuration }; GameCardAnimator.sleep(c); return r; })()");
     await pa.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
-    check("cards: with reduced motion the card only lights up, no effects", gcCalm.lit && gcCalm.fx === "0" && gcCalm.clock === "none", gcCalm);
+    check("cards: with Windows animations off, pointing at a card still plays its preview", gcOs.lit && gcOs.fx === "1" && gcOs.clock === "clockShudder" && gcOs.state === "running" && parseFloat(gcOs.dur) >= 0.1, gcOs);
+    const gcCalm = await pa.ev("(() => { document.documentElement.classList.add('eca-calm'); const c = document.querySelector('#mainView .game-card-speed'); GameCardAnimator.activate(c); const fx = c.querySelector('.gc-fx'); fx.getAnimations().forEach(t => t.finish()); const r = { fx: getComputedStyle(fx).opacity, clock: getComputedStyle(c.querySelector('.gc-dclock')).animationName, lit: c.classList.contains('hover-active') }; GameCardAnimator.sleep(c); document.documentElement.classList.remove('eca-calm'); return r; })()");
+    check("cards: with «less motion» on in the app, the card only lights up, no effects", gcCalm.lit && gcCalm.fx === "0" && gcCalm.clock === "none", gcCalm);
+    // ---------- cards: desktop mouse on Windows (also a touch screen laptop, and animations off) ----------
+    await pa.send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 720, deviceScaleFactor: 1, mobile: false });
+    await pa.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
+    const desk = await pa.ev(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = { bad: [] };
+      switchTab('arena'); arenaSub('lobby'); await wait(400); GameCardAnimator.activate(null);
+      document.body.dispatchEvent(new Event('touchstart', { bubbles: true }));   // the same laptop was just touched
+      const cards = [...document.querySelectorAll('#mainView .game-card')]; out.cards = cards.length;
+      for (const c of cards) {
+        c.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' })); c.dispatchEvent(new MouseEvent('mouseenter'));
+        const fx = c.querySelector('.gc-fx'); fx.getAnimations().forEach(t => t.finish());
+        const running = [...c.querySelectorAll('.game-card-media *')].filter(e => { const st = getComputedStyle(e); return st.animationName !== 'none' && st.animationPlayState === 'running'; }).length;
+        const on = c.classList.contains('hover-active') && getComputedStyle(fx).opacity === '1' && running > 0;
+        c.dispatchEvent(new PointerEvent('pointerout', { bubbles: true, pointerType: 'mouse', relatedTarget: document.body })); c.dispatchEvent(new MouseEvent('mouseleave', { relatedTarget: document.body }));
+        const off = !c.classList.contains('hover-active');
+        if (!on || !off) out.bad.push({ card: [...c.classList].find(x => x.startsWith('game-card-')), on, running, off });
+      }
+      document.querySelectorAll('.eca-spin-modal,#ecaMilestone,.eca-drop-modal').forEach(e => e.remove());
+      const sp = document.querySelector('#mainView .game-card-speed'); sp.scrollIntoView({ block: 'center', inline: 'center' }); await wait(400);
+      const r = sp.getBoundingClientRect(); out.at = { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+      const top = document.elementFromPoint(out.at.x, out.at.y); out.top = top === sp || sp.contains(top) ? 'card' : (top ? top.tagName + '.' + String(top.className).slice(0, 60) : 'none');
+      out.blocked = [...sp.querySelectorAll('*')].filter(e => getComputedStyle(e).pointerEvents !== 'none').length;
+      return out; })()`);
+    await pa.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: desk.at.x, y: desk.at.y }); await sleep(250);
+    const real = await pa.ev("(() => { const c = document.querySelector('#mainView .game-card-speed'), cl = getComputedStyle(c.querySelector('.gc-dclock')); return { hover: c.matches(':hover'), lit: c.classList.contains('hover-active'), clock: cl.animationName, state: cl.animationPlayState }; })()");
+    await pa.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 2, y: 2 }); await sleep(250);
+    const realOff = await pa.ev("!document.querySelector('#mainView .game-card-speed').classList.contains('hover-active')");
+    await pa.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
+    await pa.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+    check("cards: on a Windows desktop every card wakes on mouse hover and sleeps on leave, even after a touch and with animations off", desk.cards >= 20 && !desk.bad.length && desk.blocked === 0, desk);
+    check("cards: a real mouse moving over a card starts its animation, moving away stops it", real.hover && real.lit && real.clock === "clockShudder" && real.state === "running" && realOff, { real, realOff, top: desk.top, at: desk.at });
     if (process.env.E2E_SHOTS) for (const k of ["target", "map", "dojo", "boss", "speed", "knights", "duel", "spin", "coach", "arena", "event", "honor", "album", "pieces", "boards", "avatar", "frame", "chest", "bot", "puzzle", "vision", "pawns", "analysis"]) {
       await pa.send("Emulation.setDeviceMetricsOverride", { width: 375, height: 700, deviceScaleFactor: 2, mobile: true });
       const box = await pa.ev(`(async () => { document.querySelectorAll('.eca-spin-modal,#ecaMilestone,.eca-drop-modal').forEach(e => e.remove()); const c = document.querySelector('#mainView .game-card-${k}'); c.scrollIntoView({ block: 'center', inline: 'center' }); GameCardAnimator.activate(c); await new Promise(r => setTimeout(r, 330)); const r = c.getBoundingClientRect(); return { x: r.left + scrollX - 6, y: r.top + scrollY - 6, w: r.width + 12, h: r.height + 12 }; })()`);
@@ -884,26 +916,39 @@ async function login(p, id) {
     check("cards: every card in every row wakes with its own animation, no two alike", uniq.cards >= 20 && !uniq.noFx.length && !uniq.dupKinds.length && !uniq.noOwn.length && !uniq.still.length, { cards: uniq.cards, noFx: uniq.noFx, dupKinds: uniq.dupKinds, noOwn: uniq.noOwn, still: uniq.still });
     // ---------- games: full screen board ----------
     await pa.send("Page.bringToFront");
-    const fsr = await pa.ev(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
-      const probe = async sub => { switchTab('arena'); arenaSub(sub); await wait(700); const b = document.getElementById('ecaFsBtn'), board = document.querySelector('#mainView .eca-board');
+    const fsProbe = `(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+      const probe = async sub => { ecaBoardFs(false); switchTab('arena'); arenaSub(sub); await wait(700); const b = document.getElementById('ecaFsBtn'), board = document.querySelector('#mainView .eca-board');
         if (!b || !board) return { sub, found: false };
         const r0 = board.getBoundingClientRect().width, bs = b.getBoundingClientRect();
-        b.click(); await wait(250);
-        const mv = document.getElementById('mainView'), on = mv.classList.contains('board-fullscreen-active') && document.documentElement.classList.contains('eca-board-fs') && getComputedStyle(mv).position === 'fixed';
-        const w = document.querySelector('#mainView .eca-board').getBoundingClientRect().width, want = Math.min(innerWidth * .94, innerHeight * .82);
-        const btn2 = document.getElementById('ecaFsBtn'), pressed = !!btn2 && btn2.getAttribute('aria-pressed') === 'true';
-        const hd = mv.querySelector('.gold-card').getBoundingClientRect(), bd = document.querySelector('#mainView .eca-board').getBoundingClientRect();
+        b.click(); await wait(600);
+        const mv = document.getElementById('mainView'), W = innerWidth, H = innerHeight, on = mv.classList.contains('board-fullscreen-active') && getComputedStyle(mv).position === 'fixed';
+        const bd = document.querySelector('#mainView .eca-board').getBoundingClientRect(), bar = document.querySelector('#mainView .eca-arena-bar').getBoundingClientRect();
+        const sq = [...document.querySelectorAll('#mainView .eca-board .eca-sq')].map(e => e.getBoundingClientRect());
+        const inView = r => r.left >= -0.5 && r.top >= -0.5 && r.right <= W + 0.5 && r.bottom <= H + 0.5;
+        const btn2 = document.getElementById('ecaFsBtn');
+        const res = { sub, found: true, W, H, side: Math.round(bd.width), size: bs.width >= 44 && bs.height >= 44, on,
+          fits: inView(bd), all64: sq.length === 64 && sq.every(inView), square: Math.abs(bd.width - bd.height) <= 1,
+          centered: Math.abs(bd.left - (W - bd.right)) <= 2, noScroll: document.scrollingElement.scrollHeight <= H + 1 && mv.scrollHeight <= mv.clientHeight + 1 && mv.scrollTop === 0 && scrollY === 0,
+          docH: document.scrollingElement.scrollHeight, mvH: mv.scrollHeight + '/' + mv.clientHeight, bar: bar.height > 0 && bar.bottom <= bd.top + 1, big: bd.width >= Math.min(W - 32, H - 260) - 1, pressed: !!btn2 && btn2.getAttribute('aria-pressed') === 'true' };
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await wait(250);
-        const off = !mv.classList.contains('board-fullscreen-active') && !document.documentElement.classList.contains('eca-board-fs') && getComputedStyle(mv).position !== 'fixed';
-        const back = Math.abs(document.querySelector('#mainView .eca-board').getBoundingClientRect().width - r0) < 2;
-        return { sub, found: true, size: bs.width >= 44 && bs.height >= 44, on, big: Math.abs(w - want) < 3, w: Math.round(w), want: Math.round(want), pressed, clear: hd.bottom <= bd.top + 1, off, back }; };
-      out.play = await probe('pawns'); if (!out.play.found) out.play = await probe('puzzles'); out.analysis = await probe('analysis');
+        res.off = !mv.classList.contains('board-fullscreen-active') && !document.documentElement.classList.contains('eca-board-fs') && getComputedStyle(mv).position !== 'fixed';
+        res.back = Math.abs(document.querySelector('#mainView .eca-board').getBoundingClientRect().width - r0) < 2;
+        return res; };
+      out.game = await probe('pawns'); if (!out.game.found) out.game = await probe('puzzles'); out.analysis = await probe('analysis');
       ecaBoardFs(true); arenaSub('lobby'); await wait(250); out.leaveExits = !document.documentElement.classList.contains('eca-board-fs') && !document.getElementById('mainView').classList.contains('board-fullscreen-active');
-      return out; })()`);
-    const fsOk = p => p.found && p.size && p.on && p.big && p.pressed && p.clear && p.off && p.back;
-    check("board: the full screen button grows the board and Esc puts it back, in a game and on the analysis board", fsOk(fsr.play) && fsOk(fsr.analysis), fsr);
-    check("board: going back to the lobby leaves full screen", fsr.leaveExits, fsr);
-    if (process.env.E2E_SHOTS) { await pa.ev("(async () => { switchTab('arena'); arenaSub('analysis'); await new Promise(r => setTimeout(r, 500)); ecaBoardFs(true); })()"); await sleep(600); const shot = await pa.send("Page.captureScreenshot", { format: "png" }); fs.writeFileSync(path.join(process.env.E2E_SHOTS, "board-fullscreen.png"), Buffer.from(shot.data, "base64")); await pa.ev("ecaBoardFs(false); arenaSub('lobby')"); }
+      return out; })()`;
+    const fsOk = p => p.found && p.size && p.on && p.fits && p.all64 && p.square && p.centered && p.noScroll && p.bar && p.big && p.pressed && p.off && p.back;
+    const fsAll = [];
+    for (const [w, h, mobile] of [[1280, 720, false], [1366, 768, false], [1920, 1080, false], [375, 667, true]]) {
+      await pa.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: 1, mobile });
+      const r = await pa.ev(fsProbe); fsAll.push({ view: w + "x" + h, ...r });
+    }
+    await pa.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+    const fsBad = fsAll.filter(r => !fsOk(r.game) || !fsOk(r.analysis));
+    check("board: full screen shows all 64 squares centered with no scrolling at 1280x720, 1366x768, 1920x1080 and 375x667, in a game and on the analysis board", !fsBad.length, fsBad.length ? fsBad : fsAll.map(r => r.view + " game " + r.game.side + " analysis " + r.analysis.side));
+    check("board: going back to the lobby leaves full screen", fsAll.every(r => r.leaveExits), fsAll.map(r => r.leaveExits));
+    if (process.env.E2E_SHOTS) for (const [w, h, mobile] of [[1366, 768, false], [375, 667, true]]) { await pa.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: 1, mobile }); await pa.ev("(async () => { switchTab('arena'); arenaSub('analysis'); await new Promise(r => setTimeout(r, 500)); ecaBoardFs(true); })()"); await sleep(600); const shot = await pa.send("Page.captureScreenshot", { format: "png" }); fs.writeFileSync(path.join(process.env.E2E_SHOTS, "board-fullscreen-" + w + ".png"), Buffer.from(shot.data, "base64")); await pa.ev("ecaBoardFs(false); arenaSub('lobby')"); }
+    if (process.env.E2E_SHOTS) await pa.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
     // ---------- games: back to the lobby (button and the phone/browser back) ----------
     const nav = await pa.ev(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = { bad: [] };
       switchTab('arena'); arenaSub('lobby'); await wait(400); window.scrollTo(0, 420); await wait(80); out.y0 = Math.round(scrollY);
@@ -921,6 +966,18 @@ async function login(p, id) {
     check("back: the phone or browser back button from every game lands in the lobby with no timers left running", nav.bad.length === 0, nav.bad);
     check("back: the lobby comes back where you left it", Math.abs(nav.y - nav.y0) <= 4, nav);
     check("back: the «back to the lobby» button works and leaves no game step in the history", nav.button, nav);
+    const navReset = await pa.ev(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+      const navBtn = id => document.querySelector('.nav-tab[onclick$="switchTab(\\'' + id + '\\')"]');
+      switchTab('arena'); arenaSub('lobby'); await wait(200);
+      arenaSub('rush'); await wait(200); await rushStart(); await wait(200); out.started = !!arena.rush.timer;
+      navBtn('home').click(); await wait(300); out.home = tab === 'home' && arena.sub === 'lobby' && !arena.rush.timer;
+      navBtn('arena').click(); await wait(400); out.arena = tab === 'arena' && arena.sub === 'lobby' && !!document.querySelector('#mainView .nf-billboard');
+      arenaSub('puzzles'); await wait(300); navBtn('arena').click(); await wait(400); out.direct = tab === 'arena' && arena.sub === 'lobby' && !!document.querySelector('#mainView .nf-billboard');
+      arenaSub('analysis'); await wait(200); switchTab('home'); switchTab('arena'); await wait(200); out.code = arena.sub === 'analysis';
+      arenaSub('lobby'); return out; })()`);
+    check("nav: game → Home → Training Arena opens the lobby, not the old game, and its timer is stopped", navReset.started && navReset.home && navReset.arena, navReset);
+    check("nav: pressing Training Arena while inside a game goes straight to the lobby", navReset.direct, navReset);
+    check("nav: code that opens a game itself is not affected", navReset.code, navReset);
     const pcs = await pb.ev(`(async () => {
       const u = currUser(), keep = ((u.shop || {}).eq || {}).p || "", out = {}, imgs = () => document.querySelectorAll('#mainView .eca-board img.eca-pimg').length, glyphs = () => document.querySelectorAll('#mainView .eca-board .eca-pc').length;
       ecaEquip('p', ''); switchTab('arena'); arenaSub('puzzles');
