@@ -7,9 +7,9 @@
   <link rel="manifest" href="manifest.json" />
   <!-- لوجو الأكاديمية على تاب المتصفح: ICO في الجذر (الفولباك الأضمن — المتصفحات بتطلبه من /favicon.ico مباشرة)
        + PNG للتاب الحديث + apple-touch للآيفون — كلهم بنفس اللوجو ومع رقم نسخة يكسر الكاش -->
-  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v86" />
-  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v86" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v86" />
+  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v87" />
+  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v87" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v87" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ECA Chess" />
@@ -306,7 +306,7 @@
     @keyframes ecaRewardPop { 0% { opacity: 0; transform: translateY(12px) scale(.8); } 25% { opacity: 1; transform: translateY(0) scale(1.08); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px) scale(1); } }
     @media (prefers-reduced-motion: reduce) { .eca-reward-pop { animation: none; } }
 
-    /* ===== eca-v86: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
+    /* ===== eca-v87: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
     @keyframes ecaItemIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     .stagger-in > *, .st-item { animation-duration: .24s; }
     .stagger-in > *:nth-child(1) { animation-delay: 0.045s }
@@ -603,6 +603,115 @@
     }
     @media (prefers-reduced-motion: reduce) { .nf-art, .nf-live::before { animation: none; } .nf-card, .nf-poster { transition: none; } }
     html.eca-calm .nf-art, html.eca-calm .nf-live::before { animation: none; }
+    /* ===== كروت الساحة اللي بتصحى (cardfx.js): خلفية + بطل ثابت + مؤثرات بتشتغل مع .hover-active بس ===== */
+    .game-card { --gc-glow: 229,9,20; }
+    .game-card-duel { --gc-glow: 99,102,241; } .game-card-coach, .game-card-arena { --gc-glow: 245,197,24; }
+    .game-card::after { content: ""; position: absolute; inset: 0; z-index: 3; border-radius: inherit; pointer-events: none; box-shadow: inset 0 0 0 2px rgba(var(--gc-glow),.95), inset 0 0 30px rgba(var(--gc-glow),.45); opacity: 0; transition: opacity .18s ease; }
+    .game-card.hover-active { transform: scale(1.04); } .game-card.hover-active::after { opacity: 1; }
+    .game-card-media { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+    .gc-bg { position: absolute; top: -12%; bottom: -12%; inset-inline-end: -14%; width: 78%; background: radial-gradient(closest-side, rgba(var(--gc-glow),.42), transparent); opacity: .5; transition: opacity .2s ease; }
+    .game-card.hover-active .gc-bg { opacity: 1; }
+    .gc-hero, .gc-stage { position: absolute; top: 6%; inset-inline-end: 5%; width: 46%; height: 62%; }
+    .gc-fx { position: absolute; inset: 0; opacity: 0; transition: opacity .15s ease; }
+    .game-card.hover-active .gc-fx { opacity: 1; }
+    .gc-hero > *, .gc-stage > *, .gc-fx > * { position: absolute; display: block; font-style: normal; }
+    /* A. تحدي 60 ثانية: ساعة بتترعش، خطوط سرعة، وشرار ورا البيدق */
+    .gc-clock { right: 0; top: 0; width: 62%; height: 100%; }
+    .gc-hand { transform-box: fill-box; transform-origin: 50% 100%; }
+    .gc-pawn { left: 0; bottom: 0; font-size: 44px; line-height: 1; color: #fff; text-shadow: 0 2px 0 #000, 0 0 12px rgba(229,9,20,.7); }
+    .gc-line { right: 0; width: 42%; height: 2px; border-radius: 2px; background: linear-gradient(to left, transparent, rgba(255,255,255,.95)); filter: blur(.6px); opacity: 0; }
+    .gc-fire { left: 24%; bottom: 4%; width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle, #ffd166, #ff7a00 45%, transparent 70%); filter: blur(2px); }
+    .gc-spark { left: 30%; bottom: 14%; width: 4px; height: 4px; border-radius: 50%; background: #F5C518; box-shadow: 0 0 6px #ff7a00; }
+    .gc-spark:nth-of-type(odd) { background: #E50914; }
+    .game-card-speed.hover-active .gc-clock { animation: clockShudder .14s linear infinite; }
+    .game-card-speed.hover-active .gc-hand { animation: gcTick .8s steps(8) infinite; }
+    .game-card-speed.hover-active .gc-pawn { animation: gcDash .3s ease-in-out infinite alternate; }
+    .game-card-speed.hover-active .gc-line { animation: speedStream .5s linear var(--d) infinite; }
+    .game-card-speed.hover-active .gc-fire { animation: gcFlicker .16s ease-in-out infinite alternate; }
+    .game-card-speed.hover-active .gc-spark { animation: speedSparks .45s ease-out var(--d) infinite; }
+    @keyframes clockShudder { 0%, 100% { transform: translate3d(0,0,0) rotate(0); } 25% { transform: translate3d(-1.5px,1px,0) rotate(-3deg); } 75% { transform: translate3d(1.5px,-1px,0) rotate(3deg); } }
+    @keyframes gcTick { to { transform: rotate(360deg); } }
+    @keyframes gcDash { from { transform: translate3d(0,0,0) skewX(0); } to { transform: translate3d(-6px,0,0) skewX(10deg); } }
+    @keyframes speedStream { 0% { opacity: 0; transform: translate3d(30%,0,0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate3d(-240%,0,0); } }
+    @keyframes gcFlicker { from { opacity: .65; transform: scale(1); } to { opacity: 1; transform: scale(1.35); } }
+    @keyframes speedSparks { from { opacity: 1; transform: translate3d(0,0,0) scale(1); } to { opacity: 0; transform: translate3d(var(--x),var(--y),0) scale(.2); } }
+    /* B. دوجو الأخطاء: ضربة سيف، موجة صدمة، والسلاسل بتتكسر وتقع */
+    .gc-belt { right: 4%; top: 0; font-size: 50px; line-height: 1; }
+    .gc-lock { left: 14%; bottom: 0; font-size: 30px; line-height: 1; }
+    .gc-slash { left: -20%; top: 46%; width: 140%; height: 5px; border-radius: 5px; background: linear-gradient(90deg, transparent, #fff 45%, #ff4d4d 60%, transparent); filter: blur(.4px); opacity: 0; }
+    .gc-wave { left: calc(14% - 7px); bottom: -7px; width: 44px; height: 44px; border-radius: 50%; border: 3px solid rgba(229,9,20,.85); opacity: 0; }
+    .gc-frag { left: calc(14% + 12px); bottom: 14px; width: 7px; height: 11px; border: 2px solid #c9c9c9; border-radius: 4px; }
+    .game-card-dojo.hover-active .gc-bg { animation: gcRumble .12s linear infinite; }
+    .game-card-dojo.hover-active .gc-lock { animation: gcLockShake .3s linear infinite; }
+    .game-card-dojo.hover-active .gc-slash { animation: slashSweeper .9s cubic-bezier(.2,.8,.2,1) infinite; }
+    .game-card-dojo.hover-active .gc-wave { animation: gcWave .9s ease-out infinite; }
+    .game-card-dojo.hover-active .gc-wave2 { animation-delay: .45s; }
+    .game-card-dojo.hover-active .gc-frag { animation: gcFrag .9s ease-in var(--d) infinite; }
+    @keyframes gcRumble { 50% { transform: translate3d(1px,-1px,0); } }
+    @keyframes gcLockShake { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+    @keyframes slashSweeper { 0% { opacity: 0; transform: rotate(-24deg) translate3d(-60%,0,0) scaleX(.3); } 15% { opacity: 1; } 45%, 100% { opacity: 0; transform: rotate(-24deg) translate3d(30%,0,0) scaleX(1); } }
+    @keyframes gcWave { 0% { opacity: .9; transform: scale(.3); } 100% { opacity: 0; transform: scale(2.2); } }
+    @keyframes gcFrag { 0% { opacity: 1; transform: translate3d(0,0,0) rotate(0); } 100% { opacity: 0; transform: translate3d(var(--x),var(--y),0) rotate(160deg); } }
+    /* C. تحدي الأصدقاء: سيف أحمر وسيف أزرق بيخبطوا في بعض، وبرق ورا */
+    .gc-sword { top: 2%; width: 16%; height: 92%; transform-origin: 50% 92%; }
+    .gc-sword-r { left: 24%; transform: rotate(32deg); filter: drop-shadow(0 0 4px rgba(229,9,20,.8)); }
+    .gc-sword-b { left: 60%; transform: rotate(-32deg); filter: drop-shadow(0 0 4px rgba(37,99,235,.8)); }
+    .gc-clash { left: 50%; top: 22%; width: 0; height: 0; }
+    .gc-clash i { position: absolute; left: 0; top: 0; width: 14px; height: 2px; border-radius: 2px; background: #fff; box-shadow: 0 0 4px #F5C518; transform-origin: 0 50%; opacity: 0; }
+    .gc-bolt { top: 0; left: 8%; width: 14%; height: 100%; opacity: 0; filter: drop-shadow(0 0 4px #818cf8); }
+    .gc-bolt2 { left: auto; right: 10%; }
+    .gc-bolt polyline { fill: none; stroke: #c7d2fe; stroke-width: 2; stroke-linejoin: round; stroke-dasharray: 100; stroke-dashoffset: 100; }
+    .game-card-duel.hover-active .gc-bg { animation: gcStorm 1.2s steps(1) infinite; }
+    .game-card-duel.hover-active .gc-sword-r { animation: duelClash .8s ease-in-out infinite; }
+    .game-card-duel.hover-active .gc-sword-b { animation: duelClashB .8s ease-in-out infinite; }
+    .game-card-duel.hover-active .gc-clash i { animation: gcClash .8s ease-out infinite; }
+    .game-card-duel.hover-active .gc-bolt { animation: gcFlash 1.2s linear infinite; }
+    .game-card-duel.hover-active .gc-bolt polyline { animation: gcDraw 1.2s linear infinite; }
+    .game-card-duel.hover-active .gc-bolt2, .game-card-duel.hover-active .gc-bolt2 polyline { animation-delay: .6s; }
+    @keyframes duelClash { 0%, 100% { transform: rotate(32deg); } 40% { transform: rotate(44deg); } 52% { transform: rotate(26deg); } }
+    @keyframes duelClashB { 0%, 100% { transform: rotate(-32deg); } 40% { transform: rotate(-44deg); } 52% { transform: rotate(-26deg); } }
+    @keyframes gcClash { 0%, 34% { opacity: 0; transform: rotate(var(--a)) translate3d(2px,0,0) scaleX(0); } 42% { opacity: 1; transform: rotate(var(--a)) translate3d(5px,0,0) scaleX(1); } 62%, 100% { opacity: 0; transform: rotate(var(--a)) translate3d(14px,0,0) scaleX(.2); } }
+    @keyframes gcFlash { 0% { opacity: 0; } 8% { opacity: 1; } 14% { opacity: .2; } 20% { opacity: 1; } 40%, 100% { opacity: 0; } }
+    @keyframes gcDraw { 0% { stroke-dashoffset: 100; } 12%, 100% { stroke-dashoffset: 0; } }
+    @keyframes gcStorm { 0%, 100% { opacity: 1; } 10% { opacity: .55; } 20% { opacity: 1; } 60% { opacity: .75; } }
+    /* D. تحدي الكوتش: عدسة بتمسح الرقعة، تاج بيلمع، وتراب ذهبي طالع */
+    .gc-board { right: 6%; bottom: 0; width: 62%; aspect-ratio: 1; max-height: 100%; border: 2px solid #F5C518; border-radius: 4px; background: repeating-conic-gradient(#f5d77a 0 25%, #6b4a12 0 50%) 0 0 / 25% 25%; transform: perspective(200px) rotateX(28deg); transform-origin: 50% 100%; }
+    .gc-glass { right: 30%; top: 26%; font-size: 30px; line-height: 1; }
+    .gc-crown { right: 22%; top: -4%; font-size: 26px; line-height: 1; filter: drop-shadow(0 0 6px rgba(245,197,24,.7)); }
+    .gc-scan { right: 6%; bottom: 0; width: 62%; height: 18%; background: linear-gradient(180deg, transparent, rgba(245,197,24,.55), transparent); }
+    .gc-glint { font-size: 14px; line-height: 1; color: #fff3b0; text-shadow: 0 0 6px #F5C518; opacity: 0; }
+    .gc-dust { left: 50%; bottom: 0; width: 4px; height: 4px; border-radius: 50%; background: #F5C518; box-shadow: 0 0 5px #F5C518; opacity: 0; }
+    .game-card-coach.hover-active .gc-glass { animation: pulseScan 1.8s ease-in-out infinite; }
+    .game-card-coach.hover-active .gc-scan { animation: gcScanBand 1.4s ease-in-out infinite alternate; }
+    .game-card-coach.hover-active .gc-glint { animation: glintStars 1.05s ease-in-out var(--d) infinite; }
+    .game-card-coach.hover-active .gc-dust { animation: gcDust 1.8s ease-out var(--d) infinite; }
+    @keyframes pulseScan { 0%, 100% { transform: translate3d(0,0,0) scale(1); } 25% { transform: translate3d(-26px,10px,0) scale(1.15); } 50% { transform: translate3d(-10px,30px,0) scale(1); } 75% { transform: translate3d(12px,14px,0) scale(1.15); } }
+    @keyframes gcScanBand { from { transform: translate3d(0,0,0); } to { transform: translate3d(0,-360%,0); } }
+    @keyframes glintStars { 0% { opacity: 0; transform: scale(0) rotate(0); } 50% { opacity: 1; transform: scale(1.1) rotate(90deg); } 100% { opacity: 0; transform: scale(0) rotate(180deg); } }
+    @keyframes gcDust { 0% { opacity: 0; transform: translate3d(0,0,0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate3d(var(--x),var(--y),0); } }
+    /* E. البطولة: أنوار ملعب، كاس بيلف ويلمع، وألعاب نارية في الأركان */
+    .gc-trophy { left: 50%; top: 4%; margin-left: -28px; font-size: 56px; line-height: 1; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
+    .gc-glare { left: 50%; top: 4%; width: 60px; height: 64px; margin-left: -30px; overflow: hidden; border-radius: 12px; mix-blend-mode: screen; }
+    .gc-glare::before { content: ""; position: absolute; top: -20%; left: 0; width: 30%; height: 140%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent); opacity: 0; transform: translate3d(-150%,0,0) skewX(-18deg); }
+    .gc-beam { top: -10%; width: 26%; height: 130%; transform-origin: 50% 0; clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%); opacity: .45; mix-blend-mode: screen; }
+    .gc-beam-r { left: 6%; background: linear-gradient(rgba(229,9,20,.9), transparent 85%); }
+    .gc-beam-b { left: 37%; background: linear-gradient(rgba(59,130,246,.9), transparent 85%); }
+    .gc-beam-g { left: 68%; background: linear-gradient(rgba(245,197,24,.9), transparent 85%); }
+    .gc-burst { width: 0; height: 0; } .gc-burst-a { left: 10%; top: 16%; } .gc-burst-b { right: 10%; top: 22%; }
+    .gc-burst i { position: absolute; left: 0; top: 0; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: #F5C518; opacity: 0; }
+    .gc-burst i:nth-child(odd) { background: #E50914; } .gc-burst-b i:nth-child(odd) { background: #60a5fa; }
+    .game-card-arena.hover-active .gc-trophy { animation: trophyShine 1.6s ease-in-out infinite; }
+    .game-card-arena.hover-active .gc-glare::before { animation: gcGlare 1.6s ease-in-out infinite; }
+    .game-card-arena.hover-active .gc-beam { animation: gcBeam 1.4s ease-in-out infinite alternate; }
+    .game-card-arena.hover-active .gc-beam-b { animation-delay: -.5s; } .game-card-arena.hover-active .gc-beam-g { animation-delay: -1s; }
+    .game-card-arena.hover-active .gc-burst i { animation: gcBurst 1s ease-out var(--d) infinite; }
+    @keyframes trophyShine { 0%, 100% { transform: perspective(300px) rotateY(-28deg) translate3d(0,0,0); } 50% { transform: perspective(300px) rotateY(28deg) translate3d(0,-6px,0); } }
+    @keyframes gcGlare { 0% { opacity: 0; transform: translate3d(-150%,0,0) skewX(-18deg); } 30% { opacity: 1; } 60%, 100% { opacity: 0; transform: translate3d(380%,0,0) skewX(-18deg); } }
+    @keyframes gcBeam { from { transform: rotate(-28deg); } to { transform: rotate(28deg); } }
+    @keyframes gcBurst { 0% { opacity: 1; transform: rotate(var(--a)) translate3d(0,0,0) scale(.4); } 70% { opacity: .9; transform: rotate(var(--a)) translate3d(18px,0,0) scale(1); } 100% { opacity: 0; transform: rotate(var(--a)) translate3d(22px,0,0) scale(.6); } }
+    /* أقل حركة: الكارت بينوّر بس من غير مؤثرات */
+    @media (prefers-reduced-motion: reduce) { html .game-card.hover-active .game-card-media *, html .game-card.hover-active .game-card-media *::before { animation: none; } html .game-card.hover-active .gc-fx { opacity: 0; } .game-card.hover-active { transform: none; } }
+    html.eca-calm .game-card.hover-active .game-card-media *, html.eca-calm .game-card.hover-active .game-card-media *::before { animation: none; } html.eca-calm .game-card.hover-active .gc-fx { opacity: 0; }
     /* ===== الرئيسية: لوبي ألعاب (home.js) ===== */
     :root { --hm-card: #0e0e15; --hm-title: #facc15; }
     html.light, html.eca, html.kids { --hm-card: #ffffff; --hm-title: #0f3d91; }
@@ -874,8 +983,8 @@
     html[data-ecap="piece-gold"] .eca-pc.w, .eca-skin-piece-gold .eca-pc.w { color: #fde68a; text-shadow: 0 0 1px #78350f, 0 0 1px #78350f, 0 1px 3px rgba(0,0,0,.5); }
     html[data-ecap="piece-gold"] .eca-pc.b, .eca-skin-piece-gold .eca-pc.b { color: #7c2d12; text-shadow: 0 0 1px #fde047, 0 1px 2px rgba(0,0,0,.45); }
   </style>
-  <script>window.ECA_VERSION = "eca-v86";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v86" />
+  <script>window.ECA_VERSION = "eca-v87";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v87" />
 </head>
 <body class="min-h-screen flex flex-col relative">
   <a href="#mainView" class="skip-link">تخطّي إلى المحتوى</a>
@@ -1039,47 +1148,48 @@
     } catch (_) {}
   </script>
   <script type="application/json" id="ecaLazyModules">{"finance":"js/finance.js"}</script>
-  <script src="js/core.js?v=eca-v86"></script>
+  <script src="js/core.js?v=eca-v87"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v86"></script>
+  <script src="js/arena.js?v=eca-v87"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v86"></script>
-  <script src="js/streaks.js?v=eca-v86"></script>
-  <script src="js/review.js?v=eca-v86"></script>
-  <script src="js/quality.js?v=eca-v86"></script>
-  <script src="js/announce.js?v=eca-v86"></script>
-  <script src="js/progress.js?v=eca-v86"></script>
-  <script src="js/arena2.js?v=eca-v86"></script>
+  <script src="js/extras.js?v=eca-v87"></script>
+  <script src="js/streaks.js?v=eca-v87"></script>
+  <script src="js/review.js?v=eca-v87"></script>
+  <script src="js/quality.js?v=eca-v87"></script>
+  <script src="js/announce.js?v=eca-v87"></script>
+  <script src="js/progress.js?v=eca-v87"></script>
+  <script src="js/arena2.js?v=eca-v87"></script>
   <!-- homework, coach dashboards, tournaments, and placement test load on demand via loadModule -->
-  <script src="js/ux.js?v=eca-v86"></script>
-  <script src="js/annotate.js?v=eca-v86"></script>
-  <script src="js/gamify.js?v=eca-v86"></script>
-  <script src="js/adventure.js?v=eca-v86"></script>
-  <script src="js/duel.js?v=eca-v86"></script>
-  <script src="js/fx.js?v=eca-v86"></script>
-  <script src="js/speedarena.js?v=eca-v86"></script>
-  <script src="js/loot.js?v=eca-v86"></script>
-  <script src="js/dojo.js?v=eca-v86"></script>
-  <script src="js/cards.js?v=eca-v86"></script>
-  <script src="js/stamina.js?v=eca-v86"></script>
-  <script src="js/social.js?v=eca-v86"></script>
-  <script src="js/friendduel.js?v=eca-v86"></script>
-  <script src="js/weekly.js?v=eca-v86"></script>
-  <script src="js/boss.js?v=eca-v86"></script>
-  <script src="js/command.js?v=eca-v86"></script>
-  <script src="js/lessonpuz.js?v=eca-v86"></script>
-  <script src="js/parentreport.js?v=eca-v86"></script>
-  <script src="js/care.js?v=eca-v86"></script>
-  <script src="js/fun.js?v=eca-v86"></script>
-  <script src="js/flow.js?v=eca-v86"></script>
-  <script src="js/assist.js?v=eca-v86"></script>
-  <script src="js/lobby.js?v=eca-v86"></script>
-  <script src="js/home.js?v=eca-v86"></script>
+  <script src="js/ux.js?v=eca-v87"></script>
+  <script src="js/annotate.js?v=eca-v87"></script>
+  <script src="js/gamify.js?v=eca-v87"></script>
+  <script src="js/adventure.js?v=eca-v87"></script>
+  <script src="js/duel.js?v=eca-v87"></script>
+  <script src="js/fx.js?v=eca-v87"></script>
+  <script src="js/speedarena.js?v=eca-v87"></script>
+  <script src="js/loot.js?v=eca-v87"></script>
+  <script src="js/dojo.js?v=eca-v87"></script>
+  <script src="js/cards.js?v=eca-v87"></script>
+  <script src="js/stamina.js?v=eca-v87"></script>
+  <script src="js/social.js?v=eca-v87"></script>
+  <script src="js/friendduel.js?v=eca-v87"></script>
+  <script src="js/weekly.js?v=eca-v87"></script>
+  <script src="js/boss.js?v=eca-v87"></script>
+  <script src="js/command.js?v=eca-v87"></script>
+  <script src="js/lessonpuz.js?v=eca-v87"></script>
+  <script src="js/parentreport.js?v=eca-v87"></script>
+  <script src="js/care.js?v=eca-v87"></script>
+  <script src="js/fun.js?v=eca-v87"></script>
+  <script src="js/flow.js?v=eca-v87"></script>
+  <script src="js/assist.js?v=eca-v87"></script>
+  <script src="js/cardfx.js?v=eca-v87"></script>
+  <script src="js/lobby.js?v=eca-v87"></script>
+  <script src="js/home.js?v=eca-v87"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v86"></script>
+  <script type="module" src="js/firebase.js?v=eca-v87"></script>
 </body>
 </html>

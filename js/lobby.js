@@ -61,8 +61,9 @@ function lbBillboardHTML(u) {
 // كارت = خلفية وأيقونة + عنوان + وسم أخضر + شريط أحمر تحت (لو فيه تقدّم). الكارت كله زرار واحد
 function lbCard(c) {
   const label = [c.title, c.tag, c.prog != null ? Math.round(c.prog * 100) + "%" : ""].filter(Boolean).join(". ");
-  return `<button type="button" onclick="${c.go}" class="nf-card ${c.accent || ""}" aria-label="${esc(label)}">
-      <span class="nf-card-art" aria-hidden="true">${c.icon}</span>
+  const fx = c.fx && window.GameCardAnimator ? GameCardAnimator.media(c.fx) : "";
+  return `<button type="button" onclick="${c.go}" class="nf-card ${c.accent || ""}${fx ? " game-card game-card-" + esc(c.fx) : ""}" aria-label="${esc(label)}">
+      ${fx || `<span class="nf-card-art" aria-hidden="true">${c.icon}</span>`}
       ${c.badge ? `<span class="nf-tag-red">${esc(c.badge)}</span>` : ""}
       <span class="nf-card-info"><b class="nf-card-title">${esc(c.title)}</b><span class="nf-card-tag${c.live ? " nf-live" : ""}"${c.id ? ` id="${c.id}"` : ""}>${esc(c.tag)}</span></span>
       ${c.prog != null ? `<span class="nf-bar" aria-hidden="true"><i style="width:${Math.round(Math.max(0, Math.min(1, c.prog)) * 100)}%"></i></span>` : ""}
@@ -92,20 +93,22 @@ function lbScroll(btn, dir) {
 }
 window.lbScroll = lbScroll;
 
+// الألعاب اللي كروتها بتصحى بحركة خاصة بيها (cardfx.js)
+const LB_FX = { rush: "speed", friend: "duel", duel: "duel", weekly: "coach", speed: "arena" };
 function lbRowsHTML(u) {
   const student = u.role === "student", st = lbStep(u), dj = student ? lbDojo(u) : { total: null, due: 0 }, boss = lbBoss();
   const mission = student && typeof lpDailyCount === "function" ? lpDailyCount(u) : 0, goal = typeof LP_GOAL !== "undefined" ? LP_GOAL : 10;
   const cont = [
     student && { go: "lbOpen('step')", accent: "nf-red", icon: "🎯", title: LB("مهمة الدرس", "Lesson mission"), tag: LB(`${Math.min(mission, goal)} من ${goal} • +5 ⭐`, `${Math.min(mission, goal)} of ${goal} • +5 ⭐`), prog: Math.min(1, mission / goal) },
     { go: "lbOpen('lessons')", accent: "nf-teal", icon: "🗺️", title: LB("مغامرة الدروس", "Lesson adventure"), tag: LB(`Step ${st.level} • على قد مستواك`, `Step ${st.level} • at your level`), prog: st.s.total ? st.s.attC / st.s.total : 0 },
-    { go: "lbOpen('dojo')", accent: "nf-red", icon: "🥋", title: LB("دوجو الانتقام", "Dojo revenge"), tag: dj.due ? LB(`🔥 ${dj.due} جاهز • 2x`, `🔥 ${dj.due} ready • 2x`) : dj.total ? LB(`${dj.total} في الخزنة`, `${dj.total} in the vault`) : LB("الخزنة فاضية", "Vault is empty"), live: dj.due > 0 },
+    { go: "lbOpen('dojo')", accent: "nf-red", fx: "dojo", icon: "🥋", title: LB("دوجو الانتقام", "Dojo revenge"), tag: dj.due ? LB(`🔥 ${dj.due} جاهز • 2x`, `🔥 ${dj.due} ready • 2x`) : dj.total ? LB(`${dj.total} في الخزنة`, `${dj.total} in the vault`) : LB("الخزنة فاضية", "Vault is empty"), live: dj.due > 0 },
     boss && { go: `lbOpen('boss','${esc(boss.id)}')`, accent: "nf-red", icon: typeof bossFace === "function" ? bossFace(boss) : "🐉", title: boss.title, tag: LB(`HP ${boss.puzzles.length - (boss.solved || []).length} • +10 ⭐`, `HP ${boss.puzzles.length - (boss.solved || []).length} • +10 ⭐`), prog: (boss.puzzles.length - (boss.solved || []).length) / boss.puzzles.length }
   ].filter(Boolean);
   const best = student && typeof funRushBest === "function" ? funRushBest(u) : 0, spun = student && typeof ecaSpinDone === "function" && ecaSpinDone(u);
   const pvp = [
-    { go: "lbOpen('rush')", accent: "nf-violet", icon: "⚡", title: LB("تحدي 60 ثانية", "Puzzle Rush"), tag: best ? LB(`أحسن نتيجة النهاردة: ${best}`, `Today's best: ${best}`) : LB("60 ثانية • +5 ⭐", "60 seconds • +5 ⭐") },
-    { go: "lbOpen('friend')", accent: "nf-violet", icon: "🤝", title: LB("تحدي صاحبك", "Friend challenge"), tag: LB("5 ألغاز • +3 ⭐", "5 puzzles • +3 ⭐") },
-    { go: "lbOpen('duel')", accent: "nf-violet", icon: "⚔️", title: LB("مبارزة مباشرة", "Live duel"), tag: LB("1 ضد 1 • +3 ⭐", "1v1 • +3 ⭐") },
+    { go: "lbOpen('rush')", accent: "nf-violet", fx: "speed", icon: "⚡", title: LB("تحدي 60 ثانية", "Puzzle Rush"), tag: best ? LB(`أحسن نتيجة النهاردة: ${best}`, `Today's best: ${best}`) : LB("60 ثانية • +5 ⭐", "60 seconds • +5 ⭐") },
+    { go: "lbOpen('friend')", accent: "nf-violet", fx: "duel", icon: "🤝", title: LB("تحدي صاحبك", "Friend challenge"), tag: LB("5 ألغاز • +3 ⭐", "5 puzzles • +3 ⭐") },
+    { go: "lbOpen('duel')", accent: "nf-violet", fx: "duel", icon: "⚔️", title: LB("مبارزة مباشرة", "Live duel"), tag: LB("1 ضد 1 • +3 ⭐", "1v1 • +3 ⭐") },
     student && { go: "lbOpen('spin')", accent: "nf-gold", icon: "🎡", title: LB("عجلة الحظ", "Lucky spin"), tag: spun ? LB("✓ لفّيت النهاردة", "✓ Spun today") : LB("لفّة النهاردة جاهزة", "Today's spin is ready"), live: !spun }
   ].filter(Boolean);
   const W = arena.weekly, att = (W && W.att) || { n: 0, solved: false }, left = Math.max(0, 2 - (Number(att.n) || 0));
@@ -114,8 +117,8 @@ function lbRowsHTML(u) {
   const saTag = live ? LB("🔴 شغّالة دلوقتي", "🔴 LIVE NOW") : next ? LB(`تبدأ بعد ${lbClock(next.startsMs - Date.now())}`, `Starts in ${lbClock(next.startsMs - Date.now())}`) : LB("بنحمّل...", "Loading...");
   const ev = student && window.funEventState ? funEventState(u) : null;
   const originals = [
-    { go: "lbOpen('weekly')", accent: "nf-red", icon: "🏅", badge: "ECA ORIGINAL", title: LB("تحدي الأسبوع", "Weekly challenge"), tag: wkTag },
-    { go: "lbOpen('speed')", accent: "nf-gold", icon: "🏆", title: LB("بطولة السرعة", "Speed arena"), tag: saTag, live: !!live, id: "lbSaPill" },
+    { go: "lbOpen('weekly')", accent: "nf-red", fx: "coach", icon: "🏅", badge: "ECA ORIGINAL", title: LB("تحدي الأسبوع", "Weekly challenge"), tag: wkTag },
+    { go: "lbOpen('speed')", accent: "nf-gold", fx: "arena", icon: "🏆", title: LB("بطولة السرعة", "Speed arena"), tag: saTag, live: !!live, id: "lbSaPill" },
     ev && { go: ev.done && !ev.claimed ? "funEventClaim()" : "funEventStart()", accent: "nf-teal", icon: "🎪", badge: "ECA ORIGINAL", title: LB("حدث الأسبوع: ", "Weekly event: ") + (window.lpThemeName ? lpThemeName(ev.theme) : ev.theme), tag: ev.claimed ? LB("✓ خلّصته", "✓ Done") : LB(`${ev.n}/15 • +8 ⭐`, `${ev.n}/15 • +8 ⭐`), prog: ev.n / 15 },
     { go: "lbOpen('honor')", accent: "nf-gold", icon: "👑", title: LB("لوحة الشرف", "Hall of Fame"), tag: LB("الأوائل الأسبوع ده", "This week's top players") }
   ].filter(Boolean);
@@ -127,7 +130,7 @@ function lbRowsHTML(u) {
     student && { go: "lbOpen('shop:frame')", accent: "nf-violet", icon: "🖼️", title: LB("إطارات", "Frames"), tag: LB("من المتجر", "In the shop") },
     student && { go: "lbOpen('shop:tools')", accent: "nf-red", icon: "🛍️", title: LB("متجر النجوم", "Star shop"), tag: LB("بوتات وتلميحات", "Bots and hints") }
   ].filter(Boolean);
-  const all = ["play", "puzzles", "vision", "pawns", "analysis", "lessons", "rush", "duel", "friend", "speed", "weekly", "boss", "cards"].map(k => ({ go: `lbOpen('${k}')`, accent: "nf-dark", icon: LB_MODES[k][0], title: lang === "en" ? LB_MODES[k][2] : LB_MODES[k][1], tag: LB("العب", "Play") }));
+  const all = ["play", "puzzles", "vision", "pawns", "analysis", "lessons", "rush", "duel", "friend", "speed", "weekly", "boss", "cards"].map(k => ({ go: `lbOpen('${k}')`, accent: "nf-dark", fx: LB_FX[k], icon: LB_MODES[k][0], title: lang === "en" ? LB_MODES[k][2] : LB_MODES[k][1], tag: LB("العب", "Play") }));
   return lbRow("continue", LB("كمّل تدريبك", "Continue training"), cont)
     + lbRow("pvp", LB("تحديات السرعة والأصدقاء", "Speed and friends"), pvp)
     + lbRow("originals", LB("حصريات الكوتش والبطولات", "Coach originals and live events"), originals)
