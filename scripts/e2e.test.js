@@ -848,6 +848,46 @@ async function login(p, id) {
     check("home: every card's function is there", hm.fns.length === 0, hm.fns);
     check("home: player card, play now, quests, map, mission, lesson and shop each appear once in the new layout", hm.cards.player === 1 && hm.cards.play && hm.cards.shop && hm.cards.map && hm.cards.mission && hm.cards.lesson && hm.cards.sections >= 3 && hm.cards.xp && hm.cards.nick, hm.cards);
     check("home: the intro plays when you open home, not on every update", hm.intro && hm.again, hm);
+    // ---------- home: living adventure map ----------
+    const mp = await pa.ev(`(async () => { const out = {}, wait = ms => new Promise(r => setTimeout(r, ms)); switchTab('arena'); switchTab('home'); await wait(900);
+      const v = document.querySelector('#mainView .eca-map-view'), box = v.querySelector('.eca-map-scroll'), now = v.querySelector('.eca-map-node.is-now'), u = currUser(), level = Math.min(6, Number(u.level) || 1);
+      out.parts = !!(box.querySelector('.eca-map .eca-map-grid') && box.querySelectorAll('.eca-ember').length >= 6 && now && now.querySelectorAll('.eca-map-ring').length === 2 && now.querySelector('.eca-map-cta')
+        && box.querySelector('.eca-map-token .eca-map-tok-av') && box.querySelector('.eca-map-token .eca-map-tok-pet') && /🔥/.test(box.querySelector('.eca-map-bubble').textContent));
+      out.moves = [getComputedStyle(now.querySelector('.eca-map-badge')).animationName, getComputedStyle(now.querySelector('.eca-map-ring')).animationName, getComputedStyle(box.querySelector('.eca-map-tok')).animationName];
+      const br = box.getBoundingClientRect(), nr = now.querySelector('.eca-map-disc').getBoundingClientRect();
+      out.centered = nr.top >= br.top - 1 && nr.bottom <= br.bottom + 1 && (box.scrollHeight <= box.clientHeight || box.scrollTop > 0 || level >= 5);
+      box.scrollTop = level >= 4 ? box.scrollHeight : 0; await wait(50); ecaMapCenter(false); await wait(50);
+      const nr2 = now.querySelector('.eca-map-disc').getBoundingClientRect(); out.backHome = nr2.top >= br.top - 1 && nr2.bottom <= br.bottom + 1;
+      const me = v.querySelector('.eca-map-me'), mr = me.getBoundingClientRect(); out.me = mr.width >= 44 && mr.height >= 44 && !!me.getAttribute('aria-label');
+      out.prog = v.querySelector('.eca-map-prog').textContent.trim();
+      const lk = v.querySelector('.eca-map-node.is-locked');
+      if (lk) { lk.click(); const tip = lk.querySelector('.eca-map-tip'); out.locked = tab === 'home' && lk.classList.contains('is-rattle') && /🔒/.test(tip.textContent) && getComputedStyle(tip).display === 'block' && getComputedStyle(lk.querySelector('.eca-map-badge')).animationName === 'ecaLockRattle'; }
+      else out.locked = 'no locked kingdom';
+      const d = document.createElement('div'); d.innerHTML = ecaMapHTML(Object.assign({}, u, { level: 3 }));
+      out.done = d.querySelectorAll('.eca-map-node.is-done').length === 2 && d.querySelectorAll('.eca-map-node.is-done .eca-map-stars i').length === 6 && !!d.querySelector('.eca-map-road') && !!d.querySelector('.eca-map-energy[pathLength]') && !!d.querySelector('.eca-map-trail') && d.querySelectorAll('.eca-map-node.is-locked .eca-map-fog').length === 3;
+      const tok = box.querySelector('.eca-map-token'); ecaMapSlide(box.querySelector('.eca-map'), tok, 1, 2);
+      out.slide = tok.dataset.slide === '1' && tok.getAnimations().length > 0; await wait(1100);
+      out.burst = true; render(); return out; })()`);
+    check("map: battlefield, embers, the current kingdom with radar rings and play now, and your avatar with your pet", mp.parts, mp);
+    check("map: the current kingdom floats, its radar pulses and your token bounces", mp.moves.join() === "ecaFloatNode,ecaRadar,ecaTokBob", mp.moves);
+    check("map: opens centered on your kingdom, and «my place» brings it back", mp.centered && mp.backHome, mp);
+    check("map: «my place» button is 44px or more, with the kingdom progress pill", mp.me && /(المرحلة|Kingdom) \d (من|of) 6 • \d+%/.test(mp.prog), mp.prog);
+    check("map: a locked kingdom shakes and says how to open it", mp.locked === true || mp.locked === "no locked kingdom", mp.locked);
+    check("map: done kingdoms have 3 stars, a glowing road with flowing energy, and fog over locked ones", mp.done, mp);
+    check("map: your token walks along the road to a new kingdom", mp.slide, mp);
+    await pa.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
+    const calmMap = await pa.ev(`(() => { render(); const v = document.querySelector('#mainView .eca-map-view'), st = s => s ? getComputedStyle(s) : null;
+      const r = { badge: st(v.querySelector('.eca-map-node.is-now .eca-map-badge')).animationName, ring: st(v.querySelector('.eca-map-ring')).display, ember: st(v.querySelector('.eca-ember')).display, tok: st(v.querySelector('.eca-map-tok')).animationName };
+      const u = currUser(), level = Math.min(6, Number(u.level) || 1); if (level > 1) { localStorage.setItem('ECA_MAP_SEEN_' + u.id, String(level - 1)); render(); r.slide = document.querySelector('#mainView .eca-map-token').dataset.slide || ''; } else r.slide = '';
+      return r; })()`);
+    await pa.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
+    check("map: with reduced motion nothing floats, pulses or walks", calmMap.badge === "none" && calmMap.ring === "none" && calmMap.ember === "none" && calmMap.tok === "none" && !calmMap.slide, calmMap);
+    if (process.env.E2E_SHOTS) for (const [w, h] of [[375, 900], [1280, 900]]) {
+      await pa.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: 1, mobile: w < 800 });
+      await pa.ev("(() => { document.querySelectorAll('.eca-spin-modal,#ecaMilestone,.eca-drop-modal').forEach(e => e.remove()); render(); const v = document.querySelector('#mainView .eca-map-view'); window.scrollTo(0, v.getBoundingClientRect().top + scrollY - 120); })()"); await sleep(1500);
+      const shot = await pa.send("Page.captureScreenshot", { format: "png" });
+      fs.writeFileSync(path.join(process.env.E2E_SHOTS, "map-" + w + ".png"), Buffer.from(shot.data, "base64"));
+    }
     if (process.env.E2E_SHOTS) for (const [w, h] of [[375, 1500], [1280, 1500]]) {
       await pa.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: 1, mobile: w < 800 });
       await pa.ev("document.querySelectorAll('.eca-spin-modal,#ecaMilestone,.eca-drop-modal').forEach(e => e.remove()); render(); window.scrollTo(0, 0)"); await sleep(1200);

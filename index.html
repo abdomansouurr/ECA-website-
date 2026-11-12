@@ -7,9 +7,9 @@
   <link rel="manifest" href="manifest.json" />
   <!-- لوجو الأكاديمية على تاب المتصفح: ICO في الجذر (الفولباك الأضمن — المتصفحات بتطلبه من /favicon.ico مباشرة)
        + PNG للتاب الحديث + apple-touch للآيفون — كلهم بنفس اللوجو ومع رقم نسخة يكسر الكاش -->
-  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v85" />
-  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v85" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v85" />
+  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v86" />
+  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v86" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v86" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ECA Chess" />
@@ -306,7 +306,7 @@
     @keyframes ecaRewardPop { 0% { opacity: 0; transform: translateY(12px) scale(.8); } 25% { opacity: 1; transform: translateY(0) scale(1.08); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px) scale(1); } }
     @media (prefers-reduced-motion: reduce) { .eca-reward-pop { animation: none; } }
 
-    /* ===== eca-v85: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
+    /* ===== eca-v86: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
     @keyframes ecaItemIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     .stagger-in > *, .st-item { animation-duration: .24s; }
     .stagger-in > *:nth-child(1) { animation-delay: 0.045s }
@@ -679,17 +679,86 @@
     @keyframes ecaBounceIn { 0% { transform: scale(.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     @media (prefers-reduced-motion: reduce) { .eca-shake, .eca-milestone-box { animation: none; } }
     /* ===== خريطة المغامرة ===== */
-    .eca-map { position: relative; height: 520px; border-radius: 16px; overflow: hidden; background: linear-gradient(180deg,#312e81 0%,#1e3a8a 35%,#065f46 72%,#0e7490 100%); }
-    .eca-map-path { position: absolute; inset: 0; width: 100%; height: 100%; color: rgba(255,255,255,.75); pointer-events: none; }
-    .eca-map-node { position: absolute; transform: translate(-50%,-50%); width: 112px; min-height: 76px; display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: 0; padding: 0; cursor: pointer; }
-    .eca-map-disc { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; font-size: 28px; border-radius: 50%; background: #0f172a; border: 3px solid #475569; }
-    .eca-map-name { font-size: 12px; font-weight: 700; line-height: 1.2; color: #fff; text-align: center; text-shadow: 0 1px 3px #000; }
-    .eca-map-node.is-done .eca-map-disc { border-color: #34d399; }
-    .eca-map-node.is-now .eca-map-disc { border-color: #facc15; box-shadow: 0 0 18px rgba(250,204,21,.8); animation: ecaMapPulse 1.6s ease-in-out infinite; }
-    .eca-map-node.is-locked { opacity: .72; }
-    .eca-map-pet { position: absolute; top: -8px; inset-inline-end: 12px; font-size: 24px; }
-    .eca-map-check { position: absolute; top: 0; inset-inline-end: 24px; width: 20px; height: 20px; border-radius: 50%; background: #10b981; color: #fff; font-size: 12px; font-weight: 800; line-height: 20px; }
-    @keyframes ecaMapPulse { 50% { transform: scale(1.08); } }
+    /* خريطة المغامرة: عالم تكتيكي حي. كل الحركة transform/opacity و stroke-dashoffset بس */
+    .eca-map-view { position: relative; border-radius: 16px; overflow: hidden; background: #0b0b0d; }
+    .eca-map-scroll { height: min(460px, 68vh); overflow: hidden auto; scrollbar-width: thin; scrollbar-color: #E50914 transparent; }
+    .eca-map { position: relative; height: 820px; overflow: hidden; isolation: isolate; background: radial-gradient(60% 30% at 70% 18%, rgba(245,197,24,.16), transparent 70%), radial-gradient(70% 35% at 25% 62%, rgba(229,9,20,.18), transparent 70%), linear-gradient(180deg, #1a1012 0%, #141414 45%, #0f1512 100%); }
+    .eca-map-grid { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: repeating-conic-gradient(rgba(255,255,255,.06) 0 25%, transparent 0 50%) 0 0 / 56px 56px; transform: perspective(900px) rotateX(24deg); transform-origin: 50% 100%; -webkit-mask-image: linear-gradient(to top, #000, rgba(0,0,0,.55) 55%, transparent); mask-image: linear-gradient(to top, #000, rgba(0,0,0,.55) 55%, transparent); }
+    .eca-ember { position: absolute; z-index: 0; width: 4px; height: 4px; border-radius: 50%; background: #F5C518; box-shadow: 0 0 6px 2px rgba(229,9,20,.7); opacity: 0; pointer-events: none; animation: ecaEmber var(--t, 7s) linear var(--d, 0s) infinite; }
+    @keyframes ecaEmber { 0% { opacity: 0; transform: translate3d(0,0,0); } 15% { opacity: .9; } 100% { opacity: 0; transform: translate3d(10px,-180px,0); } }
+    .eca-map-path { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; }
+    .eca-map-path path { fill: none; stroke-linecap: round; }
+    .eca-map-trail { stroke: rgba(255,255,255,.15); stroke-width: 4; stroke-dasharray: 2 10; }
+    .eca-map-glow { stroke: #E50914; stroke-opacity: .22; stroke-width: 16; }
+    .eca-map-road { stroke: url(#ecaMapGrad); stroke-width: 6; }
+    .eca-map-energy { stroke: #fff6d5; stroke-width: 3; stroke-dasharray: 3 9; animation: ecaEnergy 1.6s linear infinite; }
+    @keyframes ecaEnergy { to { stroke-dashoffset: -12; } }
+    .eca-map-node { position: absolute; z-index: 2; transform: translate(-50%, -32px); width: 112px; display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .eca-map-node.is-now { z-index: 3; transform: translate(-50%, -36px); }
+    .eca-map-badge { position: relative; display: grid; place-items: center; }
+    .eca-map-disc { position: relative; overflow: hidden; width: 64px; height: 64px; display: grid; place-items: center; font-size: 30px; border-radius: 50%; border: 3px solid #4a4a4a; background: radial-gradient(circle at 35% 30%, #3a3a3a, #141414 70%); box-shadow: 0 6px 0 rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.12); }
+    .eca-map-name { padding: 1px 6px; border-radius: 6px; background: rgba(0,0,0,.55); font-size: 12px; font-weight: 700; line-height: 1.3; color: #fff; text-align: center; text-shadow: 0 1px 3px #000; }
+    .eca-map-badge .eca-map-hero { bottom: -4px; inset-inline-start: -10px; }
+    /* خلصت: إطار أخضر بذهبي، 3 نجوم طايرة، ولمعة معدن */
+    .eca-map-node.is-done .eca-map-disc { border-color: #46D369; background: radial-gradient(circle at 35% 30%, #1f5c3a, #0d1f15 70%); box-shadow: 0 6px 0 #0a3a20, 0 0 0 3px rgba(245,197,24,.55), inset 0 2px 0 rgba(255,255,255,.18); }
+    .eca-map-node.is-done .eca-map-disc::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%); transform: translateX(-120%); transition: transform .6s ease; }
+    .eca-map-node.is-done:hover .eca-map-disc::after, .eca-map-node.is-done:focus-visible .eca-map-disc::after, .eca-map-node.is-done:active .eca-map-disc::after { transform: translateX(120%); }
+    .eca-map-stars { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); display: flex; gap: 1px; font-size: 14px; line-height: 1; white-space: nowrap; }
+    .eca-map-stars i { display: inline-block; font-style: normal; animation: ecaStarBob 2.4s ease-in-out infinite; }
+    .eca-map-stars i:nth-child(2) { margin-top: -5px; animation-delay: .2s; } .eca-map-stars i:nth-child(3) { animation-delay: .4s; }
+    @keyframes ecaStarBob { 50% { transform: translateY(-4px); } }
+    .eca-map-check { position: absolute; bottom: -2px; inset-inline-end: -4px; width: 22px; height: 22px; border-radius: 50%; background: #46D369; color: #06210f; font-size: 12px; font-weight: 900; line-height: 22px; text-align: center; }
+    /* المملكة الحالية: طايرة، حواليها رادار، وتحتها «العب الآن» */
+    .eca-map-node.is-now .eca-map-badge { animation: ecaFloatNode 2.4s ease-in-out infinite; }
+    @keyframes ecaFloatNode { 50% { transform: translateY(-6px); } }
+    .eca-map-node.is-now .eca-map-disc { width: 72px; height: 72px; font-size: 34px; border-color: #E50914; background: radial-gradient(circle at 35% 30%, #5c0a10, #1a0507 70%); box-shadow: 0 6px 0 #3a0508, 0 0 22px rgba(229,9,20,.55), inset 0 2px 0 rgba(255,255,255,.15); }
+    .eca-map-ring { position: absolute; inset: 0; border-radius: 50%; border: 3px solid #E50914; opacity: 0; pointer-events: none; animation: ecaRadar 2s ease-out infinite; }
+    .eca-map-ring2 { animation-delay: 1s; }
+    @keyframes ecaRadar { 0% { opacity: .7; transform: scale(1); } 100% { opacity: 0; transform: scale(1.6); } }
+    .eca-map-cta { padding: 3px 10px; border-radius: 999px; background: #E50914; color: #fff; font-size: 12px; font-weight: 800; white-space: nowrap; box-shadow: 0 0 14px rgba(229,9,20,.6); }
+    /* مقفولة: معدن باهت وضباب ماشي، ولو اتداست بتتهز وتقول ليه */
+    .eca-map-node.is-locked .eca-map-disc { font-size: 22px; filter: grayscale(1); border-color: #2c2f34; background: linear-gradient(145deg, #3b3f45, #1b1d21); }
+    .eca-map-node.is-locked .eca-map-name { color: #a3a3a3; }
+    .eca-map-fog { position: absolute; inset: 0 -30%; z-index: 1; pointer-events: none; background: radial-gradient(closest-side at 30% 62%, rgba(205,208,215,.5), transparent), radial-gradient(closest-side at 72% 36%, rgba(205,208,215,.4), transparent); animation: ecaFog 7s ease-in-out infinite alternate; }
+    @keyframes ecaFog { from { transform: translateX(-18%); } to { transform: translateX(18%); } }
+    .eca-map-node.is-rattle .eca-map-badge { animation: ecaLockRattle .45s cubic-bezier(.36,.07,.19,.97); }
+    @keyframes ecaLockRattle { 15%, 85% { transform: translateX(-2px); } 30%, 70% { transform: translateX(4px); } 45%, 55% { transform: translateX(-5px); } }
+    .eca-map-tip { display: none; position: absolute; bottom: calc(100% + 6px); z-index: 5; width: max-content; max-width: 190px; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(229,9,20,.6); background: #000; color: #fff; font-size: 12px; font-weight: 700; line-height: 1.35; text-align: center; }
+    .eca-map-node.is-l .eca-map-tip { left: 0; } .eca-map-node.is-r .eca-map-tip { right: 0; }
+    .eca-map-node.is-tip .eca-map-tip { display: block; animation: ecaTipIn .2s ease-out; }
+    @keyframes ecaTipIn { from { opacity: 0; transform: translateY(6px); } }
+    /* البطل (أفاتار الطالب + الرفيق) فوق مملكته */
+    .eca-map-token { position: absolute; z-index: 4; transform: translate(-50%, calc(-100% - 46px)); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+    .eca-map-tok { position: relative; animation: ecaTokBob 1.1s ease-in-out infinite; }
+    @keyframes ecaTokBob { 50% { transform: translateY(-5px); } }
+    .eca-map-tok-av { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; font-size: 24px; background: #181818; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,.6); }
+    .eca-map-tok-pet { position: absolute; bottom: -4px; inset-inline-end: -12px; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; font-size: 14px; background: #141414; border: 2px solid #F5C518; }
+    .eca-map-bubble { position: relative; padding: 4px 10px; border-radius: 10px; background: #fff; color: #141414; font-size: 12px; font-weight: 800; white-space: nowrap; }
+    .eca-map-bubble::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border: 5px solid transparent; border-top-color: #fff; }
+    .eca-map-token.is-l .eca-map-bubble { transform: translateX(36px); } .eca-map-token.is-l .eca-map-bubble::after { left: calc(50% - 36px); }
+    .eca-map-spark { position: absolute; z-index: 5; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #F5C518; pointer-events: none; animation: ecaSpark .85s ease-out forwards; }
+    .eca-map-spark:nth-of-type(odd) { background: #E50914; }
+    @keyframes ecaSpark { from { opacity: 1; transform: translate3d(0,0,0) scale(1); } to { opacity: 0; transform: translate3d(var(--dx), var(--dy), 0) scale(.3); } }
+    /* زعيم الكوتش على الخريطة: أكبر، بيتنفس، وحواليه هالة حمرا */
+    .eca-map .eca-boss-node { z-index: 3; width: 112px; }
+    .eca-map .eca-boss-node::before { content: ""; position: absolute; top: -12px; left: 50%; z-index: -1; width: 108px; height: 108px; margin-left: -54px; border-radius: 50%; background: radial-gradient(circle, rgba(229,9,20,.55), transparent 65%); pointer-events: none; animation: ecaBossAura 2s ease-in-out infinite; }
+    @keyframes ecaBossAura { 50% { opacity: .45; transform: scale(1.15); } }
+    .eca-map .eca-boss-disc { width: 84px; height: 84px; font-size: 46px; border: 3px solid #E50914; background: radial-gradient(circle at 40% 35%, #7f1d1d, #1c0606 70%); box-shadow: 0 6px 0 #3a0508; animation: ecaBossBreathe 1.8s ease-in-out infinite; }
+    @keyframes ecaBossBreathe { 50% { transform: scale(1.07); } }
+    .eca-map .eca-boss-hp { width: 96px; height: 10px; }
+    /* أزرار الخريطة الطايرة */
+    .eca-map-hud { position: absolute; top: 8px; inset-inline: 8px; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; pointer-events: none; }
+    .eca-map-hud > * { pointer-events: auto; }
+    .eca-map-prog { padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.1); background: rgba(20,20,20,.88); color: #fff; font-size: 12px; font-weight: 800; }
+    .eca-map-me { min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 999px; background: #E50914; color: #fff; font-size: 13px; font-weight: 800; box-shadow: 0 4px 14px rgba(0,0,0,.5); transition: transform .15s ease; }
+    .eca-map-me:active { transform: scale(.96); }
+    @media (max-width: 380px) { .eca-map-me span { display: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .eca-ember, .eca-map-energy, .eca-map-stars i, .eca-map-node.is-now .eca-map-badge, .eca-map-ring, .eca-map-fog, .eca-map-tok, .eca-map-node.is-rattle .eca-map-badge, .eca-map-spark, .eca-map .eca-boss-node::before, .eca-map .eca-boss-disc, .eca-map-node.is-tip .eca-map-tip { animation: none; }
+      .eca-map-ring, .eca-ember, .eca-map-spark { display: none; } .eca-map-node.is-done .eca-map-disc::after { transition: none; }
+    }
+    html.eca-calm .eca-ember, html.eca-calm .eca-map-energy, html.eca-calm .eca-map-stars i, html.eca-calm .eca-map-node.is-now .eca-map-badge, html.eca-calm .eca-map-ring, html.eca-calm .eca-map-fog, html.eca-calm .eca-map-tok, html.eca-calm .eca-map .eca-boss-node::before, html.eca-calm .eca-map .eca-boss-disc { animation: none; }
+    html.eca-calm .eca-map-ring, html.eca-calm .eca-ember { display: none; }
     .eca-pet { font-size: 52px; line-height: 1; flex-shrink: 0; animation: ecaPetFloat 2.6s ease-in-out infinite; }
     @keyframes ecaPetFloat { 50% { transform: translateY(-6px); } }
     /* ===== عجلة الحظ ===== */
@@ -805,8 +874,8 @@
     html[data-ecap="piece-gold"] .eca-pc.w, .eca-skin-piece-gold .eca-pc.w { color: #fde68a; text-shadow: 0 0 1px #78350f, 0 0 1px #78350f, 0 1px 3px rgba(0,0,0,.5); }
     html[data-ecap="piece-gold"] .eca-pc.b, .eca-skin-piece-gold .eca-pc.b { color: #7c2d12; text-shadow: 0 0 1px #fde047, 0 1px 2px rgba(0,0,0,.45); }
   </style>
-  <script>window.ECA_VERSION = "eca-v85";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v85" />
+  <script>window.ECA_VERSION = "eca-v86";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v86" />
 </head>
 <body class="min-h-screen flex flex-col relative">
   <a href="#mainView" class="skip-link">تخطّي إلى المحتوى</a>
@@ -970,47 +1039,47 @@
     } catch (_) {}
   </script>
   <script type="application/json" id="ecaLazyModules">{"finance":"js/finance.js"}</script>
-  <script src="js/core.js?v=eca-v85"></script>
+  <script src="js/core.js?v=eca-v86"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v85"></script>
+  <script src="js/arena.js?v=eca-v86"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v85"></script>
-  <script src="js/streaks.js?v=eca-v85"></script>
-  <script src="js/review.js?v=eca-v85"></script>
-  <script src="js/quality.js?v=eca-v85"></script>
-  <script src="js/announce.js?v=eca-v85"></script>
-  <script src="js/progress.js?v=eca-v85"></script>
-  <script src="js/arena2.js?v=eca-v85"></script>
+  <script src="js/extras.js?v=eca-v86"></script>
+  <script src="js/streaks.js?v=eca-v86"></script>
+  <script src="js/review.js?v=eca-v86"></script>
+  <script src="js/quality.js?v=eca-v86"></script>
+  <script src="js/announce.js?v=eca-v86"></script>
+  <script src="js/progress.js?v=eca-v86"></script>
+  <script src="js/arena2.js?v=eca-v86"></script>
   <!-- homework, coach dashboards, tournaments, and placement test load on demand via loadModule -->
-  <script src="js/ux.js?v=eca-v85"></script>
-  <script src="js/annotate.js?v=eca-v85"></script>
-  <script src="js/gamify.js?v=eca-v85"></script>
-  <script src="js/adventure.js?v=eca-v85"></script>
-  <script src="js/duel.js?v=eca-v85"></script>
-  <script src="js/fx.js?v=eca-v85"></script>
-  <script src="js/speedarena.js?v=eca-v85"></script>
-  <script src="js/loot.js?v=eca-v85"></script>
-  <script src="js/dojo.js?v=eca-v85"></script>
-  <script src="js/cards.js?v=eca-v85"></script>
-  <script src="js/stamina.js?v=eca-v85"></script>
-  <script src="js/social.js?v=eca-v85"></script>
-  <script src="js/friendduel.js?v=eca-v85"></script>
-  <script src="js/weekly.js?v=eca-v85"></script>
-  <script src="js/boss.js?v=eca-v85"></script>
-  <script src="js/command.js?v=eca-v85"></script>
-  <script src="js/lessonpuz.js?v=eca-v85"></script>
-  <script src="js/parentreport.js?v=eca-v85"></script>
-  <script src="js/care.js?v=eca-v85"></script>
-  <script src="js/fun.js?v=eca-v85"></script>
-  <script src="js/flow.js?v=eca-v85"></script>
-  <script src="js/assist.js?v=eca-v85"></script>
-  <script src="js/lobby.js?v=eca-v85"></script>
-  <script src="js/home.js?v=eca-v85"></script>
+  <script src="js/ux.js?v=eca-v86"></script>
+  <script src="js/annotate.js?v=eca-v86"></script>
+  <script src="js/gamify.js?v=eca-v86"></script>
+  <script src="js/adventure.js?v=eca-v86"></script>
+  <script src="js/duel.js?v=eca-v86"></script>
+  <script src="js/fx.js?v=eca-v86"></script>
+  <script src="js/speedarena.js?v=eca-v86"></script>
+  <script src="js/loot.js?v=eca-v86"></script>
+  <script src="js/dojo.js?v=eca-v86"></script>
+  <script src="js/cards.js?v=eca-v86"></script>
+  <script src="js/stamina.js?v=eca-v86"></script>
+  <script src="js/social.js?v=eca-v86"></script>
+  <script src="js/friendduel.js?v=eca-v86"></script>
+  <script src="js/weekly.js?v=eca-v86"></script>
+  <script src="js/boss.js?v=eca-v86"></script>
+  <script src="js/command.js?v=eca-v86"></script>
+  <script src="js/lessonpuz.js?v=eca-v86"></script>
+  <script src="js/parentreport.js?v=eca-v86"></script>
+  <script src="js/care.js?v=eca-v86"></script>
+  <script src="js/fun.js?v=eca-v86"></script>
+  <script src="js/flow.js?v=eca-v86"></script>
+  <script src="js/assist.js?v=eca-v86"></script>
+  <script src="js/lobby.js?v=eca-v86"></script>
+  <script src="js/home.js?v=eca-v86"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v85"></script>
+  <script type="module" src="js/firebase.js?v=eca-v86"></script>
 </body>
 </html>

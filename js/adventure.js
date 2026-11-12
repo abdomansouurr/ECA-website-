@@ -3,47 +3,144 @@
 
 // ================= خريطة المغامرة =================
 const ECA_MAP = [
-  { step: 1, icon: "🏝️", ar: "مملكة البيدق", en: "Pawn Kingdom", x: 22, y: 88 },
-  { step: 2, icon: "🌲", ar: "قلعة الحصان", en: "Knight Castle", x: 72, y: 73 },
-  { step: 3, icon: "⛰️", ar: "برج الفيل", en: "Bishop Tower", x: 28, y: 56 },
-  { step: 4, icon: "🏰", ar: "حصن الطابية", en: "Rook Fortress", x: 74, y: 40 },
-  { step: 5, icon: "🌋", ar: "إمبراطورية الوزير", en: "Queen Empire", x: 26, y: 24 },
-  { step: 6, icon: "👑", ar: "عرش الملك", en: "King's Throne", x: 68, y: 8 }
+  { step: 1, icon: "🏝️", ar: "مملكة البيدق", en: "Pawn Kingdom", x: 22, y: 86 },
+  { step: 2, icon: "🌲", ar: "قلعة الحصان", en: "Knight Castle", x: 72, y: 74 },
+  { step: 3, icon: "⛰️", ar: "برج الفيل", en: "Bishop Tower", x: 28, y: 60 },
+  { step: 4, icon: "🏰", ar: "حصن الطابية", en: "Rook Fortress", x: 74, y: 47 },
+  { step: 5, icon: "🌋", ar: "إمبراطورية الوزير", en: "Queen Empire", x: 26, y: 34 },
+  { step: 6, icon: "👑", ar: "عرش الملك", en: "King's Throne", x: 68, y: 21 }
 ];
-function ecaMapClick(step) {
-  const u = currUser(), en = lang === "en", level = Number(u && u.level) || 1;
+function ecaMapLevel(stu) { return Math.min(ECA_MAP.length, Math.max(1, Number(stu && stu.level) || 1)); }
+function ecaMapCalm() { return document.documentElement.classList.contains("eca-calm") || !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }
+// منحنى بين مملكتين (بالنسبة المئوية من الخريطة): بيلف يمين وشمال زي طريق في لعبة
+function ecaMapCurve(p, q) { const d = (p.y - q.y) / 2; return [p, { x: p.x, y: p.y - d }, { x: q.x, y: q.y + d }, q]; }
+function ecaMapPath(from, to) {
+  let d = "";
+  for (let i = from; i < to; i++) { const [p, c1, c2, q] = ecaMapCurve(ECA_MAP[i], ECA_MAP[i + 1]); d += (d ? "" : "M" + p.x + " " + p.y) + " C" + c1.x + " " + c1.y + " " + c2.x + " " + c2.y + " " + q.x + " " + q.y; }
+  return d;
+}
+let ecaMapTipT = 0;
+function ecaMapClick(step, el) {
+  const u = currUser(), en = lang === "en", level = ecaMapLevel(u);
+  const locked = en ? "🔒 Finish the previous kingdom to unlock this one!" : "🔒 أكمل المرحلة السابقة لفتح هذه المملكة!";
   if (step === level) return switchTab("lessons");
-  toast(step < level
-    ? (en ? "You already finished this chapter!" : "خلصت الفصل ده قبل كده!")
-    : (en ? "Locked. Pass your current step to reach it." : "مقفول. عدّي الـ Step الحالي عشان توصله."));
+  if (step < level) return toast(en ? "You already finished this chapter!" : "خلصت الفصل ده قبل كده!");
+  // مقفولة: القلعة بتتهز وفوقها رسالة صغيرة
+  const tip = el && el.querySelector(".eca-map-tip");
+  if (!tip) return toast(locked);
+  el.classList.remove("is-rattle", "is-tip"); void el.offsetWidth; el.classList.add("is-rattle", "is-tip");
+  tip.textContent = locked;
+  clearTimeout(ecaMapTipT);
+  ecaMapTipT = setTimeout(() => el.classList.remove("is-rattle", "is-tip"), 2200);
 }
 window.ecaMapClick = ecaMapClick;
 function ecaMapHTML(stu) {
-  const en = lang === "en", level = Number(stu.level) || 1, s = calcStats(stu), pet = ecaPetOf(stu);
+  const en = lang === "en", level = ecaMapLevel(stu), s = calcStats(stu), pet = ecaPetOf(stu), last = ECA_MAP.length;
   const nodes = ECA_MAP.map(n => {
     const state = n.step < level ? "done" : n.step === level ? "now" : "locked", name = en ? n.en : n.ar;
     const hero = (window.ecaShopCatalog || []).find(x => x.type === "hero" && x.step === n.step);
     const label = name + " • Step " + n.step + (state === "locked" ? (en ? " (locked)" : " (مقفول)") : "") + (hero ? " • " + (en ? "Hero: " + hero.en : "البطل: " + hero.title) : "");
-    return `<button type="button" onclick="ecaMapClick(${n.step})" aria-label="${esc(label)}" title="${esc(label)}" class="eca-map-node is-${state}" style="left:${n.x}%;top:${n.y}%">
-      <span class="eca-map-disc" aria-hidden="true">${state === "locked" ? "🔒" : n.icon}</span>
+    return `<button type="button" onclick="ecaMapClick(${n.step}, this)" aria-label="${esc(label)}" title="${esc(label)}" data-step="${n.step}" class="eca-map-node is-${state} ${n.x < 50 ? "is-l" : "is-r"}" style="left:${n.x}%;top:${n.y}%">
+      <span class="eca-map-badge" aria-hidden="true">
+        ${state === "now" ? `<span class="eca-map-ring"></span><span class="eca-map-ring eca-map-ring2"></span>` : ""}
+        ${state === "done" ? `<span class="eca-map-stars"><i>⭐</i><i>⭐</i><i>⭐</i></span>` : ""}
+        <span class="eca-map-disc">${state === "locked" ? `<span class="eca-map-fog"></span>🔒` : n.icon}</span>
+        ${state === "done" ? `<span class="eca-map-check">✓</span>` : ""}
+        ${hero ? `<span class="eca-map-hero ${state === "done" ? "is-won" : ""}">${esc(hero.icon)}</span>` : ""}
+      </span>
       <span class="eca-map-name">${esc(name)}</span>
-      ${state === "now" ? `<span class="eca-map-pet" aria-hidden="true">${esc(pet.icon)}</span>` : ""}
-      ${state === "done" ? `<span class="eca-map-check" aria-hidden="true">✓</span>` : ""}
-      ${hero ? `<span class="eca-map-hero ${state === "done" ? "is-won" : ""}" aria-hidden="true">${esc(hero.icon)}</span>` : ""}
+      ${state === "now" ? `<span class="eca-map-cta">▶ ${en ? "Play now" : "العب الآن"}</span>` : ""}
+      ${state === "locked" ? `<span class="eca-map-tip" role="status"></span>` : ""}
     </button>`;
   }).join("");
-  const points = ECA_MAP.map(n => n.x + "," + n.y).join(" ");
+  const here = ECA_MAP[level - 1], avatar = typeof ecaAvatarOf === "function" ? ecaAvatarOf(stu) : "";
+  const frame = typeof ecaFrameOf === "function" ? ecaFrameOf(stu) : "", elite = window.ecaEliteClass ? ecaEliteClass(stu.id) : "";
+  const token = `<div class="eca-map-token ${here.x < 50 ? "is-l" : "is-r"}" style="left:${here.x}%;top:${here.y}%" aria-hidden="true">
+      <span class="eca-map-bubble">🔥 ${en ? "Let's do step " + level + "!" : "يلا نكمل خطوة " + level + "!"}</span>
+      <span class="eca-map-tok"><span class="eca-map-tok-av eca-frame ${frame ? "eca-frame-" + esc(frame) : ""} ${esc(elite)}">${esc(avatar || "♟")}</span><span class="eca-map-tok-pet">${esc(pet.icon)}</span></span>
+    </div>`;
+  const embers = [8, 19, 33, 47, 58, 66, 79, 90].map((x, i) => `<i class="eca-ember" style="left:${x}%;top:${30 + (i * 37) % 65}%;--d:${(i * 0.9).toFixed(1)}s;--t:${6 + (i % 3) * 2}s"></i>`).join("");
+  const done = ecaMapPath(0, level - 1), ahead = ecaMapPath(level - 1, last - 1);
+  const pct = Math.round(((level - 1) + Math.min(1, s.attC / s.total)) / last * 100);
+  const where = en ? "Center on me" : "موقعي الحالي";
   return `<section class="gold-card rounded-2xl p-4 space-y-3">
     <div class="flex flex-wrap items-center justify-between gap-2">
       <h3 class="font-display font-bold text-lg text-yellow-300">🗺️ ${en ? "Adventure map" : "خريطة المغامرة"}</h3>
       <span class="text-xs text-gray-300">${en ? "Lessons" : "الدروس"}: ${esc(s.attC)}/${esc(s.total)}</span>
     </div>
+    <div class="eca-map-view">
+      <div class="eca-map-scroll">
     <div class="eca-map">
-      <svg class="eca-map-path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="1 7" stroke-linecap="round" vector-effect="non-scaling-stroke" /></svg>
+      <div class="eca-map-grid" aria-hidden="true"></div>${embers}
+      <svg class="eca-map-path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="ecaMapGrad" gradientUnits="userSpaceOnUse" x1="0" y1="100" x2="0" y2="0"><stop offset="0" stop-color="#E50914" /><stop offset="1" stop-color="#F5C518" /></linearGradient></defs>
+        ${ahead ? `<path class="eca-map-trail" d="${ahead}" vector-effect="non-scaling-stroke" />` : ""}
+        ${done ? `<path class="eca-map-glow" d="${done}" vector-effect="non-scaling-stroke" /><path class="eca-map-road" d="${done}" vector-effect="non-scaling-stroke" /><path class="eca-map-energy" d="${done}" pathLength="100" vector-effect="non-scaling-stroke" />` : ""}
+      </svg>
       ${nodes}
+      ${token}
+    </div>
+      </div>
+      <div class="eca-map-hud">
+        <span class="eca-map-prog">🏰 ${en ? "Kingdom " + level + " of " + last + " • " + pct + "% done" : "المرحلة " + level + " من " + last + " • " + pct + "% مكتمل"}</span>
+        <button type="button" onclick="ecaMapCenter(true)" class="tap eca-map-me" title="${where}" aria-label="${where}">📍 <span>${where}</span></button>
+      </div>
     </div>
   </section>`;
 }
+// ================= بعد ما الخريطة تترسم: تتمركز على مكانك، والبطل بيمشي للمملكة الجديدة =================
+const ecaMapMem = { pg: "", top: -1 };
+function ecaMapCenter(smooth) {
+  const box = document.querySelector("#mainView .eca-map-scroll"), node = box && box.querySelector(".eca-map-node.is-now");
+  if (!box || !node) return;
+  const top = box.querySelector(".eca-map").offsetHeight * parseFloat(node.style.top) / 100 - box.clientHeight / 2;
+  box.scrollTo({ top: Math.max(0, top), behavior: smooth && !ecaMapCalm() ? "smooth" : "auto" });
+  ecaMapMem.top = -1;
+}
+window.ecaMapCenter = ecaMapCenter;
+function ecaMapBurst(world, x, y) {
+  for (let i = 0; i < 12; i++) {
+    const a = i / 12 * Math.PI * 2, r = 34 + (i % 3) * 10, sp = document.createElement("i");
+    sp.className = "eca-map-spark";
+    sp.style.cssText = "left:" + x + "%;top:" + y + "%;--dx:" + Math.round(Math.cos(a) * r) + "px;--dy:" + Math.round(Math.sin(a) * r) + "px";
+    world.appendChild(sp);
+    setTimeout(() => sp.remove(), 900);
+  }
+}
+// البطل بيمشي على نفس الطريق المرسوم من المملكة القديمة للجديدة (translate بس)
+function ecaMapSlide(world, tok, from, to) {
+  if (!tok.animate) return;
+  const W = world.offsetWidth, H = world.offsetHeight, end = ECA_MAP[to - 1], pts = [];
+  for (let i = from - 1; i < to - 1; i++) {
+    const [p, c1, c2, q] = ecaMapCurve(ECA_MAP[i], ECA_MAP[i + 1]);
+    for (let k = 0; k < 10; k++) {
+      const t = k / 10, v = 1 - t, f = c => v * v * v * p[c] + 3 * v * v * t * c1[c] + 3 * v * t * t * c2[c] + t * t * t * q[c];
+      pts.push({ translate: Math.round((f("x") - end.x) / 100 * W) + "px " + Math.round((f("y") - end.y) / 100 * H) + "px" });
+    }
+  }
+  pts.push({ translate: "0px 0px" });
+  tok.dataset.slide = "1";
+  const anim = tok.animate(pts, { duration: Math.min(2400, 900 * (to - from)), easing: "ease-in-out" });
+  anim.onfinish = () => { ecaMapBurst(world, end.x, end.y); if (typeof ecaSfx === "function") ecaSfx("ting"); };
+}
+function ecaMapMount() {
+  const box = document.querySelector("#mainView .eca-map-scroll"), u = currUser();
+  if (!box || !u || box.dataset.ready) return;
+  box.dataset.ready = "1";
+  const pg = render.__pg || "", level = ecaMapLevel(u), key = "ECA_MAP_SEEN_" + u.id;
+  // بنحفظ المكان لما الطالب نفسه يحرّك الخريطة بس، مش وهي بتتحرك لوحدها لمكانه
+  let mine = false;
+  ["pointerdown", "wheel", "touchstart", "keydown"].forEach(ev => box.addEventListener(ev, () => { mine = true; }, { passive: true }));
+  box.addEventListener("scroll", () => { if (mine) ecaMapMem.top = box.scrollTop; }, { passive: true });
+  if (ecaMapMem.pg === pg && ecaMapMem.top >= 0) box.scrollTop = ecaMapMem.top;   // تحديث عادي: الخريطة تفضل مكان ما الطالب سابها
+  else ecaMapCenter(ecaMapMem.pg !== pg);
+  ecaMapMem.pg = pg;
+  let seen = 0;
+  try { seen = Number(localStorage.getItem(key)) || 0; if (seen !== level) localStorage.setItem(key, String(level)); } catch (_) {}
+  const tok = box.querySelector(".eca-map-token");
+  if (tok && seen && seen < level && !ecaMapCalm()) ecaMapSlide(box.querySelector(".eca-map"), tok, seen, level);
+}
+window.ecaMapMount = ecaMapMount;
 
 // ================= الرفيق: بيكبر مع الخبرة =================
 const ECA_PETS = {
@@ -248,6 +345,7 @@ function ecaSpinAutoOpen(u) {
   render = function () {
     const out = _r.apply(this, arguments), u = currUser();
     if (u && u.role === "student" && !window.__authLoading) { ecaAchScan(u); ecaSpinAutoOpen(u); }
+    if (u && u.role === "student") ecaMapMount();
     return out;
   };
 }
