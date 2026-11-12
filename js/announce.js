@@ -33,8 +33,8 @@
         <div class="text-sm text-white whitespace-pre-line leading-relaxed">${a.pin ? `<span class="text-[10px] font-bold text-yellow-300 me-1.5">${LA("مثبّت", "Pinned")}</span>` : ""}${esc(a.text)}</div>
         <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] text-gray-500">
           <span>${new Date(a.at || Date.now()).toLocaleDateString(lang === "en" ? "en-GB" : "ar-EG", { day: "numeric", month: "short" })}${coach ? ` • ${esc(aud)} • ${LA("لحد", "until")} ${esc(a.until || "")}` : ""}</span>
-          ${coach ? `<button onclick="annDelete('${a.id}')" class="tap px-2 rounded-lg text-[11px] text-red-300 border border-red-500/30">${LA("حذف", "Delete")}</button>`
-            : a.pin ? "" : `<button onclick="annHide('${a.id}')" class="px-2 py-1 rounded-lg text-[11px] text-gray-400 hover:text-white">${LA("إخفاء", "Hide")} ✕</button>`}
+          ${coach ? `<button data-ann-id="${esc(a.id)}" onclick="annDelete(this.dataset.annId)" class="tap px-2 rounded-lg text-[11px] text-red-300 border border-red-500/30">${LA("حذف", "Delete")}</button>`
+            : a.pin ? "" : `<button data-ann-id="${esc(a.id)}" onclick="annHide(this.dataset.annId)" class="px-2 py-1 rounded-lg text-[11px] text-gray-400 hover:text-white">${LA("إخفاء", "Hide")} ✕</button>`}
         </div>
       </div>`;
     }

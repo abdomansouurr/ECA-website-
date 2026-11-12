@@ -10,3 +10,11 @@ firebase.json
 *.log
 .vscode/
 .claudeignore
+# أسرار وملفات إعداد ونسخ قاعدة بيانات: ما تتنشرش أبداً
+tailwind.config.js
+tailwind.input.css
+.env*
+.vs/
+*.sql
+*.bak
+*.zip
