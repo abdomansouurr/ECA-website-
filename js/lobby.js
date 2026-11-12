@@ -70,9 +70,10 @@ function lbCard(c) {
     </button>`;
 }
 function lbPoster(c, n) {
-  return `<button type="button" onclick="${c.go}" class="nf-poster-wrap" aria-label="${esc(n + ". " + c.title + ". " + c.tag)}">
+  const fx = c.fx && window.GameCardAnimator ? GameCardAnimator.media(c.fx) : "";
+  return `<button type="button" onclick="${c.go}" class="nf-poster-wrap${fx ? " game-card game-card-" + esc(c.fx) : ""}" aria-label="${esc(n + ". " + c.title + ". " + c.tag)}">
       <span class="nf-num" aria-hidden="true">${n}</span>
-      <span class="nf-poster ${c.accent || ""}"><span class="nf-card-art" aria-hidden="true">${c.icon}</span><b class="nf-card-title">${esc(c.title)}</b><span class="nf-card-tag">${esc(c.tag)}</span></span>
+      <span class="nf-poster ${c.accent || ""}">${fx || `<span class="nf-card-art" aria-hidden="true">${c.icon}</span>`}<b class="nf-card-title">${esc(c.title)}</b><span class="nf-card-tag">${esc(c.tag)}</span></span>
     </button>`;
 }
 function lbRow(key, title, items, poster) {
@@ -93,23 +94,24 @@ function lbScroll(btn, dir) {
 }
 window.lbScroll = lbScroll;
 
-// الألعاب اللي كروتها بتصحى بحركة خاصة بيها (cardfx.js)
-const LB_FX = { rush: "speed", friend: "duel", duel: "duel", weekly: "coach", speed: "arena" };
+// كل كارت ليه حركة خاصة بيه لما يصحى (cardfx.js)، ومفيش لعبة متكررة في صفين
+const LB_MORE = { play: "bot", puzzles: "puzzle", vision: "vision", pawns: "pawns", analysis: "analysis" };
 function lbRowsHTML(u) {
   const student = u.role === "student", st = lbStep(u), dj = student ? lbDojo(u) : { total: null, due: 0 }, boss = lbBoss();
   const mission = student && typeof lpDailyCount === "function" ? lpDailyCount(u) : 0, goal = typeof LP_GOAL !== "undefined" ? LP_GOAL : 10;
   const cont = [
-    student && { go: "lbOpen('step')", accent: "nf-red", icon: "🎯", title: LB("مهمة الدرس", "Lesson mission"), tag: LB(`${Math.min(mission, goal)} من ${goal} • +5 ⭐`, `${Math.min(mission, goal)} of ${goal} • +5 ⭐`), prog: Math.min(1, mission / goal) },
-    { go: "lbOpen('lessons')", accent: "nf-teal", icon: "🗺️", title: LB("مغامرة الدروس", "Lesson adventure"), tag: LB(`Step ${st.level} • على قد مستواك`, `Step ${st.level} • at your level`), prog: st.s.total ? st.s.attC / st.s.total : 0 },
+    student && { go: "lbOpen('step')", accent: "nf-red", fx: "target", icon: "🎯", title: LB("مهمة الدرس", "Lesson mission"), tag: LB(`${Math.min(mission, goal)} من ${goal} • +5 ⭐`, `${Math.min(mission, goal)} of ${goal} • +5 ⭐`), prog: Math.min(1, mission / goal) },
+    { go: "lbOpen('lessons')", accent: "nf-teal", fx: "map", icon: "🗺️", title: LB("مغامرة الدروس", "Lesson adventure"), tag: LB(`Step ${st.level} • على قد مستواك`, `Step ${st.level} • at your level`), prog: st.s.total ? st.s.attC / st.s.total : 0 },
     { go: "lbOpen('dojo')", accent: "nf-red", fx: "dojo", icon: "🥋", title: LB("دوجو الانتقام", "Dojo revenge"), tag: dj.due ? LB(`🔥 ${dj.due} جاهز • 2x`, `🔥 ${dj.due} ready • 2x`) : dj.total ? LB(`${dj.total} في الخزنة`, `${dj.total} in the vault`) : LB("الخزنة فاضية", "Vault is empty"), live: dj.due > 0 },
-    boss && { go: `lbOpen('boss','${esc(boss.id)}')`, accent: "nf-red", icon: typeof bossFace === "function" ? bossFace(boss) : "🐉", title: boss.title, tag: LB(`HP ${boss.puzzles.length - (boss.solved || []).length} • +10 ⭐`, `HP ${boss.puzzles.length - (boss.solved || []).length} • +10 ⭐`), prog: (boss.puzzles.length - (boss.solved || []).length) / boss.puzzles.length }
+    boss ? { go: `lbOpen('boss','${esc(boss.id)}')`, accent: "nf-red", fx: "boss", icon: typeof bossFace === "function" ? bossFace(boss) : "🐉", title: boss.title, tag: LB(`HP ${boss.puzzles.length - (boss.solved || []).length} • +10 ⭐`, `HP ${boss.puzzles.length - (boss.solved || []).length} • +10 ⭐`), prog: (boss.puzzles.length - (boss.solved || []).length) / boss.puzzles.length }
+      : { go: "lbOpen('boss')", accent: "nf-red", fx: "boss", icon: "🐉", title: LB("واجب الزعيم", "Boss homework"), tag: LB("مفيش زعيم دلوقتي", "No boss right now") }
   ].filter(Boolean);
   const best = student && typeof funRushBest === "function" ? funRushBest(u) : 0, spun = student && typeof ecaSpinDone === "function" && ecaSpinDone(u);
   const pvp = [
     { go: "lbOpen('rush')", accent: "nf-violet", fx: "speed", icon: "⚡", title: LB("تحدي 60 ثانية", "Puzzle Rush"), tag: best ? LB(`أحسن نتيجة النهاردة: ${best}`, `Today's best: ${best}`) : LB("60 ثانية • +5 ⭐", "60 seconds • +5 ⭐") },
-    { go: "lbOpen('friend')", accent: "nf-violet", fx: "duel", icon: "🤝", title: LB("تحدي صاحبك", "Friend challenge"), tag: LB("5 ألغاز • +3 ⭐", "5 puzzles • +3 ⭐") },
+    { go: "lbOpen('friend')", accent: "nf-violet", fx: "knights", icon: "🤝", title: LB("تحدي صاحبك", "Friend challenge"), tag: LB("5 ألغاز • +3 ⭐", "5 puzzles • +3 ⭐") },
     { go: "lbOpen('duel')", accent: "nf-violet", fx: "duel", icon: "⚔️", title: LB("مبارزة مباشرة", "Live duel"), tag: LB("1 ضد 1 • +3 ⭐", "1v1 • +3 ⭐") },
-    student && { go: "lbOpen('spin')", accent: "nf-gold", icon: "🎡", title: LB("عجلة الحظ", "Lucky spin"), tag: spun ? LB("✓ لفّيت النهاردة", "✓ Spun today") : LB("لفّة النهاردة جاهزة", "Today's spin is ready"), live: !spun }
+    student && { go: "lbOpen('spin')", accent: "nf-gold", fx: "spin", icon: "🎡", title: LB("عجلة الحظ", "Lucky spin"), tag: spun ? LB("✓ لفّيت النهاردة", "✓ Spun today") : LB("لفّة النهاردة جاهزة", "Today's spin is ready"), live: !spun }
   ].filter(Boolean);
   const W = arena.weekly, att = (W && W.att) || { n: 0, solved: false }, left = Math.max(0, 2 - (Number(att.n) || 0));
   const wkTag = !W || W.doc === undefined ? LB("بنحمّل...", "Loading...") : !W.doc ? LB("لسه ما نزلش", "Not posted yet") : att.solved ? LB("✓ حليته", "✓ Solved") : LB(`المحاولات ${left}/2`, `Attempts ${left}/2`);
@@ -119,23 +121,24 @@ function lbRowsHTML(u) {
   const originals = [
     { go: "lbOpen('weekly')", accent: "nf-red", fx: "coach", icon: "🏅", badge: "ECA ORIGINAL", title: LB("تحدي الأسبوع", "Weekly challenge"), tag: wkTag },
     { go: "lbOpen('speed')", accent: "nf-gold", fx: "arena", icon: "🏆", title: LB("بطولة السرعة", "Speed arena"), tag: saTag, live: !!live, id: "lbSaPill" },
-    ev && { go: ev.done && !ev.claimed ? "funEventClaim()" : "funEventStart()", accent: "nf-teal", icon: "🎪", badge: "ECA ORIGINAL", title: LB("حدث الأسبوع: ", "Weekly event: ") + (window.lpThemeName ? lpThemeName(ev.theme) : ev.theme), tag: ev.claimed ? LB("✓ خلّصته", "✓ Done") : LB(`${ev.n}/15 • +8 ⭐`, `${ev.n}/15 • +8 ⭐`), prog: ev.n / 15 },
-    { go: "lbOpen('honor')", accent: "nf-gold", icon: "👑", title: LB("لوحة الشرف", "Hall of Fame"), tag: LB("الأوائل الأسبوع ده", "This week's top players") }
+    ev && { go: ev.done && !ev.claimed ? "funEventClaim()" : "funEventStart()", accent: "nf-teal", fx: "event", icon: "🎪", badge: "ECA ORIGINAL", title: LB("حدث الأسبوع: ", "Weekly event: ") + (window.lpThemeName ? lpThemeName(ev.theme) : ev.theme), tag: ev.claimed ? LB("✓ خلّصته", "✓ Done") : LB(`${ev.n}/15 • +8 ⭐`, `${ev.n}/15 • +8 ⭐`), prog: ev.n / 15 },
+    { go: "lbOpen('honor')", accent: "nf-gold", fx: "honor", icon: "👑", title: LB("لوحة الشرف", "Hall of Fame"), tag: LB("الأوائل الأسبوع ده", "This week's top players") }
   ].filter(Boolean);
   const posters = [
-    { go: "lbOpen('cards')", accent: "nf-violet", icon: "🃏", title: LB("ألبوم البطاقات", "Card album"), tag: LB("اجمع البطاقات", "Collect them all") },
-    student && { go: "lbOpen('shop:piece')", accent: "nf-red", icon: "♞", title: LB("قطع جديدة", "New pieces"), tag: LB("من المتجر", "In the shop") },
-    student && { go: "lbOpen('shop:board')", accent: "nf-teal", icon: "🎨", title: LB("رقع جديدة", "New boards"), tag: LB("من المتجر", "In the shop") },
-    student && { go: "lbOpen('shop:avatar')", accent: "nf-gold", icon: "🦁", title: LB("أفاتار", "Avatars"), tag: LB("من المتجر", "In the shop") },
-    student && { go: "lbOpen('shop:frame')", accent: "nf-violet", icon: "🖼️", title: LB("إطارات", "Frames"), tag: LB("من المتجر", "In the shop") },
-    student && { go: "lbOpen('shop:tools')", accent: "nf-red", icon: "🛍️", title: LB("متجر النجوم", "Star shop"), tag: LB("بوتات وتلميحات", "Bots and hints") }
+    { go: "lbOpen('cards')", accent: "nf-violet", fx: "album", icon: "🃏", title: LB("ألبوم البطاقات", "Card album"), tag: LB("اجمع البطاقات", "Collect them all") },
+    student && { go: "lbOpen('shop:piece')", accent: "nf-red", fx: "pieces", icon: "♞", title: LB("قطع جديدة", "New pieces"), tag: LB("من المتجر", "In the shop") },
+    student && { go: "lbOpen('shop:board')", accent: "nf-teal", fx: "boards", icon: "🎨", title: LB("رقع جديدة", "New boards"), tag: LB("من المتجر", "In the shop") },
+    student && { go: "lbOpen('shop:avatar')", accent: "nf-gold", fx: "avatar", icon: "🦁", title: LB("أفاتار", "Avatars"), tag: LB("من المتجر", "In the shop") },
+    student && { go: "lbOpen('shop:frame')", accent: "nf-violet", fx: "frame", icon: "🖼️", title: LB("إطارات", "Frames"), tag: LB("من المتجر", "In the shop") },
+    student && { go: "lbOpen('shop:tools')", accent: "nf-red", fx: "chest", icon: "🛍️", title: LB("متجر النجوم", "Star shop"), tag: LB("بوتات وتلميحات", "Bots and hints") }
   ].filter(Boolean);
-  const all = ["play", "puzzles", "vision", "pawns", "analysis", "lessons", "rush", "duel", "friend", "speed", "weekly", "boss", "cards"].map(k => ({ go: `lbOpen('${k}')`, accent: "nf-dark", fx: LB_FX[k], icon: LB_MODES[k][0], title: lang === "en" ? LB_MODES[k][2] : LB_MODES[k][1], tag: LB("العب", "Play") }));
+  // باقي الألعاب (اللي مش في صف فوق): كل لعبة من الـ 13 موجودة مرة واحدة بس في الساحة
+  const all = Object.keys(LB_MORE).map(k => ({ go: `lbOpen('${k}')`, accent: "nf-dark", fx: LB_MORE[k], icon: LB_MODES[k][0], title: lang === "en" ? LB_MODES[k][2] : LB_MODES[k][1], tag: LB("العب", "Play") }));
   return lbRow("continue", LB("كمّل تدريبك", "Continue training"), cont)
     + lbRow("pvp", LB("تحديات السرعة والأصدقاء", "Speed and friends"), pvp)
     + lbRow("originals", LB("حصريات الكوتش والبطولات", "Coach originals and live events"), originals)
     + lbRow("top", LB("بطاقات التكتيك والمتجر", "Tactic cards and rewards"), posters, true)
-    + lbRow("all", LB("كل الألعاب", "All games"), all);
+    + lbRow("all", LB("ألعاب تانية", "More games"), all);
 }
 
 function lbLobbyHTML(u) {
