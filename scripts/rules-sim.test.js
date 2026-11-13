@@ -79,6 +79,17 @@ T('exam start again (attempt exists)', false, { old: base, neu: started, before:
   T('puzzle reward includes one-time mission bonus', true, { old, neu, after: { ['econ:' + neu.lastEconomy]: receipt } });
 }
 {
+  // coach hints lower the reward: 'hardest' is 5 stars / 100 xp, with hint stage 2 (x0.75) it is 3 stars / 75 xp
+  const old = C(base); old.arena.stars = 0; old.arena.xp = 0; old.arena.missionDate = today; old.arena.missionDone = true;
+  const pay = (stars, xp) => { const neu = C(old); neu.arena.stars = stars; neu.arena.xp = xp; neu.lastEconomy = `puzzle-${today}-hardest`;
+    return { old, neu, after: { ['econ:' + neu.lastEconomy]: { uid, kind: 'earn', source: 'puzzle', key: 'hardest', day: today, item: '', score: 0, starsDelta: stars, xpDelta: xp, missionBonus: false, at: now } } }; };
+  T('puzzle reward lowered by coach hints', true, pay(3, 75));
+  T('puzzle reward at half (last hint)', true, pay(2, 50));
+  T('puzzle reward of zero stars', false, pay(0, 75));
+  T('puzzle reward above the full amount', false, pay(6, 100));
+  T('puzzle reward with a fractional amount', false, pay(2.5, 50));
+}
+{
   const old = C(base); old.arena.stars = 100; old.arena.xp = 0;
   const neu = C(old); neu.arena.stars = 50; neu.shop = { titles: ['title-tactics'], bots: [], hints: 0, activeTitle: '' };
   neu.lastEconomy = 'buy-title-tactics-abcd1234';

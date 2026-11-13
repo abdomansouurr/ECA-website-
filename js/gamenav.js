@@ -83,6 +83,7 @@ let ecaNavQuiet = false, ecaNavSkipPop = false;
 const ecaLobbyMem = { y: 0, rows: {} };
 function ecaGameTeardown() {
   ecaBoardFs(false);
+  if (window.coachCancelAll) coachCancelAll();   // رد عقابي شغّال: المؤقت بيتلغي والرقعة بترجع
   const V = arena.vis;   // تدريب الرؤية: الخروج في النص بيلغي الجولة من غير نتيجة (زي تحدي 60 ثانية)
   if (V && V.timer) { clearInterval(V.timer); V.timer = null; V.active = false; V.target = ""; }
   const P = arena.puz;

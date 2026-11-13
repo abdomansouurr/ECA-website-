@@ -235,6 +235,10 @@ service cloud.firestore {
         || (key == '5' && 5 in bots) || (key == '6' && 6 in bots) || (key == '7' && 7 in bots);
     }
     // كل مكافأة بتتفحص بمسارها بس (عشان حد الـ 1000 عملية في الطلب)
+    // جايزة لغز اتحل بتلميحات الكوتش (coach.js) بتقل: أي عدد صحيح من 1 لحد الجايزة الكاملة. أكتر من الكاملة مرفوض
+    function hintedOk(r, stars, xp) {
+      return r.starsDelta is int && r.xpDelta is int && r.starsDelta >= 1 && r.starsDelta <= stars && r.xpDelta >= 1 && r.xpDelta <= xp;
+    }
     function economyEarnOk(id, r, u) {
       // الجوايز الجديدة بتتفحص في الأول وبتعدّي السلسلة كلها (حد الـ 1000 عملية مع ملف طالب كبير)
       return r.source in ['golden','combo','event'] ? economyFunOk(id, r)
@@ -243,7 +247,7 @@ service cloud.firestore {
               && r.starsDelta == 1 && r.xpDelta == 20 && r.missionBonus == false)
         : r.source == 'puzzle'
           ? (r.key in ['daily','easiest','easier','normal','harder','hardest'] && id == 'puzzle-' + r.day + '-' + r.key
-              && r.starsDelta == puzzleStars(r.key) + (r.missionBonus ? 1 : 0) && r.xpDelta == puzzleStars(r.key) * 20)
+              && hintedOk(r, puzzleStars(r.key) + (r.missionBonus ? 1 : 0), puzzleStars(r.key) * 20))
         : r.source == 'bot'
           ? (r.key in ['0','1','2','3','4','5','6','7'] && id == 'bot-' + r.day + '-' + r.key
               && botOwned(r.key, u.get('shop', {})) && r.starsDelta == botStars(r.key) && r.xpDelta == botStars(r.key) * 20 && r.missionBonus == false)
@@ -263,7 +267,7 @@ service cloud.firestore {
         : r.source == 'arena'
           ? (r.key.matches('[A-Za-z0-9-]{1,40}') && id == 'arena-' + r.key && r.missionBonus == false && arenaPayOk(r))
         : r.source == 'dojo'
-          ? (r.key.matches('[A-Za-z0-9]{3,20}') && id == 'dojo-' + r.key && r.starsDelta == 2 && r.xpDelta == 40 && r.missionBonus == false && dojoVaultOk(r))
+          ? (r.key.matches('[A-Za-z0-9]{3,20}') && id == 'dojo-' + r.key && hintedOk(r, 2, 40) && r.missionBonus == false && dojoVaultOk(r))
         : r.source == 'fduel'
           ? (r.key.matches('[A-Za-z0-9]{10,40}') && id == 'fduel-' + r.day && r.starsDelta == 3 && r.xpDelta == 60 && r.missionBonus == false && fduelWon(r.key, r.uid))
         : r.source == 'spin'
@@ -276,7 +280,7 @@ service cloud.firestore {
           ? (r.key == r.day && id == 'vision-' + r.day && r.score >= 3 && r.score <= 1000
               && r.starsDelta == visionStars(r.score) && r.xpDelta == visionStars(r.score) * 20 && r.missionBonus == false)
         : r.source == 'boss'
-          ? (r.key.matches('[A-Za-z0-9]{6,40}') && id == 'boss-' + r.key && r.starsDelta == 10 && r.xpDelta == 200 && r.missionBonus == false && bossDone(r))
+          ? (r.key.matches('[A-Za-z0-9]{6,40}') && id == 'boss-' + r.key && hintedOk(r, 10, 200) && r.missionBonus == false && bossDone(r))
         : r.source == 'drop'
           ? (r.key.matches('[A-Za-z0-9]{6,40}') && id == 'drop-' + r.key && r.missionBonus == false && dropPayOk(r))
         : false;

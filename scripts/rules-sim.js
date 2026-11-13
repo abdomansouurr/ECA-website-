@@ -65,8 +65,9 @@ function makeCtx({ uid, old, neu, before, after, now }) {
       if (r.source === 'puzzle') {
         const values = { daily: 1, easiest: 1, easier: 2, normal: 3, harder: 4, hardest: 5 }, baseStars = values[r.key] || 0;
         const bonus = r.missionBonus === true;
-        return baseStars > 0 && id === 'puzzle-' + r.day + '-' + r.key && r.starsDelta === baseStars + (bonus ? 1 : 0)
-          && r.xpDelta === baseStars * 20 && (bonus
+        // hintedOk: any whole amount from 1 up to the full reward (hints from the coach lower it)
+        return baseStars > 0 && id === 'puzzle-' + r.day + '-' + r.key && Number.isInteger(r.starsDelta) && Number.isInteger(r.xpDelta)
+          && r.starsDelta >= 1 && r.starsDelta <= baseStars + (bonus ? 1 : 0) && r.xpDelta >= 1 && r.xpDelta <= baseStars * 20 && (bonus
             ? get(oa,'missionDate','') !== r.day && get(na,'missionDate','') === r.day && get(na,'missionDone',false) === true
             : get(oa,'missionDate','') === get(na,'missionDate','') && get(oa,'missionDone',false) === get(na,'missionDone',false));
       }

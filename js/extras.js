@@ -240,6 +240,7 @@
                 <button onclick="anaUndo()" class="tap rounded-xl text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">تراجع</button>
                 <button onclick="arena.ana.flip=!arena.ana.flip; render();" class="tap rounded-xl text-xs bg-zinc-900 border border-yellow-500/30 text-yellow-300">اقلب الرقعة</button>
                 <button onclick="anaSet(new ChessCls())" class="tap rounded-xl text-xs gold-btn">من الأول</button>
+                ${window.coachHintBtnHTML ? coachHintBtnHTML("analysis") : ""}
               </div>
               <label class="block text-xs text-gray-400">FEN</label>
               <div class="flex gap-2">

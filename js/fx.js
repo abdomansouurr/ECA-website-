@@ -169,7 +169,7 @@ window.ecaCheer = ecaCheer;
 {
   const _award = window.ecaAwardStudentActivity;
   window.ecaAwardStudentActivity = async function (source, key, score) {
-    const result = await _award(source, key, score);
+    const result = await _award.apply(this, arguments);
     if (result && result.ok && !result.duplicate && source === "puzzle" && (key === "harder" || key === "hardest")) { ecaConfetti(70); ecaShake(); ecaCheer("hype"); }
     return result;
   };

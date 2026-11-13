@@ -415,7 +415,7 @@
       const id = Z.info && Z.info.id; if (!id) return;          // من غير رقم لغز مانقدرش نسجّل محاولة
       // مفتاح فريد لكل حل: لو Lichess رجّعت نفس اللغز تاني بيتحسب تاني في العداد (بدل «اتحسب قبل كده»)
       const key = id + "-" + Date.now().toString(36);
-      const diff = Z.diff;
+      const diff = Z.diff, mult = solved && window.coachRewardMult ? coachRewardMult(Z) : 1;   // تلميحات الكوتش بتقلل الجايزة
       recordAttempt("arena", key, solved, u => {
         const a = u.arena = u.arena || {}; markActiveDay(u);
         if (!solved && typeof reviewAdd === "function") reviewAdd(u, id, Z.info.rating);
@@ -427,7 +427,7 @@
         }
         else a.puzStreak = 0;
       }).then(r => {
-        if (r.ok && solved && window.ecaAwardStudentActivity) window.ecaAwardStudentActivity("puzzle", diff);
+        if (r.ok && solved && window.ecaAwardStudentActivity) window.ecaAwardStudentActivity("puzzle", diff, 0, mult);
         else if (r.code === "permission-denied") toast("اللغز ده اتحسب قبل كده — النتيجة مش هتتكرر");
       });
     }

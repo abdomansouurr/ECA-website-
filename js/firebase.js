@@ -801,6 +801,13 @@
           }
           xpDelta = source === "spin" && spinHex === "e" ? 100 : (source === "puzzle" && missionBonus ? starsDelta - 1 : starsDelta) * 20;
           if (source === "drop") xpDelta = dropXp;
+          // المساعد الذكي (coach.js): كل مرحلة تلميح بتقلل جايزة اللغز. دايماً عدد صحيح موجب، والقواعد بتقبل الأقل بس
+          const hintMult = Number(request.mult);
+          if (["puzzle", "dojo", "boss"].includes(source) && [0.9, 0.75, 0.5].includes(hintMult)) {
+            const bonus = source === "puzzle" && missionBonus ? 1 : 0;
+            starsDelta = Math.max(1, Math.floor((starsDelta - bonus) * hintMult)) + bonus;
+            xpDelta = Math.max(1, Math.floor(xpDelta * hintMult));
+          }
         } else if (op === "purchase") {
           const catalogItem = window.ecaShopCatalog.find(x => x.id === item);
           if (!catalogItem) return { ok: false };

@@ -558,7 +558,7 @@
         : (reward.missionBonus ? `مهمة اليوم تمت! +${gained} نجوم و${xp} خبرة` : `+${gained} نجوم و${xp} خبرة. برافو عليك`));
       if (tab === "home") render();
     }
-    async function awardStudentActivity(source, key, score) {
+    async function awardStudentActivity(source, key, score, mult) {
       const u = currUser();
       if (!u || u.role !== "student") return { ok: false };
       if (!window.fbEconomy) {
@@ -590,7 +590,7 @@
       if (!stars) return { ok: false };
       xp = stars * 20;
       try {
-        const result = await window.fbEconomy({ op: "earn", source, key: String(key), day, score: score || 0, stars, xp });
+        const result = await window.fbEconomy({ op: "earn", source, key: String(key), day, score: score || 0, stars, xp, mult: Number(mult) || 1 });
         if (result.ok && !result.duplicate) showStudentReward(result);
         else if (result.duplicate) {
           // مكافأة النشاط ده اتاخدت النهاردة: اللعب بيكمّل عادي من غير رسالة

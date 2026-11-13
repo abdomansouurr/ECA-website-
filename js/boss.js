@@ -77,7 +77,7 @@ async function bossClaim(a, celebrate) {
   if (B.claimed[a.id] || !window.fbEconomy) return;
   B.claimed[a.id] = true;
   let res = null;
-  try { res = await window.fbEconomy({ op: "earn", source: "boss", key: a.id }); }
+  try { res = await window.fbEconomy({ op: "earn", source: "boss", key: a.id, mult: window.coachBossMult ? coachBossMult(a.id) : 1 }); }
   catch (e) { console.warn("Boss reward failed:", e && e.code); }
   if (!res || !res.ok) { B.claimed[a.id] = false; return; }
   if (res.duplicate) return;
@@ -216,7 +216,8 @@ function arenaBossHTML() {
       : B.status === "hit" ? BL("⚔️ ضربة قوية!", "⚔️ Direct hit!")
       : B.color === "w" ? BL("اضرب بالحل الصح • الدور على الأبيض", "Strike with the right move • White to move") : BL("اضرب بالحل الصح • الدور على الأسود", "Strike with the right move • Black to move");
     return wrap(`${back}${stage}${boardHTML({ game: B.game, flip: B.flip, sel: B.sel, targets: targetsOf(B.game, B.sel), last: B.last, flash: B.flash, onClick: B.status === "play" ? "bossClick" : "bossNoop" })}
-      <p class="text-center text-sm font-bold ${B.status === "block" ? "text-red-300" : "text-gray-200"}" aria-live="polite">${msg}</p>`);
+      <p class="text-center text-sm font-bold ${B.status === "block" ? "text-red-300" : "text-gray-200"}" aria-live="polite">${msg}</p>
+      ${window.coachHintBtnHTML ? coachHintBtnHTML("boss") : ""}`);
   }
   return wrap(`${back}${stage}<p class="text-sm text-gray-300 text-center">${BL("كل لغز تحله بيشيل نقطة من صحة الزعيم. النقلة الغلط مش بتخسرك حاجة، بس الزعيم بيصدها.", "Every puzzle you solve takes 1 HP. A wrong move costs nothing, but the boss blocks it.")}</p>
     <button type="button" onclick="bossNext()" ${B.busy ? "disabled" : ""} class="tap w-full rounded-xl text-sm font-bold gold-btn disabled:opacity-40">⚔️ ${B.status === "loading" ? BL("بنجهّز...", "Getting ready...") : BL("ابدأ المعركة", "Start the battle")}</button>`);

@@ -7,9 +7,9 @@
   <link rel="manifest" href="manifest.json" />
   <!-- لوجو الأكاديمية على تاب المتصفح: ICO في الجذر (الفولباك الأضمن — المتصفحات بتطلبه من /favicon.ico مباشرة)
        + PNG للتاب الحديث + apple-touch للآيفون — كلهم بنفس اللوجو ومع رقم نسخة يكسر الكاش -->
-  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v90" />
-  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v90" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v90" />
+  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v91" />
+  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v91" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v91" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ECA Chess" />
@@ -306,7 +306,7 @@
     @keyframes ecaRewardPop { 0% { opacity: 0; transform: translateY(12px) scale(.8); } 25% { opacity: 1; transform: translateY(0) scale(1.08); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px) scale(1); } }
     @media (prefers-reduced-motion: reduce) { .eca-reward-pop { animation: none; } }
 
-    /* ===== eca-v90: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
+    /* ===== eca-v91: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
     @keyframes ecaItemIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     .stagger-in > *, .st-item { animation-duration: .24s; }
     .stagger-in > *:nth-child(1) { animation-delay: 0.045s }
@@ -942,6 +942,32 @@
     .game-card:is(.hover-active, :hover) .game-card-media * { animation-play-state: running !important; }
     .game-card:is(.hover-active, :hover) .gc-fx { opacity: 1 !important; }
     html.eca-calm .game-card:is(.hover-active, :hover) .gc-fx { opacity: 0 !important; }
+    /* ===== الكوتش جنب الرقعة (coach.js): الرد العقابي + المساعد الذكي. SVG جوه الرقعة بيكبر ويصغر معاها ===== */
+    .eca-coach-svg { position: absolute; inset: 0; z-index: 20; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+    .eca-board.eca-coach-lock { pointer-events: none; }
+    .eca-co-ref { stroke-width: 16; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; filter: drop-shadow(0 0 6px rgba(229,9,20,.9)); animation: coDraw .3s ease-out forwards; }
+    .eca-co-ref-head { fill: #E50914; opacity: 0; animation: coFade .12s ease-out .26s forwards; }
+    .eca-co-ring { fill: rgba(229,9,20,.18); stroke: #E50914; stroke-width: 7; transform-box: fill-box; transform-origin: center; animation: coRing .9s ease-out infinite; }
+    .eca-co-bad { fill: rgba(229,9,20,.45); animation: coBlink .55s ease-in-out infinite alternate; }
+    .eca-co-hint { stroke-width: 14; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; filter: drop-shadow(0 0 5px rgba(245,197,24,.7)); animation: coDraw .45s ease-out forwards; }
+    .eca-co-hint-head { fill: #F5C518; opacity: 0; animation: coFade .12s ease-out .4s forwards; }
+    .eca-co-spot { fill: rgba(245,197,24,.2); stroke: #F5C518; stroke-width: 4; }
+    .eca-co-radar { fill: none; stroke: #F5C518; stroke-width: 6; transform-box: fill-box; transform-origin: center; animation: coRadar 1.4s ease-out infinite; }
+    .eca-co-radar2 { animation-delay: .7s; }
+    @keyframes coDraw { to { stroke-dashoffset: 0; } }
+    @keyframes coFade { to { opacity: 1; } }
+    @keyframes coRing { 0% { opacity: 1; transform: scale(.85); } 100% { opacity: .2; transform: scale(1.22); } }
+    @keyframes coRadar { 0% { opacity: .95; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.4); } }
+    @keyframes coBlink { from { opacity: .35; } to { opacity: 1; } }
+    .eca-coach-toast { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 auto 10px; padding: 6px 8px 6px 14px; border-radius: 10px; background: #181818; border: 1px solid rgba(229,9,20,.65); box-shadow: 0 6px 18px rgba(0,0,0,.45); color: #fff; font-size: 13px; line-height: 1.45; animation: coIn .2s ease-out; }
+    .eca-coach-toast b { font-weight: 800; }
+    .eca-coach-skip { flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 8px; background: #E50914; color: #fff; font-size: 12px; font-weight: 800; white-space: nowrap; }
+    .eca-coach-bubble { display: flex; align-items: flex-start; gap: 10px; margin: 0 auto 10px; padding: 10px 14px; border-radius: 14px; background: #181818; border: 1px solid rgba(245,197,24,.6); box-shadow: 0 6px 18px rgba(0,0,0,.4); color: #fff; font-size: 13px; font-weight: 700; line-height: 1.55; animation: coIn .2s ease-out; }
+    .eca-coach-bubble > span { font-size: 22px; line-height: 1; }
+    .eca-coach-hint { min-height: 44px; padding: 0 10px; background: #181818; color: #F5C518; border: 1px solid rgba(245,197,24,.55); }
+    @keyframes coIn { from { opacity: 0; transform: translate3d(0,-6px,0); } }
+    @media (prefers-reduced-motion: reduce) { .eca-co-ref, .eca-co-hint { animation: none; stroke-dashoffset: 0; } .eca-co-ref-head, .eca-co-hint-head { animation: none; opacity: 1; } .eca-co-ring, .eca-co-radar, .eca-co-bad, .eca-coach-toast, .eca-coach-bubble { animation: none; } }
+    html.eca-calm .eca-co-ref, html.eca-calm .eca-co-hint { stroke-dashoffset: 0; } html.eca-calm .eca-co-ref-head, html.eca-calm .eca-co-hint-head { opacity: 1; }
     /* ===== تكبير الرقعة (gamenav.js): الـ 64 مربع جوه الشاشة كلهم، في النص، ومن غير أي سكرول ===== */
     .eca-fs-btn { min-width: 44px; min-height: 44px; padding: 0 10px; border-radius: 12px; font-size: 20px; line-height: 1; color: #fff; background: #E50914; border: 1px solid rgba(255,255,255,.2); }
     html.eca-board-fs, html.eca-board-fs body { height: 100% !important; overflow: hidden !important; }
@@ -1225,8 +1251,8 @@
     html[data-ecap="piece-gold"] .eca-pc.w, .eca-skin-piece-gold .eca-pc.w { color: #fde68a; text-shadow: 0 0 1px #78350f, 0 0 1px #78350f, 0 1px 3px rgba(0,0,0,.5); }
     html[data-ecap="piece-gold"] .eca-pc.b, .eca-skin-piece-gold .eca-pc.b { color: #7c2d12; text-shadow: 0 0 1px #fde047, 0 1px 2px rgba(0,0,0,.45); }
   </style>
-  <script>window.ECA_VERSION = "eca-v90";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v90" />
+  <script>window.ECA_VERSION = "eca-v91";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v91" />
 </head>
 <body class="min-h-screen flex flex-col relative">
   <a href="#mainView" class="skip-link">تخطّي إلى المحتوى</a>
@@ -1390,49 +1416,50 @@
     } catch (_) {}
   </script>
   <script type="application/json" id="ecaLazyModules">{"finance":"js/finance.js"}</script>
-  <script src="js/core.js?v=eca-v90"></script>
+  <script src="js/core.js?v=eca-v91"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v90"></script>
+  <script src="js/arena.js?v=eca-v91"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v90"></script>
-  <script src="js/streaks.js?v=eca-v90"></script>
-  <script src="js/review.js?v=eca-v90"></script>
-  <script src="js/quality.js?v=eca-v90"></script>
-  <script src="js/announce.js?v=eca-v90"></script>
-  <script src="js/progress.js?v=eca-v90"></script>
-  <script src="js/arena2.js?v=eca-v90"></script>
+  <script src="js/extras.js?v=eca-v91"></script>
+  <script src="js/streaks.js?v=eca-v91"></script>
+  <script src="js/review.js?v=eca-v91"></script>
+  <script src="js/quality.js?v=eca-v91"></script>
+  <script src="js/announce.js?v=eca-v91"></script>
+  <script src="js/progress.js?v=eca-v91"></script>
+  <script src="js/arena2.js?v=eca-v91"></script>
   <!-- homework, coach dashboards, tournaments, and placement test load on demand via loadModule -->
-  <script src="js/ux.js?v=eca-v90"></script>
-  <script src="js/annotate.js?v=eca-v90"></script>
-  <script src="js/gamify.js?v=eca-v90"></script>
-  <script src="js/adventure.js?v=eca-v90"></script>
-  <script src="js/duel.js?v=eca-v90"></script>
-  <script src="js/fx.js?v=eca-v90"></script>
-  <script src="js/speedarena.js?v=eca-v90"></script>
-  <script src="js/loot.js?v=eca-v90"></script>
-  <script src="js/dojo.js?v=eca-v90"></script>
-  <script src="js/cards.js?v=eca-v90"></script>
-  <script src="js/stamina.js?v=eca-v90"></script>
-  <script src="js/social.js?v=eca-v90"></script>
-  <script src="js/friendduel.js?v=eca-v90"></script>
-  <script src="js/weekly.js?v=eca-v90"></script>
-  <script src="js/boss.js?v=eca-v90"></script>
-  <script src="js/command.js?v=eca-v90"></script>
-  <script src="js/lessonpuz.js?v=eca-v90"></script>
-  <script src="js/parentreport.js?v=eca-v90"></script>
-  <script src="js/care.js?v=eca-v90"></script>
-  <script src="js/fun.js?v=eca-v90"></script>
-  <script src="js/flow.js?v=eca-v90"></script>
-  <script src="js/assist.js?v=eca-v90"></script>
-  <script src="js/cardfx.js?v=eca-v90"></script>
-  <script src="js/lobby.js?v=eca-v90"></script>
-  <script src="js/gamenav.js?v=eca-v90"></script>
-  <script src="js/home.js?v=eca-v90"></script>
+  <script src="js/ux.js?v=eca-v91"></script>
+  <script src="js/annotate.js?v=eca-v91"></script>
+  <script src="js/gamify.js?v=eca-v91"></script>
+  <script src="js/adventure.js?v=eca-v91"></script>
+  <script src="js/duel.js?v=eca-v91"></script>
+  <script src="js/fx.js?v=eca-v91"></script>
+  <script src="js/speedarena.js?v=eca-v91"></script>
+  <script src="js/loot.js?v=eca-v91"></script>
+  <script src="js/dojo.js?v=eca-v91"></script>
+  <script src="js/cards.js?v=eca-v91"></script>
+  <script src="js/stamina.js?v=eca-v91"></script>
+  <script src="js/social.js?v=eca-v91"></script>
+  <script src="js/friendduel.js?v=eca-v91"></script>
+  <script src="js/weekly.js?v=eca-v91"></script>
+  <script src="js/boss.js?v=eca-v91"></script>
+  <script src="js/command.js?v=eca-v91"></script>
+  <script src="js/lessonpuz.js?v=eca-v91"></script>
+  <script src="js/parentreport.js?v=eca-v91"></script>
+  <script src="js/care.js?v=eca-v91"></script>
+  <script src="js/fun.js?v=eca-v91"></script>
+  <script src="js/flow.js?v=eca-v91"></script>
+  <script src="js/assist.js?v=eca-v91"></script>
+  <script src="js/coach.js?v=eca-v91"></script>
+  <script src="js/cardfx.js?v=eca-v91"></script>
+  <script src="js/lobby.js?v=eca-v91"></script>
+  <script src="js/gamenav.js?v=eca-v91"></script>
+  <script src="js/home.js?v=eca-v91"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v90"></script>
+  <script type="module" src="js/firebase.js?v=eca-v91"></script>
 </body>
 </html>

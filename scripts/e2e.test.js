@@ -664,13 +664,135 @@ async function login(p, id) {
     await pa.ev("lpStart(lpDailyLesson(currUser()))");
     await until(() => pa.ev("arena.puz.status === 'play' && !!arena.puz.game"), 15000);
     check("care: a puzzle in progress counts as playing", await pa.ev("ecaIsPlaying() === true"));
-    const ladder = await pa.ev(`(async () => {
-      const Z = arena.puz, want = Z.sol[Z.idx], idx0 = Z.idx, out = {};
-      puzHint(); out.l1 = Z.hint === want.slice(0, 2) && !Z.flash; out.label2 = document.getElementById('mainView').textContent.includes('2/3');
-      puzHint(); out.l2 = Z.hint === want.slice(0, 2) && !!Z.flash && Z.flash[want.slice(2, 4)] === 'goal';
-      puzHint(); out.l3 = Z.idx > idx0 && !Z.hint;
+    // ---------- coach: a wrong move in a lesson gets the opponent's punishing reply, then the board comes back ----------
+    const refA = await pa.ev(`(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+      const ready = async () => { for (let i = 0; i < 60 && !(arena.puz.status === 'play' && arena.puz.game); i++) await wait(250); };
+      const nonMate = (fen, m) => { const c = new ChessCls(fen); c.move(m); return !c.isCheckmate(); };
+      let pick = null, maxMs = 0;
+      for (let tries = 0; tries < 15 && !pick; tries++) {
+        await ready();
+        const Z = arena.puz, g = Z.game, want = Z.sol[Z.idx], pre = g.fen();
+        for (const m of g.moves({ verbose: true })) {
+          const u = m.from + m.to + (m.promotion || '');
+          if (u === want || !nonMate(pre, m)) continue;
+          const t0 = performance.now(), r = findRefutationMove(pre, u, want); maxMs = Math.max(maxMs, performance.now() - t0);
+          if (r && 'ABCDE'.includes(r.kind)) { pick = { m: { from: m.from, to: m.to, promotion: m.promotion }, r, pre }; break; }
+        }
+        if (!pick) { puzLoad(); await wait(300); }
+      }
+      out.found = !!pick; out.maxMs = Math.round(maxMs * 10) / 10;
+      if (!pick) return out;
+      out.kind = pick.r.kind;
+      const Z = arena.puz, g = Z.game, hist0 = g.history().length;
+      const real = window.fbVaultFail; let vf = 0; window.fbVaultFail = function () { vf++; return real.apply(this, arguments); };
+      try {
+        puzPlay(pick.m);
+        out.locked = Z.isRefuting === true && Z.status === 'wrong' && !!document.querySelector('#mainView .eca-board.eca-coach-lock');
+        await wait(500);
+        out.replied = g.history().length === hist0 + 2;
+        const svg = document.querySelector('#mainView .eca-board .eca-coach-svg');
+        out.arrow = !!(svg && svg.querySelector('.eca-co-ref') && svg.querySelector('.eca-co-ref-head'));
+        out.ring = !!(svg && svg.querySelector('.eca-co-ring'));
+        out.svgBox = !!svg && Math.abs(svg.getBoundingClientRect().width - document.querySelector('#mainView .eca-board').clientWidth) <= 1;   // inside the board's border, over the 64 squares
+        const box = document.querySelector('#mainView .eca-coach-toast'), skip = box && box.querySelector('.eca-coach-skip');
+        out.reason = box ? box.textContent.trim() : '';
+        out.reasonOk = !!box && box.textContent.includes(ecaCoach.tags[pick.r.kind][0]);
+        out.skipSize = skip ? Math.round(Math.min(skip.getBoundingClientRect().width, skip.getBoundingClientRect().height)) : 0;
+        const st0 = Z.status; puzClick(pick.m.from); out.inputLocked = Z.status === st0 && Z.isRefuting === true && !Z.sel;
+        skip.click(); await wait(100);
+        out.skipRestored = g.fen() === pick.pre && Z.isRefuting === false && Z.status === 'play' && !document.querySelector('#mainView .eca-coach-svg, #mainView .eca-coach-toast, #mainView .eca-board.eca-coach-lock');
+        const second = g.moves({ verbose: true }).find(m => { const u = m.from + m.to + (m.promotion || ''); return u !== Z.sol[Z.idx] && nonMate(g.fen(), m); });
+        puzPlay({ from: second.from, to: second.to, promotion: second.promotion });
+        out.secondLocked = Z.isRefuting === true;
+        await wait(2400);
+        out.autoRestored = g.fen() === pick.pre && Z.isRefuting === false && Z.status === 'play';
+        await wait(800); out.vaultWrites = vf;
+      } finally { window.fbVaultFail = real; }
       return out; })()`);
-    check("care: hint 1 shows the piece, hint 2 the square, hint 3 plays the move", ladder.l1 && ladder.l2 && ladder.l3 && ladder.label2, ladder);
+    check("coach: a wrong move locks the board, the opponent plays the punishing reply with a red arrow, ring and reason", refA.found && refA.locked && refA.replied && refA.arrow && refA.ring && refA.svgBox && refA.reasonOk && refA.inputLocked, refA);
+    check("coach: «try again now» (44px) and the timer both bring back the exact position before the mistake", refA.skipSize >= 44 && refA.skipRestored && refA.secondLocked && refA.autoRestored, refA);
+    check("coach: two wrong moves on one puzzle log it in the mistake vault once", refA.vaultWrites === 1, refA.vaultWrites);
+    check("coach: the punishing reply is found in under 15ms", refA.maxMs < 15, refA.maxMs);
+    if (process.env.E2E_SHOTS) {
+      const shotOk = await pa.ev(`(async () => { const Z = arena.puz, g = Z.game, want = Z.sol[Z.idx], pre = g.fen();
+        const m = g.moves({ verbose: true }).find(x => { const u = x.from + x.to + (x.promotion || ''); if (u === want) return false; const r = findRefutationMove(pre, u, want); return r && 'BCDE'.includes(r.kind); });
+        if (!m) return false; document.querySelector('#mainView .eca-board').scrollIntoView({ block: 'center' }); puzPlay({ from: m.from, to: m.to, promotion: m.promotion }); return true; })()`);
+      if (shotOk) { await sleep(700); const shot = await pa.send("Page.captureScreenshot", { format: "png" }); fs.writeFileSync(path.join(process.env.E2E_SHOTS, "coach-refute.png"), Buffer.from(shot.data, "base64")); await pa.ev("coachSkip()"); }
+    }
+    const refModes = await pa.ev(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), Z = arena.puz, out = {};
+      Z.review = true; out.dojo = ecaCoach.mode() === 'dojo' && ecaCoach.refuteOk('dojo') && ecaCoach.hintOk('dojo'); Z.review = false;
+      out.boss = ecaCoach.refuteOk('boss') && ecaCoach.hintOk('boss');
+      lpExit(); for (let i = 0; i < 60 && !(Z.status === 'play' && Z.game && !Z.lesson); i++) await wait(250);
+      out.mode = ecaCoach.mode();
+      const m = Z.game.moves({ verbose: true }).find(x => { const u = x.from + x.to + (x.promotion || ''); if (u === Z.sol[Z.idx]) return false; const c = new ChessCls(Z.game.fen()); c.move(x); return !c.isCheckmate(); });
+      puzPlay({ from: m.from, to: m.to, promotion: m.promotion });
+      out.practiceOld = Z.status === 'wrong' && !Z.isRefuting && !document.querySelector('#mainView .eca-coach-toast');
+      await wait(1000); out.practiceBack = Z.status === 'play';
+      return out; })()`);
+    check("coach: the punishing reply runs in lessons, the dojo and boss homework, and practice puzzles keep the quick retry", refModes.dojo && refModes.boss && refModes.mode === "practice" && refModes.practiceOld && refModes.practiceBack, refModes);
+    // ---------- coach: 3-stage guided hint (question → piece → arrow) ----------
+    await pa.ev("lpStart(lpDailyLesson(currUser()))");
+    await until(() => pa.ev("arena.puz.status === 'play' && !!arena.puz.game && !!arena.puz.lesson"), 15000);
+    const hint = await pa.ev(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), Z = arena.puz, out = {};
+      const btn = () => document.querySelector('#mainView button.eca-coach-hint');
+      const center = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+      out.label0 = btn() ? btn().textContent.trim() : ''; out.size = btn() ? Math.round(Math.min(btn().getBoundingClientRect().width, btn().getBoundingClientRect().height)) : 0; out.mult0 = coachRewardMult(Z);
+      btn().click(); await wait(80);
+      const b1 = document.querySelector('#mainView .eca-coach-bubble');
+      out.s1 = !!b1 && b1.textContent.includes(ecaCoach.step1(ecaCoach.motif(Z, 'lesson'))) && !document.querySelector('#mainView .eca-coach-svg');
+      out.label1 = btn().textContent.trim(); out.mult1 = coachRewardMult(Z);
+      btn().click(); await wait(80);
+      const want = Z.sol[Z.idx], spot = document.querySelector('#mainView .eca-coach-svg .eca-co-spot'), sq = document.querySelector('#mainView .eca-sq[data-sq="' + want.slice(0, 2) + '"]');
+      const a = spot && center(spot), c = sq && center(sq);
+      out.s2 = !!spot && !!c && Math.hypot(a[0] - c[0], a[1] - c[1]) < 3 && document.querySelectorAll('#mainView .eca-co-radar').length === 2 && /خطوة 2|Step 2/.test(document.querySelector('#mainView .eca-coach-bubble').textContent);
+      out.label2 = btn().textContent.trim(); out.mult2 = coachRewardMult(Z);
+      return out; })()`);
+    check("hint: the coach button (44px) starts at 3 with no reward cut", /مساعدة الكوتش \(3\)|Coach help \(3\)/.test(hint.label0) && hint.size >= 44 && hint.mult0 === 1, hint);
+    check("hint: step 1 asks about the puzzle's idea (by motif) without marking any square, reward x0.9", hint.s1 && /تلميح القطعة \(2\)|Piece hint \(2\)/.test(hint.label1) && hint.mult1 === 0.9, hint);
+    check("hint: step 2 puts a gold radar ring on the piece to move, reward x0.75", hint.s2 && /مسار التكتيك \(1\)|Tactic path \(1\)/.test(hint.label2) && hint.mult2 === 0.75, hint);
+    if (process.env.E2E_SHOTS) { await pa.ev("document.querySelector('#mainView .eca-coach-bubble').scrollIntoView({ block: 'start' })"); await sleep(400); const shot = await pa.send("Page.captureScreenshot", { format: "png" }); fs.writeFileSync(path.join(process.env.E2E_SHOTS, "coach-hint2.png"), Buffer.from(shot.data, "base64")); }
+    const coachFit = [];
+    for (const [w, h, mobile] of [[320, 640, true], [1920, 1080, false]]) for (const fsOn of [false, true]) {
+      await pa.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: 1, mobile });
+      coachFit.push(await pa.ev(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); if (${fsOn}) ecaBoardFs(true); await wait(500);
+        const Z = arena.puz, board = document.querySelector('#mainView .eca-board'), svg = board && board.querySelector('.eca-coach-svg'), spot = svg && svg.querySelector('.eca-co-spot'), sq = document.querySelector('#mainView .eca-sq[data-sq="' + Z.sol[Z.idx].slice(0, 2) + '"]');
+        const bR = board.getBoundingClientRect(), sR = svg ? svg.getBoundingClientRect() : { width: 0, height: 0, left: 0, top: 0 }, a = spot && spot.getBoundingClientRect(), c = sq && sq.getBoundingClientRect();
+        const r = { view: '${w}x${h}' + (${fsOn} ? ' full screen' : ''), board: Math.round(bR.width), same: Math.abs(sR.width - board.clientWidth) <= 1 && Math.abs(sR.height - board.clientHeight) <= 1 && Math.abs(sR.left - (bR.left + board.clientLeft)) <= 1,
+          onSquare: !!a && !!c && Math.abs((a.left + a.width / 2) - (c.left + c.width / 2)) < 3 && Math.abs((a.top + a.height / 2) - (c.top + c.height / 2)) < 3, bubble: !!document.querySelector('#mainView .eca-coach-bubble') && document.querySelector('#mainView .eca-coach-bubble').getBoundingClientRect().height > 0 };
+        if (${fsOn}) ecaBoardFs(false); return r; })()`));
+    }
+    await pa.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+    check("hint: the overlay sits exactly on the board at 320px and 1920x1080, normal and full screen", coachFit.every(r => r.same && r.onSquare && r.bubble), coachFit);
+    const hint3 = await pa.ev(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), Z = arena.puz, out = {};
+      const btn = () => document.querySelector('#mainView button.eca-coach-hint');
+      btn().click(); await wait(80);
+      const want = Z.sol[Z.idx], svg = document.querySelector('#mainView .eca-coach-svg');
+      out.arrow = !!(svg && svg.querySelector('.eca-co-hint') && svg.querySelector('.eca-co-hint-head') && svg.querySelector('#ecaCoGrad'));
+      out.bubble = /خطوة 3|Step 3/.test((document.querySelector('#mainView .eca-coach-bubble') || {}).textContent || '');
+      out.done = btn().disabled && /تم عرض التلميح|Hint shown/.test(btn().textContent); out.mult3 = coachRewardMult(Z);
+      out.notPlayed = Z.status === 'play' && Z.idx === Z.coachAt;
+      out.noLeak = !document.getElementById('mainView').innerHTML.includes(want) && ![...document.querySelectorAll('#mainView *')].some(e => [...e.attributes].some(a => a.name.startsWith('data-') && a.value.includes(want)));
+      btn().click(); out.stillThree = Z.coachStage === 3;
+      puzPlay(want.length > 4 ? { from: want.slice(0, 2), to: want.slice(2, 4), promotion: want[4] } : { from: want.slice(0, 2), to: want.slice(2, 4) });
+      await wait(80); out.cleared = !document.querySelector('#mainView .eca-coach-svg, #mainView .eca-coach-bubble');
+      out.amounts = [[5, 0.9], [5, 0.75], [5, 0.5], [1, 0.5], [2, 0.75], [40, 0.9], [200, 0.5], [100, 0.75]].map(([b, m]) => ecaCoach.amount(b, m)).join();
+      return out; })()`);
+    check("hint: step 3 draws a green-to-gold arrow, the student still plays the move, reward x0.5, button done", hint3.arrow && hint3.bubble && hint3.done && hint3.mult3 === 0.5 && hint3.notPlayed && hint3.stillThree, hint3);
+    check("hint: the solution never appears in the page or in a data attribute", hint3.noLeak, hint3);
+    check("hint: a correct move clears the bubble and the overlay", hint3.cleared, hint3);
+    check("hint: rewards stay whole positive numbers (Math.max(1, Math.floor(...)))", hint3.amounts === "4,3,2,1,1,36,100,75", hint3.amounts);
+    const hintPay = await pa.ev(`(async () => { const day = todayISO();
+      for (const k of ['hardest', 'harder', 'normal', 'easier']) { const r = await window.fbEconomy({ op: 'earn', source: 'puzzle', key: k, day, mult: 0.75 }); if (r && r.ok && !r.duplicate) return { day, key: k }; }
+      return { day, key: '' }; })()`);
+    const hintRc = hintPay.key ? await read("users/" + A + "/economy/puzzle-" + hintPay.day + "-" + hintPay.key) : null;
+    const hintBase = { hardest: 5, harder: 4, normal: 3, easier: 2 }[hintPay.key];
+    check("hint: a hinted puzzle reward is saved cut down (x0.75) and the rules accept it", !!hintRc && hintRc.starsDelta - (hintRc.missionBonus ? 1 : 0) === Math.max(1, Math.floor(hintBase * 0.75)) && hintRc.xpDelta === Math.max(1, Math.floor(hintBase * 20 * 0.75)), { hintPay, hintRc });
+    const gate = await pa.ev(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+      for (const k of ['rush', 'duel', 'friend', 'speed', 'weekly']) { arenaSub(k); await wait(350); const m = ecaCoach.mode(); out[k] = !document.querySelector('#mainView .eca-coach-hint, #mainView button[onclick="puzHint()"]') && !ecaCoach.hintOk(m) && !ecaCoach.refuteOk(m); }
+      arenaSub('analysis'); await wait(500); out.analysis = !!document.querySelector('#mainView .eca-coach-hint') && ecaCoach.hintOk(ecaCoach.mode()) && !ecaCoach.refuteOk(ecaCoach.mode());
+      arenaSub('lobby'); return out; })()`);
+    check("hint: no coach help in 60s rush, duels, the speed arena or the weekly challenge; it is on the analysis board", Object.values(gate).every(Boolean), gate);
     const why = await pa.ev(`(() => {
       const fen = '6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1';
       return { same: careWhy(fen, { from: 'a1', to: 'a7' }, 'a1a8'), mate: careWhy(fen, { from: 'g1', to: 'f1' }, 'a1a8'), take: careWhy('6k1/5ppp/8/8/8/8/r4PPP/R5K1 w - - 0 1', { from: 'g1', to: 'f1' }, 'a1a2') };
@@ -929,7 +1051,7 @@ async function login(p, id) {
         const res = { sub, found: true, W, H, side: Math.round(bd.width), size: bs.width >= 44 && bs.height >= 44, on,
           fits: inView(bd), all64: sq.length === 64 && sq.every(inView), square: Math.abs(bd.width - bd.height) <= 1,
           centered: Math.abs(bd.left - (W - bd.right)) <= 2, noScroll: document.scrollingElement.scrollHeight <= H + 1 && mv.scrollHeight <= mv.clientHeight + 1 && mv.scrollTop === 0 && scrollY === 0,
-          docH: document.scrollingElement.scrollHeight, mvH: mv.scrollHeight + '/' + mv.clientHeight, bar: bar.height > 0 && bar.bottom <= bd.top + 1, big: bd.width >= Math.min(W - 32, H - 260) - 1, pressed: !!btn2 && btn2.getAttribute('aria-pressed') === 'true' };
+          docH: document.scrollingElement.scrollHeight, mvH: mv.scrollHeight + '/' + mv.clientHeight, bar: bar.height > 0 && bar.bottom <= bd.top + 1, big: bd.width >= Math.min(W - 32, H - 300) - 1, pressed: !!btn2 && btn2.getAttribute('aria-pressed') === 'true' };
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await wait(250);
         res.off = !mv.classList.contains('board-fullscreen-active') && !document.documentElement.classList.contains('eca-board-fs') && getComputedStyle(mv).position !== 'fixed';
         res.back = Math.abs(document.querySelector('#mainView .eca-board').getBoundingClientRect().width - r0) < 2;

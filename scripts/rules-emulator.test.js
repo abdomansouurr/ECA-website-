@@ -81,6 +81,10 @@ async function runSuite(label, rules, quiet) {
   await T("lesson: collected twice", false, fresh, async db => { await earn(db, "lesson", "1-0", 1); await econ(db, { kind: "earn", source: "lesson", key: "1-0", starsDelta: 1, xpDelta: 20, id: "lesson-1-0" }); });
   for (const k of Object.keys(STARS)) await T("puzzle " + k + " + mission bonus", true, legacy, db => econ(db, { kind: "earn", source: "puzzle", key: k, starsDelta: STARS[k] + 1, xpDelta: STARS[k] * 20, missionBonus: true, id: `puzzle-${today}-${k}` }));
   await T("puzzle: bonus claimed without mission update", false, legacy, db => earn(db, "puzzle", "daily", 2, { xpDelta: 20, missionBonus: false }));
+  // تلميحات الكوتش بتقلل الجايزة: أي عدد صحيح من 1 لحد الكاملة
+  await T("puzzle: reward lowered by coach hints (x0.75)", true, legacy, db => econ(db, { kind: "earn", source: "puzzle", key: "hardest", starsDelta: 3 + 1, xpDelta: 75, missionBonus: true, id: `puzzle-${today}-hardest` }));
+  await T("puzzle: hinted reward above the full amount", false, legacy, db => econ(db, { kind: "earn", source: "puzzle", key: "hardest", starsDelta: 6 + 1, xpDelta: 100, missionBonus: true, id: `puzzle-${today}-hardest` }));
+  await T("puzzle: hinted reward of zero xp", false, legacy, db => econ(db, { kind: "earn", source: "puzzle", key: "hardest", starsDelta: 1 + 1, xpDelta: 0, missionBonus: true, id: `puzzle-${today}-hardest` }));
   await T("bot 0 reward", true, fresh, db => earn(db, "bot", "0", 1));
   await T("bot 7 locked", false, rich, db => earn(db, "bot", "7", 8));
   await T("bot 7 owned", true, Object.assign({}, rich, { shop: { titles: [], bots: [7], hints: 0, activeTitle: "" } }), db => earn(db, "bot", "7", 8));
@@ -126,7 +130,8 @@ async function runSuite(label, rules, quiet) {
   await T("weekly event with forged stars", false, fresh, ev(satKey, 20));
   await T("weekly event keyed by a day that is not Saturday", false, fresh, ev(dayShift(satKey, 1)));
   await T("weekly event from an old week", false, fresh, ev(dayShift(satKey, -14)));
-  await T("weekly event for a future week", false, fresh, ev(dayShift(satKey, 7)));
+  // +14 not +7: on a Friday next Saturday is already inside the rule's one-day early window (Cairo time), so +7 failed every Friday
+  await T("weekly event for a future week", false, fresh, ev(dayShift(satKey, 14)));
   const withQl = (n, d = today) => Object.assign({}, legacy, { arena: Object.assign({}, legacy.arena, { ql: { d, k: "2-7", n } }) });
   await T("quest lesson puzzles after 10 solves", true, withQl(10), db => quest(db, "lesson", 5));
   await T("quest lesson puzzles after 9 solves", false, withQl(9), db => quest(db, "lesson", 5));
@@ -378,6 +383,8 @@ async function runSuite(label, rules, quiet) {
   await T("dojo: bonus for a solved puzzle", false, rich, db => dojoPay(db), vaultSeed(oldVault({ resolved: true })));
   await T("dojo: bonus with no mistake logged", false, rich, db => dojoPay(db));
   await T("dojo: forged bonus", false, rich, db => dojoPay(db, { starsDelta: 10, xpDelta: 200 }), vaultSeed(oldVault()));
+  await T("dojo: bonus lowered by coach hints (1 star, 20 xp)", true, rich, db => dojoPay(db, { starsDelta: 1, xpDelta: 20 }), vaultSeed(oldVault()));
+  await T("dojo: bonus of zero stars", false, rich, db => dojoPay(db, { starsDelta: 0, xpDelta: 20 }), vaultSeed(oldVault()));
   await T("dojo: bonus twice for one puzzle", false, rich, async db => { await dojoPay(db); await dojoPay(db, { dj: { d: today, n: 2 } }); }, vaultSeed(oldVault()));
   await T("dojo: sixth bonus in a day", false, Object.assign({}, rich, { arena: Object.assign({}, rich.arena, { dj: { d: today, n: 5 } }) }), db => dojoPay(db, { dj: { d: today, n: 6 } }), vaultSeed(oldVault()));
   await T("dojo: bonus without counting it", false, rich, db => econ(db, { kind: "earn", source: "dojo", key: "abc123", starsDelta: 2, xpDelta: 40, id: "dojo-abc123" }), vaultSeed(oldVault()));
@@ -530,6 +537,8 @@ async function runSuite(label, rules, quiet) {
   await T("boss: reward after defeating the boss", true, rich, db => bossPay(db), bossSeed({ solved: PZ, done: true, at: tsAgo(5000) }));
   await T("boss: reward while the boss is alive", false, rich, db => bossPay(db), bossSeed({ solved: ["p1aaa"], done: false, at: tsAgo(5000) }));
   await T("boss: forged reward", false, rich, db => bossPay(db, 50, 1000), bossSeed({ solved: PZ, done: true, at: tsAgo(5000) }));
+  await T("boss: reward lowered by coach hints (x0.5)", true, rich, db => bossPay(db, 5, 100), bossSeed({ solved: PZ, done: true, at: tsAgo(5000) }));
+  await T("boss: reward a little above the full amount", false, rich, db => bossPay(db, 11, 200), bossSeed({ solved: PZ, done: true, at: tsAgo(5000) }));
   await T("boss: reward twice", false, rich, async db => { await bossPay(db); await bossPay(db); }, bossSeed({ solved: PZ, done: true, at: tsAgo(5000) }));
   // live class drops: the coach sends, the student claims once
   const DRID = "dropAAAA1", dropRef = (db, who = uid, id = DRID) => db.collection("liveDrops").doc(who).collection("drops").doc(id);

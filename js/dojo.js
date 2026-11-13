@@ -52,7 +52,7 @@ reviewResult = async function (id, solved) {
     return dojoRefresh();
   }
   let result = null;
-  try { result = await window.fbEconomy({ op: "earn", source: "dojo", key: id, day: todayISO() }); }
+  try { result = await window.fbEconomy({ op: "earn", source: "dojo", key: id, day: todayISO(), mult: window.coachRewardMult ? coachRewardMult(arena.puz) : 1 }); }
   catch (e) { console.warn("Comeback bonus failed:", e && e.code); }
   try { await window.fbVaultResolve(id); } catch (e) { console.warn("Dojo resolve failed:", e && e.code); }
   if (result && result.ok && !result.duplicate) {
