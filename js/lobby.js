@@ -65,7 +65,7 @@ function lbCard(c) {
   return `<button type="button" onclick="${c.go}" class="nf-card ${c.accent || ""}${fx ? " game-card game-card-" + esc(c.fx) : ""}" aria-label="${esc(label)}">
       ${fx || `<span class="nf-card-art" aria-hidden="true">${c.icon}</span>`}
       ${c.badge ? `<span class="nf-tag-red">${esc(c.badge)}</span>` : ""}
-      <span class="nf-card-info"><b class="nf-card-title">${esc(c.title)}</b><span class="nf-card-tag${c.live ? " nf-live" : ""}"${c.id ? ` id="${c.id}"` : ""}>${esc(c.tag)}</span></span>
+      <span class="nf-card-info"><b class="nf-card-title">${esc(c.title)}</b><span class="nf-card-tag${c.live ? " nf-live" : ""}"${c.id ? ` id="${c.id}"` : ""}>${esc(c.tag)}</span>${c.sub ? `<span class="nf-card-sub">${c.sub}</span>` : ""}</span>
       ${c.prog != null ? `<span class="nf-bar" aria-hidden="true"><i style="width:${Math.round(Math.max(0, Math.min(1, c.prog)) * 100)}%"></i></span>` : ""}
     </button>`;
 }
@@ -99,7 +99,12 @@ const LB_MORE = { play: "bot", puzzles: "puzzle", vision: "vision", pawns: "pawn
 function lbRowsHTML(u) {
   const student = u.role === "student", st = lbStep(u), dj = student ? lbDojo(u) : { total: null, due: 0 }, boss = lbBoss();
   const mission = student && typeof lpDailyCount === "function" ? lpDailyCount(u) : 0, goal = typeof LP_GOAL !== "undefined" ? LP_GOAL : 10;
+  // لغز اليوم: مرة واحدة في اليوم، وبعد الحل الكارت بيقول اتحل ومعاه عدّاد للغز الجاي (daily.js بيحدّثه كل ثانية)
+  const dDone = student && window.ecaDailySolved ? ecaDailySolved(u) : false;
   const cont = [
+    student && { go: "lbOpen('daily')", accent: "nf-gold", fx: "daily", icon: "📅", title: LB("لغز اليوم", "Daily puzzle"), done: dDone,
+      tag: dDone ? LB("✅ تم حل لغز اليوم بنجاح", "✅ Today's puzzle solved") : LB("مرة في اليوم • +1 ⭐", "Once a day • +1 ⭐"),
+      sub: dDone && window.ecaDailyClock ? `⏳ ${esc(LB("اللغز القادم بعد", "Next puzzle in"))}: <b id="lbDailyClock" dir="ltr">${ecaDailyClock(ecaDailyLeftMs())}</b>` : "" },
     student && { go: "lbOpen('step')", accent: "nf-red", fx: "target", icon: "🎯", title: LB("مهمة الدرس", "Lesson mission"), tag: LB(`${Math.min(mission, goal)} من ${goal} • +5 ⭐`, `${Math.min(mission, goal)} of ${goal} • +5 ⭐`), prog: Math.min(1, mission / goal) },
     { go: "lbOpen('lessons')", accent: "nf-teal", fx: "map", icon: "🗺️", title: LB("مغامرة الدروس", "Lesson adventure"), tag: LB(`Step ${st.level} • على قد مستواك`, `Step ${st.level} • at your level`), prog: st.s.total ? st.s.attC / st.s.total : 0 },
     { go: "lbOpen('dojo')", accent: "nf-red", fx: "dojo", icon: "🥋", title: LB("دوجو الانتقام", "Dojo revenge"), tag: dj.due ? LB(`🔥 ${dj.due} جاهز • 2x`, `🔥 ${dj.due} ready • 2x`) : dj.total ? LB(`${dj.total} في الخزنة`, `${dj.total} in the vault`) : LB("الخزنة فاضية", "Vault is empty"), live: dj.due > 0 },
@@ -164,6 +169,7 @@ function lbOpen(key, id) {
   if (key === "boss") { arenaSub("boss"); if (id && window.ecaBossOpen) lbGo(() => ecaBossOpen(id)); return; }
   if (key === "dojo") { arenaSub("puzzles"); if (typeof reviewStart === "function") lbGo(() => reviewStart()); return; }
   if (key === "spin") return window.ecaSpinOpen ? ecaSpinOpen() : undefined;
+  if (key === "daily") return window.ecaDailyOpen ? ecaDailyOpen() : undefined;
   if (key === "honor") return switchTab("honor");
   if (String(key).startsWith("shop:")) return lbShop(String(key).slice(5));
   if (LB_MODES[key]) arenaSub(key);

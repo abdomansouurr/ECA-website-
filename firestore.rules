@@ -362,6 +362,11 @@ service cloud.firestore {
         && num(newA, 'stars') == num(oldA, 'stars') + r.starsDelta
         && num(newA, 'xp') == num(oldA, 'xp') + r.xpDelta
         && missionOk(r, oldA, newA)
+        // لغز اليوم: جايزته لازم تقفل اليوم (arena.lastDailyPuzzleSolvedDate) في نفس العملية، ومرفوضة لو اليوم متقفل خلاص.
+        // (الإيصال puzzle-{اليوم}-daily مرة واحدة هو اللي بيمنع جايزة تانية؛ القفل مش محمي في كل كتابة عشان ما يزودش عمليات
+        //  على كتابات المحاولات القريبة من حد الـ 1000، ولو الطالب عدّله بنفسه بيضر نفسه بس)
+        && (r.source != 'puzzle' || r.key != 'daily'
+          || (newA.get('lastDailyPuzzleSolvedDate', '') == r.day && oldA.get('lastDailyPuzzleSolvedDate', '') != r.day))
         && (r.source == 'coach' ? coachOk(r, oldA, newA) : oldA.get('cb', {}) == newA.get('cb', {}))
         && (r.source == 'arena' ? listGrantOk(oldA.get('tr', []), newA.get('tr', []), r.key + '|' + string(arenaRankOfStars(r.starsDelta))) : oldA.get('tr', []) == newA.get('tr', []))
         && (r.source == 'dojo' ? dojoCapOk(r, oldA, newA) : oldA.get('dj', {}) == newA.get('dj', {}))

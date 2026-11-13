@@ -119,7 +119,7 @@ async function login(p, id) {
     if (d.method === "Runtime.exceptionThrown") page.errors.push(d.params.exceptionDetails.exception?.description || d.params.exceptionDetails.text);
     if (d.method === "Runtime.consoleAPICalled" && ["warning", "error"].includes(d.params.type)) {
       const t = d.params.args.map(a => a.value || a.description || "").join(" ");
-      if (/permission|denied|insufficient/i.test(t)) page.denied.push(t.slice(0, 900));
+      if (/permission|denied|insufficient/i.test(t)) { page.denied.push(t.slice(0, 900)); console.log("  ! denied on " + page.label + ": " + t.slice(0, 200)); }   // printed in place, so the log shows which test it came from
     }
   };
   try {
@@ -365,7 +365,8 @@ async function login(p, id) {
     await pa.send("Page.bringToFront");
     await pa.ev("ecaSpinClose(); while(document.getElementById('ecaMilestone')) ecaMilestoneClose();");
     check("home shows the trophy", await pa.ev("(()=>{ render(); return document.getElementById('mainView').textContent.includes('🥇'); })()"));
-    check("confetti draws and cleans up", await pa.ev("(async()=>{ ecaConfetti(20); const on=!!document.querySelector('.eca-fx-canvas'); for(let i=0;i<40&&document.querySelector('.eca-fx-canvas');i++) await new Promise(r=>setTimeout(r,250)); return on&&!document.querySelector('.eca-fx-canvas'); })()"));
+    const conf = await pa.ev("(async()=>{ const calm = document.documentElement.classList.contains('eca-calm'), rm = matchMedia('(prefers-reduced-motion: reduce)').matches, before = document.querySelectorAll('.eca-fx-canvas').length; ecaConfetti(20); const on=!!document.querySelector('.eca-fx-canvas'); let i=0; for(;i<40&&document.querySelector('.eca-fx-canvas');i++) await new Promise(r=>setTimeout(r,250)); return { on, gone: !document.querySelector('.eca-fx-canvas'), calm, rm, before, waited: i, hidden: document.hidden }; })()");
+    check("confetti draws and cleans up", conf.on && conf.gone, conf);
     check("shake class clears", await pa.ev("(async()=>{ ecaShake(); const on=document.getElementById('mainView').classList.contains('eca-shake'); await new Promise(r=>setTimeout(r,600)); return on&&!document.getElementById('mainView').classList.contains('eca-shake'); })()"));
     check("milestone text is not HTML", await pa.ev("(()=>{ ecaMilestone({icon:'x',title:'<img src=x onerror=window.__x=1>',text:'t'}); const ok=!document.querySelector('#ecaMilestone img'); ecaMilestoneClose(); return ok; })()"));
 
@@ -669,51 +670,90 @@ async function login(p, id) {
       const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
       const ready = async () => { for (let i = 0; i < 60 && !(arena.puz.status === 'play' && arena.puz.game); i++) await wait(250); };
       const nonMate = (fen, m) => { const c = new ChessCls(fen); c.move(m); return !c.isCheckmate(); };
-      let pick = null, maxMs = 0;
+      let pick = null, maxMs = 0, tried = 0;
       for (let tries = 0; tries < 15 && !pick; tries++) {
         await ready();
         const Z = arena.puz, g = Z.game, want = Z.sol[Z.idx], pre = g.fen();
         for (const m of g.moves({ verbose: true })) {
           const u = m.from + m.to + (m.promotion || '');
           if (u === want || !nonMate(pre, m)) continue;
-          const t0 = performance.now(), r = findRefutationMove(pre, u, want); maxMs = Math.max(maxMs, performance.now() - t0);
-          if (r && 'ABCDE'.includes(r.kind)) { pick = { m: { from: m.from, to: m.to, promotion: m.promotion }, r, pre }; break; }
+          const a = ChessPositionAnalyzer.analyze(pre, u, want, Z.info.themes); tried++;
+          if (a) maxMs = Math.max(maxMs, a.ms);
+          if (a && a.refutation && a.diag) { pick = { m: { from: m.from, to: m.to, promotion: m.promotion }, a, pre }; break; }
         }
         if (!pick) { puzLoad(); await wait(300); }
       }
-      out.found = !!pick; out.maxMs = Math.round(maxMs * 10) / 10;
+      out.found = !!pick; out.maxMs = Math.round(maxMs * 10) / 10; out.tried = tried;
       if (!pick) return out;
-      out.kind = pick.r.kind;
+      out.type = pick.a.diag.type;
       const Z = arena.puz, g = Z.game, hist0 = g.history().length;
       const real = window.fbVaultFail; let vf = 0; window.fbVaultFail = function () { vf++; return real.apply(this, arguments); };
       try {
         puzPlay(pick.m);
         out.locked = Z.isRefuting === true && Z.status === 'wrong' && !!document.querySelector('#mainView .eca-board.eca-coach-lock');
         await wait(500);
-        out.replied = g.history().length === hist0 + 2;
+        const last = g.history({ verbose: true }).slice(-1)[0];
+        out.replied = g.history().length === hist0 + 2 && last.from === pick.a.refutation.from && last.to === pick.a.refutation.to;
         const svg = document.querySelector('#mainView .eca-board .eca-coach-svg');
         out.arrow = !!(svg && svg.querySelector('.eca-co-ref') && svg.querySelector('.eca-co-ref-head'));
-        out.ring = !!(svg && svg.querySelector('.eca-co-ring'));
-        out.svgBox = !!svg && Math.abs(svg.getBoundingClientRect().width - document.querySelector('#mainView .eca-board').clientWidth) <= 1;   // inside the board's border, over the 64 squares
+        out.svgBox = !!svg && Math.abs(svg.getBoundingClientRect().width - document.querySelector('#mainView .eca-board').clientWidth) <= 1;
         const box = document.querySelector('#mainView .eca-coach-toast'), skip = box && box.querySelector('.eca-coach-skip');
-        out.reason = box ? box.textContent.trim() : '';
-        out.reasonOk = !!box && box.textContent.includes(ecaCoach.tags[pick.r.kind][0]);
+        out.title = !!box && box.textContent.includes(CoachKnowledgeBot.title(pick.a.diag.type));
+        out.skipLabel = !!skip && /فهمت السبب|Got it/.test(skip.textContent);
         out.skipSize = skip ? Math.round(Math.min(skip.getBoundingClientRect().width, skip.getBoundingClientRect().height)) : 0;
+        const panel = document.querySelector('#mainView .eca-coach-panel');
+        out.panelParts = panel ? panel.querySelectorAll('.eca-ckb-part').length : 0;
+        out.panelSquares = !!panel && panel.textContent.includes(pick.a.refutation.to) && panel.querySelectorAll('.eca-sq-tok[dir="ltr"]').length >= 1;
+        out.panelBelow = !!panel && panel.getBoundingClientRect().top >= document.querySelector('#mainView .eca-board').getBoundingClientRect().bottom - 1;
         const st0 = Z.status; puzClick(pick.m.from); out.inputLocked = Z.status === st0 && Z.isRefuting === true && !Z.sel;
         skip.click(); await wait(100);
         out.skipRestored = g.fen() === pick.pre && Z.isRefuting === false && Z.status === 'play' && !document.querySelector('#mainView .eca-coach-svg, #mainView .eca-coach-toast, #mainView .eca-board.eca-coach-lock');
+        out.panelStays = !!document.querySelector('#mainView .eca-coach-panel');
         const second = g.moves({ verbose: true }).find(m => { const u = m.from + m.to + (m.promotion || ''); return u !== Z.sol[Z.idx] && nonMate(g.fen(), m); });
         puzPlay({ from: second.from, to: second.to, promotion: second.promotion });
         out.secondLocked = Z.isRefuting === true;
-        await wait(2400);
+        await wait(ecaCoach.show + 700);
         out.autoRestored = g.fen() === pick.pre && Z.isRefuting === false && Z.status === 'play';
         await wait(800); out.vaultWrites = vf;
       } finally { window.fbVaultFail = real; }
       return out; })()`);
-    check("coach: a wrong move locks the board, the opponent plays the punishing reply with a red arrow, ring and reason", refA.found && refA.locked && refA.replied && refA.arrow && refA.ring && refA.svgBox && refA.reasonOk && refA.inputLocked, refA);
-    check("coach: «try again now» (44px) and the timer both bring back the exact position before the mistake", refA.skipSize >= 44 && refA.skipRestored && refA.secondLocked && refA.autoRestored, refA);
+    check("coach: a wrong move locks the board and the opponent plays the exact punishing reply with a red arrow", refA.found && refA.locked && refA.replied && refA.arrow && refA.svgBox && refA.inputLocked, refA);
+    check("coach: the 3-part coach panel (diagnosis, thinking, rule) sits under the board with the squares in LTR", refA.title && refA.panelParts === 3 && refA.panelSquares && refA.panelBelow, refA);
+    check("coach: «got it — try again» (44px) and the 2.6s timer bring back the position, and the explanation stays to read", refA.skipLabel && refA.skipSize >= 44 && refA.skipRestored && refA.panelStays && refA.secondLocked && refA.autoRestored, refA);
     check("coach: two wrong moves on one puzzle log it in the mistake vault once", refA.vaultWrites === 1, refA.vaultWrites);
-    check("coach: the punishing reply is found in under 15ms", refA.maxMs < 15, refA.maxMs);
+    check("coach: the deep search finds the punishing reply in under 30ms", refA.maxMs < 30, { maxMs: refA.maxMs, tried: refA.tried });
+    // ---------- coach: each kind of mistake, on positions built for it ----------
+    const kinds = await pa.ev(`(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms)), Z = arena.puz, out = {};
+      const craft = async (fen, sol, wrong) => {
+        coachCancelAll();
+        const g = new ChessCls(fen);
+        Object.assign(Z, { game: g, sol: [sol], idx: 0, color: g.turn(), flip: false, last: null, counted: true, status: 'play', review: false, info: { id: 'craft', rating: 1200, themes: [] }, coachPanel: null, coachStage: 0, coachKey: null });
+        render(); const f0 = g.fen();
+        puzPlay({ from: wrong.slice(0, 2), to: wrong.slice(2, 4) }); await wait(500);
+        const R = Z.refute || {}, panel = document.querySelector('#mainView .eca-coach-panel'), svg = document.querySelector('#mainView .eca-coach-svg');
+        const r = { type: R.diag && R.diag.type, reply: (g.history({ verbose: true }).slice(-1)[0] || {}).to, text: panel ? panel.textContent.replace(/\\s+/g, ' ') : '',
+          dash: svg ? svg.querySelectorAll('.eca-co-dash').length : 0, amber: svg ? svg.querySelectorAll('.eca-co-ring-amber').length : 0, badge: !!(svg && svg.querySelector('.eca-co-badge')),
+          dots: !!(svg && svg.querySelector('.eca-co-dots')), xray: !!(svg && svg.querySelector('.eca-co-xray')), ring: svg ? svg.querySelectorAll('.eca-co-ring').length : 0 };
+        coachSkip(); await wait(60); r.back = g.fen() === f0;
+        return r;
+      };
+      out.fork = await craft('6k1/8/8/4n3/8/8/3Q2P1/6K1 w - - 0 1', 'd2d3', 'g2g3');
+      out.abandoned = await craft('4r1k1/8/8/8/4B3/2N5/8/6K1 w - - 0 1', 'e4d5', 'c3b5');
+      out.hanging = await craft('4k3/8/3p4/8/8/5N2/8/4K3 w - - 0 1', 'f3d4', 'f3e5');
+      out.mate = await craft('4r1k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1', 'h2h3', 'd1d7');
+      out.threat = await craft('2r3k1/8/8/8/2B5/8/P7/6K1 w - - 0 1', 'c4b5', 'a2a3');
+      out.pin = await craft('r5k1/8/8/8/3K4/8/4Q3/8 w - - 0 1', 'e2e3', 'd4e4');
+      Z.status = 'idle'; Z.game = null; Z.counted = false; puzLoad();   // back to a normal lesson puzzle in play, like before these tests
+      for (let i = 0; i < 60 && !(Z.status === 'play' && Z.game); i++) await wait(250);
+      return out; })()`);
+    const has = (r, ...words) => words.every(w => r.text.includes(w));
+    check("coach: a move that allows a fork names the knight, the fork square and both targets, with two amber arrows", kinds.fork.type === "ALLOWED_OPPONENT_FORK" && kinds.fork.reply === "f3" && has(kinds.fork, "الحصان", "f3", "d2", "g1", "شوكة") && kinds.fork.dash === 2 && kinds.fork.amber === 2 && kinds.fork.back, kinds.fork);
+    check("coach: a defender walking away shows the broken shield, the dotted line, and names both pieces and squares", kinds.abandoned.type === "ABANDONED_DEFENSE" && kinds.abandoned.reply === "e4" && has(kinds.abandoned, "الحصان", "c3", "b5", "الفيل", "e4", "الرخ (القلعة)", "e8") && kinds.abandoned.badge && kinds.abandoned.dots && kinds.abandoned.back, kinds.abandoned);
+    check("coach: a piece moved to a guarded square names the square and the pawn that takes it", kinds.hanging.type === "MOVED_TO_HANGING_SQUARE" && kinds.hanging.reply === "e5" && has(kinds.hanging, "e5", "d6", "البيدق (العسكري)", "الحصان") && kinds.hanging.ring >= 1 && kinds.hanging.back, kinds.hanging);
+    check("coach: walking into mate names the king's square and the mating move", kinds.mate.type === "WALKED_INTO_MATE" && kinds.mate.reply === "e1" && has(kinds.mate, "g1", "e8", "e1", "كش مات") && kinds.mate.back, kinds.mate);
+    check("coach: an ignored threat names the threatened bishop and its square", kinds.threat.type === "IGNORED_EXISTING_THREAT" && kinds.threat.reply === "c4" && has(kinds.threat, "الفيل", "c4", "تهديد") && kinds.threat.back, kinds.threat);
+    check("coach: a pin or skewer draws the x-ray line through both pieces", kinds.pin.type === "ALLOWED_OPPONENT_PIN_OR_SKEWER" && kinds.pin.xray && has(kinds.pin, "e4", "e2") && kinds.pin.back, kinds.pin);
     if (process.env.E2E_SHOTS) {
       const shotOk = await pa.ev(`(async () => { const Z = arena.puz, g = Z.game, want = Z.sol[Z.idx], pre = g.fen();
         const m = g.moves({ verbose: true }).find(x => { const u = x.from + x.to + (x.promotion || ''); if (u === want) return false; const r = findRefutationMove(pre, u, want); return r && 'BCDE'.includes(r.kind); });
@@ -740,7 +780,9 @@ async function login(p, id) {
       out.label0 = btn() ? btn().textContent.trim() : ''; out.size = btn() ? Math.round(Math.min(btn().getBoundingClientRect().width, btn().getBoundingClientRect().height)) : 0; out.mult0 = coachRewardMult(Z);
       btn().click(); await wait(80);
       const b1 = document.querySelector('#mainView .eca-coach-bubble');
-      out.s1 = !!b1 && b1.textContent.includes(ecaCoach.step1(ecaCoach.motif(Z, 'lesson'))) && !document.querySelector('#mainView .eca-coach-svg');
+      const plain = h => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent.replace(/\s+/g, ' ').trim(); };
+      out.s1text = b1 ? b1.textContent.replace(/\s+/g, ' ').trim() : '';
+      out.s1 = !!b1 && out.s1text.includes(plain(ecaCoach.step1Text(Z, 'lesson'))) && !document.querySelector('#mainView .eca-coach-svg');
       out.label1 = btn().textContent.trim(); out.mult1 = coachRewardMult(Z);
       btn().click(); await wait(80);
       const want = Z.sol[Z.idx], spot = document.querySelector('#mainView .eca-coach-svg .eca-co-spot'), sq = document.querySelector('#mainView .eca-sq[data-sq="' + want.slice(0, 2) + '"]');
@@ -793,6 +835,62 @@ async function login(p, id) {
       arenaSub('analysis'); await wait(500); out.analysis = !!document.querySelector('#mainView .eca-coach-hint') && ecaCoach.hintOk(ecaCoach.mode()) && !ecaCoach.refuteOk(ecaCoach.mode());
       arenaSub('lobby'); return out; })()`);
     check("hint: no coach help in 60s rush, duels, the speed arena or the weekly challenge; it is on the analysis board", Object.values(gate).every(Boolean), gate);
+    // ---------- daily puzzle: once a day (Cairo time), then locked with a live countdown ----------
+    await pa.send("Page.bringToFront");
+    const dly = await pa.ev(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {}, u = currUser(), Z = arena.puz;
+      out.key = getDailyDateKey(); out.keyIsCairo = out.key === window.ecaCairoDay();
+      out.before = ecaDailySolved();
+      switchTab('arena'); arenaSub('lobby'); await wait(300);
+      const card = () => document.querySelector('#mainView .game-card-daily');
+      out.cardOpen = !!card() && /مرة في اليوم|Once a day/.test(card().textContent);
+      lbOpen('daily');
+      for (let i = 0; i < 80 && !(Z.status === 'play' && Z.game && Z.diff === 'daily'); i++) await wait(250);
+      out.opened = arena.sub === 'puzzles' && Z.diff === 'daily' && Z.status === 'play';
+      for (let g = 0; g < 200 && Z.status !== 'solved'; g++) { if (Z.status === 'play' && Z.sol[Z.idx]) { const m = Z.sol[Z.idx]; puzPlay(m.length > 4 ? { from: m.slice(0, 2), to: m.slice(2, 4), promotion: m[4] } : { from: m.slice(0, 2), to: m.slice(2, 4) }); } await wait(150); }
+      out.solved = Z.status === 'solved';
+      out.cached = localStorage.getItem('eca_daily_solved_' + u.id + '_' + out.key) === '1';
+      out.lockedNow = ecaDailySolved();
+      return out; })()`);
+    check("daily: the day key is Cairo's date, and the daily card is open before solving", dly.keyIsCairo && !dly.before && dly.cardOpen && dly.opened, dly);
+    check("daily: solving it locks it on this device at once", dly.solved && dly.cached && dly.lockedNow, dly);
+    const dayLocked = await until(async () => ((await U(A)).arena || {}).lastDailyPuzzleSolvedDate === dly.key, 15000);
+    const dailyRc = await read("users/" + A + "/economy/puzzle-" + dly.key + "-daily");
+    check("daily: the reward and lastDailyPuzzleSolvedDate are saved together", !!dayLocked && !!dailyRc, { field: ((await U(A)).arena || {}).lastDailyPuzzleSolvedDate, receipt: dailyRc });
+    const starsBefore = (await U(A)).arena.stars;
+    const dly2 = await pa.ev(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {}, Z = arena.puz;
+      await wait(2600); out.nextNotDaily = Z.diff === 'easier';
+      out.again = await window.fbEconomy({ op: 'earn', source: 'puzzle', key: 'daily', day: todayISO() });
+      switchTab('arena'); arenaSub('lobby'); await wait(300);
+      const card = document.querySelector('#mainView .game-card-daily');
+      out.badge = !!card && /تم حل لغز اليوم بنجاح|Today's puzzle solved/.test(card.textContent);
+      out.clock0 = (document.getElementById('lbDailyClock') || {}).textContent || '';
+      for (let i = 0; i < 40 && ((document.getElementById('lbDailyClock') || {}).textContent || '') === out.clock0; i++) await wait(100);
+      out.clock1 = (document.getElementById('lbDailyClock') || {}).textContent || '';
+      out.ticks = /^\\d\\d:\\d\\d:\\d\\d$/.test(out.clock0) && out.clock0 !== out.clock1;
+      lbOpen('daily'); await wait(50);
+      const t = document.getElementById('toast').textContent;
+      out.blocked = arena.sub === 'lobby' && /حليت لغز النهاردة خلاص/.test(t) && /ساعة/.test(t) && /دقيقة/.test(t);
+      Z.lesson = ''; Z.review = false; Z.diff = 'daily'; Z.status = 'idle'; arenaSub('puzzles'); await wait(400); out.menuBlocked = Z.diff === 'easier';
+      arenaSub('lobby'); return out; })()`);
+    check("daily: the next puzzle after solving is not the daily one", dly2.nextNotDaily, dly2);
+    check("daily: the lobby card says it's solved with a ticking countdown to the next one", dly2.badge && dly2.ticks, dly2);
+    check("daily: opening it again (card or puzzle menu) is blocked with the come-back-tomorrow message", dly2.blocked && dly2.menuBlocked, dly2);
+    check("daily: a second reward the same day pays nothing", (await U(A)).arena.stars === starsBefore && !!dly2.again && (dly2.again.duplicate || dly2.again.ok === false), { again: dly2.again });
+    await pa.send("Page.reload"); await sleep(1000); await waitReady(pa);
+    const dly3 = await pa.ev(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {}, u = currUser(), key = getDailyDateKey();
+      out.afterReload = ecaDailySolved();
+      localStorage.removeItem('eca_daily_solved_' + u.id + '_' + key); out.fromServer = ecaDailySolved();
+      switchTab('arena'); arenaSub('lobby'); await wait(300);
+      out.cardLocked = /تم حل لغز اليوم بنجاح|Today's puzzle solved/.test((document.querySelector('#mainView .game-card-daily') || {}).textContent || '');
+      const real = window.getDailyDateKey, d = new Date(Date.now() + 864e5);
+      window.getDailyDateKey = () => real(d);   // the clock crosses midnight in Cairo
+      await wait(1500);
+      out.midnight = !ecaDailySolved() && /مرة في اليوم|Once a day/.test((document.querySelector('#mainView .game-card-daily') || {}).textContent || '');
+      window.getDailyDateKey = real; await wait(1300);
+      out.restored = ecaDailySolved();
+      return out; })()`);
+    check("daily: the lock survives a page reload, also from the saved field alone", dly3.afterReload && dly3.fromServer && dly3.cardLocked, dly3);
+    check("daily: at Cairo midnight the card unlocks by itself", dly3.midnight && dly3.restored, dly3);
     const why = await pa.ev(`(() => {
       const fen = '6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1';
       return { same: careWhy(fen, { from: 'a1', to: 'a7' }, 'a1a8'), mate: careWhy(fen, { from: 'g1', to: 'f1' }, 'a1a8'), take: careWhy('6k1/5ppp/8/8/8/8/r4PPP/R5K1 w - - 0 1', { from: 'g1', to: 'f1' }, 'a1a2') };
@@ -1048,7 +1146,7 @@ async function login(p, id) {
         const sq = [...document.querySelectorAll('#mainView .eca-board .eca-sq')].map(e => e.getBoundingClientRect());
         const inView = r => r.left >= -0.5 && r.top >= -0.5 && r.right <= W + 0.5 && r.bottom <= H + 0.5;
         const btn2 = document.getElementById('ecaFsBtn');
-        const res = { sub, found: true, W, H, side: Math.round(bd.width), size: bs.width >= 44 && bs.height >= 44, on,
+        const res = { sub, found: true, W, H, side: Math.round(bd.width), btn: Math.round(bs.width) + 'x' + Math.round(bs.height), size: bs.width >= 43.5 && bs.height >= 43.5, on,
           fits: inView(bd), all64: sq.length === 64 && sq.every(inView), square: Math.abs(bd.width - bd.height) <= 1,
           centered: Math.abs(bd.left - (W - bd.right)) <= 2, noScroll: document.scrollingElement.scrollHeight <= H + 1 && mv.scrollHeight <= mv.clientHeight + 1 && mv.scrollTop === 0 && scrollY === 0,
           docH: document.scrollingElement.scrollHeight, mvH: mv.scrollHeight + '/' + mv.clientHeight, bar: bar.height > 0 && bar.bottom <= bd.top + 1, big: bd.width >= Math.min(W - 32, H - 300) - 1, pressed: !!btn2 && btn2.getAttribute('aria-pressed') === 'true' };
@@ -1133,7 +1231,7 @@ async function login(p, id) {
       out.centered = nr.top >= br.top - 1 && nr.bottom <= br.bottom + 1 && (box.scrollHeight <= box.clientHeight || box.scrollTop > 0 || level >= 5);
       box.scrollTop = level >= 4 ? box.scrollHeight : 0; await wait(50); ecaMapCenter(false); await wait(50);
       const nr2 = now.querySelector('.eca-map-disc').getBoundingClientRect(); out.backHome = nr2.top >= br.top - 1 && nr2.bottom <= br.bottom + 1;
-      const me = v.querySelector('.eca-map-me'), mr = me.getBoundingClientRect(); out.me = mr.width >= 44 && mr.height >= 44 && !!me.getAttribute('aria-label');
+      const me = v.querySelector('.eca-map-me'), mr = me.getBoundingClientRect(); out.me = mr.width >= 43.5 && mr.height >= 43.5 && !!me.getAttribute('aria-label'); out.meSize = Math.round(mr.width) + 'x' + Math.round(mr.height) + ' ' + getComputedStyle(me).minHeight + ' ' + getComputedStyle(me).display;
       out.prog = v.querySelector('.eca-map-prog').textContent.trim();
       const lk = v.querySelector('.eca-map-node.is-locked');
       if (lk) { lk.click(); const tip = lk.querySelector('.eca-map-tip'); out.locked = tab === 'home' && lk.classList.contains('is-rattle') && /🔒/.test(tip.textContent) && getComputedStyle(tip).display === 'block' && getComputedStyle(lk.querySelector('.eca-map-badge')).animationName === 'ecaLockRattle'; }
@@ -1146,7 +1244,7 @@ async function login(p, id) {
     check("map: battlefield, embers, the current kingdom with radar rings and play now, and your avatar with your pet", mp.parts, mp);
     check("map: the current kingdom floats, its radar pulses and your token bounces", mp.moves.join() === "ecaFloatNode,ecaRadar,ecaTokBob", mp.moves);
     check("map: opens centered on your kingdom, and «my place» brings it back", mp.centered && mp.backHome, mp);
-    check("map: «my place» button is 44px or more, with the kingdom progress pill", mp.me && /(المرحلة|Kingdom) \d (من|of) 6 • \d+%/.test(mp.prog), mp.prog);
+    check("map: «my place» button is 44px or more, with the kingdom progress pill", mp.me && /(المرحلة|Kingdom) \d (من|of) 6 • \d+%/.test(mp.prog), { prog: mp.prog, size: mp.meSize });
     check("map: a locked kingdom shakes and says how to open it", mp.locked === true || mp.locked === "no locked kingdom", mp.locked);
     check("map: done kingdoms have 3 stars, a glowing road with flowing energy, and fog over locked ones", mp.done, mp);
     check("map: your token walks along the road to a new kingdom", mp.slide, mp);

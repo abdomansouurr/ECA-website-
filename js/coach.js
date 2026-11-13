@@ -8,7 +8,7 @@
 const CCL = (ar, en) => lang === "en" ? en : ar;
 const COACH_VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 const COACH_MULT = [1, 0.9, 0.75, 0.5];
-const COACH_PAUSE = 250, COACH_SHOW = 1650, COACH_FALLBACK = 1100;
+const COACH_PAUSE = 250, COACH_SHOW = 2600, COACH_FALLBACK = 1100;
 const COACH_TAGS = {
   A: ["⚠️ الخصم عنده رد محضّر على النقلة دي!", "⚠️ Your opponent has a prepared answer to this move!"],
   B: ["⚠️ النقلة دي بتسمح بكش مات في نقلة واحدة!", "⚠️ This move allows mate in one!"],
@@ -118,16 +118,23 @@ function coachSfx(kind) {
 }
 function coachStartRefute(S, mode, pre, r, want, onDone, last0) {
   coachClear();
-  const ref = findRefutationMove(pre, coachUci(r), want, S.refutations || (S.pz && S.pz.refutations));
-  S.isRefuting = true;
-  S.refute = { mode, game: S.game, pre, last0, wrong: r.to, ref, kind: ref ? ref.kind : "F", onDone, shown: false };
+  const wrong = coachUci(r), themes = (S.info && S.info.themes) || (S.pz && S.pz.themes) || [], explicit = S.refutations || (S.pz && S.pz.refutations);
+  // محرك البحث (analyzer.js) هو الأساس: الرد الدقيق + سبب الغلطة. ولو مش متاح، الطريقة السريعة القديمة
+  let ref = null, diag = null;
+  const an = window.ChessPositionAnalyzer ? ChessPositionAnalyzer.analyze(pre, wrong, want, themes, explicit) : null;
+  if (an && an.diag) { diag = an.diag; if (an.refutation) ref = { from: an.refutation.from, to: an.refutation.to, promotion: an.refutation.promotion || "", target: an.refutation.to, kind: diag.type }; }
+  else ref = findRefutationMove(pre, wrong, want, explicit);
+  S.isRefuting = true; S.coachPanel = null;
+  S.refute = { mode, game: S.game, pre, last0, wrong: r.to, ref, diag, themes, kind: diag ? diag.type : ref ? ref.kind : "F", onDone, shown: false };
   coachTimers.push(setTimeout(() => {
     const R = S.refute;
     if (!R || R.game !== S.game) return;
-    if (R.ref) { const m = coachTry(S.game, coachUci(R.ref)); if (m) S.last = [m.from, m.to]; else R.ref = null; }
+    if (R.ref) { const m = coachTry(S.game, coachUci(R.ref)); if (m) S.last = [m.from, m.to]; else { R.ref = null; if (R.diag) R.diag = Object.assign({}, R.diag, { vectors: [] }); } }
     R.shown = true; coachSfx("warn");
+    // الشرح بيفضل ظاهر بعد ما الرقعة ترجع، لحد ما الطالب يلعب نقلته الجاية
+    if (R.diag) S.coachPanel = { game: S.game, idx: S.idx, html: coachBotPanel(R.diag, R.pre, R.themes) };
     if (typeof arenaRefresh === "function") arenaRefresh();
-    coachTimers.push(setTimeout(() => coachRestore(S), R.ref ? COACH_SHOW : COACH_FALLBACK));
+    coachTimers.push(setTimeout(() => coachRestore(S), R.ref || R.diag ? COACH_SHOW : COACH_FALLBACK));
   }, COACH_PAUSE));
 }
 function coachRestore(S, quiet) {
@@ -135,6 +142,7 @@ function coachRestore(S, quiet) {
   const R = S && S.refute;
   if (!R) return;
   S.refute = null; S.isRefuting = false;
+  if (quiet) S.coachPanel = null;
   if (R.game === S.game && S.game) {
     const g = S.game;
     for (let i = 0; i < 3 && g.fen() !== R.pre; i++) if (!g.undo()) break;
@@ -150,6 +158,83 @@ function coachCancelAll() { if (typeof arena === "undefined") return; [arena.puz
 window.coachSkip = coachSkip;
 window.coachCancelAll = coachCancelAll;
 window.findRefutationMove = findRefutationMove;
+function coachPanelClose() { const m = coachMode(); if (m && coachState(m)) { coachState(m).coachPanel = null; if (typeof arenaRefresh === "function") arenaRefresh(); } }
+window.coachPanelClose = coachPanelClose;
+
+// ================= البوت التعليمي (CoachKnowledgeBot): الغلطة بالقطع والمربعات بالعربي =================
+const CKB_PIECE = { p: ["البيدق (العسكري)", "pawn"], n: ["الحصان", "knight"], b: ["الفيل", "bishop"], r: ["الرخ (القلعة)", "rook"], q: ["الوزير", "queen"], k: ["الملك", "king"] };
+const ckbP = t => { const x = CKB_PIECE[t]; return `<b>${x ? CCL(x[0], "the " + x[1]) : CCL("قطعة", "a piece")}</b>`; };
+// المربعات بتفضل LTR جوه الجملة العربي
+const ckbS = s => `<bdi dir="ltr" class="eca-sq-tok">${esc(String(s || ""))}</bdi>`;
+const CKB_TITLE = {
+  WALKED_INTO_MATE: ["⚠️ النقلة دي بتسمح بكش مات!", "⚠️ This move allows checkmate!"],
+  MOVED_TO_HANGING_SQUARE: ["⚠️ قطعتك راحت مربع مش محمي!", "⚠️ Your piece went to an unprotected square!"],
+  ABANDONED_DEFENSE: ["⚠️ شلت الحماية عن قطعة عندك!", "⚠️ You took away a defender!"],
+  OPENED_LINE_OR_BROKEN_PIN: ["⚠️ نقلتك فتحت خط للخصم!", "⚠️ Your move opened a line for the opponent!"],
+  ALLOWED_OPPONENT_FORK: ["⚠️ نقلتك سمحت بشوكة!", "⚠️ Your move allowed a fork!"],
+  ALLOWED_OPPONENT_PIN_OR_SKEWER: ["⚠️ نقلتك سمحت بربط أو سيخ!", "⚠️ Your move allowed a pin or skewer!"],
+  IGNORED_EXISTING_THREAT: ["⚠️ تجاهلت تهديد الخصم!", "⚠️ You ignored your opponent's threat!"],
+  MISSED_TACTICAL_WIN: ["⚠️ فكر تاني! في نقلة أقوى بكتير", "⚠️ Think again! There's a much stronger move"]
+};
+function ckbMotif(themes) {
+  for (const t of themes || []) if (typeof LP_NAMES !== "undefined" && LP_NAMES[t]) return LP_NAMES[t][lang === "en" ? 1 : 0];
+  return CCL("تكتيكي", "a tactic");
+}
+function coachBotDiagnosis(d) {
+  const P = ckbP, S = ckbS, sp = P(d.studentPiece), op = P(d.opponentPiece);
+  switch (d.type) {
+    case "WALKED_INTO_MATE": return CCL(`نقلة ${sp} من ${S(d.wrongFrom)} لـ ${S(d.wrongTo)} سابت ملكك في ${S(d.kingSq)} مكشوف، والخصم عنده ${d.mateIn > 1 ? "كش مات في نقلتين" : "كش مات في نقلة واحدة"} بيبدأ بـ ${op} من ${S(d.refFrom)} لـ ${S(d.refTo)}!`,
+      `Moving ${sp} from ${S(d.wrongFrom)} to ${S(d.wrongTo)} left your king on ${S(d.kingSq)} exposed: the opponent has mate in ${d.mateIn || 1} starting with ${op} from ${S(d.refFrom)} to ${S(d.refTo)}!`);
+    case "MOVED_TO_HANGING_SQUARE": return CCL(`مربع ${S(d.wrongTo)} مراقب بـ ${op} الخصم الموجود في ${S(d.refFrom)}! كده أنت قدمت ${sp} هدية بدون حماية.`,
+      `Square ${S(d.wrongTo)} is watched by the opponent's ${op} on ${S(d.refFrom)}! You gave away ${sp} for free.`);
+    case "ABANDONED_DEFENSE": return CCL(`تحريك ${sp} من مربع ${S(d.wrongFrom)} لمربع ${S(d.wrongTo)} رفع الحماية عن ${P(d.targetPiece)} في مربع ${S(d.targetSq)}، وده سمح لـ ${op} الخصم من ${S(d.refFrom)} إنه ياكله مجاناً!`,
+      `Moving ${sp} from ${S(d.wrongFrom)} to ${S(d.wrongTo)} took away the protection of ${P(d.targetPiece)} on ${S(d.targetSq)}, so the opponent's ${op} on ${S(d.refFrom)} takes it for free!`);
+    case "OPENED_LINE_OR_BROKEN_PIN": return CCL(`تحريك ${sp} من ${S(d.throughSq || d.wrongFrom)} فتح الخط قدام ${op} الخصم في ${S(d.attackerSq || d.refFrom)}، فبقى يوصل لـ ${P(d.targetPiece)} في ${S(d.refTo)}!`,
+      `Moving ${sp} off ${S(d.throughSq || d.wrongFrom)} opened the line for the opponent's ${op} on ${S(d.attackerSq || d.refFrom)}, which now reaches ${P(d.targetPiece)} on ${S(d.refTo)}!`);
+    case "ALLOWED_OPPONENT_FORK": { const [a, b] = d.forkTargets || [];
+      return CCL(`نقلتك سمحت لـ ${op} الخصم ينزل في مربع ${S(d.refTo)} ويعمل <b>شوكة مزدوجة (Fork)</b> بيهاجم فيها ${P(a && a.type)} (${S(a && a.sq)}) و ${P(b && b.type)} (${S(b && b.sq)}) في نفس الوقت!`,
+        `Your move let the opponent's ${op} land on ${S(d.refTo)} with a <b>fork</b>, attacking ${P(a && a.type)} (${S(a && a.sq)}) and ${P(b && b.type)} (${S(b && b.sq)}) at once!`); }
+    case "ALLOWED_OPPONENT_PIN_OR_SKEWER": return CCL(`نقلتك سمحت لـ ${op} الخصم يروح ${S(d.refTo)}: ${P(d.pinnedPiece)} في ${S(d.pinnedSq)} و${P(d.behindPiece)} في ${S(d.behindSq)} بقوا على نفس الخط قدامه (<b>ربط أو سيخ</b>)!`,
+      `Your move let the opponent's ${op} go to ${S(d.refTo)}: ${P(d.pinnedPiece)} on ${S(d.pinnedSq)} and ${P(d.behindPiece)} on ${S(d.behindSq)} are on the same line in front of it (<b>pin or skewer</b>)!`);
+    case "IGNORED_EXISTING_THREAT": return CCL(`انتبه لتهديد الخصم! الخصم كان بيهدد ${P(d.threatPiece)} في ${S(d.threatSq || d.refTo)} بنقلة ${op} إلى ${S(d.refTo)}، ونقلتك مدافعتش عن التهديد ده.`,
+      `Watch your opponent's threat! They were threatening ${P(d.threatPiece)} on ${S(d.threatSq || d.refTo)} with ${op} to ${S(d.refTo)}, and your move didn't deal with it.`);
+    default: return CCL(`نقلتك آمنة ومش بتخسر قطعة، لكنها بطيئة وبتفوت عليك فرصة حسم الموقف بتكتيك <b>${esc(ckbMotif(d.themes))}</b>!`,
+      `Your move is safe and loses nothing, but it's slow and misses the winning <b>${esc(ckbMotif(d.themes))}</b>!`);
+  }
+}
+// تفكير الكوتش: من قراءة الموقف قبل النقلة (قطع الخصم السايبة، قطع على نفس الخط، مربعات هروب الملك، الكشوش المتاحة)
+function coachBotThinking(preFen) {
+  const f = window.ChessPositionAnalyzer ? ChessPositionAnalyzer.features(preFen) : null, bits = [];
+  if (f && f.loose.length) bits.push(CCL("قطع الخصم اللي مش محمية: ", "Undefended enemy pieces: ") + f.loose.slice(0, 2).map(x => `${ckbP(x.type)} ${CCL("في", "on")} ${ckbS(x.sq)}`).join(CCL(" و", " and ")));
+  if (f && f.aligned) bits.push(`${ckbP(f.aligned.a.type)} ${CCL("في", "on")} ${ckbS(f.aligned.a.sq)} ${CCL("و", "and")} ${ckbP(f.aligned.b.type)} ${CCL("في", "on")} ${ckbS(f.aligned.b.sq)} ${CCL("على نفس الخط", "on the same line")}`);
+  if (f && f.escapes <= 1) bits.push(CCL(`ملك الخصم في ${ckbS(f.kingSq)} ${f.escapes ? "عنده مربع هروب واحد بس" : "مالوش ولا مربع هروب"}`, `the enemy king on ${ckbS(f.kingSq)} has ${f.escapes ? "only one escape square" : "no escape square"}`));
+  if (f && f.checks) bits.push(CCL(`عندك ${f.checks} ${f.checks === 1 ? "كش متاح" : "كشوش متاحة"}`, `you have ${f.checks} check${f.checks === 1 ? "" : "s"} available`));
+  return bits.length ? CCL("قبل نقلتك كان في الموقف: ", "Before your move the position had: ") + bits.join(CCL("، ", "; ")) + CCL(". دي الحاجات اللي المفروض تبدأ بيها.", ". That's where to start looking.")
+    : CCL("اسأل نفسك قبل كل نقلة: إيه اللي اتغيّر بعد نقلة الخصم؟ إيه المهدد عندي؟ وإيه أقوى نقلة إجبارية عندي؟", "Before every move ask: what changed after the opponent's move? What of mine is attacked? What is my strongest forcing move?");
+}
+const CKB_RULE = {
+  WALKED_INTO_MATE: ["قبل أي نقلة اعمل «فحص الأمان»: الخصم عنده كش؟ عنده مات؟ وسيب لملكك مربع هروب.", "Before every move do a safety check: does the opponent have a check or a mate? Give your king an escape square."],
+  MOVED_TO_HANGING_SQUARE: ["قبل ما تحط قطعة في مربع اسأل: مين بيهاجم المربع ده ومين بيحميه؟ لو المهاجمين أكتر أو أرخص، متروحش.", "Before putting a piece on a square ask: who attacks it and who defends it? If the attackers are more or cheaper, don't go."],
+  ABANDONED_DEFENSE: ["كل قطعة عندك ليها شغلانة. قبل ما تحركها اسأل: هي بتحمي مين؟ ولو مشيت، مين هيحميه؟", "Every piece has a job. Before moving it ask: what is it defending, and who defends that once it leaves?"],
+  OPENED_LINE_OR_BROKEN_PIN: ["قبل ما تحرك قطعة واقفة على خط فيه فيل أو رخ أو وزير للخصم، شوف إيه اللي هيبان وراها.", "Before moving a piece that stands on a line with an enemy bishop, rook or queen, look at what's behind it."],
+  ALLOWED_OPPONENT_FORK: ["خلي بالك من مربعات الشوكة: قطعتين غاليين (أو الملك وقطعة) على مسافة نقلة واحدة من حصان أو وزير الخصم = خطر.", "Watch fork squares: two valuable pieces (or king and a piece) one move away from an enemy knight or queen means danger."],
+  ALLOWED_OPPONENT_PIN_OR_SKEWER: ["متحطش الملك أو الوزير على نفس خط فيل أو رخ الخصم، حتى لو في قطعة في النص.", "Don't line up your king or queen with an enemy bishop or rook, even with a piece in between."],
+  IGNORED_EXISTING_THREAT: ["منهج الخطوات: أول سؤال دايماً «الخصم بيهدد إيه؟» — رد على التهديد الأول: احمي، اهرب، اسد، أو كُل المهاجم.", "Step method: the first question is always «what does my opponent threaten?» — answer it: defend, move, block or take the attacker."],
+  MISSED_TACTICAL_WIN: ["دور الأول على النقلات الإجبارية بالترتيب: كش ← أكل ← تهديد.", "Look at forcing moves first, in order: checks, captures, threats."]
+};
+function coachBotRule(d) {
+  const r = CKB_RULE[d.type] || CKB_RULE.MISSED_TACTICAL_WIN;
+  return CCL(r[0], r[1]) + (d.type === "MISSED_TACTICAL_WIN" ? CCL(` فكرة الموقف ده: <b>${esc(ckbMotif(d.themes))}</b>.`, ` This position's idea: <b>${esc(ckbMotif(d.themes))}</b>.`) : "");
+}
+function coachBotPanel(d, preFen) {
+  return `<section class="eca-coach-panel eca-fs-keep" aria-label="${CCL("شرح الكوتش", "Coach explanation")}">
+    <header><b>🧑‍🏫 ${CCL("الكوتش بيشرحلك", "Your coach explains")}</b><button type="button" onclick="coachPanelClose()" class="tap eca-coach-x" title="${CCL("اقفل الشرح", "Close")}" aria-label="${CCL("اقفل الشرح", "Close")}">✕</button></header>
+    <div class="eca-ckb-part" data-part="1"><h4>1. ${CCL("تشخيص النقلة (ليه نقلتك خطأ؟)", "Diagnosis (why was your move wrong?)")}</h4><p>${coachBotDiagnosis(d)}</p></div>
+    <div class="eca-ckb-part" data-part="2"><h4>2. ${CCL("تفكير الكوتش (إزاي تقرأ الموقف صح؟)", "Coach's thinking (how to read the position)")}</h4><p>${coachBotThinking(preFen)}</p></div>
+    <div class="eca-ckb-part" data-part="3"><h4>3. ${CCL("نصيحة منهج الخطوات", "Step method rule")}</h4><p>${coachBotRule(d)}</p></div>
+  </section>`;
+}
+window.CoachKnowledgeBot = { diagnosis: coachBotDiagnosis, thinking: coachBotThinking, rule: coachBotRule, panel: coachBotPanel, title: t => CCL(...(CKB_TITLE[t] || CKB_TITLE.MISSED_TACTICAL_WIN)), piece: ckbP };
 
 // النقلة دي غلط؟ (على نسخة من الرقعة، من غير ما نلمس الدور نفسه) — نفس شرط arena.js: النقلة المطلوبة أو كش مات
 function coachIsWrong(S, mv) {
@@ -166,6 +251,7 @@ function coachIsWrong(S, mv) {
   const _pp = puzPlay;
   puzPlay = function (mv) {
     const Z = arena.puz, m = coachMode();
+    if (Z.status === "play") Z.coachPanel = null;   // نقلة جديدة: شرح الغلطة اللي فاتت بيقفل
     if (Z.status === "play" && coachRefuteOk(m) && coachIsWrong(Z, mv)) {
       const g = Z.game, pre = g.fen(), want = Z.sol[Z.idx], last0 = Z.last;
       const r = g.move(mv);
@@ -182,6 +268,7 @@ function coachIsWrong(S, mv) {
   const _bm = bossMove;
   bossMove = async function (mv) {
     const B = arena.boss;
+    if (B.status === "play") B.coachPanel = null;
     if (B.status === "play" && B.game && !B.busy && coachIsWrong(B, mv)) {
       const g = B.game, pre = g.fen(), want = B.sol[B.idx], last0 = B.last;
       const r = g.move(mv);
@@ -214,6 +301,15 @@ function coachMotif(S, m) {
   for (const t of ((S.info && S.info.themes) || (S.pz && S.pz.themes) || [])) if (COACH_MOTIF[t]) return COACH_MOTIF[t];
   return "default";
 }
+// خطوة 1 بتقرا الموقف الحقيقي (analyzer.js): قطع الخصم على نفس الخط، القطع السايبة، مربعات هروب الملك. ولو مفيش حاجة واضحة، سؤال الفكرة
+function coachStep1Text(S, m) {
+  const f = window.ChessPositionAnalyzer && S && S.game ? ChessPositionAnalyzer.features(S.game.fen()) : null, bits = [];
+  if (f && f.aligned) bits.push(`${ckbP(f.aligned.a.type)} ${CCL("في", "on")} ${ckbS(f.aligned.a.sq)} ${CCL("و", "and")} ${ckbP(f.aligned.b.type)} ${CCL("في", "on")} ${ckbS(f.aligned.b.sq)} ${CCL("على نفس الخط", "are on the same line")}`);
+  if (f && f.loose.length) bits.push(CCL(`في قطعة غير محمية في ${ckbS(f.loose[0].sq)}`, `there is an undefended piece on ${ckbS(f.loose[0].sq)}`));
+  if (f && f.escapes === 0 && coachMotif(S, m) === "mate") bits.push(CCL(`ملك الخصم في ${ckbS(f.kingSq)} مالوش مربع هروب`, `the enemy king on ${ckbS(f.kingSq)} has no escape square`));
+  if (!bits.length) return CCL(...COACH_STEP1[coachMotif(S, m)]);
+  return CCL("💡 بص على موقف الخصم: ", "💡 Look at your opponent's position: ") + bits.join(CCL("، و", ", and ")) + CCL(".. إزاي نستغل ده؟", ". How can we use that?");
+}
 function coachHintLabel(st) {
   return st >= 3 ? CCL("💡 تم عرض التلميح", "💡 Hint shown") : st === 2 ? CCL("💡 مسار التكتيك (1)", "💡 Tactic path (1)")
     : st === 1 ? CCL("💡 تلميح القطعة (2)", "💡 Piece hint (2)") : CCL("💡 مساعدة الكوتش (3)", "💡 Coach help (3)");
@@ -227,7 +323,7 @@ function coachHint(m) {
   const key = coachKey(S, m);
   if (S.coachKey !== key) { S.coachKey = key; S.coachStage = 0; }
   if (S.coachStage >= 3) return;
-  S.coachStage++; S.coachAt = m === "analysis" ? key : S.idx; S.sel = null;
+  S.coachStage++; S.coachAt = m === "analysis" ? key : S.idx; S.sel = null; S.coachPanel = null;
   if (m === "boss") { S.coachWorst = S.coachWorst || {}; S.coachWorst[S.aid] = Math.max(S.coachWorst[S.aid] || 0, S.coachStage); }
   coachSfx("hint");
   if (typeof arenaRefresh === "function") arenaRefresh();
@@ -276,25 +372,38 @@ function coachPaint() {
     const btn = mv.querySelector('button[onclick="puzHint()"]');
     if (btn) { btn.classList.add("eca-coach-hint"); if (coachStage(S, m) >= 3 || S.isRefuting) btn.disabled = true; btn.innerHTML = coachHintLabel(coachStage(S, m)); }
   }
-  let svg = "", above = "";
+  let svg = "", above = "", below = "";
   const R = S.refute;
   if (R) {
     board.classList.add("eca-coach-lock");
     if (R.shown) {
-      const tag = COACH_TAGS[R.ref ? R.kind : "F"];
+      const title = R.diag ? CCL(...(CKB_TITLE[R.diag.type] || CKB_TITLE.MISSED_TACTICAL_WIN)) : CCL(...COACH_TAGS[R.ref ? R.kind : "F"]);
       if (R.ref) {
-        const a = coachSq(board, R.ref.from), b = coachSq(board, R.ref.to), t = coachSq(board, R.ref.target);
+        const a = coachSq(board, R.ref.from), b = coachSq(board, R.ref.to);
         if (a && b) svg += coachArrow(a, b, "eca-co-ref", "#E50914");
-        if (t) svg += `<circle class="eca-co-ring" cx="${t[0]}" cy="${t[1]}" r="44" />`;
+        if (!R.diag) { const t = coachSq(board, R.ref.target); if (t) svg += `<circle class="eca-co-ring" cx="${t[0]}" cy="${t[1]}" r="44" />`; }
       } else { const t = coachSq(board, R.wrong); if (t) svg += `<rect class="eca-co-bad" x="${t[0] - 50}" y="${t[1] - 50}" width="100" height="100" />`; }
-      above += `<div class="eca-coach-toast eca-fs-keep" role="status"><b>${CCL(tag[0], tag[1])}</b>${R.ref ? `<button type="button" onclick="coachSkip()" class="tap eca-coach-skip">${CCL("🔄 جرب تاني الآن", "🔄 Try again now")}</button>` : ""}</div>`;
+      // الأسهم التانية من تشخيص الغلطة: الشوكة، الحماية اللي اتشالت، خط الأشعة، دواير الخطر
+      ((R.diag && R.diag.vectors) || []).forEach(v => {
+        const a = coachSq(board, v.from || v.sq), b = v.to ? coachSq(board, v.to) : null;
+        if (!a) return;
+        if (v.kind === "ring") svg += `<circle class="eca-co-ring${v.tone === "amber" ? " eca-co-ring-amber" : ""}" cx="${a[0]}" cy="${a[1]}" r="44" />`;
+        else if (v.kind === "dash" && b) svg += coachArrow(a, b, "eca-co-dash", "#F5C518");
+        else if (v.kind === "dots" && b) svg += `<line class="eca-co-dots" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" />`;
+        else if (v.kind === "xray" && b) svg += `<line class="eca-co-xray" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" />`;
+        else if (v.kind === "badge") svg += `<g class="eca-co-badge"><circle cx="${a[0] + 28}" cy="${a[1] - 28}" r="24" /><text x="${a[0] + 28}" y="${a[1] - 20}" text-anchor="middle">${esc(v.text || "")}</text></g>`;
+      });
+      above += `<div class="eca-coach-toast eca-fs-keep" role="status"><b>${title}</b>${R.ref || R.diag ? `<button type="button" onclick="coachSkip()" class="tap eca-coach-skip">${CCL("🔄 فهمت السبب — جرب تاني", "🔄 Got it — try again")}</button>` : ""}</div>`;
     }
-  } else {
+  }
+  const P = S.coachPanel;
+  if (P && P.game === S.game && P.idx === S.idx) below = P.html;
+  if (!R) {
     const st = coachStage(S, m), here = m === "analysis" ? S.coachAt === coachKey(S, m) : S.coachAt === S.idx;
     const want = coachWant(S, m), live = m === "analysis" || S.status === "play";
     if (st && here && want && live) {
       const a = coachSq(board, want.slice(0, 2)), b = coachSq(board, want.slice(2, 4));
-      const text = st === 1 ? CCL(...COACH_STEP1[coachMotif(S, m)])
+      const text = st === 1 ? coachStep1Text(S, m)
         : st === 2 ? CCL("🎯 خطوة 2: القطعة المتحددة بالدهبي هي البطل هنا.. فكر إيه أقوى مربع تروح له!", "🎯 Step 2: The piece circled in gold is the hero here. Which square is strongest for it?")
         : CCL("✨ خطوة 3: نفّذ النقلة المشار إليها بالسهم وركّز ليه النقلة دي بتكسب!", "✨ Step 3: Play the move the arrow shows, and think about why it wins!");
       above += `<div class="eca-coach-bubble eca-fs-keep" role="status"><span aria-hidden="true">🧑‍🏫</span><p>${text}</p></div>`;
@@ -304,11 +413,12 @@ function coachPaint() {
   }
   if (svg) board.insertAdjacentHTML("beforeend", `<svg class="eca-coach-svg" viewBox="0 0 800 800" preserveAspectRatio="none" aria-hidden="true">${svg}</svg>`);
   if (above) board.insertAdjacentHTML("beforebegin", above);
+  if (below) board.insertAdjacentHTML("afterend", below);
 }
 {
   const _r = render;
   render = function () { const out = _r.apply(this, arguments); try { coachPaint(); } catch (e) { console.warn("Coach overlay:", e); } return out; };
 }
 window.ecaCoach = { mode: coachMode, hintOk: coachHintOk, refuteOk: coachRefuteOk, state: coachState, stage: coachStage, want: coachWant, motif: coachMotif,
-  step1: k => CCL(...COACH_STEP1[k] || COACH_STEP1.default), mult: COACH_MULT, amount: coachAmount, tags: COACH_TAGS,
+  step1: k => CCL(...COACH_STEP1[k] || COACH_STEP1.default), step1Text: coachStep1Text, mult: COACH_MULT, amount: coachAmount, tags: COACH_TAGS, show: COACH_SHOW,
   isRefuting: () => { const m = coachMode(); return !!(m && coachState(m) && coachState(m).isRefuting); } };

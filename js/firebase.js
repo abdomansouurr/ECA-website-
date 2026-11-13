@@ -694,6 +694,7 @@
         source = String(request.source || ""); key = String(request.key || ""); day = String(request.day || "");
         if (source === "login" || source === "spin" || source === "golden" || source === "combo") { day = cairoDayKey(); key = day; }
         if (source === "boss" || source === "drop") day = cairoDayKey();
+        if (source === "puzzle" && key === "daily") day = cairoDayKey();   // لغز اليوم بيقفل لنص الليل بتوقيت القاهرة
         if (!dayOk(day)) return { ok: false };
         if (source === "lesson" && /^[1-6]-[0-9]{1,2}$/.test(key)) id = "lesson-" + key;
         else if (source === "puzzle" && ["daily","easiest","easier","normal","harder","hardest"].includes(key)) id = "puzzle-" + day + "-" + key;
@@ -843,6 +844,11 @@
         arena.stars = oldStars + starsDelta;
         arena.xp = (Number(arena.xp) || 0) + xpDelta;
         const fix = selfFieldsFix(profile);
+        // لغز اليوم: الجايزة بتقفل اليوم في نفس العملية (القواعد بترفض الجايزة من غيره أو لو اليوم متقفل)
+        if (op === "earn" && source === "puzzle" && key === "daily") {
+          if (arena.lastDailyPuzzleSolvedDate === day) return { ok: false, code: "daily-locked" };
+          arena.lastDailyPuzzleSolvedDate = day;
+        }
         tx.update(userRef, Object.assign({ arena, shop: nextShop, lastEconomy: id }, fix));
         tx.set(receiptRef, Object.assign({
           uid, kind: receiptKind, source, key, day, item, score, starsDelta, xpDelta, missionBonus, at: serverTimestamp()

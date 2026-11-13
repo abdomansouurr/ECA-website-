@@ -23,6 +23,7 @@ async function econ(db, r, change) {
     const p = (await tx.get(ur)).data(); await tx.get(rr);
     const arena = Object.assign({}, p.arena || {}), shop = Object.assign({ titles: [], bots: [], hints: 0, activeTitle: "" }, p.shop || {});
     arena.stars = (Number(arena.stars) || 0) + r.starsDelta; arena.xp = (Number(arena.xp) || 0) + r.xpDelta;
+    if (r.source === "puzzle" && r.key === "daily" && !r.noDailyLock) arena.lastDailyPuzzleSolvedDate = today;   // the daily puzzle locks its day in the same write
     if (r.missionBonus) { arena.missionDate = today; arena.missionDone = true; }
     const next = change ? change(shop, arena) || shop : shop;
     tx.update(ur, { arena, shop: next, lastEconomy: r.id });
@@ -84,6 +85,16 @@ async function runSuite(label, rules, quiet) {
   // تلميحات الكوتش بتقلل الجايزة: أي عدد صحيح من 1 لحد الكاملة
   await T("puzzle: reward lowered by coach hints (x0.75)", true, legacy, db => econ(db, { kind: "earn", source: "puzzle", key: "hardest", starsDelta: 3 + 1, xpDelta: 75, missionBonus: true, id: `puzzle-${today}-hardest` }));
   await T("puzzle: hinted reward above the full amount", false, legacy, db => econ(db, { kind: "earn", source: "puzzle", key: "hardest", starsDelta: 6 + 1, xpDelta: 100, missionBonus: true, id: `puzzle-${today}-hardest` }));
+  await T("daily puzzle: reward without locking the day", false, legacy, db => econ(db, { kind: "earn", source: "puzzle", key: "daily", starsDelta: 2, xpDelta: 20, missionBonus: true, id: `puzzle-${today}-daily`, noDailyLock: true }));
+  await T("daily puzzle: reward when today is already locked", false, Object.assign({}, legacy, { arena: Object.assign({}, legacy.arena, { lastDailyPuzzleSolvedDate: today }) }), db => econ(db, { kind: "earn", source: "puzzle", key: "daily", starsDelta: 2, xpDelta: 20, missionBonus: true, id: `puzzle-${today}-daily` }));
+  await T("daily puzzle: paid, then the lock cleared by hand", true, legacy, async db => {
+    await econ(db, { kind: "earn", source: "puzzle", key: "daily", starsDelta: 2, xpDelta: 20, missionBonus: true, id: `puzzle-${today}-daily` });
+    const u = (await db.collection("users").doc(uid).get()).data();
+    await patch(db, { arena: Object.assign({}, u.arena, { lastDailyPuzzleSolvedDate: "" }) });
+  });
+  await T("daily puzzle: clearing the lock does not pay the day twice", false, Object.assign({}, legacy, { arena: Object.assign({}, legacy.arena, { stars: 9, xp: 20, missionDate: today, missionDone: true, lastDailyPuzzleSolvedDate: "" }) }),
+    db => econ(db, { kind: "earn", source: "puzzle", key: "daily", starsDelta: 1, xpDelta: 20, missionBonus: false, id: `puzzle-${today}-daily` }),
+    s => s.collection("users").doc(uid).collection("economy").doc(`puzzle-${today}-daily`).set({ uid, kind: "earn", source: "puzzle", key: "daily", day: today, item: "", score: 0, starsDelta: 2, xpDelta: 20, missionBonus: true, at: ts() }));
   await T("puzzle: hinted reward of zero xp", false, legacy, db => econ(db, { kind: "earn", source: "puzzle", key: "hardest", starsDelta: 1 + 1, xpDelta: 0, missionBonus: true, id: `puzzle-${today}-hardest` }));
   await T("bot 0 reward", true, fresh, db => earn(db, "bot", "0", 1));
   await T("bot 7 locked", false, rich, db => earn(db, "bot", "7", 8));

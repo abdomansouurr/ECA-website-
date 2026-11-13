@@ -9,6 +9,7 @@ const GameCardAnimator = (() => {
   const sword = (cls, blade, edge) => `<svg class="gc-sword ${cls}" viewBox="0 0 20 80"><polygon points="10,0 14,8 14,56 6,56 6,8" fill="${blade}" stroke="${edge}" stroke-width="1.5" /><rect x="0" y="55" width="20" height="5" rx="2" fill="#F5C518" /><rect x="8" y="60" width="4" height="14" fill="#5b3a1a" /><circle cx="10" cy="77" r="3" fill="#F5C518" /></svg>`;
   // كل لعبة ليها بطل ثابت (B) ومؤثرات (C) خاصة بيها، ومفيش لعبتين بنفس الحركة
   const HERO = {
+    daily: `<span class="gc-cal"><i class="gc-cal-top"></i><b>♞</b></span><span class="gc-dsun">☀️</span>`,
     target: `<span class="gc-target">🎯</span>`,
     map: `<svg class="gc-trail" viewBox="0 0 100 100" preserveAspectRatio="none"><path class="gc-trail-base" d="M8 92 C 40 92, 10 52, 46 50 S 70 14, 86 16" pathLength="100" /><path class="gc-trail-gold" d="M8 92 C 40 92, 10 52, 46 50 S 70 14, 86 16" pathLength="100" /></svg><span class="gc-castle">🏰</span><svg class="gc-compass" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="#111827" stroke="#F5C518" stroke-width="2" /><polygon class="gc-needle" points="20,5 23.5,20 20,35 16.5,20" fill="#E50914" /><circle cx="20" cy="20" r="2.5" fill="#F5C518" /></svg>`,
     dojo: `<span class="gc-belt">🥋</span><span class="gc-lock">🔒</span>`,
@@ -34,6 +35,7 @@ const GameCardAnimator = (() => {
     analysis: `<span class="gc-mini"></span><span class="gc-an gc-an-n">♞</span><span class="gc-an gc-an-b">♝</span>`
   };
   const FX = {
+    daily: stage(`<i class="gc-page"></i>${ring("gc-dray", 3, 0.3)}`),
     target: stage(`<i class="gc-arrow"></i>${ring("gc-ripple", 3, 0.25)}`),
     map: stage(`<i class="gc-beacon"></i><i class="gc-beacon gc-beacon2"></i>`),
     dojo: `<i class="gc-slash"></i>` + stage(`<i class="gc-wave"></i><i class="gc-wave gc-wave2"></i>${dots("gc-frag", [[-18, 46, 0], [-6, 54, 0.15], [8, 50, 0.3], [18, 44, 0.45], [0, 58, 0.6]])}`),

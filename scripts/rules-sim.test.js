@@ -90,6 +90,20 @@ T('exam start again (attempt exists)', false, { old: base, neu: started, before:
   T('puzzle reward with a fractional amount', false, pay(2.5, 50));
 }
 {
+  // daily puzzle: the reward locks the day (lastDailyPuzzleSolvedDate) in the same write, once a day
+  const old = C(base); old.arena.stars = 0; old.arena.xp = 0; old.arena.missionDate = today; old.arena.missionDone = true;
+  const pay = (o, lock) => { const neu = C(o); neu.arena.stars = o.arena.stars + 1; neu.arena.xp = o.arena.xp + 20; neu.lastEconomy = `puzzle-${today}-daily`; if (lock !== undefined) neu.arena.lastDailyPuzzleSolvedDate = lock;
+    return { old: o, neu, after: { ['econ:' + neu.lastEconomy]: { uid, kind: 'earn', source: 'puzzle', key: 'daily', day: today, item: '', score: 0, starsDelta: 1, xpDelta: 20, missionBonus: false, at: now } } }; };
+  T('daily puzzle reward locks the day', true, pay(old, today));
+  T('daily puzzle reward without locking the day', false, pay(old));
+  const locked = C(old); locked.arena.lastDailyPuzzleSolvedDate = today;
+  T('daily puzzle reward when the day is already locked', false, pay(locked, today));
+  // clearing the lock by hand does not open a second reward: the day's receipt already exists
+  const cleared = C(old); cleared.arena.lastDailyPuzzleSolvedDate = '';
+  const twice = pay(cleared, today); twice.before = { ['econ:' + twice.neu.lastEconomy]: twice.after['econ:' + twice.neu.lastEconomy] };
+  T('daily puzzle reward twice after clearing the lock', false, twice);
+}
+{
   const old = C(base); old.arena.stars = 100; old.arena.xp = 0;
   const neu = C(old); neu.arena.stars = 50; neu.shop = { titles: ['title-tactics'], bots: [], hints: 0, activeTitle: '' };
   neu.lastEconomy = 'buy-title-tactics-abcd1234';
