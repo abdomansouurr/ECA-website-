@@ -13,23 +13,64 @@
   const sqName = s => FILES[s & 7] + (8 - (s >> 4));
   const sqIdx = n => (8 - Number(n[1])) * 16 + FILES.indexOf(n[0]);
   const ok = s => !(s & 0x88);
+  // التبييت: علامة في النقلة (بت 17)، وحقوق التبييت 1=K 2=Q 4=k 8=q. أي حركة من/لـ مربعات الملك والرخ بتشيل الحق بتاعها
+  const CASTLE = 1 << 17;
+  const CR_MASK = new Uint8Array(128).fill(15);
+  CR_MASK[116] = 12; CR_MASK[119] = 14; CR_MASK[112] = 13; CR_MASK[4] = 3; CR_MASK[7] = 11; CR_MASK[0] = 7;
+  // مرحلة الدور (للملك: وسط اللعب ← النهاية): حصان/فيل 1، رخ 2، وزير 4 — 24 = كل القطع
+  const PH = [0, 0, 1, 1, 2, 4, 0];
+  // مفاتيح Zobrist (رقمين 32 بت) من مولّد ثابت: نفس الموقف = نفس المفتاح في الصفحة والـ Worker والاختبارات
+  let zs = 0x2545F491;
+  const zr = () => { zs ^= zs << 13; zs ^= zs >>> 17; zs ^= zs << 5; return zs | 0; };
+  const ZL = new Int32Array(16 * 128), ZH = new Int32Array(16 * 128);
+  for (let i = 0; i < ZL.length; i++) { ZL[i] = zr(); ZH[i] = zr(); }
+  const ZSL = zr(), ZSH = zr(), ZCRL = new Int32Array(16), ZCRH = new Int32Array(16), ZEPL = new Int32Array(8), ZEPH = new Int32Array(8);
+  for (let i = 0; i < 16; i++) { ZCRL[i] = zr(); ZCRH[i] = zr(); }
+  for (let i = 0; i < 8; i++) { ZEPL[i] = zr(); ZEPH[i] = zr(); }
+  // جداول مواقع القطع (Simplified Evaluation Function) من ناحية الأبيض، الصف 8 الأول
+  const PST_SRC = [null,
+    [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10, 5,5,10,25,25,10,5,5, 0,0,0,20,20,0,0,0, 5,-5,-10,0,0,-10,-5,5, 5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
+    [-50,-40,-30,-30,-30,-30,-40,-50, -40,-20,0,0,0,0,-20,-40, -30,0,10,15,15,10,0,-30, -30,5,15,20,20,15,5,-30, -30,0,15,20,20,15,0,-30, -30,5,10,15,15,10,5,-30, -40,-20,0,5,5,0,-20,-40, -50,-40,-30,-30,-30,-30,-40,-50],
+    [-20,-10,-10,-10,-10,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,10,10,5,0,-10, -10,5,5,10,10,5,5,-10, -10,0,10,10,10,10,0,-10, -10,10,10,10,10,10,10,-10, -10,5,0,0,0,0,5,-10, -20,-10,-10,-10,-10,-10,-10,-20],
+    [0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, 0,0,0,5,5,0,0,0],
+    [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,5,5,5,0,-10, -5,0,5,5,5,5,0,-5, 0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10, -10,0,5,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20]];
+  const KMG = [-30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -20,-30,-30,-40,-40,-30,-30,-20, -10,-20,-20,-20,-20,-20,-20,-10, 20,20,0,0,0,0,20,20, 20,30,10,0,0,10,30,20];
+  const KEG = [-50,-40,-30,-20,-20,-30,-40,-50, -30,-20,-10,0,0,-10,-20,-30, -30,-10,20,30,30,20,-10,-30, -30,-10,30,40,40,30,-10,-30, -30,-10,30,40,40,30,-10,-30, -30,-10,20,30,30,20,-10,-30, -30,-30,0,0,0,0,-30,-30, -50,-30,-30,-30,-30,-30,-30,-50];
+  // PSQ[قطعة*128+مربع]: موجب للأبيض وسالب للأسود (الملك بيتحسب لوحده حسب المرحلة)
+  const PSQ = new Int16Array(16 * 128);
+  for (let p = 1; p < 16; p++) {
+    const t = p & 7; if (t < 1 || t > 5) continue;
+    for (let s = 0; s < 128; s++) { if (s & 0x88) continue; const row = s >> 4, col = s & 7, v = PST_SRC[t][(p & 8 ? 7 - row : row) * 8 + col]; PSQ[p * 128 + s] = p & 8 ? -v : v; }
+  }
 
   // ================= اللوح =================
   function parse(fen) {
-    const [rows, side, , ep] = String(fen).split(" ");
+    const [rows, side, cast, ep] = String(fen).split(" ");
     const b = new Int8Array(128), k = [-1, -1];
-    let r = 0, c = 0, mat = 0;
+    let r = 0, c = 0, mat = 0, pst = 0, ph = 0;
     for (const ch of rows) {
       if (ch === "/") { r++; c = 0; continue; }
       if (ch >= "1" && ch <= "8") { c += Number(ch); continue; }
       const t = CODE[ch.toLowerCase()], col = ch === ch.toUpperCase() ? 0 : 8, s = r * 16 + c;
       if (!t || r > 7 || c > 7) throw new Error("bad fen");
       b[s] = t | col; if (t === 6) k[col ? 1 : 0] = s;
-      if (t !== 6) mat += col ? -VAL[t] : VAL[t];
+      if (t !== 6) { mat += col ? -VAL[t] : VAL[t]; pst += PSQ[(t | col) * 128 + s]; ph += PH[t]; }
       c++;
     }
     if (k[0] < 0 || k[1] < 0) throw new Error("no king");
-    return { b, turn: side === "b" ? 8 : 0, ep: ep && ep !== "-" ? sqIdx(ep) : -1, k, mat, st: [] };
+    // حقوق التبييت: بس لو الملك والرخ في أماكنهم فعلاً
+    let cr = 0; const cs = cast || "-";
+    if (cs.includes("K") && b[116] === 6 && b[119] === 4) cr |= 1;
+    if (cs.includes("Q") && b[116] === 6 && b[112] === 4) cr |= 2;
+    if (cs.includes("k") && b[4] === 14 && b[7] === 12) cr |= 4;
+    if (cs.includes("q") && b[4] === 14 && b[0] === 12) cr |= 8;
+    const pos = { b, turn: side === "b" ? 8 : 0, ep: ep && ep !== "-" ? sqIdx(ep) : -1, k, mat, pst, ph, cr, hl: 0, hh: 0, st: [] };
+    let hl = ZCRL[cr], hh = ZCRH[cr];
+    for (let s = 0; s < 128; s++) { if (s & 0x88) { s += 7; continue; } if (b[s]) { hl ^= ZL[b[s] * 128 + s]; hh ^= ZH[b[s] * 128 + s]; } }
+    if (pos.turn) { hl ^= ZSL; hh ^= ZSH; }
+    if (pos.ep >= 0) { hl ^= ZEPL[pos.ep & 7]; hh ^= ZEPH[pos.ep & 7]; }
+    pos.hl = hl; pos.hh = hh;
+    return pos;
   }
   const kingOf = (pos, col) => pos.k[col ? 1 : 0];
   // هل المربع ده متهاجم من اللون by (0 أبيض، 8 أسود)؟
@@ -53,9 +94,24 @@
     for (const d of ORTH) { let s = sq + d; while (ok(s)) { const p = b[s]; if (p) { if (p === (4 | by) || p === (5 | by)) out.push(s); break; } s += d; } }
     return out;
   }
-  // النقلات (نقلة = from | to<<7 | ترقية<<14). caps = الأكل والترقية بس
+  // التبييت (بيتضاف لأي مولّد نقلات): المربعات اللي في النص فاضية، والملك مش في كش ومش بيعدّي على مربع متهاجم
+  function castles(pos, out, n) {
+    const b = pos.b, cr = pos.cr;
+    if (pos.turn === 0 && b[116] === 6) {
+      if ((cr & 1) && !b[117] && !b[118] && b[119] === 4 && !attacked(pos, 116, 8) && !attacked(pos, 117, 8) && !attacked(pos, 118, 8)) out[n++] = 116 | 118 << 7 | CASTLE;
+      if ((cr & 2) && !b[115] && !b[114] && !b[113] && b[112] === 4 && !attacked(pos, 116, 8) && !attacked(pos, 115, 8) && !attacked(pos, 114, 8)) out[n++] = 116 | 114 << 7 | CASTLE;
+    } else if (pos.turn === 8 && b[4] === 14) {
+      if ((cr & 4) && !b[5] && !b[6] && b[7] === 12 && !attacked(pos, 4, 0) && !attacked(pos, 5, 0) && !attacked(pos, 6, 0)) out[n++] = 4 | 6 << 7 | CASTLE;
+      if ((cr & 8) && !b[3] && !b[2] && !b[1] && b[0] === 12 && !attacked(pos, 4, 0) && !attacked(pos, 3, 0) && !attacked(pos, 2, 0)) out[n++] = 4 | 2 << 7 | CASTLE;
+    }
+    return n;
+  }
+  // النقلات (نقلة = from | to<<7 | ترقية<<14 | تبييت<<17). caps = الأكل والترقية بس.
+  // القايمة الكاملة دي فيها الترقية لأي قطعة (عشان أي نقلة جاية من Stockfish تتلاقى)؛ البحث بيرقّي لوزير بس.
+  // أكل الملك مش نقلة أبداً: لو جالنا موقف غلط (ملك الطرف التاني في كش) المحرك بيكمّل عادي من غير ما «ياكل الملك»
   function gen(pos, out, caps) {
     const b = pos.b, me = pos.turn, them = me ^ 8;
+    const promo = (f, to) => { out.push(f | to << 7 | 5 << 14); if (!caps) out.push(f | to << 7 | 2 << 14, f | to << 7 | 4 << 14, f | to << 7 | 3 << 14); };
     for (let sq = 0; sq < 128; sq++) {
       if (sq & 0x88) { sq += 7; continue; }
       const p = b[sq]; if (!p || (p & 8) !== me) continue;
@@ -63,44 +119,63 @@
       if (t === 1) {
         const dir = me ? 16 : -16, start = me ? 1 : 6, last = me ? 7 : 0, one = sq + dir;
         if (ok(one) && !b[one]) {
-          if ((one >> 4) === last) out.push(sq | one << 7 | 5 << 14);
+          if ((one >> 4) === last) promo(sq, one);
           else if (!caps) { out.push(sq | one << 7); const two = one + dir; if ((sq >> 4) === start && !b[two]) out.push(sq | two << 7); }
         }
         for (const d of [dir - 1, dir + 1]) {
           const to = sq + d; if (!ok(to)) continue;
           const q = b[to];
-          if ((q && (q & 8) === them) || to === pos.ep) out.push(sq | to << 7 | ((to >> 4) === last ? 5 << 14 : 0));
+          if ((q && (q & 8) === them && (q & 7) !== 6) || to === pos.ep) { if ((to >> 4) === last) promo(sq, to); else out.push(sq | to << 7); }
         }
       } else if (t === 2 || t === 6) {
-        for (const d of t === 2 ? KNIGHT : KING) { const to = sq + d; if (!ok(to)) continue; const q = b[to]; if (q ? (q & 8) === them : !caps) out.push(sq | to << 7); }
+        for (const d of t === 2 ? KNIGHT : KING) { const to = sq + d; if (!ok(to)) continue; const q = b[to]; if (q ? ((q & 8) === them && (q & 7) !== 6) : !caps) out.push(sq | to << 7); }
       } else {
         for (const d of t === 3 ? DIAG : t === 4 ? ORTH : ALL) {
           let to = sq + d;
-          while (ok(to)) { const q = b[to]; if (q) { if ((q & 8) === them) out.push(sq | to << 7); break; } if (!caps) out.push(sq | to << 7); to += d; }
+          while (ok(to)) { const q = b[to]; if (q) { if ((q & 8) === them && (q & 7) !== 6) out.push(sq | to << 7); break; } if (!caps) out.push(sq | to << 7); to += d; }
         }
       }
     }
+    if (!caps && pos.cr) { const tmp = []; const n = castles(pos, tmp, 0); for (let i = 0; i < n; i++) out.push(tmp[i]); }
     return out;
   }
+  // النقلة على اللوح، والتقييم (خامات + مواقع) ومفتاح الموقف ومرحلة الدور بيتحدّثوا مع النقلة على طول
   function make(pos, m) {
     const f = m & 127, t = (m >> 7) & 127, pr = (m >> 14) & 7, b = pos.b, p = b[f], me = pos.turn;
     let cap = b[t], capSq = t;
     if ((p & 7) === 1 && t === pos.ep && !cap) { capSq = t + (me ? -16 : 16); cap = b[capSq]; b[capSq] = 0; }
-    pos.st.push(f, t, p, cap, capSq, pos.ep, pos.mat);
-    const sign = me ? -1 : 1;
-    if (cap) pos.mat += sign * VAL[cap & 7];
-    if (pr) pos.mat += sign * (VAL[pr] - VAL[1]);
-    b[t] = pr ? (pr | me) : p; b[f] = 0;
-    if ((p & 7) === 6) pos.k[me ? 1 : 0] = t;
+    pos.st.push(m, p, cap, capSq, pos.ep, pos.mat, pos.cr, pos.pst, pos.ph, pos.hl, pos.hh);
+    const sign = me ? -1 : 1, np = pr ? (pr | me) : p;
+    let hl = pos.hl ^ ZL[p * 128 + f], hh = pos.hh ^ ZH[p * 128 + f], pst = pos.pst - PSQ[p * 128 + f];
+    if (cap) { pos.mat += sign * VAL[cap & 7]; hl ^= ZL[cap * 128 + capSq]; hh ^= ZH[cap * 128 + capSq]; pst -= PSQ[cap * 128 + capSq]; pos.ph -= PH[cap & 7]; }
+    if (pr) { pos.mat += sign * (VAL[pr] - VAL[1]); pos.ph += PH[pr]; }
+    b[t] = np; b[f] = 0;
+    hl ^= ZL[np * 128 + t]; hh ^= ZH[np * 128 + t]; pst += PSQ[np * 128 + t];
+    if ((p & 7) === 6) {
+      pos.k[me ? 1 : 0] = t;
+      if (m & CASTLE) {
+        const rf = t > f ? t + 1 : t - 2, rt = t > f ? t - 1 : t + 1, rk = 4 | me;
+        b[rt] = rk; b[rf] = 0;
+        hl ^= ZL[rk * 128 + rf] ^ ZL[rk * 128 + rt]; hh ^= ZH[rk * 128 + rf] ^ ZH[rk * 128 + rt]; pst += PSQ[rk * 128 + rt] - PSQ[rk * 128 + rf];
+      }
+    }
+    if (pos.ep >= 0) { hl ^= ZEPL[pos.ep & 7]; hh ^= ZEPH[pos.ep & 7]; }
     pos.ep = (p & 7) === 1 && (t - f === 32 || f - t === 32) ? (f + t) >> 1 : -1;
-    pos.turn ^= 8;
+    if (pos.ep >= 0) { hl ^= ZEPL[pos.ep & 7]; hh ^= ZEPH[pos.ep & 7]; }
+    const cr = pos.cr & CR_MASK[f] & CR_MASK[t];
+    if (cr !== pos.cr) { hl ^= ZCRL[pos.cr] ^ ZCRL[cr]; hh ^= ZCRH[pos.cr] ^ ZCRH[cr]; pos.cr = cr; }
+    pos.turn ^= 8; pos.hl = hl ^ ZSL; pos.hh = hh ^ ZSH; pos.pst = pst;
   }
   function unmake(pos) {
-    const s = pos.st, mat = s.pop(), ep = s.pop(), capSq = s.pop(), cap = s.pop(), p = s.pop(), t = s.pop(), f = s.pop(), b = pos.b;
+    const s = pos.st, hh = s.pop(), hl = s.pop(), ph = s.pop(), pst = s.pop(), cr = s.pop(), mat = s.pop(), ep = s.pop(), capSq = s.pop(), cap = s.pop(), p = s.pop(), m = s.pop(), b = pos.b;
+    const f = m & 127, t = (m >> 7) & 127;
     pos.turn ^= 8;
     b[f] = p; b[t] = 0; b[capSq] = cap;
-    if ((p & 7) === 6) pos.k[pos.turn ? 1 : 0] = f;
-    pos.ep = ep; pos.mat = mat;
+    if ((p & 7) === 6) {
+      pos.k[pos.turn ? 1 : 0] = f;
+      if (m & CASTLE) { const rf = t > f ? t + 1 : t - 2, rt = t > f ? t - 1 : t + 1; b[rf] = b[rt]; b[rt] = 0; }
+    }
+    pos.ep = ep; pos.mat = mat; pos.cr = cr; pos.pst = pst; pos.ph = ph; pos.hl = hl; pos.hh = hh;
   }
   const inCheck = pos => attacked(pos, kingOf(pos, pos.turn), pos.turn ^ 8);
   function legal(pos, caps) {
@@ -136,19 +211,20 @@
         for (let i = 0; i < 2; i++) {
           const to = sq + pc[i]; if (!ok(to)) continue;
           const q = b[to];
-          if ((q && (q & 8) === them) || to === pos.ep) out[n++] = sq | to << 7 | ((to >> 4) === last ? 5 << 14 : 0);
+          if ((q && (q & 8) === them && (q & 7) !== 6) || to === pos.ep) out[n++] = sq | to << 7 | ((to >> 4) === last ? 5 << 14 : 0);
         }
       } else if (t === 2 || t === 6) {
         const ds = t === 2 ? KNIGHT : KING;
-        for (let i = 0; i < 8; i++) { const to = sq + ds[i]; if (!ok(to)) continue; const q = b[to]; if (q ? (q & 8) === them : !caps) out[n++] = sq | to << 7; }
+        for (let i = 0; i < 8; i++) { const to = sq + ds[i]; if (!ok(to)) continue; const q = b[to]; if (q ? ((q & 8) === them && (q & 7) !== 6) : !caps) out[n++] = sq | to << 7; }
       } else {
         const ds = t === 3 ? DIAG : t === 4 ? ORTH : ALL;
         for (let i = 0; i < ds.length; i++) {
           const d = ds[i]; let to = sq + d;
-          while (ok(to)) { const q = b[to]; if (q) { if ((q & 8) === them) out[n++] = sq | to << 7; break; } if (!caps) out[n++] = sq | to << 7; to += d; }
+          while (ok(to)) { const q = b[to]; if (q) { if ((q & 8) === them && (q & 7) !== 6) out[n++] = sq | to << 7; break; } if (!caps) out[n++] = sq | to << 7; to += d; }
         }
       }
     }
+    if (!caps && pos.cr) n = castles(pos, out, n);
     return n;
   }
   function orderInto(pos, moves, n, first, sc) {
@@ -234,6 +310,240 @@
       curated: false, score: bestScore, gain: mate ? Infinity : bestScore - base, mate, mateIn: mate ? Math.ceil((MATE - bestScore) / 2) : 0, depth, nodes: ctx.nodes, ms: now() - t0 };
   }
 
+  // ================= SEE: حساب سلسلة الأكل على مربع واحد =================
+  // أرخص قطعة من اللون by بتهاجم المربع (من غير ما نعمل arrays)
+  function leastAttacker(b, sq, by) {
+    if (by === 0) { if (ok(sq + 15) && b[sq + 15] === 1) return sq + 15; if (ok(sq + 17) && b[sq + 17] === 1) return sq + 17; }
+    else { if (ok(sq - 15) && b[sq - 15] === 9) return sq - 15; if (ok(sq - 17) && b[sq - 17] === 9) return sq - 17; }
+    for (let i = 0; i < 8; i++) { const s = sq + KNIGHT[i]; if (ok(s) && b[s] === (2 | by)) return s; }
+    let bs = -1, rs = -1, qs = -1;
+    for (let i = 0; i < 4; i++) { const d = DIAG[i]; let s = sq + d; while (ok(s)) { const p = b[s]; if (p) { if (p === (3 | by)) { if (bs < 0) bs = s; } else if (p === (5 | by) && qs < 0) qs = s; break; } s += d; } }
+    if (bs >= 0) return bs;
+    for (let i = 0; i < 4; i++) { const d = ORTH[i]; let s = sq + d; while (ok(s)) { const p = b[s]; if (p) { if (p === (4 | by)) { if (rs < 0) rs = s; } else if (p === (5 | by) && qs < 0) qs = s; break; } s += d; } }
+    if (rs >= 0) return rs;
+    if (qs >= 0) return qs;
+    for (let i = 0; i < 8; i++) { const s = sq + KING[i]; if (ok(s) && b[s] === (6 | by)) return s; }
+    return -1;
+  }
+  const SEE_GAIN = new Int32Array(40), SEE_SAVE = new Int32Array(80);
+  // مكسب اللي بيلعب النقلة m بعد ما كل الأكل على المربع يخلص (الطرفين بيختاروا يكملوا أو يقفوا). موجب = بيكسب
+  function see(pos, m) {
+    const b = pos.b, f = m & 127, t = (m >> 7) & 127, pr = (m >> 14) & 7, pf = b[f], pt = b[t];
+    let side = pos.turn, d = 0, ns = 0, epSq = -1, epP = 0;
+    const gain = SEE_GAIN;
+    gain[0] = (pt ? VAL[pt & 7] : ((pf & 7) === 1 && t === pos.ep ? 100 : 0)) + (pr ? VAL[pr] - 100 : 0);
+    let onSq = pr ? VAL[pr] : VAL[pf & 7];
+    b[f] = 0; b[t] = pr ? (pr | side) : pf;
+    if (!pt && (pf & 7) === 1 && t === pos.ep) { epSq = t + (side ? -16 : 16); epP = b[epSq]; b[epSq] = 0; }
+    side ^= 8;
+    for (;;) {
+      const s = leastAttacker(b, t, side); if (s < 0) break;
+      d++; gain[d] = onSq - gain[d - 1];
+      if (Math.max(-gain[d - 1], gain[d]) < 0) break;
+      onSq = VAL[b[s] & 7];
+      SEE_SAVE[ns++] = s; SEE_SAVE[ns++] = b[s]; b[s] = 0;
+      side ^= 8;
+      if (d > 36) break;
+    }
+    while (d > 0) { gain[d - 1] = -Math.max(-gain[d - 1], gain[d]); d--; }
+    while (ns > 0) { const p = SEE_SAVE[--ns], s = SEE_SAVE[--ns]; b[s] = p; }
+    b[f] = pf; b[t] = pt; if (epSq >= 0) b[epSq] = epP;
+    return gain[0];
+  }
+
+  // ================= البحث العميق (للتصنيف والشرح وخط التكملة) =================
+  // PVS + جدول تبديل (Zobrist) + killers/history + null move + LMR + تمديد الكش + quiescence بقص SEE.
+  // التقييم = خامات + مواقع القطع + الملك حسب المرحلة. الحد الأساسي عدد مواقف ثابت (نفس النتيجة كل مرة)، والوقت حد أمان بس.
+  const MAXPLY = 64, TT_SIZE = 1 << 17, TT_MASK = TT_SIZE - 1;
+  let TT = null;
+  function ttClear() {
+    if (!TT) TT = { lo: new Int32Array(TT_SIZE), hi: new Int32Array(TT_SIZE), mv: new Int32Array(TT_SIZE), sc: new Int32Array(TT_SIZE), dp: new Int8Array(TT_SIZE), fl: new Uint8Array(TT_SIZE) };
+    else { TT.fl.fill(0); TT.lo.fill(0); TT.hi.fill(0); }
+  }
+  const DBUF = Array.from({ length: MAXPLY + 2 }, () => new Int32Array(256)), DSC = Array.from({ length: MAXPLY + 2 }, () => new Int32Array(256));
+  const PVT = new Int32Array(MAXPLY * MAXPLY), PVL = new Int32Array(MAXPLY + 2);
+  const KILL = new Int32Array((MAXPLY + 2) * 2), HIST = new Int32Array(16 * 128);
+  function evaluate(pos) {
+    const ph = pos.ph > 24 ? 24 : pos.ph, wk = pos.k[0], bk = pos.k[1];
+    const wi = (wk >> 4) * 8 + (wk & 7), bi = (7 - (bk >> 4)) * 8 + (bk & 7);
+    const s = pos.mat + pos.pst + (((KMG[wi] - KMG[bi]) * ph + (KEG[wi] - KEG[bi]) * (24 - ph)) / 24 | 0);
+    return pos.turn ? -s : s;
+  }
+  function hasPieces(pos, col) { const b = pos.b; for (let s = 0; s < 128; s++) { if (s & 0x88) { s += 7; continue; } const p = b[s]; if (p && (p & 8) === col && (p & 7) > 1 && (p & 7) < 6) return true; } return false; }
+  function tick(ctx) { if (++ctx.nodes > ctx.max || ((ctx.nodes & 1023) === 0 && now() > ctx.deadline)) ctx.stop = true; return ctx.stop; }
+  function scoreInto(pos, buf, n, sc, ttm, ply) {
+    const b = pos.b;
+    for (let i = 0; i < n; i++) {
+      const m = buf[i], f = m & 127, t = (m >> 7) & 127, v = b[t], pr = (m >> 14) & 7;
+      if (m === ttm) sc[i] = 2000000000;
+      else if (v || pr || ((b[f] & 7) === 1 && t === pos.ep)) sc[i] = 100000000 + (v ? VAL[v & 7] : 100) * 16 - (VAL[b[f] & 7] >> 4) + (pr ? VAL[pr] : 0);
+      else if (m === KILL[ply * 2]) sc[i] = 90000000;
+      else if (m === KILL[ply * 2 + 1]) sc[i] = 80000000;
+      else sc[i] = HIST[b[f] * 128 + t];
+    }
+  }
+  function pickNext(buf, sc, i, n) {
+    let bi = i; for (let j = i + 1; j < n; j++) if (sc[j] > sc[bi]) bi = j;
+    if (bi !== i) { const m = buf[i], s = sc[i]; buf[i] = buf[bi]; sc[i] = sc[bi]; buf[bi] = m; sc[bi] = s; }
+    return buf[i];
+  }
+  function dqs(pos, alpha, beta, ply, qd, ctx) {
+    PVL[ply] = ply;
+    if (tick(ctx)) return 0;
+    if (ply >= MAXPLY - 2) return evaluate(pos);
+    if (inCheck(pos)) return qd < 6 ? devade(pos, alpha, beta, ply, qd, ctx) : evaluate(pos);
+    const stand = evaluate(pos);
+    if (stand >= beta) return stand;
+    if (stand > alpha) alpha = stand;
+    const buf = DBUF[ply], sc = DSC[ply], n = genInto(pos, buf, true), me = pos.turn;
+    scoreInto(pos, buf, n, sc, 0, ply);
+    for (let i = 0; i < n; i++) {
+      const m = pickNext(buf, sc, i, n), pr = (m >> 14) & 7;
+      if (!pr) { const v = pos.b[(m >> 7) & 127]; if (stand + (v ? VAL[v & 7] : 100) + 200 < alpha) continue; if (see(pos, m) < 0) continue; }
+      make(pos, m);
+      if (attacked(pos, kingOf(pos, me), me ^ 8)) { unmake(pos); continue; }
+      PVL[ply + 1] = ply + 1;
+      const s = -dqs(pos, -beta, -alpha, ply + 1, qd + 1, ctx);
+      unmake(pos);
+      if (ctx.stop) return 0;
+      if (s >= beta) return s;
+      if (s > alpha) { alpha = s; PVT[ply * MAXPLY + ply] = m; for (let k = ply + 1; k < PVL[ply + 1]; k++) PVT[ply * MAXPLY + k] = PVT[(ply + 1) * MAXPLY + k]; PVL[ply] = PVL[ply + 1]; }
+    }
+    return alpha;
+  }
+  // في الكش جوه الـ quiescence: كل نقلات الهروب (عشان المات يتشاف)، والعمق محدود بـ qd
+  function devade(pos, alpha, beta, ply, qd, ctx) {
+    const buf = DBUF[ply], sc = DSC[ply], n = genInto(pos, buf, false), me = pos.turn;
+    scoreInto(pos, buf, n, sc, 0, ply);
+    let legalN = 0, best = -MATE - 1;
+    for (let i = 0; i < n; i++) {
+      const m = pickNext(buf, sc, i, n);
+      make(pos, m);
+      if (attacked(pos, kingOf(pos, me), me ^ 8)) { unmake(pos); continue; }
+      legalN++; PVL[ply + 1] = ply + 1;
+      const s = -dqs(pos, -beta, -alpha, ply + 1, qd + 1, ctx);
+      unmake(pos);
+      if (ctx.stop) return 0;
+      if (s > best) best = s;
+      if (s > alpha) { alpha = s; PVT[ply * MAXPLY + ply] = m; for (let k = ply + 1; k < PVL[ply + 1]; k++) PVT[ply * MAXPLY + k] = PVT[(ply + 1) * MAXPLY + k]; PVL[ply] = PVL[ply + 1]; }
+      if (alpha >= beta) return alpha;
+    }
+    return legalN ? best : -MATE + ply;
+  }
+  function dsearch(pos, depth, alpha, beta, ply, ctx, pvNode, qd) {
+    PVL[ply] = ply;
+    if (tick(ctx)) return 0;
+    const me = pos.turn, check = inCheck(pos);
+    if (check && ply < ctx.ext) depth++;
+    if (depth <= 0) return dqs(pos, alpha, beta, ply, 0, ctx);
+    if (ply >= MAXPLY - 2) return evaluate(pos);
+    if (ply > 0) { const ma = -MATE + ply, mb = MATE - ply - 1; if (alpha < ma) alpha = ma; if (beta > mb) beta = mb; if (alpha >= beta) return alpha; }
+    const ti = pos.hl & TT_MASK; let ttm = 0;
+    if (TT.fl[ti] && TT.lo[ti] === pos.hl && TT.hi[ti] === pos.hh) {
+      ttm = TT.mv[ti];
+      if (!pvNode && ply > 0 && TT.dp[ti] >= depth) {
+        let s = TT.sc[ti]; if (s > MATE - 1000) s -= ply; else if (s < -MATE + 1000) s += ply;
+        const fl = TT.fl[ti];
+        if (fl === 1 || (fl === 2 && s >= beta) || (fl === 3 && s <= alpha)) return s;
+      }
+    }
+    // null move: لو حتى من غير ما ألعب الموقف كويس كفاية، مفيش داعي أدوّر هنا (مش في الكش ولا في نهاية بيادق بس)
+    if (!pvNode && !check && depth >= 3 && ply > 0 && beta < MATE - 1000 && hasPieces(pos, me) && evaluate(pos) >= beta) {
+      const ep = pos.ep, ohl = pos.hl, ohh = pos.hh;
+      let hl = ohl ^ ZSL, hh = ohh ^ ZSH; if (ep >= 0) { hl ^= ZEPL[ep & 7]; hh ^= ZEPH[ep & 7]; }
+      pos.hl = hl; pos.hh = hh; pos.ep = -1; pos.turn ^= 8;
+      const s = -dsearch(pos, depth - 3, -beta, -beta + 1, ply + 1, ctx, false, 0);
+      pos.turn ^= 8; pos.ep = ep; pos.hl = ohl; pos.hh = ohh;
+      if (ctx.stop) return 0;
+      if (s >= beta) return beta;
+      PVL[ply] = ply;
+    }
+    const buf = DBUF[ply], sc = DSC[ply], n = genInto(pos, buf, false), a0 = alpha;
+    scoreInto(pos, buf, n, sc, ttm, ply);
+    let best = -MATE - 1, bestMove = 0, legalN = 0;
+    for (let i = 0; i < n; i++) {
+      const m = pickNext(buf, sc, i, n);
+      if (ply === 0 && ctx.excl.indexOf(m) >= 0) continue;
+      const t = (m >> 7) & 127, quiet = !pos.b[t] && !((m >> 14) & 7) && !((pos.b[m & 127] & 7) === 1 && t === pos.ep);
+      make(pos, m);
+      if (attacked(pos, kingOf(pos, me), me ^ 8)) { unmake(pos); continue; }
+      legalN++;
+      PVL[ply + 1] = ply + 1;
+      let s;
+      if (legalN === 1) s = -dsearch(pos, depth - 1, -beta, -alpha, ply + 1, ctx, pvNode, 0);
+      else {
+        const r = depth >= 3 && quiet && !check && legalN > 4 && m !== KILL[ply * 2] && m !== KILL[ply * 2 + 1] && !inCheck(pos) ? (legalN > 12 ? 2 : 1) : 0;
+        s = -dsearch(pos, depth - 1 - r, -alpha - 1, -alpha, ply + 1, ctx, false, 0);
+        if (!ctx.stop && s > alpha && r) { PVL[ply + 1] = ply + 1; s = -dsearch(pos, depth - 1, -alpha - 1, -alpha, ply + 1, ctx, false, 0); }
+        if (!ctx.stop && s > alpha && s < beta) { PVL[ply + 1] = ply + 1; s = -dsearch(pos, depth - 1, -beta, -alpha, ply + 1, ctx, true, 0); }
+      }
+      unmake(pos);
+      if (ctx.stop) return 0;
+      if (s > best) {
+        best = s; bestMove = m;
+        if (s > alpha) {
+          alpha = s;
+          PVT[ply * MAXPLY + ply] = m; for (let k = ply + 1; k < PVL[ply + 1]; k++) PVT[ply * MAXPLY + k] = PVT[(ply + 1) * MAXPLY + k]; PVL[ply] = PVL[ply + 1];
+          if (alpha >= beta) {
+            if (quiet) { if (KILL[ply * 2] !== m) { KILL[ply * 2 + 1] = KILL[ply * 2]; KILL[ply * 2] = m; } const hi = pos.b[m & 127] * 128 + t; HIST[hi] = Math.min(50000000, HIST[hi] + depth * depth); }
+            break;
+          }
+        }
+      }
+    }
+    if (!legalN) return check ? -MATE + ply : 0;
+    const fl = best >= beta ? 2 : best > a0 ? 1 : 3;
+    if (!TT.fl[ti] || TT.dp[ti] <= depth || fl === 1) {
+      TT.lo[ti] = pos.hl; TT.hi[ti] = pos.hh; TT.mv[ti] = bestMove; TT.dp[ti] = depth; TT.fl[ti] = fl;
+      TT.sc[ti] = best > MATE - 1000 ? best + ply : best < -MATE + 1000 ? best - ply : best;
+    }
+    return best;
+  }
+  // نتيجة البحث بالشكل اللي بيستخدمه Stockfish: cp أو mate من ناحية اللي عليه الدور + الخط (uci)
+  function fmtScore(s) {
+    if (s > MATE - 1000) return { cp: null, mate: Math.ceil((MATE - s) / 2) };
+    if (s < -MATE + 1000) return { cp: null, mate: -Math.ceil((MATE + s) / 2) };
+    return { cp: s, mate: null };
+  }
+  // deepSearch(fen, { multiPV, maxNodes, budget, depth }) → { lines: [{ uci, cp, mate, pv, depth }], depth, nodes, ms }
+  function deepSearch(fen, opt) {
+    const o = opt || {}, t0 = now();
+    let pos; try { pos = parse(fen); } catch (_) { return null; }
+    const moves = legal(pos, false);
+    const out = { fen, lines: [], depth: 0, nodes: 0, ms: 0, src: "eca" };
+    if (!moves.length) { out.over = inCheck(pos) ? "mate" : "stalemate"; out.ms = now() - t0; return out; }
+    ttClear(); KILL.fill(0); HIST.fill(0);
+    const multi = Math.max(1, Math.min(o.multiPV || 1, moves.length)), maxDepth = Math.min(o.depth || 30, MAXPLY - 8);
+    const total = o.maxNodes || 150000, deadline = t0 + (o.budget || 2500), excl = [];
+    for (let k = 0; k < multi; k++) {
+      const ctx = { nodes: 0, max: k ? Math.floor(total * 0.6) : total, deadline, stop: false, excl: excl.slice(), ext: 8 };
+      let line = null;
+      for (let d = 1; d <= maxDepth; d++) {
+        ctx.ext = d * 2 + 2;
+        const s = dsearch(pos, d, -MATE - 1, MATE + 1, 0, ctx, true, 0);
+        if (ctx.stop) break;
+        const pv = []; for (let i = 0; i < PVL[0]; i++) pv.push(PVT[i]);
+        if (!pv.length || (excl.length && excl.indexOf(pv[0]) >= 0)) break;
+        line = { move: pv[0], score: s, depth: d, pv };
+        if (Math.abs(s) > MATE - 1000 && d > MATE - Math.abs(s)) break;   // المات اتشاف لآخره
+      }
+      out.nodes += ctx.nodes;
+      if (!line) break;
+      excl.push(line.move);
+      out.lines.push(Object.assign({ uci: uci(line.move), pv: line.pv.map(uci), depth: line.depth }, fmtScore(line.score)));
+    }
+    out.depth = out.lines.length ? out.lines[0].depth : 0;
+    out.ms = now() - t0;
+    return out;
+  }
+  // تقييم ثابت سريع للموقف (من ناحية الأبيض) بعد ما الأكل يهدى — لحساب «اتخسر إيه فعلاً» في آخر الخط
+  function quietMaterial(fen) {
+    let pos; try { pos = parse(fen); } catch (_) { return 0; }
+    const ctx = { nodes: 0, max: 20000, deadline: now() + 40, stop: false, move: 0, prev: 0 };
+    const s = quiesce(pos, -Infinity, Infinity, 0, 0, ctx);
+    return ctx.stop ? pos.mat : (pos.turn ? -s : s);
+  }
+
   // ================= هندسة الموقف =================
   function pieceAt(pos, sq) { const p = pos.b[sq]; return p ? { type: TYPE[p & 7], color: p & 8 ? "b" : "w", sq: sqName(sq) } : null; }
   // القطعة اللي على from بتهاجم target؟ (بدون ما تتحرك، مع مراعاة اللي بين الاتنين)
@@ -311,7 +621,8 @@
     if (rmv !== undefined) make(after, rmv);
     if (victim && victim.color === me) {
       out.targetSq = victim.sq; out.targetPiece = victim.type;
-      if (rt === to) { out.type = "MOVED_TO_HANGING_SQUARE"; out.vectors.push({ kind: "ring", sq: victim.sq, tone: "red" }); return out; }
+      // كام قطعة لنا كانت حامية المربع (عشان الشرح مايقولش «من غير حماية» وهو محمي)
+      if (rt === to) { out.type = "MOVED_TO_HANGING_SQUARE"; out.defenders = attackers(post, rt, me === "w" ? 0 : 8).length; out.vectors.push({ kind: "ring", sq: victim.sq, tone: "red" }); return out; }
       if (pre.b[from] && hits(pre, from, rt) && !(attackers(post, rt, me === "w" ? 0 : 8).length)) {
         out.type = "ABANDONED_DEFENSE";
         out.vectors.push({ kind: "badge", sq: sqName(from), text: "🛡️❌" }, { kind: "dots", from: sqName(from), to: victim.sq }, { kind: "ring", sq: victim.sq, tone: "red" });
@@ -405,10 +716,210 @@
       for (let c = 0; c < 8; c++) { const p = pos.b[r * 16 + c]; if (!p) { e++; continue; } if (e) { s += e; e = 0; } const ch = TYPE[p & 7]; s += p & 8 ? ch : ch.toUpperCase(); }
       if (e) s += e; if (r < 7) s += "/";
     }
-    return s + " " + (pos.turn ? "b" : "w") + " - " + (pos.ep >= 0 ? sqName(pos.ep) : "-") + " 0 1";
+    const cr = (pos.cr & 1 ? "K" : "") + (pos.cr & 2 ? "Q" : "") + (pos.cr & 4 ? "k" : "") + (pos.cr & 8 ? "q" : "");
+    return s + " " + (pos.turn ? "b" : "w") + " " + (cr || "-") + " " + (pos.ep >= 0 ? sqName(pos.ep) : "-") + " 0 1";
   }
 
-  root.ChessPositionAnalyzer = { findExactRefutation, diagnoseMistakeReason, features, analyze, parse, toFen, VAL, MATE };
+  // ================= PositionConceptAnalyzer: الأفكار على خط النقلات نفسه (مش تخمين) =================
+  const colOf = p => (p & 8 ? "b" : "w");
+  const clonePos = p => ({ b: Int8Array.from(p.b), turn: p.turn, ep: p.ep, k: p.k.slice(), mat: p.mat, pst: p.pst, ph: p.ph, cr: p.cr, hl: p.hl, hh: p.hh, st: [] });
+  function findMove(pos, u) { const all = legal(pos, false); const m = all.find(x => uci(x) === u); return m !== undefined ? m : all.find(x => uci(x) === u + "q"); }
+  const BIG = p => p && ((p & 7) === 6 || VAL[p & 7] >= 300);
+  // قطع الخصم الغالية اللي القطعة على sq بتهاجمها (شوكة: 2 أو أكتر، كل واحدة يا ملك يا مش محمية يا أغلى من المهاجم)
+  function forkTargets(pos, sq) {
+    const p = pos.b[sq]; if (!p) return [];
+    const them = (p & 8) ^ 8, out = [];
+    for (let s = 0; s < 128; s++) {
+      if (s & 0x88) { s += 7; continue; }
+      const q = pos.b[s]; if (!q || (q & 8) !== them || !BIG(q) || !hits(pos, sq, s)) continue;
+      if ((q & 7) === 6 || !attackers(pos, s, them).length || VAL[q & 7] > VAL[p & 7]) out.push({ type: TYPE[q & 7], sq: sqName(s) });
+    }
+    return out;
+  }
+  // قطعة ماشية لنا بقت بتشوف هدف غالي للخصم من خلال المربع اللي اتساب (هجوم/كش بالكشف)
+  function discovered(pre, post, f, t) {
+    const me = post.turn ^ 8, b = post.b;
+    for (let s = 0; s < 128; s++) {
+      if (s & 0x88) { s += 7; continue; }
+      const p = b[s]; if (!p || (p & 8) !== me || s === t) continue;
+      const k = p & 7; if (k < 3 || k > 5) continue;
+      const d = lineDir(s, f); if (!d) continue;
+      const diag = (d === 15 || d === 17 || d === -15 || d === -17);
+      if ((k === 3 && !diag) || (k === 4 && diag)) continue;
+      let x = s + d, clear = true; while (x !== f) { if (b[x]) { clear = false; break; } x += d; } if (!clear) continue;
+      x = f + d; while (ok(x) && !b[x]) x += d;
+      if (!ok(x) || x === t) continue;
+      const q = b[x]; if (!q || (q & 8) === me || !BIG(q)) continue;
+      if (!hits(pre, s, x)) return { by: TYPE[k], bySq: sqName(s), target: TYPE[q & 7], targetSq: sqName(x), check: (q & 7) === 6 };
+    }
+    return null;
+  }
+  function trappedBy(post, t) {
+    // قطعة غالية للخصم (مش الملك) القطعة اللي اتحركت بتهاجمها، ومالهاش ولا مربع آمن تهرب له
+    const me = post.turn ^ 8, them = post.turn, out = [];
+    for (let s = 0; s < 128; s++) {
+      if (s & 0x88) { s += 7; continue; }
+      const q = post.b[s]; if (!q || (q & 8) !== them || (q & 7) === 6 || (q & 7) === 1 || !hits(post, t, s)) continue;
+      // هل القطعة اللي اتحركت تكسبها فعلاً لو فضلت مكانها؟ (بنبص من ناحيتنا للحظة)
+      post.turn ^= 8;
+      const mc = legal(post, true).find(x => (x & 127) === t && ((x >> 7) & 127) === s), cap = mc === undefined ? -1 : see(post, mc);
+      post.turn ^= 8;
+      if (cap <= 0) continue;
+      // مهرب = نقلة للقطعة دي ما بتخسرش (SEE ≥ 0)، أو قطعة تانية تاكل المهاجم من غير خسارة
+      const moves = legal(post, false);
+      const safe = moves.some(m => ((m & 127) === s && see(post, m) >= 0) || (((m >> 7) & 127) === t && see(post, m) >= 0));
+      if (!safe) out.push({ type: TYPE[q & 7], sq: sqName(s) });
+    }
+    return out;
+  }
+  function isPassed(pos, sq) {
+    const p = pos.b[sq]; if ((p & 7) !== 1) return false;
+    const me = p & 8, f = sq & 7, r = sq >> 4, enemy = 1 | (me ^ 8);
+    for (let rr = 0; rr < 8; rr++) {
+      if (me ? rr <= r : rr >= r) continue;   // الصفوف اللي قدام البيدق بس
+      for (let ff = f - 1; ff <= f + 1; ff++) if (ff >= 0 && ff < 8 && pos.b[rr * 16 + ff] === enemy) return false;
+    }
+    return true;
+  }
+  function fileOpen(pos, f, col) { let own = 0, opp = 0; for (let r = 0; r < 8; r++) { const p = pos.b[r * 16 + f]; if ((p & 7) === 1) { if (colOf(p) === col) own++; else opp++; } } return own ? "" : opp ? "semi" : "open"; }
+  function outpost(pos, sq) {
+    const p = pos.b[sq]; if ((p & 7) !== 2) return false;
+    const me = p & 8, r = sq >> 4, f = sq & 7, rank = 8 - r;
+    if (me ? rank < 3 || rank > 5 : rank < 4 || rank > 6) return false;
+    if (!attackers(pos, sq, me).some(s => (pos.b[s] & 7) === 1)) return false;
+    const enemy = 1 | (me ^ 8);
+    for (let rr = 0; rr < 8; rr++) {
+      if (me ? rr <= r : rr >= r) continue;
+      for (const ff of [f - 1, f + 1]) if (ff >= 0 && ff < 8 && pos.b[rr * 16 + ff] === enemy) return false;
+    }
+    return true;
+  }
+  // نوع المات: الصف الأخير، الخنق (Smothered)، العربي، أناستازيا
+  function matePattern(post, me) {
+    const them = me ^ 8, ks = kingOf(post, them), kr = ks >> 4, kf = ks & 7, back = them ? 0 : 7;
+    const checkers = attackers(post, ks, me), c = checkers[0], ct = c !== undefined ? post.b[c] & 7 : 0;
+    const around = KING.map(d => ks + d).filter(ok);
+    if (ct === 2 && around.every(s => post.b[s] && (post.b[s] & 8) === them)) return "smothered";
+    if (ct === 4 && (kr === 0 || kr === 7) && (kf === 0 || kf === 7) && Math.abs((c >> 4) - kr) + Math.abs((c & 7) - kf) === 1 && attackers(post, c, me).some(s => (post.b[s] & 7) === 2)) return "arabian";
+    if ((ct === 4 || ct === 5) && kr === back && (c >> 4) === kr) return "backRank";
+    if ((ct === 4 || ct === 5) && (kf === 0 || kf === 7) && (c & 7) === kf && around.some(s => attackers(post, s, me).some(a => (post.b[a] & 7) === 2))) return "anastasia";
+    return "";
+  }
+  // نمشي على الخط نقلة نقلة ونسجّل اللي حصل فعلاً على الرقعة + الأفكار في كل نقلة
+  function walkLine(fen, line, max) {
+    let pos; try { pos = parse(fen); } catch (_) { return { steps: [], ok: false }; }
+    const fm0 = Number(String(fen).split(" ")[5]) || 1, side0 = pos.turn, steps = [], pres = [];
+    for (let i = 0; i < (line || []).length && i < (max || 12); i++) {
+      const m = findMove(pos, line[i]); if (m === undefined) break;
+      const f = m & 127, t = (m >> 7) & 127, p = pos.b[f], me = pos.turn, col = me ? "b" : "w";
+      let capSq = t, cap = pos.b[t];
+      if (!cap && (p & 7) === 1 && t === pos.ep) { capSq = t + (me ? -16 : 16); cap = pos.b[capSq]; }
+      const pre = clonePos(pos); pres.push(pre);
+      const st = { i, uci: uci(m), color: col, piece: TYPE[p & 7], from: sqName(f), to: sqName(t), captured: cap ? TYPE[cap & 7] : "", capSq: cap ? sqName(capSq) : "",
+        promo: (m >> 14) & 7 ? TYPE[(m >> 14) & 7] : "", castle: !!(m & CASTLE), moveNo: fm0 + ((i + (side0 ? 1 : 0)) >> 1), concepts: [] };
+      st.capDefenders = cap ? attackers(pos, capSq, me ^ 8).length : 0;   // كام قطعة كانت حامية القطعة اللي اتاكلت
+      st.see = see(pos, m);
+      make(pos, m);
+      const replies = legal(pos, false);
+      st.check = inCheck(pos); st.mate = st.check && !replies.length; st.stalemate = !st.check && !replies.length;
+      st.mat = pos.mat; st.fen = toFen(pos);
+      st.recapture = cap ? attackers(pos, t, me ^ 8).length > 0 : false;
+      st.hanging = !attackers(pos, t, me).length && attackers(pos, t, me ^ 8).length > 0;   // القطعة اللي اتحركت بقت متهاجمة ومش محمية
+      const C = st.concepts, push = (key, o) => C.push(Object.assign({ key, ply: i }, o || {}));
+      // الشوكة بتتحسب بس لو القطعة اللي عاملاها مش بتضيع على مربعها (وإلا دي تضحية مش شوكة)
+      const ft = st.see >= 0 ? forkTargets(pos, t) : []; if (ft.length >= 2) push("fork", { sq: st.to, piece: st.piece, targets: ft.slice(0, 3) });
+      const k = p & 7;
+      let pinned = false;
+      if (k >= 3 && k <= 5 && st.see >= 0) {
+        const xr = xray(pos, t, col === "w" ? "b" : "w");
+        if (xr) { const front = pos.b[xr.front], behind = pos.b[xr.behind]; pinned = true;
+          push((behind & 7) === 6 ? "pinAbs" : xr.pin ? "pinRel" : "skewer", { sq: st.to, piece: st.piece, front: { type: TYPE[front & 7], sq: sqName(xr.front) }, behind: { type: TYPE[behind & 7], sq: sqName(xr.behind) } }); }
+      }
+      const disc = discovered(pre, pos, f, t); if (disc) push(disc.check ? "discoveredCheck" : "discovered", disc);
+      if (st.mate) { const mp = matePattern(pos, me); if (mp) push(mp, { king: sqName(kingOf(pos, me ^ 8)) }); }
+      if (!st.mate && !st.check && !pinned && st.see >= 0) { const tr = trappedBy(pos, t); if (tr.length) push("trapped", { target: tr[0] }); }
+      if (k === 1 && isPassed(pos, t) && !st.promo) push("passedPawn", { sq: st.to });
+      if (k === 2 && outpost(pos, t)) push("outpost", { sq: st.to });
+      if (k === 4 && (f & 7) !== (t & 7)) { const fo = fileOpen(pos, t & 7, col); if (fo) push("openFile", { file: FILES[t & 7], open: fo }); }
+      if (st.moveNo <= 12 && (st.castle || ((k === 2 || k === 3) && (f >> 4) === (me ? 0 : 7)) || (k === 1 && [51, 52, 67, 68].includes(t)))) push("development", { sq: st.to, castle: st.castle });
+      // حماية الملك: بيدق من درع ملكنا المبيّت اتحرك، أو أكلنا قطعة جنب ملك الخصم
+      const myK = kingOf(pre, me), kf = myK & 7, homeRow = me ? 0 : 7;
+      if (k === 1 && (myK >> 4) === homeRow && (kf >= 5 || kf <= 2) && Math.abs((f & 7) - kf) <= 1 && (f >> 4) === homeRow + (me ? 1 : -1)) push("kingSafety", { own: true, sq: st.from });
+      if (cap && KING.some(d => capSq + d === kingOf(pos, me ^ 8))) push("kingSafety", { own: false, sq: st.capSq });
+      steps.push(st);
+      if (st.mate || st.stalemate) break;
+    }
+    // أفكار بتتشاف على أكتر من نقلة: تشتيت، استدراج، إزالة المدافع، النقلة البينية
+    for (let i = 0; i + 2 < steps.length; i++) {
+      const a = steps[i], b = steps[i + 1], c = steps[i + 2], preB = pres[i + 1], preA = pres[i];
+      const cTarget = c.capSq || (c.mate ? sqName(kingOf(parse(c.fen), c.color === "w" ? 8 : 0)) : "");
+      if (cTarget && b.from !== cTarget) {
+        const dIdx = sqIdx(b.from), x = sqIdx(cTarget);
+        if (preB.b[dIdx] && hits(preB, dIdx, x) && sqIdx(b.to) !== x) a.concepts.push({ key: "deflection", ply: i, defender: { type: b.piece, sq: b.from }, target: cTarget });
+      }
+      // استدراج: ضحّينا بقطعة على مربع، والخصم أكلها فقطعته اتشدّت للمربع ده، وبعدها كش أو مات أو هجوم عليها
+      if ((a.see < 0 || a.hanging) && b.to === a.to && b.captured) {
+        const post = parse(c.fen); if (c.check || c.mate || hits(post, sqIdx(c.to), sqIdx(a.to))) a.concepts.push({ key: "decoy", ply: i, piece: b.piece, sq: a.to });
+      }
+      if (a.captured && c.capSq && c.capSq !== a.to) {
+        const g = sqIdx(a.capSq), x = sqIdx(c.capSq);
+        if (preA.b[g] && hits(preA, g, x) && (preA.b[x] & 8) === (preA.b[g] & 8)) a.concepts.push({ key: "removalGuard", ply: i, guard: { type: a.captured, sq: a.capSq }, target: c.capSq });
+      }
+      if (i > 0) {
+        const prev = steps[i - 1];
+        if (prev.captured && prev.color !== a.color && a.to !== prev.to && (a.check || a.captured) && c.to === prev.to && c.captured
+          && attackers(preA, sqIdx(prev.to), preA.turn).length) a.concepts.push({ key: "zwischenzug", ply: i, sq: prev.to });
+      }
+    }
+    return { steps, ok: true, pos };
+  }
+  // الحساب الحقيقي للخامات على الخط (بعد كل الأكل والأكل المضاد) من ناحية أول واحد لعب
+  function verifyLine(fen, line, max) {
+    const w = walkLine(fen, line, max), s = w.steps;
+    if (!s.length) return { steps: [], net: 0, netRaw: 0, mate: "", firstLoss: null };
+    const sign = s[0].color === "w" ? 1 : -1, start = parse(fen).mat, last = s[s.length - 1];
+    const end = last.mate || last.stalemate ? last.mat : quietMaterial(last.fen);
+    const firstLoss = s.find(x => x.color !== s[0].color && x.captured) || null;
+    return { steps: s, net: sign * (end - start), netRaw: sign * (last.mat - start), mate: last.mate ? last.color : "", firstLoss,
+      lossRecapturable: firstLoss ? s.some(x => x.i > firstLoss.i && x.color === s[0].color && x.to === firstLoss.to && x.captured) || firstLoss.capDefenders > 0 : false };
+  }
+  // النقلة تضحية؟ القطعة اللي اتلعبت بتتاكل بخسارة (SEE)، أو النقلة سابت قطعة تانية (حصان أو أكبر) تتاكل
+  function sacrifice(fen, u) {
+    let pos; try { pos = parse(fen); } catch (_) { return { is: false }; }
+    const m = findMove(pos, u); if (m === undefined) return { is: false };
+    const own = see(pos, m);
+    make(pos, m);
+    const replies = legal(pos, false);
+    if (!replies.length) { unmake(pos); return { is: false, see: own, risk: 0 }; }   // مات أو تعادل على طول: مش تضحية
+    // الأكل على نفس المربع محسوب في SEE النقلة نفسها؛ هنا بنشوف القطع التانية اللي اتسابت
+    let risk = 0, sq = "";
+    const t = (m >> 7) & 127;
+    for (const c of replies) { const ct = (c >> 7) & 127; if (ct === t || !pos.b[ct]) continue; const v = see(pos, c); if (v > risk) { risk = v; sq = sqName(ct); } }
+    if (own < 0 && -own > risk) sq = sqName(t);
+    unmake(pos);
+    const is = own <= -200 || risk - Math.max(0, own) >= 200;
+    return { is, see: own, risk, sq };
+  }
+
+  // عدّ المواقف لعمق معيّن (اختبار صحة مولّد النقلات: تبييت، أخذ في المرور، ترقية)
+  function perft(fen, depth) {
+    const pos = parse(fen);
+    const go = d => { if (!d) return 1; let n = 0; for (const m of legal(pos, false)) { make(pos, m); n += go(d - 1); unmake(pos); } return n; };
+    return go(depth);
+  }
+  // SEE لنقلة uci من موقف FEN
+  function seeUci(fen, u) { let pos; try { pos = parse(fen); } catch (_) { return 0; } const m = legal(pos, false).find(x => uci(x) === u); return m === undefined ? 0 : see(pos, m); }
+
+  root.ChessPositionAnalyzer = { findExactRefutation, diagnoseMistakeReason, features, analyze, parse, toFen, VAL, MATE, deepSearch, see: seeUci, quietMaterial, perft };
+  root.PositionConceptAnalyzer = { walkLine, verifyLine, sacrifice, concepts: (fen, line, max) => walkLine(fen, line, max).steps.map(s => s.concepts) };
+  // جوه Web Worker (من غير DOM): البحث العميق بيشتغل هنا عشان الصفحة ما تقفش
+  if (typeof window === "undefined" && typeof importScripts === "function" && typeof postMessage === "function") {
+    root.onmessage = e => {
+      const d = e.data || {}; let result = null;
+      try { if (d.op === "deep") result = deepSearch(d.fen, d.opts); } catch (_) { result = null; }
+      postMessage({ id: d.id, result });
+    };
+  }
   // تسخين مرة واحدة والمتصفح فاضي: أول غلطة للطالب ما تدفعش تمن تجهيز الـ JS (وإلا أول رد ممكن ياخد 30ms+)
   if (typeof window !== "undefined" && typeof document !== "undefined") {
     const warm = () => { try { for (let i = 0; i < 3; i++) findExactRefutation("r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4", "c4f7"); } catch (_) {} };

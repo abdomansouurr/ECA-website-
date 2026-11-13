@@ -125,14 +125,18 @@ function coachStartRefute(S, mode, pre, r, want, onDone, last0) {
   if (an && an.diag) { diag = an.diag; if (an.refutation) ref = { from: an.refutation.from, to: an.refutation.to, promotion: an.refutation.promotion || "", target: an.refutation.to, kind: diag.type }; }
   else ref = findRefutationMove(pre, wrong, want, explicit);
   S.isRefuting = true; S.coachPanel = null;
-  S.refute = { mode, game: S.game, pre, last0, wrong: r.to, ref, diag, themes, kind: diag ? diag.type : ref ? ref.kind : "F", onDone, shown: false };
+  S.refute = { mode, game: S.game, pre, last0, wrong: r.to, wrongUci: wrong, ref, diag, themes, kind: diag ? diag.type : ref ? ref.kind : "F", onDone, shown: false, gain: an && an.refutation ? an.refutation.gain : 0 };
   coachTimers.push(setTimeout(() => {
     const R = S.refute;
     if (!R || R.game !== S.game) return;
     if (R.ref) { const m = coachTry(S.game, coachUci(R.ref)); if (m) S.last = [m.from, m.to]; else { R.ref = null; if (R.diag) R.diag = Object.assign({}, R.diag, { vectors: [] }); } }
-    R.shown = true; coachSfx("warn");
-    // الشرح بيفضل ظاهر بعد ما الرقعة ترجع، لحد ما الطالب يلعب نقلته الجاية
-    if (R.diag) S.coachPanel = { game: S.game, idx: S.idx, html: coachBotPanel(R.diag, R.pre, R.themes) };
+    R.shown = true;
+    // كش مات أو خسارة قطعة كاملة = خبطة الخطأ الفادح، وغير كده التحذير الهادي
+    if (window.ecaGM && R.diag && (R.diag.type === "WALKED_INTO_MATE" || R.gain >= 250)) ecaGM.sound("BLUNDER"); else coachSfx("warn");
+    // الشرح بيفضل ظاهر بعد ما الرقعة ترجع، لحد ما الطالب يلعب نقلته الجاية.
+    // كارت الجراند ماستر (gmcoach.js): الحكم المبدئي على طول، والمحرك بيكمّل التصنيف والتكملة في الخلفية
+    if (window.ecaGM) ecaGM.puzzleWrong(S, R);
+    else if (R.diag) S.coachPanel = { game: S.game, idx: S.idx, html: coachBotPanel(R.diag, R.pre, R.themes) };
     if (typeof arenaRefresh === "function") arenaRefresh();
     coachTimers.push(setTimeout(() => coachRestore(S), R.ref || R.diag ? COACH_SHOW : COACH_FALLBACK));
   }, COACH_PAUSE));
@@ -185,8 +189,11 @@ function coachBotDiagnosis(d) {
   switch (d.type) {
     case "WALKED_INTO_MATE": return CCL(`نقلة ${sp} من ${S(d.wrongFrom)} لـ ${S(d.wrongTo)} سابت ملكك في ${S(d.kingSq)} مكشوف، والخصم عنده ${d.mateIn > 1 ? "كش مات في نقلتين" : "كش مات في نقلة واحدة"} بيبدأ بـ ${op} من ${S(d.refFrom)} لـ ${S(d.refTo)}!`,
       `Moving ${sp} from ${S(d.wrongFrom)} to ${S(d.wrongTo)} left your king on ${S(d.kingSq)} exposed: the opponent has mate in ${d.mateIn || 1} starting with ${op} from ${S(d.refFrom)} to ${S(d.refTo)}!`);
-    case "MOVED_TO_HANGING_SQUARE": return CCL(`مربع ${S(d.wrongTo)} مراقب بـ ${op} الخصم الموجود في ${S(d.refFrom)}! كده أنت قدمت ${sp} هدية بدون حماية.`,
-      `Square ${S(d.wrongTo)} is watched by the opponent's ${op} on ${S(d.refFrom)}! You gave away ${sp} for free.`);
+    case "MOVED_TO_HANGING_SQUARE": return d.defenders
+      ? CCL(`مربع ${S(d.wrongTo)} مراقب بـ ${op} الخصم الموجود في ${S(d.refFrom)}! صحيح ${sp} عليه حماية، لكن ${op} أرخص منه، فالتبادل خسران ليك.`,
+        `Square ${S(d.wrongTo)} is watched by the opponent's ${op} on ${S(d.refFrom)}! ${sp} is protected, but ${op} is cheaper, so the trade loses for you.`)
+      : CCL(`مربع ${S(d.wrongTo)} مراقب بـ ${op} الخصم الموجود في ${S(d.refFrom)}! كده أنت قدمت ${sp} هدية بدون حماية.`,
+        `Square ${S(d.wrongTo)} is watched by the opponent's ${op} on ${S(d.refFrom)}! You gave away ${sp} for free.`);
     case "ABANDONED_DEFENSE": return CCL(`تحريك ${sp} من مربع ${S(d.wrongFrom)} لمربع ${S(d.wrongTo)} رفع الحماية عن ${P(d.targetPiece)} في مربع ${S(d.targetSq)}، وده سمح لـ ${op} الخصم من ${S(d.refFrom)} إنه ياكله مجاناً!`,
       `Moving ${sp} from ${S(d.wrongFrom)} to ${S(d.wrongTo)} took away the protection of ${P(d.targetPiece)} on ${S(d.targetSq)}, so the opponent's ${op} on ${S(d.refFrom)} takes it for free!`);
     case "OPENED_LINE_OR_BROKEN_PIN": return CCL(`تحريك ${sp} من ${S(d.throughSq || d.wrongFrom)} فتح الخط قدام ${op} الخصم في ${S(d.attackerSq || d.refFrom)}، فبقى يوصل لـ ${P(d.targetPiece)} في ${S(d.refTo)}!`,

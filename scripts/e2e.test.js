@@ -702,13 +702,33 @@ async function login(p, id) {
         out.skipLabel = !!skip && /فهمت السبب|Got it/.test(skip.textContent);
         out.skipSize = skip ? Math.round(Math.min(skip.getBoundingClientRect().width, skip.getBoundingClientRect().height)) : 0;
         const panel = document.querySelector('#mainView .eca-coach-panel');
-        out.panelParts = panel ? panel.querySelectorAll('.eca-ckb-part').length : 0;
+        out.panelEarly = !!panel && !!panel.querySelector('.eca-gm-layer[data-layer="1"]');
         out.panelSquares = !!panel && panel.textContent.includes(pick.a.refutation.to) && panel.querySelectorAll('.eca-sq-tok[dir="ltr"]').length >= 1;
         out.panelBelow = !!panel && panel.getBoundingClientRect().top >= document.querySelector('#mainView .eca-board').getBoundingClientRect().bottom - 1;
         const st0 = Z.status; puzClick(pick.m.from); out.inputLocked = Z.status === st0 && Z.isRefuting === true && !Z.sel;
         skip.click(); await wait(100);
         out.skipRestored = g.fen() === pick.pre && Z.isRefuting === false && Z.status === 'play' && !document.querySelector('#mainView .eca-coach-svg, #mainView .eca-coach-toast, #mainView .eca-board.eca-coach-lock');
         out.panelStays = !!document.querySelector('#mainView .eca-coach-panel');
+        // كارت الجراند ماستر بعد ما المحرك يخلص: 4 طبقات + شارة بلون الدرجة + زرار التكملة
+        for (let i = 0; i < 60 && !(Z.coachPanel && Z.coachPanel.rv); i++) await wait(100);
+        const card = document.querySelector('#mainView .eca-gm-card[data-tier]:not([data-tier=""])'), rv = Z.coachPanel && Z.coachPanel.rv;
+        out.gmTier = rv ? rv.tier : ''; out.gmLayers = card ? card.querySelectorAll('.eca-gm-layer').length : 0;
+        out.gmBad = ['INACCURACY', 'MISTAKE', 'MISSED_WIN', 'BLUNDER'].includes(out.gmTier);
+        out.gmBadge = !!card && !!rv && card.querySelector('.eca-gm-badge').textContent === ecaGM.tiers[rv.tier].sym && card.style.getPropertyValue('--gm').trim() === ecaGM.tiers[rv.tier].color;
+        out.gmTitle = !!card && !!rv && card.querySelector('.eca-gm-title').textContent.includes(ecaGM.tiers[rv.tier].ar);
+        out.gmNoSolution = !document.getElementById('mainView').innerHTML.includes(Z.sol[Z.idx]) && !/أفضل نقلة كانت/.test(card ? card.textContent : '');
+        const fb = card && card.querySelector('.eca-gm-follow');
+        out.followSize = fb ? Math.round(Math.min(fb.getBoundingClientRect().width, fb.getBoundingClientRect().height)) : 0;
+        if (fb) {
+          fb.click(); await wait(500);
+          out.followOn = Z.status === 'follow' && g.fen() !== pick.pre && !!document.querySelector('#mainView .eca-gm-svg .eca-gm-num') && !!document.querySelector('#mainView .eca-gm-followbar');
+          for (let i = 0; i < 90 && Z.gmFollow && Z.gmFollow.i < Z.gmFollow.moves.length; i++) await wait(100);
+          out.followSteps = Z.gmFollow ? Z.gmFollow.i : 0; out.followNums = document.querySelectorAll('#mainView .eca-gm-svg .eca-gm-num').length;
+          const back = document.querySelector('#mainView .eca-gm-back');
+          out.backSize = back ? Math.round(Math.min(back.getBoundingClientRect().width, back.getBoundingClientRect().height)) : 0;
+          back.click(); await wait(150);
+          out.followBack = !Z.gmFollow && Z.status === 'play' && g.fen() === pick.pre && !document.querySelector('#mainView .eca-gm-followbar, #mainView .eca-gm-num');
+        }
         const second = g.moves({ verbose: true }).find(m => { const u = m.from + m.to + (m.promotion || ''); return u !== Z.sol[Z.idx] && nonMate(g.fen(), m); });
         puzPlay({ from: second.from, to: second.to, promotion: second.promotion });
         out.secondLocked = Z.isRefuting === true;
@@ -718,7 +738,10 @@ async function login(p, id) {
       } finally { window.fbVaultFail = real; }
       return out; })()`);
     check("coach: a wrong move locks the board and the opponent plays the exact punishing reply with a red arrow", refA.found && refA.locked && refA.replied && refA.arrow && refA.svgBox && refA.inputLocked, refA);
-    check("coach: the 3-part coach panel (diagnosis, thinking, rule) sits under the board with the squares in LTR", refA.title && refA.panelParts === 3 && refA.panelSquares && refA.panelBelow, refA);
+    check("coach: the coach card appears at once under the board with the squares in LTR", refA.title && refA.panelEarly && refA.panelSquares && refA.panelBelow, refA);
+    check("GM coach: the wrong move gets a class (?! ? ⚡ ??) with its Chess.com badge, color and Arabic title, in a 4-layer card", refA.gmBad && refA.gmLayers === 4 && refA.gmBadge && refA.gmTitle, refA);
+    check("GM coach: in a running puzzle the card never shows the solution", refA.gmNoSolution, refA);
+    check("GM coach: «▶ show the follow-up» (44px) plays the line on the board with numbered arrows, and «↩ back» (44px) restores the exact position", refA.followSize >= 44 && refA.followOn && refA.followSteps >= 2 && refA.followNums === refA.followSteps && refA.backSize >= 44 && refA.followBack, refA);
     check("coach: «got it — try again» (44px) and the 2.6s timer bring back the position, and the explanation stays to read", refA.skipLabel && refA.skipSize >= 44 && refA.skipRestored && refA.panelStays && refA.secondLocked && refA.autoRestored, refA);
     check("coach: two wrong moves on one puzzle log it in the mistake vault once", refA.vaultWrites === 1, refA.vaultWrites);
     check("coach: the deep search finds the punishing reply in under 30ms", refA.maxMs < 30, { maxMs: refA.maxMs, tried: refA.tried });
@@ -742,7 +765,7 @@ async function login(p, id) {
       out.abandoned = await craft('4r1k1/8/8/8/4B3/2N5/8/6K1 w - - 0 1', 'e4d5', 'c3b5');
       out.hanging = await craft('4k3/8/3p4/8/8/5N2/8/4K3 w - - 0 1', 'f3d4', 'f3e5');
       out.mate = await craft('4r1k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1', 'h2h3', 'd1d7');
-      out.threat = await craft('2r3k1/8/8/8/2B5/8/P7/6K1 w - - 0 1', 'c4b5', 'a2a3');
+      out.threat = await craft('2r4k/8/8/8/2B5/8/P7/6K1 w - - 0 1', 'c4b5', 'a2a3');
       out.pin = await craft('r5k1/8/8/8/3K4/8/4Q3/8 w - - 0 1', 'e2e3', 'd4e4');
       Z.status = 'idle'; Z.game = null; Z.counted = false; puzLoad();   // back to a normal lesson puzzle in play, like before these tests
       for (let i = 0; i < 60 && !(Z.status === 'play' && Z.game); i++) await wait(250);
@@ -754,6 +777,29 @@ async function login(p, id) {
     check("coach: walking into mate names the king's square and the mating move", kinds.mate.type === "WALKED_INTO_MATE" && kinds.mate.reply === "e1" && has(kinds.mate, "g1", "e8", "e1", "كش مات") && kinds.mate.back, kinds.mate);
     check("coach: an ignored threat names the threatened bishop and its square", kinds.threat.type === "IGNORED_EXISTING_THREAT" && kinds.threat.reply === "c4" && has(kinds.threat, "الفيل", "c4", "تهديد") && kinds.threat.back, kinds.threat);
     check("coach: a pin or skewer draws the x-ray line through both pieces", kinds.pin.type === "ALLOWED_OPPONENT_PIN_OR_SKEWER" && kinds.pin.xray && has(kinds.pin, "e4", "e2") && kinds.pin.back, kinds.pin);
+    // ---------- GM coach: the right move in a puzzle gets its badge (!! for a sacrifice, ! for the only move) and its sound ----------
+    const gmP = await pa.ev(`(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms)), Z = arena.puz, out = {}, notes = [], real = window.sfxNotes;
+      window.sfxNotes = function (n) { notes.push(n.join('-')); };
+      const craft = (fen, sol) => { coachCancelAll(); const g = new ChessCls(fen); Object.assign(Z, { game: g, sol: [sol], idx: 0, color: g.turn(), flip: false, last: null, counted: true, status: 'play', review: false, info: { id: 'craft', rating: 1200, themes: [] }, coachPanel: null, coachStage: 0, coachKey: null, gmNote: null, gmBadge: null }); render(); return g; };
+      try {
+        craft('5r1k/6pp/7N/3Q4/8/8/8/6K1 w - - 0 1', 'd5g8'); puzPlay({ from: 'd5', to: 'g8' }); await wait(150);
+        let b = document.querySelector('#mainView .eca-gm-svg .eca-gm-sqbadge'), n = document.querySelector('#mainView .eca-gm-note');
+        out.brilliant = Z.gmBadge && Z.gmBadge.tier; out.bSym = b ? b.querySelector('text').textContent : ''; out.bColor = b ? b.querySelector('circle').getAttribute('fill') : '';
+        out.bNote = n ? n.textContent.replace(/\\s+/g, ' ') : ''; out.bSound = notes.includes('1047-1319-1568-2093');
+        const sq = document.querySelector('#mainView .eca-sq[data-sq="g8"]'), br = b && b.getBoundingClientRect(), sr = sq && sq.getBoundingClientRect();
+        out.onSquare = !!br && !!sr && br.left >= sr.left - 2 && br.right <= sr.right + 14 && br.top >= sr.top - 14 && br.bottom <= sr.bottom + 2;
+        craft('r3k3/8/8/1N6/8/8/8/4K3 w - - 0 1', 'b5c7'); puzPlay({ from: 'b5', to: 'c7' });
+        for (let i = 0; i < 40 && !(Z.gmBadge && Z.gmBadge.tier === 'GREAT'); i++) await wait(100);
+        b = document.querySelector('#mainView .eca-gm-svg .eca-gm-sqbadge');
+        out.great = Z.gmBadge && Z.gmBadge.tier; out.gSym = b ? b.querySelector('text').textContent : ''; out.gColor = b ? b.querySelector('circle').getAttribute('fill') : '';
+        out.gSound = notes.includes('880-1175-1480');
+      } finally { window.sfxNotes = real; }
+      clearTimeout(Z.nextTimer); Z.status = 'idle'; Z.game = null; Z.counted = false; puzLoad();
+      for (let i = 0; i < 60 && !(Z.status === 'play' && Z.game); i++) await wait(250);
+      return out; })()`);
+    check("GM coach: a queen sacrifice that mates (Qg8+!!) gets the teal «!!» badge on its square, a note and the brilliant chime", gmP.brilliant === "BRILLIANT" && gmP.bSym === "!!" && gmP.bColor === "#1BACA6" && gmP.onSquare && /تضحية/.test(gmP.bNote) && gmP.bSound, gmP);
+    check("GM coach: the only saving move (Nc7+ fork) is upgraded to the blue «!» GREAT badge by the engine in the background", gmP.great === "GREAT" && gmP.gSym === "!" && gmP.gColor === "#5C8BB0" && gmP.gSound, gmP);
     if (process.env.E2E_SHOTS) {
       const shotOk = await pa.ev(`(async () => { const Z = arena.puz, g = Z.game, want = Z.sol[Z.idx], pre = g.fen();
         const m = g.moves({ verbose: true }).find(x => { const u = x.from + x.to + (x.promotion || ''); if (u === want) return false; const r = findRefutationMove(pre, u, want); return r && 'BCDE'.includes(r.kind); });
@@ -835,6 +881,64 @@ async function login(p, id) {
       arenaSub('analysis'); await wait(500); out.analysis = !!document.querySelector('#mainView .eca-coach-hint') && ecaCoach.hintOk(ecaCoach.mode()) && !ecaCoach.refuteOk(ecaCoach.mode());
       arenaSub('lobby'); return out; })()`);
     check("hint: no coach help in 60s rush, duels, the speed arena or the weekly challenge; it is on the analysis board", Object.values(gate).every(Boolean), gate);
+    // ---------- GM coach on the analysis board: Stockfish (MultiPV 2) reviews every move, with the site's engine as the fallback ----------
+    const gmA = await pa.ev(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), A = arena.ana, out = {}, notes = [], real = window.sfxNotes;
+      const until = async (f, ms) => { for (let t = 0; t < ms; t += 100) { if (f()) return true; await wait(100); } return false; };
+      window.sfxNotes = function (n) { notes.push(n.join('-')); };
+      try {
+        switchTab('arena'); arenaSub('analysis'); await wait(300);
+        anaSet(new ChessCls()); anaClick('e2'); anaClick('e4');
+        out.bookOk = await until(() => A.line[0] && A.line[0].rv, 20000); await wait(150);
+        out.book = A.line[0].rv && A.line[0].rv.tier;
+        out.bookName = ((document.querySelector('#anaEval .eca-ana-book') || {}).textContent || '').trim();
+        out.bookMini = ((document.querySelector('#anaMoves .eca-ana-mv[data-tier="BOOK"] .eca-gm-mini') || {}).textContent || '');
+        out.evalBar = !!document.querySelector('#anaEval .eval-bar > div') && /^[+−\\-]?\\d|^-?M|…/.test(((document.querySelector('#anaEval .eca-ana-pill') || {}).textContent || '').trim());
+        out.bookCard = !!document.querySelector('#anaGM .eca-gm-card[data-tier="BOOK"]') && document.querySelectorAll('#anaGM .eca-gm-layer').length === 4;
+        // blunder: the queen walks onto a square the pawn takes
+        anaSet(new ChessCls('4k3/8/8/3p4/8/3Q4/8/4K3 w - - 0 1')); await wait(100); anaClick('d3'); anaClick('c4');
+        out.blOk = await until(() => A.line[0] && A.line[0].rv, 25000); await wait(200);
+        const rv = A.line[0].rv; out.tier = rv && rv.tier; out.src = (ecaGM.get(A.line[0].after) || {}).src;
+        const card = document.querySelector('#anaGM .eca-gm-card'), text = card ? card.textContent.replace(/\\s+/g, ' ') : '';
+        out.title = card ? card.querySelector('.eca-gm-title').textContent : ''; out.layers = card ? card.querySelectorAll('.eca-gm-layer').length : 0;
+        out.free = /من غير أي حماية/.test(text); out.cont = /dxc4/.test(text); out.best = /★ أفضل نقلة كانت/.test(text);
+        out.mini = ((document.querySelector('#anaMoves .eca-ana-mv[data-tier="BLUNDER"] .eca-gm-mini') || {}).textContent || '');
+        const sb = document.querySelector('#mainView .eca-board .eca-gm-svg .eca-gm-sqbadge[data-tier="BLUNDER"]');
+        out.sqBadge = !!sb && sb.querySelector('circle').getAttribute('fill') === '#CA3431' && sb.querySelector('text').textContent === '??';
+        out.green = !!document.querySelector('#mainView .eca-gm-svg .eca-gm-best'); out.red = !!document.querySelector('#mainView .eca-gm-svg .eca-gm-threat');
+        out.thud = notes.includes('110-82');
+        anaLines(); await wait(100); out.hidden = !document.querySelector('#mainView .eca-gm-svg .eca-gm-best, #mainView .eca-gm-svg .eca-gm-threat');
+        anaLines(); await wait(100); out.shown = !!document.querySelector('#mainView .eca-gm-svg .eca-gm-best');
+        // the follow-up on the board, then back to the position
+        const f0 = A.game.fen(); document.querySelector('#anaGM .eca-gm-follow').click(); await wait(500);
+        out.followMoved = A.game.fen() !== f0 && !!document.querySelector('#mainView .eca-gm-svg .eca-gm-num');
+        anaClick('e8'); out.locked = !A.sel;
+        await until(() => A.gmFollow && A.gmFollow.i >= A.gmFollow.moves.length, 9000);
+        out.steps = A.gmFollow ? A.gmFollow.i : 0;
+        document.querySelector('#mainView .eca-gm-back').click(); await wait(200);
+        out.back = !A.gmFollow && A.game.fen() === f0 && A.ply === 1 && !!document.querySelector('#anaGM .eca-gm-card[data-tier="BLUNDER"]');
+        // stepping through the game keeps every move
+        anaGo(0); await wait(60); out.navStart = A.ply === 0 && A.game.fen() === A.root && A.line.length === 1;
+        anaStep(1); await wait(60); out.navNext = A.ply === 1 && A.game.fen() === f0;
+        out.navBtns = [...document.querySelectorAll('#mainView .eca-ana-nav button')].every(b => b.getBoundingClientRect().height >= 44 && b.getBoundingClientRect().width >= 44 && (b.title || b.getAttribute('aria-label')));
+        // brilliant: queen sacrifice into a smothered mate
+        anaSet(new ChessCls('5r1k/6pp/7N/3Q4/8/8/8/6K1 w - - 0 1')); await wait(100); anaClick('d5'); anaClick('g8');
+        out.brOk = await until(() => A.line[0] && A.line[0].rv, 25000); out.brilliant = A.line[0].rv && A.line[0].rv.tier;
+        out.brChime = notes.includes('1047-1319-1568-2093');
+        // the site's own engine when Stockfish isn't there
+        ecaGM.engine = 'internal';
+        anaSet(new ChessCls('r3k3/8/8/1N6/8/8/8/4K3 w - - 0 1')); await wait(100); anaClick('b5'); anaClick('c7');
+        out.inOk = await until(() => A.line[0] && A.line[0].rv, 25000); out.internalTier = A.line[0].rv && A.line[0].rv.tier;
+        out.internalSrc = (ecaGM.get(A.line[0].after) || {}).src; out.internalCard = !!document.querySelector('#anaGM .eca-gm-card');
+      } finally { ecaGM.engine = 'auto'; window.sfxNotes = real; }
+      return out; })()`);
+    check("GM analysis: 1.e4 is marked 📖 Book in the move list, the opening is named, and the eval bar with its pill is shown", gmA.bookOk && gmA.book === "BOOK" && gmA.bookMini === "📖" && /افتتاح بيدق الملك|King's Pawn/.test(gmA.bookName) && gmA.evalBar && gmA.bookCard, gmA);
+    check("GM analysis: Qc4?? is a BLUNDER: «??» in the move list, the crimson badge on c4, the low thud, and a 4-layer card", gmA.blOk && gmA.tier === "BLUNDER" && gmA.mini === "??" && gmA.sqBadge && gmA.thud && gmA.layers === 4 && /خطأ فادح/.test(gmA.title), gmA);
+    check("GM analysis: the card says the queen had no defender, shows the line (dxc4) and the best move", gmA.free && gmA.cont && gmA.best, gmA);
+    check("GM analysis: green arrow for the best move, red for the opponent's reply, and the 👁 toggle hides and shows them", gmA.green && gmA.red && gmA.hidden && gmA.shown, gmA);
+    check("GM analysis: «▶ show the follow-up» plays the line with numbered arrows (board locked), «↩ back» restores it", gmA.followMoved && gmA.locked && gmA.steps >= 1 && gmA.back, gmA);
+    check("GM analysis: ⏮ ◀ ▶ ⏭ step through the game without losing moves (44px buttons with labels)", gmA.navStart && gmA.navNext && gmA.navBtns, gmA);
+    check("GM analysis: the queen sacrifice into a smothered mate (Qg8+) is BRILLIANT with the chime", gmA.brOk && gmA.brilliant === "BRILLIANT" && gmA.brChime, gmA);
+    check("GM analysis: without Stockfish the site's own engine (Web Worker) reviews the move", gmA.inOk && gmA.internalSrc === "eca" && !!gmA.internalTier && gmA.internalCard, gmA);
     // ---------- daily puzzle: once a day (Cairo time), then locked with a live countdown ----------
     await pa.send("Page.bringToFront");
     const dly = await pa.ev(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {}, u = currUser(), Z = arena.puz;

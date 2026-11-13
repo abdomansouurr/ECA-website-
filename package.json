@@ -15,7 +15,8 @@
     "audit": "node scripts/audit.js",
     "seed:emulator": "node scripts/seed-data.js",
     "obfuscate:puzzles": "node scripts/obfuscate-puzzles.js",
-    "test:coach": "node scripts/coach-analyzer.test.js"
+    "test:coach": "node scripts/coach-analyzer.test.js",
+    "test:gm": "node scripts/gm-coach.test.js"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "3.0.4",

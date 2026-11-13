@@ -16,7 +16,7 @@ const CASES = [
     (d, r) => r.from === "e5" && r.to === "f3" && d.forkTargets.map(f => f.sq).sort().join() === "d2,g1" && d.vectors.filter(v => v.kind === "dash").length === 2],
   ["the rook leaves the back rank: mate in one", "4r1k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1", "d1d7", "WALKED_INTO_MATE",
     (d, r) => r.from === "e8" && r.to === "e1" && r.mate && d.mateIn === 1 && d.kingSq === "g1"],
-  ["a pawn move ignores the rook attacking the bishop", "2r3k1/8/8/8/2B5/8/P7/6K1 w - - 0 1", "a2a3", "IGNORED_EXISTING_THREAT",
+  ["a pawn move ignores the rook attacking the bishop", "2r4k/8/8/8/2B5/8/P7/6K1 w - - 0 1", "a2a3", "IGNORED_EXISTING_THREAT",
     (d, r) => r.from === "c8" && r.to === "c4" && d.threatSq === "c4" && d.threatPiece === "b"],
   ["the king steps onto the file: skewer", "r5k1/8/8/8/3K4/8/4Q3/8 w - - 0 1", "d4e4", "ALLOWED_OPPONENT_PIN_OR_SKEWER",
     (d, r) => r.to === "e8" && d.pinnedSq === "e4" && d.behindSq === "e2" && d.vectors.some(v => v.kind === "xray")],
