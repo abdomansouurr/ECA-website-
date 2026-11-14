@@ -1458,6 +1458,15 @@ async function login(p, id) {
     await lvOver(W1); await lvOver(B1);
     const p3 = await until(async () => { const x = await read(`liveArenas/${arn.tid}/players/${w1uid}`); return x && x.games.length === 3 && x.cur === "" ? x : null; }, 12000);
     check("🏆 arena: a win on fire scores 4 (5 + 4 = 9)", pl6.ok && p3 && p3.pts === 9 && p3.streak === 3 && p3.fire, { pl6, p3 });
+    const rr = (who, gid) => until(() => read(`users/${who}/ratings/${gid}`), 20000);
+    const [ra1, rb1, ra2, rc2, ra3, rb3] = [await rr(w1uid, r1a.id), await rr(b1uid, r1a.id), await rr(w1uid, r2w.id), await rr(C, r2w.id), await rr(w1uid, r3w.id), await rr(b1uid, r3w.id)];
+    const eloK = (me, opp, S) => [32, 24].map(k => Math.max(600, Math.round(me + k * (S - 1 / (1 + Math.pow(10, (opp - me) / 400))))));
+    const fresh = !!(ra1 && rb1 && ra2 && rc2 && ra3 && rb3)
+      && ra2.before === ra1.after && rc2.opp === ra1.after && ra2.opp === rc2.before        // game 2 started right after game 1: both sides used the new rating
+      && ra3.before === ra2.after && rb3.opp === ra2.after && ra3.opp === rb1.after && rb3.before === rb1.after;
+    const math = !!(ra1 && ra2 && ra3 && rc2) && [ra1, ra2, ra3].every(r => r.mode === "arena" && eloK(r.before, r.opp, r.res === "win" ? 1 : r.res === "draw" ? 0.5 : 0).includes(r.after));
+    check("🏅 rating: back-to-back arena games use the rating the previous game just produced (game 2 sees game 1's result on both boards, game 3 sees game 2's)", fresh && math,
+      { g1: ra1 && [ra1.before, ra1.after, ra1.opp], g1b: rb1 && [rb1.before, rb1.after], g2: ra2 && [ra2.before, ra2.after, ra2.opp], g2c: rc2 && [rc2.before, rc2.after, rc2.opp], g3: ra3 && [ra3.before, ra3.after, ra3.opp], g3b: rb3 && [rb3.before, rb3.after, rb3.opp] });
     await pg.send("Page.bringToFront");
     const stand = await lv(pg, `lvArenaBack(false); await wait(300); await until(() => document.querySelectorAll('#mainView .lv-table tbody tr').length >= 3, 8000);
       const rows = [...document.querySelectorAll('#mainView .lv-table tbody tr')].map(r => r.textContent.replace(/\\s+/g, ' ').trim());
@@ -1467,12 +1476,17 @@ async function login(p, id) {
 
     // ---------- 📚 game archive: list, filters, Grandmaster analysis saved, 0ms badges on reopen, PGN, import, bot games ----------
     await pa.send("Page.bringToFront");
+    const uBot0 = await U(A);
     const lbot = await lv(pa, `const P = arena.play; switchTab('arena'); arenaSub('play'); await wait(200); P.level = 0; P.colorChoice = 'w'; P.tc = 3; playStart(); await wait(100); playDo({ from: 'e2', to: 'e4' });
       await until(() => P.game && P.game.history().length >= 2 && !P.thinking, 8000); await playResign(); await wait(300); render(); await wait(1500);
-      return { over: P.over, rec: P._agRec ? { id: P._agRec.gameId, mode: P._agRec.mode, tc: P._agRec.timeControl, clk: P._agRec.clockTimesCentisec.length, black: P._agRec.blackName, rating: P._agRec.blackRating } : null };`);
+      const un = document.querySelector('#mainView .eca-unrated');
+      return { over: P.over, unrated: un ? un.textContent.replace(/\\s+/g, ' ').trim() : '', rec: P._agRec ? { id: P._agRec.gameId, mode: P._agRec.mode, tc: P._agRec.timeControl, clk: P._agRec.clockTimesCentisec.length, black: P._agRec.blackName, rating: P._agRec.blackRating } : null };`);
     const lbotDoc = lbot.rec ? await until(() => read("archivedGames/" + lbot.rec.id), 10000) : null;
-    const rb = lbot.rec ? await until(() => read(`users/${A}/ratings/${lbot.rec.id}`), 25000) : null;
-    check("🏅 rating: a rated bot game counts against the bot's rating (a loss to the 300 bot: a whole-number drop of at most 40)", !!rb && rb.mode === "bot" && rb.opp === 300 && rb.res === "loss" && Number.isInteger(rb.delta) && rb.delta < 0 && rb.delta >= -40 && rb.after === rb.before + rb.delta, rb);
+    await sleep(4000);
+    const rb = lbot.rec ? await read(`users/${A}/ratings/${lbot.rec.id}`) : "no-game", uBotAfter = await U(A);
+    check("🤖 bot games are training games: no rating row, and the ECA rating, peak and rated-games count stay the same", rb === null && uBotAfter.ecaRating === uBot0.ecaRating && uBotAfter.ecaPeakRating === uBot0.ecaPeakRating && uBotAfter.ecaRatedGamesCount === uBot0.ecaRatedGamesCount,
+      { rb, before: [uBot0.ecaRating, uBot0.ecaRatedGamesCount], after: [uBotAfter.ecaRating, uBotAfter.ecaRatedGamesCount] });
+    check("🤖 the bot game screen says «🤖 مباراة تدريبية (غير مصنفة - Unrated)»", /🤖 مباراة تدريبية \(غير مصنفة - Unrated\)/.test(lbot.unrated || ""), lbot.unrated);
     check("📚 archive: a finished game against a rated academy bot saves itself (3+0 clock, bot rating)", lbot.over === "loss" && !!lbotDoc && lbotDoc.mode === "bot" && lbotDoc.timeControl === "3+0" && lbotDoc.blackRating === 300 && lbotDoc.result === "0-1", { lbot, lbotDoc: lbotDoc && { mode: lbotDoc.mode, tc: lbotDoc.timeControl, r: lbotDoc.blackRating, res: lbotDoc.result } });
     await lv(pa, `Object.assign(arena.play, { game: null, over: '', thinking: false }); return true;`);
     const arch = await lv(pa, `localStorage.removeItem('eca_saved_games_' + fbMyUid()); arena.archive.synced = ''; arena.archive.triedAt = 0; switchTab('arena'); arenaSub('lobby'); await wait(200);

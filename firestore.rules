@@ -173,21 +173,24 @@ service cloud.firestore {
         && (!changed.hasAny(['arena','shop','lastEconomy']) || economyUpdateOk());
     }
     // ---------- تصنيف الأكاديمية (ECA Rating) ----------
-    // الطالب بيحدّث تصنيفه بنفسه بعد دور متسجّل في الأرشيف (مباشر، بطولة، أو ضد بوت): مرة واحدة لكل دور
-    // (users/{uid}/ratings/{gameId} بيتعمل في نفس العملية)، عدد صحيح من 600 لـ 3500، والتغيير بين −40 و+40
-    // وفي اتجاه النتيجة (الفوز ماينقّصش، والخسارة ماتزوّدش). الحساب نفسه (Elo) على الجهاز، والقواعد بتحدّه
+    // الطالب بيحدّث تصنيفه بنفسه بعد دور مباشر بين طالبين بس (ودّي أو بطولة أرينا) — أدوار البوت تدريبية ومش مصنفة،
+    // لأن نتيجتها جاية من الجهاز. الدور لازم يكون متسجّل في الأرشيف وكمان خلصان فعلاً في liveMatches (اللي قواعده بتتحقق
+    // من كل نقلة ونهاية) بين لاعبين مختلفين، وبنفس النتيجة. مرة واحدة لكل دور (users/{uid}/ratings/{gameId} في نفس العملية)،
+    // عدد صحيح من 600 لـ 3500، والتغيير بين −40 و+40 وفي اتجاه النتيجة. الحساب نفسه (Elo) على الجهاز، والقواعد بتحدّه
     function ratingDoc(uid, gid) { return /databases/$(database)/documents/users/$(uid)/ratings/$(gid); }
     function ratingOk() {
       let d = request.resource.data;
       let me = request.auth.uid;
       let gid = d.get('ecaLastGame', '');
       let g = get(/databases/$(database)/documents/archivedGames/$(gid)).data;
+      let m = get(/databases/$(database)/documents/liveMatches/$(gid)).data;
       let nr = d.get('ecaRating', 1000);
       let delta = nr - resource.data.get('ecaRating', 1000);
       let peak = resource.data.get('ecaPeakRating', 1000);
       return gid is string && gid.matches('[A-Za-z0-9_-]{10,60}') && gid != resource.data.get('ecaLastGame', '')
         && !exists(ratingDoc(me, gid)) && existsAfter(ratingDoc(me, gid))
-        && g.mode in ['pvp', 'arena', 'bot'] && (g.whiteUid == me || g.blackUid == me)
+        && g.mode in ['pvp', 'arena'] && (g.whiteUid == me || g.blackUid == me)
+        && m.status == 'over' && m.res == g.result && m.mode == g.mode && m.w == g.whiteUid && m.b == g.blackUid && m.w != m.b
         && g.result in ['1-0', '0-1', '1/2-1/2'] && request.time < g.playedAt + duration.value(7, 'd')
         && nr is int && nr >= 600 && nr <= 3500 && delta >= -40 && delta <= 40
         && (g.result == '1/2-1/2' || (g.result == (g.whiteUid == me ? '1-0' : '0-1') ? delta >= 0 : delta <= 0))

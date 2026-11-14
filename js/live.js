@@ -639,7 +639,7 @@ function lvLobbyHTML(u) {
         <button type="button" onclick="lvQuick()" class="tap lv-btn gold-btn"${L.busy ? " disabled" : ""}>⚔️ ${LVT("ابحث عن خصم", "Find an opponent")} <bdi dir="ltr">${esc(t.tc)}</bdi></button>
         <button type="button" onclick="lvCreate(true)" class="tap lv-btn"${L.busy ? " disabled" : ""}>🔗 ${LVT("تحدي صاحبك برابط", "Challenge a friend by link")}</button>
       </div>` : `<p class="text-xs text-gray-400">${LVT("الطلاب هما اللي بيلعبوا. تقدر تعمل بطولة أرينا تحت وتتفرج على الأدوار.", "Students play. You can create an arena below and watch the games.")}</p>`}
-      ${student ? `<button type="button" onclick="lvBots()" class="tap lv-btn w-full">🤖 ${LVT("العب ضد بوتات الأكاديمية (بتصنيف) بنفس الوقت", "Play the rated academy bots with this clock")}</button>` : ""}
+      ${student ? `<button type="button" onclick="lvBots()" class="tap lv-btn w-full">🤖 ${LVT("العب ضد بوتات الأكاديمية بنفس الوقت — مباراة تدريبية (غير مصنفة - Unrated)", "Play the academy bots with this clock — training game (Unrated)")}</button>` : ""}
     </section>
     <section class="gold-card rounded-2xl p-4 space-y-2" aria-label="${LVT("تحديات مفتوحة", "Open challenges")}"><h3 class="font-bold text-yellow-300">🟢 ${LVT("تحديات مفتوحة", "Open challenges")}</h3>${rows}</section>
     ${lvArenasHTML(u)}

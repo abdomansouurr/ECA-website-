@@ -430,7 +430,13 @@ async function runSuite(label, rules, quiet) {
   const GID = "liveAAAAAAAAAAAAAAAA";
   const agDoc = (x = {}) => Object.assign({ gameId: GID, whiteUid: uid, whiteName: "A", whiteRating: 1000, blackUid: other, blackName: "B", blackRating: 1000, mode: "pvp", timeControl: "3+2", result: "1-0",
     termination: "resign", pgn: "", uciMoves: "e2e4 e7e5", clockTimesCentisec: [], openingNameAr: "", analysisSummary: null, playedAt: TS.now(), participantUids: [uid, other] }, x);
-  const agSeedR = (x, more) => async s => { await s.collection("archivedGames").doc((x && x.gameId) || GID).set(agDoc(x)); if (more) await more(s); };
+  // the archived game + the finished live match it came from (a real game between two students)
+  const agSeedR = (x, more) => async s => {
+    const a = agDoc(x), id = (x && x.gameId) || GID;
+    await s.collection("archivedGames").doc(id).set(a);
+    if (!(x && x.noMatch)) await s.collection("liveMatches").doc(id).set(Object.assign({ status: "over", res: a.result, mode: a.mode, w: a.whiteUid, b: a.blackUid, moves: ["e2e4", "e7e5"], n: 2 }, (x && x.match) || {}));
+    if (more) await more(s);
+  };
   const rate = (db, x = {}) => db.runTransaction(async tx => {
     const g = x.g || GID, ur = db.collection("users").doc(uid), mr = ur.collection("ratings").doc(g);
     const p = (await tx.get(ur)).data(); await tx.get(mr);
@@ -442,7 +448,13 @@ async function runSuite(label, rules, quiet) {
   await T("rating: a win in a live game (+16, 1000 → 1016)", true, rich, db => rate(db), agSeedR());
   await T("rating: a loss (−16)", true, rich, db => rate(db, { after: 984, mark: { res: "loss" } }), agSeedR({ result: "0-1" }));
   await T("rating: a draw moves it either way", true, rich, db => rate(db, { after: 992, mark: { res: "draw" } }), agSeedR({ result: "1/2-1/2" }));
-  await T("rating: a rated bot game", true, rich, db => rate(db, { mark: { mode: "bot", opp: 900 } }), agSeedR({ mode: "bot", blackUid: "bot-4", blackName: "منافس", blackRating: 900, participantUids: [uid] }));
+  await T("rating: a bot game is a training game and never changes it", false, rich, db => rate(db, { mark: { mode: "bot", opp: 900 } }), agSeedR({ mode: "bot", blackUid: "bot-4", blackName: "منافس", blackRating: 900, participantUids: [uid], noMatch: true }));
+  await T("rating: a bot game even with a forged live match", false, rich, db => rate(db, { mark: { mode: "bot", opp: 900 } }), agSeedR({ mode: "bot", blackUid: "bot-4", blackName: "منافس", blackRating: 900, participantUids: [uid] }));
+  await T("rating: an archived friendly game with no live match behind it", false, rich, db => rate(db), agSeedR({ noMatch: true }));
+  await T("rating: the live match is still being played", false, rich, db => rate(db), agSeedR({ match: { status: "live", res: "" } }));
+  await T("rating: the live match ended the other way", false, rich, db => rate(db), agSeedR({ match: { res: "0-1" } }));
+  await T("rating: a live match against yourself", false, rich, db => rate(db), agSeedR({ blackUid: uid, participantUids: [uid, uid] }));
+  await T("rating: the live match was between other players", false, rich, db => rate(db), agSeedR({ match: { b: "x2" } }));
   await T("rating: an arena game as black", true, rich, db => rate(db, { mark: { mode: "arena" } }), agSeedR({ mode: "arena", whiteUid: other, blackUid: uid, result: "0-1" }));
   await T("rating: more than +40 in one game", false, rich, db => rate(db, { after: 1041 }), agSeedR());
   await T("rating: a win that lowers it", false, rich, db => rate(db, { after: 990 }), agSeedR());

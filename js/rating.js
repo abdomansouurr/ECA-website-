@@ -1,5 +1,5 @@
 // ECA — rating.js: تصنيف الأكاديمية الرسمي (ECA Rating)
-// كل طالب بيبدأ بـ 1000. بعد كل دور محسوب (مباشر ودّي، بطولة أرينا، أو ضد بوت أكاديمي ليه تصنيف) التصنيف بيتحسب بـ Elo:
+// كل طالب بيبدأ بـ 1000. التصنيف بيتحسب بعد الأدوار المباشرة بين طالبين بس (ودّي أو بطولة أرينا) — أدوار البوت تدريبية ومش مصنفة. Elo:
 //   E = 1 / (1 + 10^((الخصم − انا) / 400)) ، K = 32 لأول 20 دور وبعدها 24 ، الجديد = max(600, round(القديم + K × (النتيجة − E)))
 // الكتابة: transaction واحدة (firebase.js → fbRateGame) بتحسب من التصنيف اللي على السيرفر نفسه، وبتعمل users/{uid}/ratings/{gameId}
 // في نفس العملية، والقواعد بتحد التغيير (−40..+40، عدد صحيح، وفي اتجاه النتيجة، ومرة واحدة لكل دور).
@@ -74,9 +74,9 @@ window.ecaLiveRatingOf = (gid, c) => ELO_GAME[gid] ? ELO_GAME[gid][c] : null;
 // ================= بعد الدور: المعاينة على طول + الكتابة في الخلفية بالترتيب =================
 const RTP = {};          // gameId → { before, after, delta, final }
 const RTA = new Set();   // العدّاد اتحرك مرة لكل دور
-const RTQ = { busy: false, timer: 0 };
+const RTQ = { busy: false, timer: 0, pending: 0 };
 function rtqKey() { return "eca_rate_q_" + (window.fbMyUid ? fbMyUid() : ""); }
-function rtqLoad() { try { const v = JSON.parse(localStorage.getItem(rtqKey()) || "[]"); return Array.isArray(v) ? v.filter(x => x && typeof x.gameId === "string") : []; } catch (_) { return []; } }
+function rtqLoad() { try { const v = JSON.parse(localStorage.getItem(rtqKey()) || "[]"); return Array.isArray(v) ? v.filter(x => x && typeof x.gameId === "string" && (x.mode === "pvp" || x.mode === "arena")) : []; } catch (_) { return []; } }
 function rtqSave(q) { try { localStorage.setItem(rtqKey(), JSON.stringify(q.slice(0, 30))); } catch (_) {} }
 function rtPreview(it) {
   const u = currUser(); if (!u || u.role !== "student" || RTP[it.gameId]) return;
@@ -85,7 +85,8 @@ function rtPreview(it) {
 }
 function ecaRateQueue(it) {
   const u = currUser(); if (!u || u.role !== "student" || !window.fbRateGame || !/^[A-Za-z0-9_-]{10,60}$/.test(String(it.gameId || ""))) return;
-  if (!(Number(it.opp) > 0)) return;
+  // التصنيف للأدوار المباشرة بين طالبين بس (ودّي أو بطولة)، مش البوتات
+  if (!(Number(it.opp) > 0) || !["pvp", "arena"].includes(it.mode)) return;
   rtPreview(it);
   const q = rtqLoad(); if (!q.some(x => x.gameId === it.gameId)) q.push({ gameId: it.gameId, mode: it.mode, res: it.res, opp: Math.round(it.opp), tries: 0 });
   rtqSave(q); rtqPump();
@@ -165,34 +166,40 @@ window.ecaRateAfterLive = function (d) {
   const res = d.res === "1/2-1/2" ? "draw" : d.res === (me === "w" ? "1-0" : "0-1") ? "win" : "loss", oc = me === "w" ? "b" : "w", oppUid = me === "w" ? d.b : d.w;
   const snap = ELO_GAME[d.id], go = opp => ecaRateQueue({ gameId: d.id, mode: d.mode, res, opp });
   if (snap && snap[oc] != null) return go(snap[oc]);
-  if (ELO[oppUid] != null) return go(ELO[oppUid]);
-  const late = opp => { go(opp); if (arena.live.id === d.id && typeof lvPaint === "function") lvPaint(true); };
-  if (window.fbRatingsOf) window.fbRatingsOf([oppUid]).then(m => late(m[oppUid] || 1000)).catch(() => late(1000)); else go(1000);
+  // تصنيف الخصم لسه بيتجاب: الدور الجاي بيستنى (RTQ.pending) لحد ما ده يتسجّل
+  RTQ.pending++;
+  const late = opp => { RTQ.pending = Math.max(0, RTQ.pending - 1); go(opp); if (arena.live.id === d.id && typeof lvPaint === "function") lvPaint(true); };
+  if (window.fbRatingsOf) window.fbRatingsOf([oppUid], true).then(m => late(m[oppUid] || 1000)).catch(() => late(ELO[oppUid] != null ? ELO[oppUid] : 1000)); else late(1000);
 };
-// دور ضد بوت خلص (archive.js بيحفظه في render): التصنيف ضد تصنيف البوت
-function rtBotGame(P) {
-  const rec = P && P._agRec; if (!rec || P._rtRec === rec) return false;
-  P._rtRec = rec;
-  const botW = String(rec.whiteUid || "").startsWith("bot-"), opp = botW ? rec.whiteRating : rec.blackRating;
-  if (!(Number(opp) > 0)) return false;
-  ecaRateQueue({ gameId: rec.gameId, mode: "bot", res: P.over === "win" ? "win" : P.over === "draw" ? "draw" : "loss", opp: Number(opp) });
-  return !!RTP[rec.gameId];
-}
-{
-  const _r = render;
-  render = function () {
-    const out = _r.apply(this, arguments);
-    const P = arena.play;
-    if (P && P.over && P._agRec && P._rtRec !== P._agRec && rtBotGame(P)) setTimeout(() => { if (tab === "arena" && arena.sub === "play") arenaRefresh(); }, 0);
-    return out;
+// الدور الجاي (الطابور، تحدي جديد، أو قبول تحدي) مايبدأش غير بعد ما تصنيف الدور اللي فات يتسجّل ويتنشر،
+// عشان الخصم الجاي يقرا التصنيف الجديد مش القديم. لو النت بطيء بنكمّل بعد 8 ثواني (التصنيف بيتسجّل بعدين)
+window.ecaRateSettled = (ms = 8000) => new Promise(resolve => {
+  const t0 = Date.now();
+  const check = () => {
+    const left = rtqLoad().length + RTQ.pending;
+    if ((!left && !RTQ.busy) || Date.now() - t0 > ms) return resolve(!left);
+    setTimeout(check, 100);
   };
+  check();
+});
+for (const name of ["lvQueue", "lvCreate", "lvQuick", "lvAccept"]) {
+  const fn = window[name] || (typeof globalThis[name] === "function" ? globalThis[name] : null);
+  if (typeof fn !== "function") continue;
+  const wrapped = async function (...args) {
+    if (name !== "lvQueue" || args[0]) await window.ecaRateSettled();
+    return fn.apply(this, args);
+  };
+  if (name === "lvQueue") lvQueue = wrapped; else if (name === "lvCreate") lvCreate = wrapped; else if (name === "lvQuick") lvQuick = wrapped; else lvAccept = wrapped;
+  window[name] = wrapped;
 }
+// أدوار البوت تدريبية: مش بتغيّر التصنيف (النجوم والخبرة و«اتعلم من أخطائك» شغالين عادي)
+const RT_UNRATED = () => `<div class="eca-unrated" role="note">🤖 ${ERT("مباراة تدريبية (غير مصنفة - Unrated)", "Training game (Unrated)")}<span>${ERT("النجوم والخبرة بتتحسب، والتصنيف بيتغير في الأدوار المباشرة والبطولات بس", "Stars and XP still count; the rating changes only in live games and arenas")}</span></div>`;
 if (typeof arenaPlayHTML === "function") {
   const _ap = arenaPlayHTML;
   arenaPlayHTML = function () {
     const h = _ap.apply(this, arguments), P = arena.play;
-    if (!P || !P.over || !P._agRec || !RTP[P._agRec.gameId]) return h;
-    return h.replace('<div class="grid grid-cols-3 gap-2">', ecaRateLineHTML(P._agRec.gameId, P.over) + '<div class="grid grid-cols-3 gap-2">');
+    if (!P || !P.game) return h;
+    return h.replace('<div class="grid grid-cols-3 gap-2">', RT_UNRATED() + '<div class="grid grid-cols-3 gap-2">');
   };
 }
 

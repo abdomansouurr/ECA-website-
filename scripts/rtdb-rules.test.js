@@ -79,6 +79,12 @@ const W = "whiteU1", B = "blackU1", X = "strangerU1", COACH = "coachU1", MID = "
   await T("offer a draw in the opponent's name", false, W, db => ref(db).update({ drawOfferedBy: "b" }), midGame());
   await T("abort after both moved", false, W, end({ result: "", termination: "abort" }), midGame());
   await T("abort before the first moves", true, W, end({ result: "", termination: "abort" }), fresh({ lastMoveAt: Date.now() - 1000 }));
+  // the ECA rating lives in Firestore only (verified human games): nothing in Realtime Database can hold or change it
+  await T("rating: write an ECA rating anywhere at the root", false, W, db => db.ref("ratings/" + W).set({ ecaRating: 2400 }));
+  await T("rating: write an ECA rating under users", false, W, db => db.ref("users/" + W + "/ecaRating").set(2400));
+  await T("rating: hide a rating inside your presence", false, W, db => db.ref("presence/" + W).set({ online: true, at: TS, game: MID, ecaRating: 2400 }));
+  await T("rating: hide a rating inside the live game relay", false, W, db => ref(db).update({ ecaRating: 2400 }), midGame());
+  await T("rating: a player claims a result in the relay without a finished game", false, W, db => ref(db).update({ status: "finished", result: "1-0", termination: "checkmate" }), midGame());
   // presence and disconnects
   await T("write your own presence", true, W, db => db.ref("presence/" + W).set({ online: true, at: TS, game: MID }));
   await T("write a classmate's presence", false, W, db => db.ref("presence/" + B).set({ online: false, at: TS }));

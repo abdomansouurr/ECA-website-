@@ -7,9 +7,9 @@
   <link rel="manifest" href="manifest.json" />
   <!-- لوجو الأكاديمية على تاب المتصفح: ICO في الجذر (الفولباك الأضمن — المتصفحات بتطلبه من /favicon.ico مباشرة)
        + PNG للتاب الحديث + apple-touch للآيفون — كلهم بنفس اللوجو ومع رقم نسخة يكسر الكاش -->
-  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v97" />
-  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v97" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v97" />
+  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v98" />
+  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v98" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v98" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ECA Chess" />
@@ -306,7 +306,7 @@
     @keyframes ecaRewardPop { 0% { opacity: 0; transform: translateY(12px) scale(.8); } 25% { opacity: 1; transform: translateY(0) scale(1.08); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px) scale(1); } }
     @media (prefers-reduced-motion: reduce) { .eca-reward-pop { animation: none; } }
 
-    /* ===== eca-v97: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
+    /* ===== eca-v98: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
     @keyframes ecaItemIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     .stagger-in > *, .st-item { animation-duration: .24s; }
     .stagger-in > *:nth-child(1) { animation-delay: 0.045s }
@@ -1041,6 +1041,9 @@
     .eca-elo-badge { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: rgba(245,197,24,.12); border: 1px solid rgba(245,197,24,.45); color: #fde68a; font-size: 13px; font-weight: 700; }
     .eca-elo-badge b { color: #F5C518; font-size: 15px; } .eca-elo-badge i { font-style: normal; font-weight: 400; font-size: 12px; color: #d4d4d4; }
     html.light .eca-elo-badge, html.kids .eca-elo-badge { background: rgba(122,90,7,.08); border-color: rgba(122,90,7,.35); color: #7a5a07; }
+    .eca-unrated { display: grid; gap: 2px; padding: 8px 12px; border-radius: 12px; background: rgba(148,163,184,.1); border: 1px dashed rgba(148,163,184,.5); color: #e2e8f0; font-size: 13px; font-weight: 800; }
+    .eca-unrated span { font-size: 12px; font-weight: 400; color: #a3a3a3; }
+    html.light .eca-unrated, html.kids .eca-unrated { background: rgba(71,85,105,.06); color: #334155; } html.light .eca-unrated span, html.kids .eca-unrated span { color: #57534e; }
     html.light .eca-elo-badge b, html.kids .eca-elo-badge b { color: #7a5a07; } html.light .eca-elo-badge i, html.kids .eca-elo-badge i { color: #57534e; }
     .lv-elo { flex-shrink: 0; padding: 1px 7px; border-radius: 999px; background: rgba(245,197,24,.12); border: 1px solid rgba(245,197,24,.3); color: #fde68a; font-size: 12px; font-weight: 700; white-space: nowrap; margin-inline-start: 4px; }
     .lv-pn .lv-elo { display: inline-block; vertical-align: middle; }
@@ -1526,8 +1529,8 @@
     html[data-ecap="piece-gold"] .eca-pc.w, .eca-skin-piece-gold .eca-pc.w { color: #fde68a; text-shadow: 0 0 1px #78350f, 0 0 1px #78350f, 0 1px 3px rgba(0,0,0,.5); }
     html[data-ecap="piece-gold"] .eca-pc.b, .eca-skin-piece-gold .eca-pc.b { color: #7c2d12; text-shadow: 0 0 1px #fde047, 0 1px 2px rgba(0,0,0,.45); }
   </style>
-  <script>window.ECA_VERSION = "eca-v97";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v97" />
+  <script>window.ECA_VERSION = "eca-v98";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v98" />
 </head>
 <body class="min-h-screen flex flex-col relative">
   <a href="#mainView" class="skip-link">تخطّي إلى المحتوى</a>
@@ -1691,59 +1694,59 @@
     } catch (_) {}
   </script>
   <script type="application/json" id="ecaLazyModules">{"finance":"js/finance.js"}</script>
-  <script src="js/core.js?v=eca-v97"></script>
+  <script src="js/core.js?v=eca-v98"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v97"></script>
+  <script src="js/arena.js?v=eca-v98"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v97"></script>
-  <script src="js/streaks.js?v=eca-v97"></script>
-  <script src="js/review.js?v=eca-v97"></script>
-  <script src="js/quality.js?v=eca-v97"></script>
-  <script src="js/announce.js?v=eca-v97"></script>
-  <script src="js/progress.js?v=eca-v97"></script>
-  <script src="js/arena2.js?v=eca-v97"></script>
+  <script src="js/extras.js?v=eca-v98"></script>
+  <script src="js/streaks.js?v=eca-v98"></script>
+  <script src="js/review.js?v=eca-v98"></script>
+  <script src="js/quality.js?v=eca-v98"></script>
+  <script src="js/announce.js?v=eca-v98"></script>
+  <script src="js/progress.js?v=eca-v98"></script>
+  <script src="js/arena2.js?v=eca-v98"></script>
   <!-- homework, coach dashboards, tournaments, and placement test load on demand via loadModule -->
-  <script src="js/ux.js?v=eca-v97"></script>
-  <script src="js/annotate.js?v=eca-v97"></script>
-  <script src="js/gamify.js?v=eca-v97"></script>
-  <script src="js/adventure.js?v=eca-v97"></script>
-  <script src="js/duel.js?v=eca-v97"></script>
-  <script src="js/fx.js?v=eca-v97"></script>
-  <script src="js/speedarena.js?v=eca-v97"></script>
-  <script src="js/loot.js?v=eca-v97"></script>
-  <script src="js/dojo.js?v=eca-v97"></script>
-  <script src="js/cards.js?v=eca-v97"></script>
-  <script src="js/stamina.js?v=eca-v97"></script>
-  <script src="js/social.js?v=eca-v97"></script>
-  <script src="js/friendduel.js?v=eca-v97"></script>
-  <script src="js/weekly.js?v=eca-v97"></script>
-  <script src="js/boss.js?v=eca-v97"></script>
-  <script src="js/command.js?v=eca-v97"></script>
-  <script src="js/lessonpuz.js?v=eca-v97"></script>
-  <script src="js/parentreport.js?v=eca-v97"></script>
-  <script src="js/care.js?v=eca-v97"></script>
-  <script src="js/fun.js?v=eca-v97"></script>
-  <script src="js/flow.js?v=eca-v97"></script>
-  <script src="js/assist.js?v=eca-v97"></script>
-  <script src="js/analyzer.js?v=eca-v97"></script>
-  <script src="js/openings.js?v=eca-v97"></script>
-  <script src="js/coach.js?v=eca-v97"></script>
-  <script src="js/gmcoach.js?v=eca-v97"></script>
-  <script src="js/daily.js?v=eca-v97"></script>
-  <script src="js/cardfx.js?v=eca-v97"></script>
-  <script src="js/lobby.js?v=eca-v97"></script>
-  <script src="js/gamenav.js?v=eca-v97"></script>
-  <script src="js/home.js?v=eca-v97"></script>
-  <script src="js/live.js?v=eca-v97"></script>
-  <script src="js/archive.js?v=eca-v97"></script>
-  <script src="js/rating.js?v=eca-v97"></script>
-  <script src="js/blunders.js?v=eca-v97"></script>
-  <script src="js/certs.js?v=eca-v97"></script>
+  <script src="js/ux.js?v=eca-v98"></script>
+  <script src="js/annotate.js?v=eca-v98"></script>
+  <script src="js/gamify.js?v=eca-v98"></script>
+  <script src="js/adventure.js?v=eca-v98"></script>
+  <script src="js/duel.js?v=eca-v98"></script>
+  <script src="js/fx.js?v=eca-v98"></script>
+  <script src="js/speedarena.js?v=eca-v98"></script>
+  <script src="js/loot.js?v=eca-v98"></script>
+  <script src="js/dojo.js?v=eca-v98"></script>
+  <script src="js/cards.js?v=eca-v98"></script>
+  <script src="js/stamina.js?v=eca-v98"></script>
+  <script src="js/social.js?v=eca-v98"></script>
+  <script src="js/friendduel.js?v=eca-v98"></script>
+  <script src="js/weekly.js?v=eca-v98"></script>
+  <script src="js/boss.js?v=eca-v98"></script>
+  <script src="js/command.js?v=eca-v98"></script>
+  <script src="js/lessonpuz.js?v=eca-v98"></script>
+  <script src="js/parentreport.js?v=eca-v98"></script>
+  <script src="js/care.js?v=eca-v98"></script>
+  <script src="js/fun.js?v=eca-v98"></script>
+  <script src="js/flow.js?v=eca-v98"></script>
+  <script src="js/assist.js?v=eca-v98"></script>
+  <script src="js/analyzer.js?v=eca-v98"></script>
+  <script src="js/openings.js?v=eca-v98"></script>
+  <script src="js/coach.js?v=eca-v98"></script>
+  <script src="js/gmcoach.js?v=eca-v98"></script>
+  <script src="js/daily.js?v=eca-v98"></script>
+  <script src="js/cardfx.js?v=eca-v98"></script>
+  <script src="js/lobby.js?v=eca-v98"></script>
+  <script src="js/gamenav.js?v=eca-v98"></script>
+  <script src="js/home.js?v=eca-v98"></script>
+  <script src="js/live.js?v=eca-v98"></script>
+  <script src="js/archive.js?v=eca-v98"></script>
+  <script src="js/rating.js?v=eca-v98"></script>
+  <script src="js/blunders.js?v=eca-v98"></script>
+  <script src="js/certs.js?v=eca-v98"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v97"></script>
+  <script type="module" src="js/firebase.js?v=eca-v98"></script>
 </body>
 </html>

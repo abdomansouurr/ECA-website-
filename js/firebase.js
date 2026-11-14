@@ -481,7 +481,9 @@
       if (result.ok && !result.duplicate && result.profile) {
         maps.core[uid] = cleanDeep(result.profile);
         synced["c:" + uid] = JSON.stringify(split(Object.assign({ id: uid }, result.profile)).core);
-        rebuild(); clearTimeout(boardTimer); boardPublish();
+        rebuild(); clearTimeout(boardTimer);
+        // الخصم الجاي بيقرا التصنيف من صف لوحة الصدارة: بيتنشر قبل ما الدور الجاي يبدأ
+        try { await boardPublish(); } catch (_) {}
       }
       return result;
     });
@@ -495,7 +497,8 @@
       }
       for (let i = 0; i < need.length; i += 10) {
         const part = need.slice(i, i + 10);
-        const rows = await Promise.all(part.map(u => getDoc(doc(firestore, "leaderboard", u)).then(s => s.exists() ? s.data() : null).catch(() => null)));
+        const one = u => (fresh ? getDocFromServer(doc(firestore, "leaderboard", u)).catch(() => getDoc(doc(firestore, "leaderboard", u))) : getDoc(doc(firestore, "leaderboard", u)));
+        const rows = await Promise.all(part.map(u => one(u).then(s => s.exists() ? s.data() : null).catch(() => null)));
         part.forEach((u, k) => { const r = rows[k] && Number.isInteger(rows[k].r) ? rows[k].r : 1000; ratingCache.set(u, { r, t: Date.now() }); out[u] = r; });
       }
       return out;
