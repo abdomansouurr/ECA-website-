@@ -1,5 +1,5 @@
 // ECA service worker — offline support. Bump VERSION to force clients to refresh the cache.
-const VERSION = "eca-v95";
+const VERSION = "eca-v96";
 const SHELL = [
   "./", "./index.html", "./manifest.json",
   "./favicon.ico", "./img/favicon.png", "./apple-touch-icon.png",   // لوجو الأكاديمية على التاب والأيفون — أوفلاين برضه
@@ -9,9 +9,9 @@ const SHELL = [
   "./img/pieces/lichess/bK.svg", "./img/pieces/lichess/bQ.svg", "./img/pieces/lichess/bR.svg", "./img/pieces/lichess/bB.svg", "./img/pieces/lichess/bN.svg", "./img/pieces/lichess/bP.svg",
   "./vendor/chess.js", "./vendor/stockfish.js", "./vendor/stockfish-19-lite-single.js", "./vendor/stockfish-19-lite-single.wasm",
   // ملفات الكود (لازم نفس ?v= اللي في index.html)
-  "./tailwind.css?v=eca-v95",
-  "./js/core.js?v=eca-v95", "./js/arena.js?v=eca-v95", "./js/extras.js?v=eca-v95", "./js/streaks.js?v=eca-v95", "./js/review.js?v=eca-v95", "./js/quality.js?v=eca-v95", "./js/announce.js?v=eca-v95", "./js/progress.js?v=eca-v95", "./js/arena2.js?v=eca-v95", "./js/ux.js?v=eca-v95", "./js/annotate.js?v=eca-v95", "./js/gamify.js?v=eca-v95", "./js/adventure.js?v=eca-v95", "./js/duel.js?v=eca-v95", "./js/fx.js?v=eca-v95", "./js/speedarena.js?v=eca-v95", "./js/loot.js?v=eca-v95", "./js/dojo.js?v=eca-v95", "./js/cards.js?v=eca-v95", "./js/stamina.js?v=eca-v95", "./js/social.js?v=eca-v95", "./js/friendduel.js?v=eca-v95", "./js/weekly.js?v=eca-v95", "./js/boss.js?v=eca-v95", "./js/command.js?v=eca-v95", "./js/lessonpuz.js?v=eca-v95", "./js/parentreport.js?v=eca-v95", "./js/care.js?v=eca-v95", "./js/fun.js?v=eca-v95", "./js/flow.js?v=eca-v95", "./js/assist.js?v=eca-v95", "./js/analyzer.js?v=eca-v95", "./js/openings.js?v=eca-v95", "./js/coach.js?v=eca-v95", "./js/gmcoach.js?v=eca-v95", "./js/daily.js?v=eca-v95", "./js/cardfx.js?v=eca-v95", "./js/lobby.js?v=eca-v95", "./js/gamenav.js?v=eca-v95", "./js/home.js?v=eca-v95", "./js/live.js?v=eca-v95", "./js/archive.js?v=eca-v95", "./js/diagnostics.js?v=eca-v95", "./js/firebase.js?v=eca-v95", "./js/finance.js?v=eca-v95", "./js/homework.js?v=eca-v95", "./js/today.js?v=eca-v95", "./js/reports.js?v=eca-v95", "./js/tournaments.js?v=eca-v95", "./js/placement-data.js?v=eca-v95", "./js/placement.js?v=eca-v95",
-  "./puzzles.js?v=eca-v95", "./puzzles-themes.js?v=eca-v95"   // عشان الامتحان يشتغل أوفلاين
+  "./tailwind.css?v=eca-v96",
+  "./js/core.js?v=eca-v96", "./js/arena.js?v=eca-v96", "./js/extras.js?v=eca-v96", "./js/streaks.js?v=eca-v96", "./js/review.js?v=eca-v96", "./js/quality.js?v=eca-v96", "./js/announce.js?v=eca-v96", "./js/progress.js?v=eca-v96", "./js/arena2.js?v=eca-v96", "./js/ux.js?v=eca-v96", "./js/annotate.js?v=eca-v96", "./js/gamify.js?v=eca-v96", "./js/adventure.js?v=eca-v96", "./js/duel.js?v=eca-v96", "./js/fx.js?v=eca-v96", "./js/speedarena.js?v=eca-v96", "./js/loot.js?v=eca-v96", "./js/dojo.js?v=eca-v96", "./js/cards.js?v=eca-v96", "./js/stamina.js?v=eca-v96", "./js/social.js?v=eca-v96", "./js/friendduel.js?v=eca-v96", "./js/weekly.js?v=eca-v96", "./js/boss.js?v=eca-v96", "./js/command.js?v=eca-v96", "./js/lessonpuz.js?v=eca-v96", "./js/parentreport.js?v=eca-v96", "./js/care.js?v=eca-v96", "./js/fun.js?v=eca-v96", "./js/flow.js?v=eca-v96", "./js/assist.js?v=eca-v96", "./js/analyzer.js?v=eca-v96", "./js/openings.js?v=eca-v96", "./js/coach.js?v=eca-v96", "./js/gmcoach.js?v=eca-v96", "./js/daily.js?v=eca-v96", "./js/cardfx.js?v=eca-v96", "./js/lobby.js?v=eca-v96", "./js/gamenav.js?v=eca-v96", "./js/home.js?v=eca-v96", "./js/live.js?v=eca-v96", "./js/archive.js?v=eca-v96", "./js/diagnostics.js?v=eca-v96", "./js/firebase.js?v=eca-v96", "./js/finance.js?v=eca-v96", "./js/homework.js?v=eca-v96", "./js/today.js?v=eca-v96", "./js/reports.js?v=eca-v96", "./js/tournaments.js?v=eca-v96", "./js/placement-data.js?v=eca-v96", "./js/placement.js?v=eca-v96",
+  "./puzzles.js?v=eca-v96", "./puzzles-themes.js?v=eca-v96"   // عشان الامتحان يشتغل أوفلاين
 ];
 const CDN = [
   "https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap"
@@ -24,6 +24,7 @@ const NO_CACHE_HOSTS = [
 ];
 const isLive = url => NO_CACHE_HOSTS.includes(url.hostname)
   || url.hostname.endsWith(".firebaseapp.com")
+  || url.hostname.endsWith(".firebasedatabase.app") || url.hostname.endsWith(".firebaseio.com")
   || (url.hostname === "lichess.org" && url.pathname.startsWith("/api/"));
 
 self.addEventListener("install", e => {

@@ -2,6 +2,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, linkWithPopup, deleteUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { initializeFirestore, writeBatch, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocFromServer, getDocs, getDocsFromServer, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot, serverTimestamp, orderBy, limit, runTransaction, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getDatabase, ref as rtRef, onValue as rtOnValue, update as rtUpdate, set as rtSet, get as rtGet, onDisconnect as rtOnDisconnect, serverTimestamp as rtNow, goOffline as rtGoOffline, goOnline as rtGoOnline, runTransaction as rtTx } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDofyiWsg2HmOQgigWeqUpOaSupoMQ1GKc",
@@ -9,7 +10,8 @@
       projectId: "eca-chess",
       storageBucket: "eca-chess.firebasestorage.app",
       messagingSenderId: "978726294610",
-      appId: "1:978726294610:web:17c0ad743303b700f4fb8b"
+      appId: "1:978726294610:web:17c0ad743303b700f4fb8b",
+      databaseURL: "https://eca-chess-default-rtdb.europe-west1.firebasedatabase.app"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -18,6 +20,8 @@
     googleProvider.setCustomParameters({ prompt: "select_account" });
     // كاش أوفلاين على الجهاز: القراءات المتكررة ما بتتحسبش تاني (بيوفر تكلفة) والموقع بيشتغل لو النت قطع
     const firestore = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+    // Realtime Database: نقل النقلات بسرعة + «أنا متصل» (onDisconnect). Firestore بيفضل السجل الرسمي للدور
+    const rtdb = firebaseConfig.databaseURL ? getDatabase(app) : null;
 
     // ===================== أدوات مساعدة =====================
     const MAIL_SUFFIX = "@eca.local";                  // الطلاب بيدخلوا بـ username؛ بنحوله لإيميل داخلي
@@ -83,6 +87,7 @@
     function resetState() {
       unsubs.forEach(u => { try { u(); } catch (_) {} }); unsubs = [];
       stopAllListeners();
+      if (typeof rtPresence === "function") { try { rtPresence(); } catch (_) {} rtPresence = null; }
       clearInterval(dailyNotificationTimer); dailyNotificationTimer = null; dailyNotificationAttemptDate = "";
       loginRewardDay = ""; loginRewardTries = 0; freezeCheckDay = "";
       window.ecaNotifications = [];
@@ -690,9 +695,63 @@
     const lmView = (id, r, local) => ({ id, local: !!local, w: r.w || "", b: r.b || "", wn: cleanDeep(r.wn || ""), bn: cleanDeep(r.bn || ""), p: Array.isArray(r.p) ? r.p : [],
       base: Number(r.base) || 0, inc: Number(r.inc) || 0, tc: String(r.tc || ""), mode: r.mode === "arena" ? "arena" : "pvp", tid: String(r.tid || ""), status: String(r.status || ""),
       moves: Array.isArray(r.moves) ? r.moves.map(String) : [], n: Number(r.n) || 0, wt: Number(r.wt) || 0, bt: Number(r.bt) || 0, at: tsMs(r.at),
-      bzw: !!r.bzw, bzb: !!r.bzb, draw: String(r.draw || ""), res: String(r.res || ""), why: String(r.why || ""), hbw: tsMs(r.hbw), hbb: tsMs(r.hbb), created: tsMs(r.created) });
+      bzw: !!r.bzw, bzb: !!r.bzb, draw: String(r.draw || ""), res: String(r.res || ""), why: String(r.why || ""), hbw: tsMs(r.hbw), hbb: tsMs(r.hbb), created: tsMs(r.created),
+      pend: String(r.pend || ""), bad: String(r.bad || ""), badPly: Number(r.badPly) || 0, judge: String(r.judge || "") });
     const myNick = () => (maps.core[me.uid] || {}).nickname || "";
-    window.ecaLiveSync = { kind: "firestore", rtdb: false };
+    // ناقل المزامنة (LiveSyncTransport): Realtime Database للنقلات والاتصال (أسرع)، وFirestore للسجل الرسمي والقواعد اللي بتحسب النتيجة
+    window.ecaLiveSync = { kind: rtdb ? "rtdb+firestore" : "firestore", rtdb: !!rtdb };
+    // استماع RTDB بيتسجل في نفس مدير الاستماع (بيتقفل مع الخروج)
+    function listenRt(name, path, onNext) {
+      const id = ++liveSeq, stop = rtOnValue(rtRef(rtdb, path), snap => onNext(snap.val()), err => console.warn("RTDB " + name + " failed:", err && err.code));
+      liveListeners.set(id, { name, since: Date.now(), stop });
+      return () => { const l = liveListeners.get(id); if (!l) return; liveListeners.delete(id); try { l.stop(); } catch (_) {} };
+    }
+    // الاتصال بـ RTDB بيتفتح بس وقت الدور المباشر (الخطة المجانية: 100 اتصال في نفس الوقت) وبيتقفل بعده
+    let rtOffset = 0, rtPresence = null, rtAwake = false, rtOffsetStop = null;
+    function rtWake() {
+      if (!rtdb || rtAwake) return;
+      rtAwake = true; rtGoOnline(rtdb);
+      if (!rtOffsetStop) rtOffsetStop = rtOnValue(rtRef(rtdb, ".info/serverTimeOffset"), s => { rtOffset = Number(s.val()) || 0; });
+    }
+    window.fbRtSleep = () => {
+      if (!rtdb || !rtAwake || rtPresence) return;
+      if (rtOffsetStop) { rtOffsetStop(); rtOffsetStop = null; }
+      rtAwake = false; rtGoOffline(rtdb);
+    };
+    window.fbRtNow = () => Date.now() + rtOffset;
+    // «أنا موجود في الدور»: لو النت قطع أو التاب اتقفل، السيرفر نفسه بيكتب online: false (onDisconnect)
+    window.fbPresenceOn = gameId => {
+      if (!rtdb || !me) return;
+      rtWake();
+      const r = rtRef(rtdb, "presence/" + me.uid), game = /^[A-Za-z0-9]{0,40}$/.test(gameId || "") ? gameId || "" : "";
+      if (rtPresence) rtPresence();
+      rtPresence = rtOnValue(rtRef(rtdb, ".info/connected"), snap => {
+        if (snap.val() !== true || !me) return;
+        rtOnDisconnect(r).set({ online: false, at: rtNow(), game }).then(() => rtSet(r, { online: true, at: rtNow(), game })).catch(e => console.warn("Presence failed:", e && e.code));
+      });
+    };
+    window.fbPresenceOff = () => {
+      if (!rtdb || !me || !rtPresence) return;
+      rtPresence(); rtPresence = null;
+      const r = rtRef(rtdb, "presence/" + me.uid);
+      rtOnDisconnect(r).cancel().catch(() => {});
+      rtSet(r, { online: false, at: rtNow(), game: "" }).catch(() => {}).then(() => { if (!rtPresence && !arenaLiveOpen()) window.fbRtSleep(); });
+    };
+    const arenaLiveOpen = () => typeof arena !== "undefined" && arena.live && !!arena.live.id;
+    window.fbPresenceWatch = (uid, onVal) => { if (!rtdb || !/^[A-Za-z0-9]{1,40}$/.test(uid || "")) return () => {}; rtWake(); return listenRt("presence", "presence/" + uid, onVal); };
+    // للاختبارات: قطع اتصال RTDB بس (زي ما الخصم يقفل النت)
+    window.fbRtNet = on => { if (rtdb && rtAwake) (on ? rtGoOnline : rtGoOffline)(rtdb); };
+    // ممر النقلات السريع liveMatches/{id} في RTDB (database.rules.json بيتأكد من الدور والصيغة والساعة)
+    window.fbRtWatch = (id, onVal) => { if (!rtdb) return () => {}; rtWake(); return listenRt("liveRelay", "liveMatches/" + id, onVal); };
+    // الاتنين بيحاولوا يفتحوا الممر في نفس اللحظة: transaction بتكتب بس لو مفيش حاجة، والتاني بيرجع من غير كتابة مرفوضة
+    window.fbRtCreate = async d => {
+      if (!rtdb) return false;
+      const r = rtRef(rtdb, "liveMatches/" + d.id);
+      await rtTx(r, cur => cur !== null ? undefined : { whiteUid: d.w, blackUid: d.b, baseMs: d.base, incrementMs: d.inc, turn: "w", plyCount: 0, lastMoveUci: "", uciMoves: "", wTimeMs: d.base, bTimeMs: d.base,
+        lastMoveAt: rtNow(), status: "live", result: "", termination: "", pendingTermination: "", drawOfferedBy: "", illegalMoveAttempt: "" }, { applyLocally: false });
+      return true;
+    };
+    window.fbRtUpdate = (id, patch) => rtdb ? rtUpdate(rtRef(rtdb, "liveMatches/" + id), Object.assign({}, patch, patch.lastMoveUci ? { lastMoveAt: rtNow() } : {})) : Promise.resolve();
     window.fbLiveWatch = (id, onDoc) => listen("liveMatch", doc(firestore, "liveMatches", id), { includeMetadataChanges: true },
       snap => onDoc(snap.exists() ? lmView(snap.id, snap.data({ serverTimestamps: "estimate" }), snap.metadata.hasPendingWrites) : null),
       err => { if (auth.currentUser) console.warn("Live match watch failed:", err && err.code); });
@@ -715,6 +774,9 @@
       tx.update(ref, Object.assign(seat, { status: "live", at: serverTimestamp(), hbw: serverTimestamp(), hbb: serverTimestamp() }));
       return true;
     });
+    // الكوتش: الأدوار اللي اتلغت بشكوى (نقلة غير قانونية / ادعاء غلط) ومستنية حكمه
+    window.fbLiveDisputes = (onRows, onError) => listen("liveDisputes", query(collection(firestore, "liveMatches"), where("why", "==", "illegal"), limit(20)),
+      snap => onRows(snap.docs.map(d => lmView(d.id, d.data({ serverTimestamps: "estimate" })))), err => { console.warn("Live disputes failed:", err && err.code); if (onError) onError(); });
     window.fbLiveMove = (id, patch) => updateDoc(doc(firestore, "liveMatches", id), Object.assign({}, patch, { at: serverTimestamp() }));
     window.fbLivePatch = (id, patch) => updateDoc(doc(firestore, "liveMatches", id), patch);
     window.fbLiveBeat = (id, side) => updateDoc(doc(firestore, "liveMatches", id), { [side === "w" ? "hbw" : "hbb"]: serverTimestamp() });
@@ -790,14 +852,30 @@
         throw e;
       }
     };
+    // الطريقة السريعة (الأحدث بس، 15 في المرة) محتاجة الـ index المركّب. لو لسه بيتبني أو مش موجود:
+    // نفس الأدوار بفلتر واحد (array-contains بيشتغل من غير أي index) وبنرتّبها على الجهاز. محدش بيشوف رسالة خطأ.
+    let archiveIndexOk = true;
     window.fbArchiveList = async (uid, o) => {
       o = o || {};
-      const parts = [collection(firestore, "archivedGames"), where("participantUids", "array-contains", uid)];
-      if (o.after) parts.push(where("playedAt", ">", Timestamp.fromMillis(o.after)));
-      if (o.before) parts.push(where("playedAt", "<", Timestamp.fromMillis(o.before)));
-      parts.push(orderBy("playedAt", "desc"), limit(o.limit || 15));
-      const snap = await getDocs(query(...parts));
-      return snap.docs.map(d => agView(d.id, d.data()));
+      const lim = o.limit || 15;
+      if (archiveIndexOk && !window.__ecaArchiveNoIndex) {
+        try {
+          const parts = [collection(firestore, "archivedGames"), where("participantUids", "array-contains", uid)];
+          if (o.after) parts.push(where("playedAt", ">", Timestamp.fromMillis(o.after)));
+          if (o.before) parts.push(where("playedAt", "<", Timestamp.fromMillis(o.before)));
+          parts.push(orderBy("playedAt", "desc"), limit(lim));
+          const snap = await getDocs(query(...parts));
+          return snap.docs.map(d => agView(d.id, d.data()));
+        } catch (e) {
+          if (!e || (e.code !== "failed-precondition" && e.code !== "invalid-argument")) throw e;
+          archiveIndexOk = false;
+        }
+      }
+      const snap = await getDocs(query(collection(firestore, "archivedGames"), where("participantUids", "array-contains", uid), limit(120)));
+      let rows = snap.docs.map(d => agView(d.id, d.data())).sort((a, b) => b.playedAt - a.playedAt);
+      if (o.after) rows = rows.filter(r => r.playedAt > o.after);
+      if (o.before) rows = rows.filter(r => r.playedAt < o.before);
+      return rows.slice(0, lim);
     };
     window.fbArchiveGet = async gid => { const s = await getDoc(doc(firestore, "archivedGames", gid)); return s.exists() ? agView(s.id, s.data()) : null; };
     window.fbArchiveSummary = (gid, summary) => updateDoc(doc(firestore, "archivedGames", gid), { analysisSummary: summary });

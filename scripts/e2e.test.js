@@ -20,8 +20,11 @@ function patchFirebase(src) {
   swap('projectId: "eca-chess"', `projectId: "${PROJECT}"`);
   swap('const googleProvider = new GoogleAuthProvider();', `connectAuthEmulator(auth, "${AUTH}", { disableWarnings: true });\n    const googleProvider = new GoogleAuthProvider();`);
   swap('// ===================== أدوات مساعدة =====================', 'connectFirestoreEmulator(firestore, "127.0.0.1", 8085);\n    // ===================== أدوات مساعدة =====================');
+  // Realtime Database على الـ emulator (نفس database.rules.json)
+  swap('databaseURL: "https://eca-chess-default-rtdb.europe-west1.firebasedatabase.app"', `databaseURL: "https://${PROJECT}-default-rtdb.firebaseio.com"`);
+  swap('const rtdb = firebaseConfig.databaseURL ? getDatabase(app) : null;', 'const rtdb = firebaseConfig.databaseURL ? getDatabase(app) : null;\n    if (rtdb) connectDatabaseEmulator(rtdb, "127.0.0.1", 9000);');
   src = src.replace('console.warn("Leaderboard update failed:", e && e.code)', 'console.warn("Leaderboard update denied:", e && e.code, e && e.message, JSON.stringify(row))').replace('console.warn("streak freeze:", e && (e.code || e.message))', 'console.warn("streak freeze denied:", e && e.message)');
-  return 'import { connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";\nimport { connectFirestoreEmulator } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";\n' + src;
+  return 'import { connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";\nimport { connectFirestoreEmulator } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";\nimport { connectDatabaseEmulator } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";\n' + src;
 }
 const server = http.createServer((req, res) => {
   const p = decodeURIComponent(req.url.split("?")[0]), file = path.join(root, p === "/" ? "index.html" : p);
@@ -59,6 +62,7 @@ const docUrl = p => `${FS}/v1/projects/${PROJECT}/databases/(default)/documents/
 const owner = { Authorization: "Bearer owner", "Content-Type": "application/json" };
 async function seed(p, data) { const r = await fetch(docUrl(p), { method: "PATCH", headers: owner, body: JSON.stringify({ fields: toValue(data).mapValue.fields }) }); if (!r.ok) throw new Error("seed " + p + " " + r.status + " " + await r.text()); }
 async function read(p) { const r = await fetch(docUrl(p), { headers: owner }); if (r.status === 404) return null; if (!r.ok) throw new Error("read " + p + " " + r.status); const j = await r.json(); return fromValue({ mapValue: { fields: j.fields || {} } }); }
+async function rtRead(p) { const r = await fetch(`http://127.0.0.1:9000/${p}.json?ns=${PROJECT}-default-rtdb`, { headers: { Authorization: "Bearer owner" } }); return r.ok ? r.json() : null; }
 async function list(p) { const r = await fetch(docUrl(p) + "?pageSize=100", { headers: owner }); if (!r.ok) return []; const j = await r.json(); return (j.documents || []).map(d => d.name.split("/").pop()); }
 async function signUp(email) { const r = await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=x`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password: PASS, returnSecureToken: true }) }); const j = await r.json(); if (!j.localId) throw new Error("signUp " + JSON.stringify(j)); return j.localId; }
 const dayOf = n => { const d = new Date(Date.now() - n * 864e5); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
@@ -1185,7 +1189,7 @@ async function login(p, id) {
       return { sub: arena.sub, color: L.color, flip: L.flip, status: L.doc && L.doc.status };`);
     check("⏱️ live: the friend who opens the link joins the game as black", g1b.sub === "live" && g1b.color === "b" && g1b.flip && g1b.status === "live", g1b);
     await pa.send("Page.bringToFront");
-    const mv1 = await lv(pa, `await until(() => L.doc && L.doc.status === 'live', 15000);
+    const mv1 = await lv(pa, `await until(() => L.doc && L.doc.status === 'live' && (!ecaLiveSync.rtdb || (L.rt && L.rt.plyCount === 0)), 15000);
       const s0 = JSON.stringify(ecaGM.stats()), realPaint = window.lvPaint; let paintMs = 0;
       window.lvPaint = function () { const t = performance.now(); const o = realPaint.apply(this, arguments); paintMs += performance.now() - t; return o; };
       let dt = 0; try { const t0 = performance.now(); liveClick('e2'); liveClick('e4'); dt = performance.now() - t0; } finally { window.lvPaint = realPaint; }
@@ -1228,6 +1232,11 @@ async function login(p, id) {
     check("📚 archive: the finished game is saved once for both players (moves, result, players, clocks, PGN)", !!ag1 && ag1.result === "1/2-1/2" && ag1.uciMoves === "e2e4 e7e5 g1f3" && ag1.mode === "pvp" && JSON.stringify(ag1.participantUids) === JSON.stringify([A, B])
       && ag1.analysisSummary === null && /1\. e4 e5 2\. Nf3/.test(ag1.pgn) && ag1.clockTimesCentisec.length === 3 && ag1.termination === "draw", ag1 && { result: ag1.result, uci: ag1.uciMoves, mode: ag1.mode, p: ag1.participantUids, clk: ag1.clockTimesCentisec });
 
+    const rt1 = await rtRead("liveMatches/" + g1.id);
+    check("⚡ RTDB: the live game has a Realtime Database relay with the same moves, clocks and the closing result", !!rt1 && rt1.plyCount === 3 && rt1.uciMoves === "e2e4 e7e5 g1f3" && rt1.whiteUid === A && rt1.blackUid === B && rt1.status === "finished" && rt1.termination === "draw" && rt1.result === "1/2-1/2" && rt1.wTimeMs > 180000, rt1);
+    const pres1 = await rtRead("presence/" + A);
+    check("⚡ RTDB: presence is written by the player and set offline when the game ends", !!pres1 && pres1.online === false && typeof pres1.at === "number", pres1);
+
     // game 2: lobby matchmaking at 1+0, then white runs out of time
     await pa.send("Page.bringToFront");
     const lg2 = await lvNew(pa, 0, "b");
@@ -1250,7 +1259,7 @@ async function login(p, id) {
     const pl3 = await lvPlay({ w: pa, b: pb }, ["f2f3", "e7e5", "g2g4", "d8h4"]);
     const m3 = await lvOver(pb), m3a = await lvOver(pa);
     const g3doc = await read("liveMatches/" + g3);
-    check("⏱️ live: «قبول» from the lobby, and checkmate ends the game with the mating move", g3c === "b" && pl3.ok && m3.res === "0-1" && m3.why === "checkmate" && g3doc.n === 4 && /كسبت|won/i.test(m3.card) && /خسرت|lost/i.test(m3a.card), { g3c, pl3, m3, m3a });
+    check("⏱️ live: «قبول» from the lobby, and checkmate ends the game with the mating move (confirmed by the loser's device)", g3c === "b" && pl3.ok && m3.res === "0-1" && m3.why === "checkmate" && g3doc.n === 4 && g3doc.pend === "" && /كسبت|won/i.test(m3.card) && /خسرت|lost/i.test(m3a.card), { g3c, pl3, m3, m3a });
 
     // game 4: the opponent disconnects (banner + 30s claim) and comes back; then a resignation
     await pa.send("Page.bringToFront");
@@ -1258,6 +1267,15 @@ async function login(p, id) {
     await pb.send("Page.bringToFront");
     await lvJoin(pb, g4);
     await lvPlay({ w: pa, b: pb }, ["e2e4", "e7e5"]);
+    await until(async () => { const x = await rtRead("liveMatches/" + g4); return x && x.plyCount === 2; }, 8000); await sleep(400);   // the relay write is acknowledged before the cut
+    await pb.ev("fbRtNet(false)");   // the opponent's connection drops (RTDB onDisconnect fires on the server)
+    await pa.send("Page.bringToFront");
+    const prs = await lv(pa, `const t0 = Date.now(); const seen = await until(() => L.oppOnline === false && !!document.querySelector('#lvConn .lv-conn'), 8000);
+      return { seen, ms: Date.now() - t0, text: ((document.getElementById('lvConn') || {}).textContent || '').replace(/\\s+/g, ' ').slice(0, 120) };`);
+    await pb.send("Page.bringToFront"); await pb.ev("fbRtNet(true)");
+    await pa.send("Page.bringToFront");
+    prs.back = await lv(pa, `return await until(() => L.oppOnline === true && !document.querySelector('#lvConn .lv-conn'), 10000);`);
+    check("⚡ RTDB presence: a dropped connection shows «انقطع اتصال الخصم» within seconds (onDisconnect), and clears when the opponent is back", prs.seen && prs.ms < 5000 && /انقطع اتصال الخصم/.test(prs.text) && prs.back, prs);
     await pb.ev("lvBeatStop()"); await sleep(400);   // the opponent goes quiet
     await pa.send("Page.bringToFront");
     const dc = await lv(pa, `await until(() => L.san.length === 2, 8000); L.oppSeen = Date.now() - 20000; await wait(1300); const c = document.getElementById('lvConn');
@@ -1281,6 +1299,50 @@ async function login(p, id) {
       return { btn, why: L.doc.why, res: L.doc.res, card: ((document.querySelector('#lvRoot .lv-result') || {}).textContent || '') };`);
     await sleep(1500);
     check("⏱️ live: a game can be aborted before both sides move, with no result and no archive entry", ab.btn && ab.why === "abort" && ab.res === "" && !(await read("archivedGames/" + g5)), ab);
+
+    // ---------- 🛡️ dual-peer consensus: nobody can win by a claim alone ----------
+    const injectGame = async (inject, label, noWait) => {
+      await pa.send("Page.bringToFront");
+      const id = await lvNew(pa, 3, "w");
+      await pb.send("Page.bringToFront"); await lvJoin(pb, id);
+      await lvPlay({ w: pa, b: pb }, ["e2e4", "e7e5"]);
+      await pa.send("Page.bringToFront");
+      await lv(pa, `await until(() => L.san.length === 2 && L.doc.n === 2 && !L.doc.local, 8000); const d = L.doc; ${inject} return true;`);
+      if (noWait) return { id };
+      await pb.send("Page.bringToFront");
+      const out = await lv(pb, `await until(() => L.doc && L.doc.status === 'over', 8000); return { why: L.doc.why, res: L.doc.res, bad: L.doc.bad, badPly: L.doc.badPly, pend: L.doc.pend, card: ((document.querySelector('#lvRoot .lv-result') || {}).textContent || '').replace(/\\s+/g, ' ') };`);
+      out.id = id; out.label = label; return out;
+    };
+    const fake = await injectGame(`await fbLiveMove(d.id, { moves: d.moves.concat('d2d4'), n: 3, wt: d.wt - 3000, draw: '', pend: 'checkmate' });`, "fake mate");
+    check("🛡️ consensus: a fake checkmate claim (DevTools) is rejected by the opponent's chess.js — no win, game void and flagged", fake.why === "illegal" && fake.res === "" && fake.bad === "w" && fake.badPly === 3 && fake.pend === "checkmate" && /اتلغى|void/i.test(fake.card), fake);
+    const ill = await injectGame(`await fbLiveMove(d.id, { moves: d.moves.concat('e2e5'), n: 3, wt: d.wt - 3000, draw: '' });`, "illegal move");
+    check("🛡️ consensus: an illegal move injected through DevTools is caught instantly — the game is void and the cheater flagged", ill.why === "illegal" && ill.res === "" && ill.bad === "w" && ill.badPly === 3, ill);
+    const ill2 = await lv(pa, `await until(() => L.doc && L.doc.status === 'over', 6000); return { accused: /اشتكى من نقلتك|reported your move/.test(((document.querySelector('#lvRoot .lv-result') || {}).textContent || '')), noArchive: !L.rec };`);
+    check("🛡️ consensus: the cheater sees the report and gets no archive entry or win", ill2.accused && ill2.noArchive && !(await read("archivedGames/" + ill.id)), ill2);
+    const lie = await injectGame("", "false report", true);
+    await pb.send("Page.bringToFront"); const dB0 = pb.denied.length;
+    // the receiver lies: the white move was legal, but black reports it anyway
+    const lieW = await lv(pb, `const r = await fbLivePatch('${lie.id}', { status: 'over', res: '', why: 'illegal', bad: 'w', badPly: 2, draw: '' }).then(() => 'ok', e => e.code); return r;`).catch(() => "err");
+    pb.denied.splice(dB0);
+    await pa.send("Page.bringToFront");
+    const g8 = await lv(pa, `await until(() => L.san.length === 2 && !L.inflight, 6000); return true;`);
+    // a legal white move, then the false report on it
+    await lv(pa, `lvMove({ from: 'g1', to: 'f3' }); await until(() => L.doc.n === 3 && !L.doc.local, 8000); return true;`);
+    await pb.send("Page.bringToFront");
+    const lie2 = await lv(pb, `await until(() => L.doc.n === 3, 6000); const r = await fbLivePatch(L.doc.id, { status: 'over', res: '', why: 'illegal', bad: 'w', badPly: 3, draw: '' }).then(() => 'ok', e => e.code); return r;`);
+    check("🛡️ consensus rules: a report out of turn is refused; reporting the opponent's last move voids the game (no points for anyone)", lieW === "permission-denied" && lie2 === "ok" && g8, { lieW, lie2 });
+    await pg.send("Page.bringToFront");
+    const judge = await lv(pg, `switchTab('arena'); arenaSub('live'); await until(() => !!ChessCls, 20000); arena.live.view = 'lobby'; render();
+      await until(() => (L.disputes || []).filter(r => ['${fake.id}', '${ill.id}', '${lie.id}'].includes(r.id)).length === 3 && !!document.querySelector('#mainView .lv-dispute[data-gid="${lie.id}"]'), 12000);
+      const txt = id => ((document.querySelector('#mainView .lv-dispute[data-gid="' + id + '"] .lv-verdict') || {}).className || '') + ' ' + ((document.querySelector('#mainView .lv-dispute[data-gid="' + id + '"]') || {}).textContent || '');
+      const out = { fake: txt('${fake.id}'), ill: txt('${ill.id}'), lie: txt('${lie.id}') };
+      const b = document.querySelector('#mainView .lv-dispute[data-gid="${lie.id}"] button'); out.btn44 = !!b && b.getBoundingClientRect().height >= 44; if (b) b.click();
+      await wait(1500); const b2 = document.querySelector('#mainView .lv-dispute[data-gid="${ill.id}"] button'); if (b2) b2.click(); await wait(1500);
+      return out;`);
+    const j8 = await until(async () => { const x = await read("liveMatches/" + lie.id); return x && x.why === "forfeit" ? x : null; }, 10000), j7 = await until(async () => { const x = await read("liveMatches/" + ill.id); return x && x.why === "forfeit" ? x : null; }, 10000);
+    check("🛡️ coach review: chess.js replays each disputed game and names the cheater (fake mate claim, illegal move, false report)", /is-claim/.test(judge.fake) && /is-move/.test(judge.ill) && /is-false/.test(judge.lie) && judge.btn44, judge);
+    check("🛡️ coach review: «⚖️ نفّذ الحكم» forfeits the cheater (the false reporter loses, the illegal mover loses)", !!j8 && j8.res === "1-0" && j8.judge === ADMIN && !!j7 && j7.res === "0-1", { j8: j8 && { res: j8.res, why: j8.why }, j7: j7 && { res: j7.res, why: j7.why } });
+    await pg.ev("switchTab('home')");
 
     // ---------- 🏆 live arena tournament: coach creates it, queue + pairing, berserk, streak fire, standings, spectating ----------
     await pg.send("Page.bringToFront");
@@ -1354,7 +1416,7 @@ async function login(p, id) {
     const lbotDoc = lbot.rec ? await until(() => read("archivedGames/" + lbot.rec.id), 10000) : null;
     check("📚 archive: a finished game against a rated academy bot saves itself (3+0 clock, bot rating)", lbot.over === "loss" && !!lbotDoc && lbotDoc.mode === "bot" && lbotDoc.timeControl === "3+0" && lbotDoc.blackRating === 300 && lbotDoc.result === "0-1", { lbot, lbotDoc: lbotDoc && { mode: lbotDoc.mode, tc: lbotDoc.timeControl, r: lbotDoc.blackRating, res: lbotDoc.result } });
     await lv(pa, `Object.assign(arena.play, { game: null, over: '', thinking: false }); return true;`);
-    const arch = await lv(pa, `localStorage.removeItem('eca_saved_games_' + fbMyUid()); arena.archive.synced = ''; switchTab('arena'); arenaSub('lobby'); await wait(200);
+    const arch = await lv(pa, `localStorage.removeItem('eca_saved_games_' + fbMyUid()); arena.archive.synced = ''; arena.archive.triedAt = 0; switchTab('arena'); arenaSub('lobby'); await wait(200);
       const fromLobby = !!document.querySelector('#mainView .nf-row [onclick="lbOpen(\\'archive\\')"]');
       lbOpen('archive'); await until(() => document.querySelectorAll('#mainView .ag-row').length >= 5 && !arena.archive.busy, 15000);
       const rows = () => [...document.querySelectorAll('#mainView .ag-row')], out = { fromLobby, all: rows().length };
@@ -1394,6 +1456,18 @@ async function login(p, id) {
     check("📚 archive rules: a classmate cannot read, grade or overwrite someone else's game", tamper.read === "permission-denied" && tamper.sum === "permission-denied" && tamper.del === "permission-denied", tamper);
     await pc.ev("switchTab('home')");
     await pa.send("Page.bringToFront");
+    const noIdx = await lv(pa, `window.__ecaArchiveNoIndex = true; const key = 'eca_saved_games_' + fbMyUid(); localStorage.removeItem(key); arena.archive.synced = ''; arena.archive.triedAt = 0; arena.archive.filter = 'all';
+      switchTab('arena'); arenaSub('archive'); await until(() => document.querySelectorAll('#mainView .ag-row').length >= 7 && !arena.archive.busy, 15000);
+      const ids = [...document.querySelectorAll('#mainView .ag-row')].map(r => r.dataset.gid), cache = JSON.parse(localStorage.getItem(key)).games;
+      const at = ids.map(id => (cache.find(g => g.gameId === id) || {}).playedAt || 0);
+      window.__ecaArchiveNoIndex = false;
+      return { rows: ids.length, sorted: at.every((t, i) => !i || at[i - 1] >= t), err: /ما قدرناش|Could not reach|غير متاح|unavailable/i.test(document.getElementById('mainView').textContent) };`);
+    check("📚 archive without the composite index: the simple query is sorted on the device and shows every game", noIdx.rows >= 7 && noIdx.sorted && !noIdx.err, noIdx);
+    const agOff = await lv(pa, `const keep = window.fbArchiveList; window.fbArchiveList = async () => { throw Object.assign(new Error('offline'), { code: 'unavailable' }); };
+      arena.archive.synced = ''; arena.archive.triedAt = 0; render(); await wait(600);
+      const out = { rows: document.querySelectorAll('#mainView .ag-row').length, err: /ما قدرناش|Could not reach|غير متاح|unavailable|السيرفر/i.test(document.getElementById('mainView').textContent) };
+      window.fbArchiveList = keep; return out;`);
+    check("📚 archive offline: the games saved on the device show with no error banner", agOff.rows >= 7 && !agOff.err, agOff);
     await pa.ev("switchTab('home')");
     await pb.ev("(() => { lvArenaLeave(); switchTab('home'); })()");
     // ---------- daily puzzle: once a day (Cairo time), then locked with a live countdown ----------

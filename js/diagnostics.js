@@ -32,7 +32,7 @@
     add("listeners", "no duplicate listeners", !dup.length, dup.length ? dup.map(n => n + " ×" + count[n]).join(", ") : list.map(l => l.name).join(", "));
     const staffCore = u && u.role !== "student" ? 8 : 0;
     add("listeners", "open listeners stay small", list.length <= 10 + staffCore, list.length + " open");
-    const offView = { leaderboard: tab !== "honor", duelLobby: !(tab === "arena" && arena.sub === "duel"), speedArenaBoard: !(tab === "arena" && arena.sub === "speed"), friendDuel: !(tab === "arena" && arena.sub === "friend"), assignments: tab !== "command", liveLobby: !(tab === "arena" && arena.sub === "live"), liveArenas: !(tab === "arena" && arena.sub === "live") };
+    const offView = { leaderboard: tab !== "honor", duelLobby: !(tab === "arena" && arena.sub === "duel"), speedArenaBoard: !(tab === "arena" && arena.sub === "speed"), friendDuel: !(tab === "arena" && arena.sub === "friend"), assignments: tab !== "command", liveLobby: !(tab === "arena" && arena.sub === "live"), liveArenas: !(tab === "arena" && arena.sub === "live"), liveDisputes: !(tab === "arena" && arena.sub === "live") };
     const leaks = list.map(l => l.name).filter(n => offView[n]);
     add("listeners", "no listeners for closed views", !leaks.length, leaks.join(", ") || "ok");
   }

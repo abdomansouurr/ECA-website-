@@ -10,16 +10,17 @@ const LVT = (ar, en) => lang === "en" ? en : ar;
 const LV_WHY = {
   checkmate: ["كش مات", "Checkmate"], resign: ["استسلام", "Resignation"], timeout: ["الوقت خلص", "Time out"], draw: ["اتفاق على التعادل", "Draw agreed"],
   stalemate: ["بات (مفيش نقلات)", "Stalemate"], repetition: ["تكرار الوضع 3 مرات", "Threefold repetition"], fifty: ["قاعدة الخمسين نقلة", "Fifty-move rule"],
-  material: ["مفيش قطع كفاية للكش مات", "Insufficient material"], abandon: ["الخصم ساب الدور", "Opponent left"], abort: ["اتلغى قبل أول نقلة", "Aborted"]
+  material: ["مفيش قطع كفاية للكش مات", "Insufficient material"], abandon: ["الخصم ساب الدور", "Opponent left"], abort: ["اتلغى قبل أول نقلة", "Aborted"],
+  illegal: ["نقلة غير قانونية — الدور اتلغى لحد حكم الكوتش", "Illegal move — the game is void until the coach rules"], forfeit: ["حكم الكوتش بعد مراجعة النقلات", "Coach ruling after reviewing the moves"]
 };
 const lvLsGet = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (_) { return d; } };
 const lvLsSet = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (_) {} };
 arena.live = {
   view: "lobby", tci: Math.min(LV_TC.length - 1, Math.max(0, Number(lvLsGet("ECA_LIVE_TC", "3")) || 0)), side: "r", lobby: null, lobbyStop: null, busy: false,
   arenas: null, arenasStop: null, arTci: 3, arMin: 30, arStart: 0,
-  id: "", doc: null, stop: null, game: null, san: [], color: "", flip: false, sel: null, last: null, pre: [], spect: false, autoJoin: "",
+  id: "", doc: null, stop: null, rtStop: null, presStop: null, game: null, san: [], ucis: [], color: "", flip: false, sel: null, last: null, pre: [], spect: false, autoJoin: "",
   clk: { w: 0, b: 0, side: null, t0: 0 }, clkLog: [], off: null, rtt: 300, calQ: null, oppSeen: 0, oppHb: 0, over: null, inflight: false, bad: false,
-  flagAt: 0, flagBusy: false, lowTick: 0, raf: 0, hb: 0, rec: null, recs: {}, done: {}, backId: "",
+  flagAt: 0, flagBusy: false, lowTick: 0, raf: 0, hb: 0, rec: null, recs: {}, done: {}, backId: "", disputes: null, disputesStop: null, judging: "",
   tid: "", ar: null, players: [], arStop: null, pairBusy: false, pairAt: 0, seenWait: {}, sinceAt: 0
 };
 function lvMe() { return window.fbMyUid ? fbMyUid() : ""; }
@@ -48,14 +49,18 @@ function lvCalib(tSend, tAck, srv) {
 function lvCalAck(q) { const L = arena.live; if (L.calQ !== q) return; q.tAck = Date.now(); if (q.srv) { lvCalib(q.tSend, q.tAck, q.srv); L.calQ = null; } }
 
 // ================= فتح دور ومتابعته =================
+// مصدرين: Firestore (السجل الرسمي اللي القواعد بتحسب منه النتيجة) وRealtime Database (ممر سريع للنقلات + «متصل/مش متصل»).
+// النقلة اللي بتيجي من RTDB بتتعرض فوراً «مؤقتاً» بعد ما chess.js يتأكد إنها قانونية، وFirestore بيأكدها. لو اختلفوا، Firestore هو الصح.
 function lvOpen(id, spect) {
   const L = arena.live;
   if (!lvIdOk(id) || !window.fbLiveWatch || typeof ChessCls === "undefined" || !ChessCls) return;
   if (L.id === id && L.stop) { L.view = "game"; return lvPaint(true); }
   lvClose();
-  Object.assign(L, { view: "game", id, doc: null, game: new ChessCls(), san: [], color: "", flip: false, sel: null, last: null, pre: [], spect: !!spect, over: null,
-    clk: { w: 0, b: 0, side: null, t0: 0 }, clkLog: [], oppSeen: Date.now(), oppHb: 0, inflight: false, bad: false, flagAt: 0, flagBusy: false, lowTick: 0, rec: L.recs[id] || null, calQ: null });
+  Object.assign(L, { view: "game", id, doc: null, game: new ChessCls(), san: [], ucis: [], color: "", flip: false, sel: null, last: null, pre: [], spect: !!spect, over: null,
+    clk: { w: 0, b: 0, side: null, t0: 0 }, clkLog: [], oppSeen: Date.now(), oppHb: 0, inflight: false, bad: false, flagAt: 0, flagBusy: false, lowTick: 0, rec: L.recs[id] || null, calQ: null,
+    prov: 0, provAt: 0, rtAt: 0, rt: null, sendQ: null, relayQ: null, mirrorQ: null, verifiedN: -1, flagged: "", rtMade: false, oppOnline: null, oppOffAt: 0, viaRt: 0, presOn: false });
   L.stop = window.fbLiveWatch(id, d => lvOnDoc(id, d));
+  if (window.fbRtWatch && window.ecaLiveSync && ecaLiveSync.rtdb) L.rtStop = window.fbRtWatch(id, v => lvOnRt(id, v));
   lvBeatStart();
   lvPaint(true);
 }
@@ -63,10 +68,15 @@ window.lvOpen = lvOpen;
 function lvClose() {
   const L = arena.live;
   if (L.stop) { L.stop(); L.stop = null; }
+  if (L.rtStop) { L.rtStop(); L.rtStop = null; }
+  if (L.presStop) { L.presStop(); L.presStop = null; }
+  if (L.presOn && window.fbPresenceOff) { fbPresenceOff(); L.presOn = false; }
   lvBeatStop();
-  L.id = ""; L.doc = null; L.game = null; L.pre = []; L.sel = null; L.inflight = false;
+  L.id = ""; L.doc = null; L.game = null; L.pre = []; L.sel = null; L.inflight = false; L.sendQ = null; L.prov = 0; L.rt = null; L.relayQ = null; L.mirrorQ = null;
+  if (window.fbRtSleep) setTimeout(() => { if (!arena.live.id) fbRtSleep(); }, 1500);   // مفيش دور مفتوح: اتصال RTDB بيتقفل
 }
 function lvPlaying() { const L = arena.live, d = L.doc; return !!(d && d.status === "live" && !L.spect && L.color && !L.over); }
+function lvToMove(n) { return n % 2 ? "b" : "w"; }
 
 function lvOnDoc(id, d) {
   const L = arena.live; if (L.id !== id) return;
@@ -89,30 +99,79 @@ function lvOnDoc(id, d) {
   // الخصم موجود؟ (نبضته اتغيرت أو لعب)
   const oppHb = L.color === "w" ? d.hbb : d.hbw;
   if (oppHb && oppHb !== L.oppHb) { L.oppHb = oppHb; L.oppSeen = Date.now(); }
+  // «متصل» على RTDB: ليا (onDisconnect) وللخصم (بيظهر فوراً لو النت قطع)
+  if (!L.spect && L.color && ["open", "live"].includes(d.status)) {
+    if (!L.presOn && window.fbPresenceOn) { fbPresenceOn(id); L.presOn = true; }
+    const opp = L.color === "w" ? d.b : d.w;
+    if (opp && !L.presStop && window.fbPresenceWatch) L.presStop = window.fbPresenceWatch(opp, v => lvOnPres(id, v));
+  }
+  // ممر النقلات السريع بيتعمل مع أول الدور (أي لاعب من الاتنين)
+  if (!L.spect && L.color && d.status === "live" && d.n === 0 && !L.rtMade && window.fbRtCreate && window.ecaLiveSync && ecaLiveSync.rtdb) { L.rtMade = true; window.fbRtCreate(d).catch(() => {}); }
   if (!prev || (prev.status === "open" && d.status !== "open")) {
     lvRebuild(true);
     if (d.status === "live") lvStarted(!prev && d.n >= 2);
   } else {
     const g = L.game, have = L.san.length;
-    if (d.n < have && !L.inflight) lvRebuild(true);
+    const pending = (L.inflight || L.sendQ ? 1 : 0) + (L.prov > d.n ? 1 : 0);
+    const prefixOk = L.ucis.slice(0, Math.min(d.n, have)).every((u, i) => d.moves[i] === u);
+    if (!prefixOk || (d.n < have - pending)) lvRebuild(true);
     else if (d.n > have) {
       let r = null;
       for (const u of d.moves.slice(have)) {
         try { r = uciMove(g, u); } catch (_) { r = null; }
         if (!r) { L.bad = true; break; }
-        L.san.push(r.san); L.last = [r.from, r.to]; lvMoveSfx(r, g);
+        L.san.push(r.san); L.ucis.push(u); L.last = [r.from, r.to]; lvMoveSfx(r, g);
       }
       // ساعتي بتبدأ من لحظة ما النقلة وصلتني (الخصم مايكسبش من بطء النت عندي)
       L.clk = { w: d.wt, b: d.bt, side: d.status === "live" && d.n >= 2 ? g.turn() : null, t0: performance.now() };
       L.clkLog[d.n - 1] = d.n % 2 ? d.wt : d.bt;
       L.oppSeen = Date.now(); L.lowTick = 0;
+    } else if (L.prov && d.n >= L.prov) {
+      // النقلة اللي جت من RTDB اتأكدت في السجل الرسمي: وقت الخصم من Firestore، وساعتي شغالة زي ما هي
+      const mover = lvToMove(L.prov - 1); L.clk[mover] = mover === "w" ? d.wt : d.bt; L.clkLog[L.prov - 1] = L.clk[mover]; L.prov = 0;
     }
     if (prev.draw !== d.draw && d.draw && d.draw !== L.color && !L.spect) { lvSfx("draw"); toast(LVT("🤝 الخصم بيعرض تعادل", "🤝 Your opponent offers a draw")); }
     if (prev.bzw !== d.bzw || prev.bzb !== d.bzb) { const c = prev.bzw !== d.bzw ? "w" : "b"; L.clk[c] = c === "w" ? d.wt : d.bt; if (c !== L.color) toast(LVT("⚡ الخصم عمل برزرك!", "⚡ Your opponent went berserk!")); }
   }
+  // نقلتي اللي كانت مستنية السجل الرسمي يلحق نقلة الخصم
+  if (L.sendQ && d.n === L.sendQ.ctx.n - 1 && d.status === "live") { const s = L.sendQ; L.sendQ = null; lvSend(s.id, s.patch, s.ctx, s.retry); }
+  const myTurn = d.status === "live" && !L.spect && L.color && L.color === lvToMove(d.n);
+  // نقلة الخصم مش قانونية (اتكتبت من برة الموقع) → شكوى: الدور بيتلغي ويروح للكوتش
+  if (myTurn && L.bad && L.san.length < d.n) lvFlag(d);
+  // ادعاء نهاية (كش مات / تعادل) من الخصم: chess.js على جهازي بيتأكد منه في نفس اللحظة
+  else if (myTurn && d.pend && L.verifiedN !== d.n && L.san.length === d.n) lvVerify(d);
   if (d.status === "over" && !L.over) lvFinish(d);
-  else if (d.status === "live" && !L.spect && L.color && L.game.turn() === L.color && L.pre.length && !L.inflight) { if (lvRunPremove()) return; }
+  else if (myTurn && !d.pend && L.game.turn() === L.color && L.pre.length && !L.inflight && !L.sendQ) { if (lvRunPremove()) return; }
   lvPaint();
+}
+// نقلة من ممر RTDB: بتتعرض فوراً لو قانونية ومكمّلة لنفس الدور بالظبط
+function lvOnRt(id, v) {
+  const L = arena.live; if (L.id !== id) return;
+  L.rt = v;
+  // الممر لحق السجل الرسمي: نبعت النقلة أو النهاية اللي كانت مستنياه
+  if (v && L.relayQ && v.plyCount === L.relayQ.n - 1) { const q = L.relayQ; L.relayQ = null; if (L.ucis[q.n - 1] === q.uci) lvRelay(q); }
+  if (v && L.mirrorQ && L.doc && v.plyCount === L.doc.n) { const p = L.mirrorQ; L.mirrorQ = null; lvRtMirror(p); }
+  const d = L.doc;
+  if (!v || !d || d.status !== "live" || L.over || v.status !== "live") return;
+  if (v.whiteUid !== d.w || v.blackUid !== d.b || v.baseMs !== d.base || v.incrementMs !== d.inc) return;   // مش ممر الدور ده
+  const have = L.san.length, mover = lvToMove(have);
+  if (v.plyCount !== have + 1 || (!L.spect && mover === L.color) || v.uciMoves !== L.ucis.concat(v.lastMoveUci).join(" ")) return;
+  let r = null; try { r = uciMove(L.game, v.lastMoveUci); } catch (_) { r = null; }
+  if (!r) return;                                         // السجل الرسمي هو اللي هيحكم
+  L.san.push(r.san); L.ucis.push(v.lastMoveUci); L.last = [r.from, r.to]; lvMoveSfx(r, L.game);
+  L.prov = have + 1; L.provAt = Date.now(); L.rtAt = v.lastMoveAt; L.viaRt++;
+  L.clk = { w: v.wTimeMs, b: v.bTimeMs, side: have + 1 >= 2 ? L.game.turn() : null, t0: performance.now() };
+  L.clkLog[have] = mover === "w" ? v.wTimeMs : v.bTimeMs;
+  L.oppSeen = Date.now(); L.lowTick = 0;
+  if (!L.spect && L.color && L.game.turn() === L.color && L.pre.length && !L.inflight && !v.pendingTermination) { if (lvRunPremove()) return; }
+  lvPaint();
+}
+function lvOnPres(id, v) {
+  const L = arena.live; if (L.id !== id) return;
+  L.oppOnline = v ? v.online !== false : null;
+  L.oppOffAt = v && v.online === false ? Number(v.at) || Date.now() : 0;
+  if (L.oppOnline) L.oppSeen = Date.now();
+  const c = document.getElementById("lvConn"); if (c) { const h = lvConnHTML(); if (c.__h !== h) { c.__h = h; c.innerHTML = h; } }
 }
 function lvStarted(quiet) {
   const L = arena.live;
@@ -122,13 +181,13 @@ function lvStarted(quiet) {
   // مفيش أي شغل محرك في الخلفية وقت الدور المباشر
   if (window.ecaGM && ecaGM.cancelWhere) ecaGM.cancelWhere(() => true, false);
 }
-// الرقعة والساعة من المستند (أول مرة، أو بعد رفض نقلة، أو رجوع للدور)
+// الرقعة والساعة من المستند الرسمي (أول مرة، أو بعد رفض نقلة، أو لو الممر السريع قال حاجة غلط)
 function lvRebuild(resume) {
   const L = arena.live, d = L.doc; if (!d || !ChessCls) return;
-  const g = new ChessCls(), san = []; let r = null;
-  for (const u of d.moves) { try { r = uciMove(g, u); } catch (_) { r = null; } if (!r) { L.bad = true; break; } san.push(r.san); }
-  L.game = g; L.san = san; L.last = typeof lastOf === "function" ? lastOf(g) : null; L.sel = null; L.inflight = false;
-  const run = d.status === "live" && d.n >= 2 ? (d.n % 2 ? "b" : "w") : null;
+  const g = new ChessCls(), san = [], ucis = []; let r = null;
+  for (const u of d.moves) { try { r = uciMove(g, u); } catch (_) { r = null; } if (!r) { L.bad = true; break; } san.push(r.san); ucis.push(u); }
+  L.game = g; L.san = san; L.ucis = ucis; L.last = typeof lastOf === "function" ? lastOf(g) : null; L.sel = null; L.inflight = false; L.sendQ = null; L.prov = 0;
+  const run = d.status === "live" && d.n >= 2 ? lvToMove(d.n) : null;
   L.clk = { w: d.wt, b: d.bt, side: run, t0: performance.now() };
   // رجوع لدور شغال: الوقت اللي عدّى من آخر نقلة على ساعة السيرفر
   if (resume && run && d.at && !d.local) L.clk[run] -= Math.max(0, lvSrvNow() - d.at);
@@ -136,45 +195,86 @@ function lvRebuild(resume) {
   if (d.n) L.clkLog[d.n - 1] = d.n % 2 ? d.wt : d.bt;
 }
 
+// ================= نهاية الدور بالاتفاق (Dual-Peer Consensus) =================
+// اللاعب اللي عمل الكش مات مايقدرش يعلن الفوز لوحده: نقلته بتتكتب ومعاها pend، وجهاز الخصم بيتأكد بـ chess.js ويكتب النتيجة.
+function lvVerify(d) {
+  const L = arena.live, g = L.game; L.verifiedN = d.n;
+  const half = Number(g.fen().split(" ")[4]) || 0;
+  const ok = { checkmate: g.isCheckmate(), stalemate: g.isStalemate(), material: g.isInsufficientMaterial(), repetition: g.isThreefoldRepetition(), fifty: half >= 100 }[d.pend];
+  if (!ok) return lvFlag(d);
+  const side = lvToMove(d.n);
+  lvWrite({ status: "over", res: d.pend === "checkmate" ? (side === "w" ? "0-1" : "1-0") : "1/2-1/2", why: d.pend, pend: "", draw: "" });
+}
+// نقلة غير قانونية أو ادعاء غلط: الدور بيتلغي (من غير نقط) ويروح للكوتش يحكم بعد ما يراجع النقلات
+function lvFlag(d) {
+  const L = arena.live; if (L.flagged === d.id) return;
+  L.flagged = d.id;
+  const side = lvToMove(d.n);
+  lvWrite({ status: "over", res: "", why: "illegal", bad: side === "w" ? "b" : "w", badPly: d.n, draw: "" });
+  toast(LVT("🚩 الخصم لعب نقلة غير قانونية — الدور اتلغى والكوتش هيراجعه", "🚩 Your opponent played an illegal move — the game is void and goes to the coach"));
+}
+// كتابة في السجل الرسمي، وبعدها نفس النهاية في ممر RTDB (عشان مايتكتبش فيه نقلات بعد كده)
+function lvWrite(patch, msg) {
+  const L = arena.live, d = L.doc; if (!d || !window.fbLivePatch) return Promise.resolve();
+  return window.fbLivePatch(d.id, patch).then(() => lvRtMirror(patch)).catch(e => { console.warn("Live action failed:", e && e.code); if (msg) toast(msg); });
+}
+function lvRtMirror(p) {
+  const L = arena.live, v = L.rt; if (!window.fbRtUpdate || !L.doc) return;
+  if (!v || (v.status === "live" && v.plyCount < L.doc.n)) { if (p.status === "over") L.mirrorQ = p; return; }   // الممر متأخر: النهاية بتستنى
+  if (v.status !== "live" || v.plyCount !== L.doc.n) return;
+  if (p.status === "over") {
+    if (!/^(checkmate|stalemate|repetition|fifty|material|resign|timeout|draw|abort|abandon|illegal)$/.test(p.why || "")) return;
+    window.fbRtUpdate(L.id, { status: "finished", result: p.res || "", termination: p.why, pendingTermination: "", drawOfferedBy: "", illegalMoveAttempt: p.why === "illegal" ? p.bad || "" : "" }).catch(() => {});
+  } else if (typeof p.draw === "string") window.fbRtUpdate(L.id, { drawOfferedBy: p.draw }).catch(() => {});
+}
+
 // ================= النقلة (0ms على الشاشة، والكتابة بعدها) =================
-function lvEndOf(g, side) {
-  const o = (res, why) => ({ status: "over", res, why });
-  if (g.isCheckmate()) return o(side === "w" ? "1-0" : "0-1", "checkmate");
-  if (g.isStalemate()) return o("1/2-1/2", "stalemate");
-  if (g.isInsufficientMaterial()) return o("1/2-1/2", "material");
-  if (g.isThreefoldRepetition()) return o("1/2-1/2", "repetition");
-  if (g.isDraw()) return o("1/2-1/2", "fifty");
-  return null;
+function lvEndOf(g) {
+  if (g.isCheckmate()) return "checkmate";
+  if (g.isStalemate()) return "stalemate";
+  if (g.isInsufficientMaterial()) return "material";
+  if (g.isThreefoldRepetition()) return "repetition";
+  if (g.isDraw()) return "fifty";
+  return "";
 }
 function lvMove(m) {
   const L = arena.live, d = L.doc, g = L.game;
-  if (!d || d.status !== "live" || L.over || L.spect || !L.color || g.turn() !== L.color || L.inflight || L.san.length !== d.n) return false;
-  const t = performance.now(), side = L.color, before = d.n;
+  if (!d || d.status !== "live" || d.pend || L.over || L.spect || !L.color || g.turn() !== L.color || L.inflight || L.sendQ) return false;
+  const before = L.san.length;
+  if (before !== d.n && !(L.prov && before === L.prov)) return false;
+  const t = performance.now(), side = L.color;
   let r = null; try { r = g.move(m); } catch (_) { r = null; }
   if (!r) { L.sel = null; lvPaint(); return false; }
   const key = side === "w" ? "wt" : "bt", stored = side === "w" ? d.wt : d.bt, inc = (side === "w" ? d.bzw : d.bzb) ? 0 : d.inc;
   let nt = stored;
   if (before >= 2) {
-    // وقت التفكير على الجهاز، ولو النت أبطأ من 300ms بنخصم الفرق (السيرفر بيرفض أي وقت زيادة)
-    const think = t - L.clk.t0, est = L.off == null ? 0 : lvSrvNow() + L.rtt / 2 - d.at;
+    // وقت التفكير على الجهاز، ولو النت أبطأ من 300ms بنخصم الفرق (السيرفر بيرفض أي وقت زيادة).
+    // لو نقلة الخصم وصلت من RTDB، الحساب من وقتها هناك (السجل الرسمي لسه ما وصلش)
+    const think = t - L.clk.t0, viaRt = L.prov && L.prov === before && L.rtAt && window.fbRtNow;
+    const est = viaRt ? fbRtNow() + L.rtt / 2 - L.rtAt : L.off == null ? 0 : lvSrvNow() + L.rtt / 2 - d.at;
     const used = Math.max(think, est - 250);
     if (stored - used <= 0) { g.undo(); lvOnFlag(side); return false; }
     nt = Math.round(stored - used) + inc;
   }
-  const n = before + 1;
-  L.san.push(r.san); L.last = [r.from, r.to]; L.sel = null; L.inflight = true; L.lowTick = 0;
+  const n = before + 1, uci = r.from + r.to + (r.promotion || ""), pend = lvEndOf(g);
+  L.san.push(r.san); L.ucis.push(uci); L.last = [r.from, r.to]; L.sel = null; L.inflight = true; L.lowTick = 0;
   L.clk = Object.assign(L.clk, { [side]: nt, side: n >= 2 ? (side === "w" ? "b" : "w") : null, t0: t });
   L.clkLog[n - 1] = nt;
-  const patch = Object.assign({ moves: d.moves.concat(r.from + r.to + (r.promotion || "")), n, [key]: nt, draw: "" }, lvEndOf(g, side) || {});
+  const patch = { n, [key]: nt, draw: "", pend }, ctx = { stored, inc, side, key, n, uci, nt, pend };
   lvMoveSfx(r, g);
   lvPaint();
-  // الكتابة بعد ما النقلة تظهر (الشاشة مابتستناش النت)
-  Promise.resolve().then(() => lvSend(d.id, patch, { stored, inc, side, key, n }));
+  // الكتابة بعد ما النقلة تظهر (الشاشة مابتستناش النت): السجل الرسمي + الممر السريع
+  Promise.resolve().then(() => { lvSend(d.id, patch, ctx); lvRelay(ctx); });
   return true;
 }
 window.lvMove = lvMove;
 function lvSend(id, patch, ctx, retry) {
-  const L = arena.live, q = { field: "at", n: ctx.n, tSend: Date.now(), tAck: 0, srv: 0 };
+  const L = arena.live;
+  if (L.id !== id) return;
+  // نقلة الخصم لسه ما وصلتش السجل الرسمي (جت من RTDB): نقلتي بتستنى لحد ما يلحقها
+  if (!L.doc || L.doc.n !== ctx.n - 1) { L.sendQ = { id, patch, ctx, retry }; return; }
+  patch.moves = L.doc.moves.concat(ctx.uci);
+  const q = { field: "at", n: ctx.n, tSend: Date.now(), tAck: 0, srv: 0 };
   L.calQ = q;
   window.fbLiveMove(id, patch).then(() => { if (L.id !== id) return; L.inflight = false; lvCalAck(q); })
     .catch(e => {
@@ -190,6 +290,16 @@ function lvSend(id, patch, ctx, retry) {
       toast(LVT("⚠️ النقلة ما اتسجلتش — اتأكد من النت", "⚠️ The move was not saved — check your connection"));
       lvPaint();
     });
+}
+// الممر السريع: نفس النقلة في RTDB (database.rules.json: دورك بس، +1، صيغة UCI، والوقت مايزيدش)
+function lvRelay(ctx) {
+  const L = arena.live, v = L.rt;
+  if (window.fbRtUpdate && (!v || (v.status === "live" && v.plyCount < ctx.n - 1))) { L.relayQ = ctx; return; }   // نقلة الخصم لسه ما وصلتش الممر: نقلتي بتستنى
+  if (!v || !window.fbRtUpdate || v.status !== "live" || v.plyCount !== ctx.n - 1 || !L.doc || v.whiteUid !== L.doc.w) return;
+  const key = ctx.side === "w" ? "wTimeMs" : "bTimeMs", old = Number(v[key]) || 0;
+  let t = Math.min(ctx.nt, ctx.n - 1 >= 2 ? Math.round(old - (fbRtNow() + 150 - v.lastMoveAt)) + (Number(v.incrementMs) || 0) : old);
+  if (t < 0) return;
+  window.fbRtUpdate(L.id, { plyCount: ctx.n, turn: lvToMove(ctx.n), lastMoveUci: ctx.uci, uciMoves: (v.uciMoves ? v.uciMoves + " " : "") + ctx.uci, [key]: t, pendingTermination: ctx.pend || "", drawOfferedBy: "" }).catch(() => {});
 }
 // ضغطة على مربع: نقلة في دورك، أو premove وانت مستني
 function liveClick(sq) {
@@ -261,14 +371,11 @@ function lvOnFlag(c) {
     patch = { status: "over", res: c === "w" ? "0-1" : "1-0", why: "timeout" };
   } else patch = lvNoMate(L.game, L.color) ? { status: "over", res: "1/2-1/2", why: "material" } : { status: "over", res: L.color === "w" ? "1-0" : "0-1", why: "timeout" };
   L.flagBusy = true;
-  window.fbLivePatch(d.id, patch).catch(() => {}).then(() => { L.flagBusy = false; });   // لو السيرفر شايف إن لسه فيه وقت: بنحاول تاني
+  window.fbLivePatch(d.id, patch).then(() => lvRtMirror(patch)).catch(() => {}).then(() => { L.flagBusy = false; });   // لو السيرفر شايف إن لسه فيه وقت: بنحاول تاني
 }
 
 // ================= الأزرار: استسلام، تعادل، إلغاء، برزرك، إعلان الفوز =================
-function lvAct(patch, msg) {
-  const L = arena.live, d = L.doc; if (!d || !window.fbLivePatch) return;
-  return window.fbLivePatch(d.id, patch).catch(e => { console.warn("Live action failed:", e && e.code); if (msg) toast(msg); });
-}
+function lvAct(patch, msg) { return lvWrite(patch, msg); }
 async function lvResign() {
   const L = arena.live; if (!lvPlaying()) return;
   if (window.ecaConfirm && !(await window.ecaConfirm(LVT("متأكد إنك عايز تستسلم؟", "Resign this game?")))) return;
@@ -298,6 +405,7 @@ function lvFinish(d) {
   L.over = { res: d.res, why: d.why }; L.pre = []; L.sel = null;
   L.clk = { w: d.wt, b: d.bt, side: null, t0: performance.now() };
   if (d.why === "timeout") L.clk[d.n % 2 ? "b" : "w"] = 0;   // اللي وقته خلص هو اللي كان عليه الدور
+  if (L.presOn && window.fbPresenceOff) { fbPresenceOff(); L.presOn = false; }
   if (L.spect || !me || L.done[d.id]) return;
   L.done[d.id] = true;
   const won = d.res === (me === "w" ? "1-0" : "0-1"), lost = !!d.res && d.res !== "1/2-1/2" && !won;
@@ -329,8 +437,11 @@ function lvBeat() {
 document.addEventListener("visibilitychange", () => { if (!document.hidden && arena.live.doc) { lvBeat(); lvLoop(); } });
 function lvConnHTML() {
   const L = arena.live, d = L.doc; if (!lvPlaying()) return "";
-  const gap = Date.now() - L.oppSeen; if (gap < 12000) return "";
-  const left = Math.max(0, 30 - Math.floor(gap / 1000));
+  const gap = Date.now() - L.oppSeen, off = L.oppOnline === false;
+  if (gap < 12000 && !off) return "";
+  // RTDB بيقول فوراً إن الخصم فصل (onDisconnect)، والإعلان بيتحسب على السيرفر من آخر نبضة (30 ثانية)
+  const offFor = off && window.fbRtNow ? Math.max(0, fbRtNow() - L.oppOffAt) : 0;
+  const left = gap >= 30000 ? 0 : Math.max(1, 30 - Math.floor(Math.max(gap, offFor) / 1000));
   return `<div class="lv-conn" role="alert"><b>⚠️ ${LVT("انقطع اتصال الخصم.. يحق لك إعلان الفوز خلال 30 ثانية إذا لم يعد", "Your opponent disconnected.. you can claim the win in 30 seconds if they don't return")}</b>
     ${left ? `<span class="lv-conn-n" dir="ltr">${left}s</span>` : `<button type="button" onclick="lvClaimAbandon()" class="tap lv-claim">${d.n < 2 ? "✖ " + LVT("إلغاء الدور", "Abort the game") : "🏆 " + LVT("إعلان الفوز", "Claim the win")}</button>`}</div>`;
 }
@@ -338,6 +449,7 @@ setInterval(() => {
   const L = arena.live, here = tab === "arena" && arena.sub === "live";
   if (L.doc && L.doc.status === "live" && !L.over && L.clk.side && lvRem(L.clk.side) <= 0) lvOnFlag(L.clk.side);   // الرقعة مش ظاهرة (rAF واقف)
   if (!here) return;
+  if (L.prov && L.doc && L.doc.n < L.prov && Date.now() - L.provAt > 6000) { lvRebuild(true); lvPaint(); }
   if (L.view === "game") { const c = document.getElementById("lvConn"); if (c) { const h = lvConnHTML(); if (c.__h !== h) { c.__h = h; c.innerHTML = h; } } }
   if (L.view === "arena" && L.ar) {
     const el = document.getElementById("lvArClock"); if (el) el.textContent = lvArClockText();
@@ -390,6 +502,7 @@ function lvActionsHTML() {
   const L = arena.live, d = L.doc;
   if (L.spect) return `<p class="lv-spect">👁️ ${LVT("بتتفرّج على الدور", "You are spectating")}</p>`;
   if (!lvPlaying()) return "";
+  if (d.pend && lvToMove(d.n) !== L.color) return `<p class="lv-claimwait" role="status">⏳ ${LVT("بنستنى جهاز الخصم يأكد", "Waiting for the opponent's device to confirm")} (${esc(LVT((LV_WHY[d.pend] || ["", ""])[0], (LV_WHY[d.pend] || ["", ""])[1]))})...</p>`;
   const b = [];
   if (d.n < 2) b.push(lvBtn("lvAbort()", "✖ " + LVT("إلغاء الدور", "Abort")));
   else {
@@ -407,7 +520,9 @@ function lvDrawHTML() {
 function lvResultHTML() {
   const L = arena.live, d = L.doc; if (d.status !== "over") return "";
   const me = L.color, won = !L.spect && d.res === (me === "w" ? "1-0" : "0-1"), draw = d.res === "1/2-1/2";
-  const head = !d.res ? "✖ " + LVT("الدور اتلغى", "Game aborted")
+  const accused = d.why === "illegal" && !L.spect && d.bad === me;
+  const head = d.why === "illegal" ? (accused ? "⚠️ " + LVT("الخصم اشتكى من نقلتك — الكوتش هيراجع الدور", "Your opponent reported your move — the coach will review the game") : "🚩 " + LVT("الدور اتلغى (نقلة غير قانونية)", "Game void (illegal move)"))
+    : !d.res ? "✖ " + LVT("الدور اتلغى", "Game aborted")
     : L.spect || !me ? (draw ? "🤝 " + LVT("تعادل", "Draw") : d.res === "1-0" ? "⚪ " + LVT("الأبيض كسب", "White won") : "⚫ " + LVT("الأسود كسب", "Black won"))
     : won ? "🏆 " + LVT("كسبت الدور!", "You won!") : draw ? "🤝 " + LVT("تعادل", "Draw") : "💔 " + LVT("خسرت الدور", "You lost");
   const why = LV_WHY[d.why] ? LVT(LV_WHY[d.why][0], LV_WHY[d.why][1]) : "";
@@ -525,6 +640,7 @@ function lvLobbyHTML(u) {
     </section>
     <section class="gold-card rounded-2xl p-4 space-y-2" aria-label="${LVT("تحديات مفتوحة", "Open challenges")}"><h3 class="font-bold text-yellow-300">🟢 ${LVT("تحديات مفتوحة", "Open challenges")}</h3>${rows}</section>
     ${lvArenasHTML(u)}
+    ${u.role !== "student" && u.role !== "parent" ? lvDisputesHTML() : ""}
     <button type="button" onclick="arenaSub('archive')" class="tap lv-btn w-full">📚 ${LVT("أرشيف أدواري", "My games archive")}</button>
   </div>`;
 }
@@ -657,6 +773,45 @@ function lvTourCardHTML(u) {
 function lvGoArenas() { arena.live.view = arena.live.tid ? "arena" : "lobby"; arena.sub = "live"; switchTab("arena"); }
 window.lvGoArenas = lvGoArenas;
 
+// ================= مراجعة الشكاوى (للكوتش): chess.js بيعيد الدور ويحدد مين اللي غلط =================
+function lvVerdict(r) {
+  const g = new ChessCls(); let badAt = -1;
+  for (let i = 0; i < r.moves.length; i++) { let x = null; try { x = uciMove(g, r.moves[i]); } catch (_) { x = null; } if (!x) { badAt = i; break; } }
+  const accused = r.bad === "w" ? "w" : "b", accuser = accused === "w" ? "b" : "w";
+  if (badAt >= 0) return { cheat: lvToMove(badAt), kind: "move", ply: badAt + 1 };
+  if (r.pend) {
+    const half = Number(g.fen().split(" ")[4]) || 0;
+    const ok = { checkmate: g.isCheckmate(), stalemate: g.isStalemate(), material: g.isInsufficientMaterial(), repetition: g.isThreefoldRepetition(), fifty: half >= 100 }[r.pend];
+    return ok ? { cheat: accuser, kind: "false" } : { cheat: accused, kind: "claim" };
+  }
+  return { cheat: accuser, kind: "false" };
+}
+function lvDisputesHTML() {
+  const L = arena.live, rows = L.disputes;
+  if (rows === null) return "";
+  const list = rows.filter(r => lvIdOk(r.id)).map(r => {
+    const v = lvVerdict(r), who = c => (c === "w" ? "⚪ " : "⚫ ") + lvName(c === "w" ? r.w : r.b, c === "w" ? r.wn : r.bn), win = v.cheat === "w" ? "b" : "w";
+    const why = v.kind === "move" ? LVT(`نقلة غير قانونية من ${who(v.cheat)} (النقلة ${v.ply})`, `Illegal move by ${who(v.cheat)} (ply ${v.ply})`)
+      : v.kind === "claim" ? LVT(`ادعاء ${(LV_WHY[r.pend] || [r.pend])[0]} غلط من ${who(v.cheat)}`, `False ${r.pend} claim by ${who(v.cheat)}`)
+      : LVT(`شكوى غلط من ${who(v.cheat)} — كل النقلات قانونية`, `False report by ${who(v.cheat)} — every move was legal`);
+    return `<div class="lv-dispute" data-gid="${esc(r.id)}"><div class="lv-who"><b>${esc(who("w"))} vs ${esc(who("b"))}</b></div><span class="lv-tag" dir="ltr">⏱ ${esc(r.tc)}</span>
+      <p class="lv-verdict is-${v.kind}">⚖️ ${esc(why)}</p>
+      <button type="button" onclick="lvJudge('${esc(r.id)}')" class="tap lv-btn gold-btn"${L.judging === r.id ? " disabled" : ""}>⚖️ ${LVT("نفّذ الحكم", "Apply the ruling")}: ${esc(who(win))} ${LVT("يكسب", "wins")}</button></div>`;
+  }).join("");
+  return `<section class="gold-card rounded-2xl p-4 space-y-2" aria-label="${LVT("أدوار عليها شكوى", "Disputed games")}"><h3 class="font-bold text-yellow-300">🚩 ${LVT("أدوار عليها شكوى (مراجعة الكوتش)", "Disputed games (coach review)")}</h3>
+    <p class="text-xs text-gray-400">${LVT("لما جهاز طالب يلاقي نقلة غير قانونية أو ادعاء كش مات غلط، الدور بيتلغي ويوصل هنا. الموقع بيعيد النقلات بـ chess.js ويقولك مين اللي غلط.", "When a student's device finds an illegal move or a false checkmate claim, the game is voided and lands here. The site replays the moves with chess.js and tells you who cheated.")}</p>
+    ${list || `<p class="lv-empty">${LVT("مفيش شكاوى", "No disputes")}</p>`}</section>`;
+}
+async function lvJudge(gid) {
+  const L = arena.live, r = (L.disputes || []).find(x => x.id === gid); if (!r || L.judging || !window.fbLivePatch) return;
+  const v = lvVerdict(r), res = v.cheat === "w" ? "0-1" : "1-0";
+  L.judging = gid; render();
+  try { await window.fbLivePatch(gid, { res, why: "forfeit", judge: lvMe() }); toast(LVT("⚖️ الحكم اتسجل", "⚖️ Ruling saved")); }
+  catch (e) { console.warn("Ruling failed:", e && e.code); toast(LVT("الحكم ما اتسجلش", "The ruling was not saved")); }
+  L.judging = ""; render();
+}
+window.lvJudge = lvJudge;
+
 // ================= الصفحة جوه ساحة التدريب =================
 function lvHTML(u) {
   const L = arena.live;
@@ -687,6 +842,7 @@ function lvHTML(u) {
     if (!here) {
       if (L.lobbyStop) { L.lobbyStop(); L.lobbyStop = null; }
       if (L.arenasStop) { L.arenasStop(); L.arenasStop = null; }
+      if (L.disputesStop) { L.disputesStop(); L.disputesStop = null; }
       if (L.arStop && !lvPlaying()) { L.arStop(); L.arStop = null; }
       if (L.stop && !lvPlaying() && !(L.doc && L.doc.status === "open")) lvClose();
     }
@@ -695,6 +851,7 @@ function lvHTML(u) {
     if (here && u && !window.__authLoading) {
       if (L.view === "lobby") {
         if (!L.lobbyStop && window.fbLiveLobby) L.lobbyStop = window.fbLiveLobby(rows => { L.lobby = rows; if (tab === "arena" && arena.sub === "live" && L.view === "lobby") render(); }, () => { L.lobby = []; });
+        if (u.role !== "student" && u.role !== "parent" && !L.disputesStop && window.fbLiveDisputes) L.disputesStop = window.fbLiveDisputes(rows => { L.disputes = rows; if (tab === "arena" && arena.sub === "live" && L.view === "lobby") render(); }, () => { L.disputes = []; });
       }
       if (L.view !== "game" && !L.arenasStop && window.fbLaList) L.arenasStop = window.fbLaList(rows => { L.arenas = rows; if (tab === "arena" && arena.sub === "live" && L.view === "lobby") render(); }, () => { L.arenas = []; });
       if (L.view === "arena" && L.tid && !L.arStop) lvArenaOpen(L.tid);

@@ -627,6 +627,8 @@ async function runSuite(label, rules, quiet) {
     const mv = x => db => lmRef(db).update(Object.assign({ at: ts() }, x));
     const mid = (x = {}) => () => lmDoc(Object.assign({ moves: ["e2e4", "e7e5"], n: 2, wt: 100000, bt: 90000, at: tsAgo(5000) }, x));
     const M3 = ["e2e4", "e7e5", "g1f3"];
+    const agLiveV = () => ({ gameId: LM, whiteUid: uid, whiteName: "Falcon", whiteRating: null, blackUid: other, blackName: "Tiger", blackRating: null, mode: "pvp", timeControl: "3+2", result: "1-0", termination: "illegal",
+      pgn: "1. e4 e5", uciMoves: "e2e4 e7e5", clockTimesCentisec: [], openingNameAr: "", analysisSummary: null, playedAt: ts(), participantUids: [uid, other] });
     // a challenge and joining it
     await TT("live: open a challenge as white", true, uid, db => lmRef(db).set(open0()));
     await TT("live: open a challenge as black", true, uid, db => lmRef(db).set(open0({ w: "", wn: "", b: uid, bn: "Falcon" })));
@@ -648,10 +650,30 @@ async function runSuite(label, rules, quiet) {
     await TT("live: keep your clock as if no time passed", false, uid, mv({ moves: M3, n: 3, wt: 100000 }), lmSeed(mid()));
     await TT("live: cut the opponent's clock", false, uid, mv({ moves: M3, n: 3, wt: 95500, bt: 1000 }), lmSeed(mid()));
     await TT("live: the first move cannot add time", false, uid, mv({ moves: ["e2e4"], n: 1, wt: 185000 }), lmSeed(lmDoc()));
-    await TT("live: checkmate with the move", true, uid, mv({ moves: ["e2e4", "e7e5", "d1h5"], n: 3, wt: 95500, status: "over", res: "1-0", why: "checkmate" }), lmSeed(mid()));
+    await TT("live: end the game with your own checkmate claim (no confirmation)", false, uid, mv({ moves: ["e2e4", "e7e5", "d1h5"], n: 3, wt: 95500, status: "over", res: "1-0", why: "checkmate" }), lmSeed(mid()));
     await TT("live: checkmate that gives the win to the opponent", false, uid, mv({ moves: ["e2e4", "e7e5", "d1h5"], n: 3, wt: 95500, status: "over", res: "0-1", why: "checkmate" }), lmSeed(mid()));
-    await TT("live: stalemate with the move is a draw", true, uid, mv({ moves: M3, n: 3, wt: 95500, status: "over", res: "1/2-1/2", why: "stalemate" }), lmSeed(mid()));
+    await TT("live: end the game with your own stalemate claim", false, uid, mv({ moves: M3, n: 3, wt: 95500, status: "over", res: "1/2-1/2", why: "stalemate" }), lmSeed(mid()));
     await TT("live: stalemate written as a win", false, uid, mv({ moves: M3, n: 3, wt: 95500, status: "over", res: "1-0", why: "stalemate" }), lmSeed(mid()));
+    // نهاية الدور بالاتفاق: الادعاء مع النقلة، والخصم هو اللي يأكد
+    await TT("live: a mating move carries a checkmate claim (still live)", true, uid, mv({ moves: ["e2e4", "e7e5", "d1h5"], n: 3, wt: 95500, pend: "checkmate" }), lmSeed(mid()));
+    await TT("live: a claim that is not an ending", false, uid, mv({ moves: M3, n: 3, wt: 95500, pend: "win" }), lmSeed(mid()));
+    const claimed = (x = {}) => () => lmDoc(Object.assign({ moves: ["e2e4", "e7e5", "d1h5"], n: 3, wt: 95500, bt: 90000, at: tsAgo(500), pend: "checkmate" }, x));
+    await TT("live: the opponent confirms the checkmate (their own loss)", true, other, db => lmRef(db).update({ status: "over", res: "1-0", why: "checkmate", pend: "" }), lmSeed(claimed()));
+    await TT("live: the player who claimed mate confirms it himself", false, uid, db => lmRef(db).update({ status: "over", res: "1-0", why: "checkmate", pend: "" }), lmSeed(claimed()));
+    await TT("live: confirming a checkmate with the wrong winner", false, other, db => lmRef(db).update({ status: "over", res: "0-1", why: "checkmate", pend: "" }), lmSeed(claimed()));
+    await TT("live: confirming a stalemate claim as a draw", true, other, db => lmRef(db).update({ status: "over", res: "1/2-1/2", why: "stalemate", pend: "" }), lmSeed(claimed({ pend: "stalemate" })));
+    await TT("live: confirming without any claim", false, other, db => lmRef(db).update({ status: "over", res: "1-0", why: "checkmate", pend: "" }), lmSeed(claimed({ pend: "" })));
+    await TT("live: playing on after a checkmate claim", false, other, mv({ moves: ["e2e4", "e7e5", "d1h5", "b8c6"], n: 4, bt: 88000 }), lmSeed(claimed()));
+    await TT("live: the claimer wins on time if the opponent never confirms", true, uid, db => lmRef(db).update({ status: "over", res: "1-0", why: "timeout" }), lmSeed(claimed({ bt: 4000, at: tsAgo(6000) })));
+    await TT("live: flag the opponent's illegal last move (game void)", true, other, db => lmRef(db).update({ status: "over", res: "", why: "illegal", bad: "w", badPly: 3 }), lmSeed(claimed()));
+    await TT("live: flag your own move", false, uid, db => lmRef(db).update({ status: "over", res: "", why: "illegal", bad: "b", badPly: 3 }), lmSeed(claimed()));
+    await TT("live: a flag that hands you the win", false, other, db => lmRef(db).update({ status: "over", res: "0-1", why: "illegal", bad: "w", badPly: 3 }), lmSeed(claimed()));
+    await TT("live: a flag that blames the wrong move", false, other, db => lmRef(db).update({ status: "over", res: "", why: "illegal", bad: "w", badPly: 1 }), lmSeed(claimed()));
+    const voided = () => lmDoc({ moves: ["e2e4", "e7e5", "e2e5"], n: 3, status: "over", res: "", why: "illegal", bad: "w", badPly: 3 });
+    await TT("live: the coach rules on a disputed game", true, coachU, db => lmRef(db).update({ res: "0-1", why: "forfeit", judge: coachU }), lmSeed(voided));
+    await TT("live: a student rules on a disputed game", false, other, db => lmRef(db).update({ res: "0-1", why: "forfeit", judge: other }), lmSeed(voided));
+    await TT("live: the coach rewrites a normal result", false, coachU, db => lmRef(db).update({ res: "0-1", why: "forfeit", judge: coachU }), lmSeed(() => lmDoc({ moves: M3, n: 3, status: "over", res: "1-0", why: "resign" })));
+    await TT("archive: a voided game cannot be archived", false, uid, db => db.collection("archivedGames").doc(LM).set(Object.assign(agLiveV(), { result: "1-0", uciMoves: "e2e4 e7e5 e2e5" })), lmSeed(voided));
     // resign, draw offers, flags and abandoned games
     await TT("live: resign", true, uid, db => lmRef(db).update({ status: "over", res: "0-1", why: "resign" }), lmSeed(mid()));
     await TT("live: resign but write a win", false, uid, db => lmRef(db).update({ status: "over", res: "1-0", why: "resign" }), lmSeed(mid()));

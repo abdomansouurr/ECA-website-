@@ -1,0 +1,90 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "presence": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.hasChildren(['online', 'at']) && newData.child('at').val() == now",
+        "online": {
+          ".validate": "newData.isBoolean()"
+        },
+        "at": {
+          ".validate": "newData.isNumber()"
+        },
+        "game": {
+          ".validate": "newData.isString() && newData.val().length <= 40 && newData.val().matches(/^[A-Za-z0-9]{0,40}$/)"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "staff": {
+      ".read": false,
+      ".write": false
+    },
+    "liveMatches": {
+      "$mid": {
+        ".read": "auth != null",
+        ".write": "auth != null && $mid.matches(/^[A-Za-z0-9]{10,40}$/) && ((!data.exists() && newData.exists() && (newData.child('whiteUid').val() == auth.uid || newData.child('blackUid').val() == auth.uid)) || (data.exists() && (data.child('whiteUid').val() == auth.uid || data.child('blackUid').val() == auth.uid || root.child('staff').child(auth.uid).val() == true) && (newData.exists() || data.child('status').val() == 'finished')))",
+        ".validate": "newData.hasChildren(['whiteUid', 'blackUid', 'baseMs', 'incrementMs', 'turn', 'plyCount', 'lastMoveUci', 'uciMoves', 'wTimeMs', 'bTimeMs', 'lastMoveAt', 'status', 'result', 'termination', 'pendingTermination', 'drawOfferedBy', 'illegalMoveAttempt']) && (!data.exists() ? (newData.child('plyCount').val() == 0 && newData.child('turn').val() == 'w' && newData.child('lastMoveUci').val() == '' && newData.child('uciMoves').val() == '' && newData.child('wTimeMs').val() == newData.child('baseMs').val() && newData.child('bTimeMs').val() == newData.child('baseMs').val() && newData.child('lastMoveAt').val() == now && newData.child('status').val() == 'live' && newData.child('result').val() == '' && newData.child('termination').val() == '' && newData.child('pendingTermination').val() == '' && newData.child('drawOfferedBy').val() == '' && newData.child('illegalMoveAttempt').val() == '' && newData.child('whiteUid').val() != newData.child('blackUid').val()) : (newData.child('whiteUid').val() == data.child('whiteUid').val() && newData.child('blackUid').val() == data.child('blackUid').val() && newData.child('baseMs').val() == data.child('baseMs').val() && newData.child('incrementMs').val() == data.child('incrementMs').val() && ((newData.child('plyCount').val() == data.child('plyCount').val() + 1 && newData.child('plyCount').val() <= 600 && data.child('status').val() == 'live' && data.child('pendingTermination').val() == '' && auth.uid == (data.child('turn').val() == 'w' ? data.child('whiteUid').val() : data.child('blackUid').val()) && newData.child('turn').val() == (data.child('turn').val() == 'w' ? 'b' : 'w') && newData.child('lastMoveUci').val().matches(/^[a-h][1-8][a-h][1-8][qrbn]?$/) && newData.child('uciMoves').val() == (data.child('uciMoves').val() == '' ? '' : data.child('uciMoves').val() + ' ') + newData.child('lastMoveUci').val() && newData.child('lastMoveAt').val() == now && newData.child('pendingTermination').val().matches(/^(checkmate|stalemate|repetition|fifty|material)?$/) && newData.child('drawOfferedBy').val() == '' && newData.child('status').val() == data.child('status').val() && newData.child('result').val() == data.child('result').val() && newData.child('termination').val() == data.child('termination').val() && newData.child('illegalMoveAttempt').val() == data.child('illegalMoveAttempt').val() && (data.child('turn').val() == 'w' ? (newData.child('bTimeMs').val() == data.child('bTimeMs').val() && newData.child('wTimeMs').val() >= 0 && (data.child('plyCount').val() < 2 ? newData.child('wTimeMs').val() <= data.child('wTimeMs').val() : newData.child('wTimeMs').val() <= data.child('wTimeMs').val() - (now - data.child('lastMoveAt').val()) + data.child('incrementMs').val() + 350)) : (newData.child('wTimeMs').val() == data.child('wTimeMs').val() && newData.child('bTimeMs').val() >= 0 && (data.child('plyCount').val() < 2 ? newData.child('bTimeMs').val() <= data.child('bTimeMs').val() : newData.child('bTimeMs').val() <= data.child('bTimeMs').val() - (now - data.child('lastMoveAt').val()) + data.child('incrementMs').val() + 350)))) || ((newData.child('plyCount').val() == data.child('plyCount').val() && newData.child('turn').val() == data.child('turn').val() && newData.child('lastMoveUci').val() == data.child('lastMoveUci').val() && newData.child('uciMoves').val() == data.child('uciMoves').val() && newData.child('wTimeMs').val() == data.child('wTimeMs').val() && newData.child('bTimeMs').val() == data.child('bTimeMs').val() && newData.child('lastMoveAt').val() == data.child('lastMoveAt').val()) && ((data.child('status').val() == 'live' && newData.child('status').val() == data.child('status').val() && newData.child('result').val() == data.child('result').val() && newData.child('termination').val() == data.child('termination').val() && newData.child('pendingTermination').val() == data.child('pendingTermination').val() && newData.child('illegalMoveAttempt').val() == data.child('illegalMoveAttempt').val() && (newData.child('drawOfferedBy').val() == '' || (data.child('drawOfferedBy').val() == '' && newData.child('drawOfferedBy').val() == (auth.uid == data.child('whiteUid').val() ? 'w' : 'b')))) || (data.child('status').val() == 'live' && newData.child('status').val() == 'finished' && newData.child('pendingTermination').val() == '' && newData.child('drawOfferedBy').val() == '' && (data.child('whiteUid').val() == auth.uid || data.child('blackUid').val() == auth.uid ? ((newData.child('termination').val() == 'resign' && newData.child('result').val() == (auth.uid == data.child('whiteUid').val() ? '0-1' : '1-0') && newData.child('illegalMoveAttempt').val() == '') || (newData.child('termination').val() == 'timeout' && newData.child('illegalMoveAttempt').val() == '' && (newData.child('result').val() == (auth.uid == data.child('whiteUid').val() ? '0-1' : '1-0') || ((auth.uid != (data.child('turn').val() == 'w' ? data.child('whiteUid').val() : data.child('blackUid').val()) && data.child('plyCount').val() >= 2 && (now - data.child('lastMoveAt').val()) > (data.child('turn').val() == 'w' ? data.child('wTimeMs').val() : data.child('bTimeMs').val())) && newData.child('result').val() == (auth.uid == data.child('whiteUid').val() ? '1-0' : '0-1')))) || (newData.child('termination').val() == 'material' && newData.child('illegalMoveAttempt').val() == '' && newData.child('result').val() == '1/2-1/2' && (auth.uid != (data.child('turn').val() == 'w' ? data.child('whiteUid').val() : data.child('blackUid').val()) && data.child('plyCount').val() >= 2 && (now - data.child('lastMoveAt').val()) > (data.child('turn').val() == 'w' ? data.child('wTimeMs').val() : data.child('bTimeMs').val()))) || (newData.child('termination').val() == 'draw' && newData.child('illegalMoveAttempt').val() == '' && newData.child('result').val() == '1/2-1/2' && data.child('drawOfferedBy').val() == (auth.uid == data.child('whiteUid').val() ? 'b' : 'w')) || (newData.child('termination').val() == 'abort' && newData.child('illegalMoveAttempt').val() == '' && newData.child('result').val() == '' && data.child('plyCount').val() < 2) || (data.child('pendingTermination').val() != '' && newData.child('termination').val() == data.child('pendingTermination').val() && newData.child('illegalMoveAttempt').val() == '' && auth.uid == (data.child('turn').val() == 'w' ? data.child('whiteUid').val() : data.child('blackUid').val()) && newData.child('result').val() == (newData.child('termination').val() == 'checkmate' ? (data.child('turn').val() == 'w' ? '0-1' : '1-0') : '1/2-1/2')) || (newData.child('termination').val() == 'illegal' && newData.child('result').val() == '' && auth.uid == (data.child('turn').val() == 'w' ? data.child('whiteUid').val() : data.child('blackUid').val()) && data.child('plyCount').val() >= 1 && newData.child('illegalMoveAttempt').val() == (data.child('turn').val() == 'w' ? 'b' : 'w')) || (newData.child('termination').val() == 'abandon' && newData.child('illegalMoveAttempt').val() == '' && data.child('plyCount').val() >= 2 && newData.child('result').val() == (auth.uid == data.child('whiteUid').val() ? '1-0' : '0-1') && root.child('presence').child((auth.uid == data.child('whiteUid').val() ? data.child('blackUid').val() : data.child('whiteUid').val())).child('online').val() == false && now - root.child('presence').child((auth.uid == data.child('whiteUid').val() ? data.child('blackUid').val() : data.child('whiteUid').val())).child('at').val() > 30000)) : (root.child('staff').child(auth.uid).val() == true && newData.child('termination').val() == 'abort' && newData.child('result').val() == '' && newData.child('illegalMoveAttempt').val() == ''))))))))",
+        "whiteUid": {
+          ".validate": "newData.isString() && newData.val().length <= 40 && newData.val().matches(/^[A-Za-z0-9]{1,40}$/)"
+        },
+        "blackUid": {
+          ".validate": "newData.isString() && newData.val().length <= 40 && newData.val().matches(/^[A-Za-z0-9]{1,40}$/)"
+        },
+        "baseMs": {
+          ".validate": "newData.isNumber() && newData.val() >= 60000 && newData.val() <= 900000"
+        },
+        "incrementMs": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000"
+        },
+        "turn": {
+          ".validate": "newData.isString() && newData.val().length <= 1 && newData.val().matches(/^[wb]$/)"
+        },
+        "plyCount": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 600"
+        },
+        "lastMoveUci": {
+          ".validate": "newData.isString() && newData.val().length <= 5 && newData.val().matches(/^([a-h][1-8][a-h][1-8][qrbn]?)?$/)"
+        },
+        "uciMoves": {
+          ".validate": "newData.isString() && newData.val().length <= 3600 && newData.val().matches(/^[a-h1-8qrbn ]*$/)"
+        },
+        "wTimeMs": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3600000"
+        },
+        "bTimeMs": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3600000"
+        },
+        "lastMoveAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "status": {
+          ".validate": "newData.isString() && newData.val().length <= 8 && newData.val().matches(/^(live|finished)$/)"
+        },
+        "result": {
+          ".validate": "newData.isString() && newData.val().length <= 7 && newData.val().matches(/^(1-0|0-1|1\\/2-1\\/2)?$/)"
+        },
+        "termination": {
+          ".validate": "newData.isString() && newData.val().length <= 12 && newData.val().matches(/^(checkmate|stalemate|repetition|fifty|material|resign|timeout|draw|abort|abandon|illegal)?$/)"
+        },
+        "pendingTermination": {
+          ".validate": "newData.isString() && newData.val().length <= 12 && newData.val().matches(/^(checkmate|stalemate|repetition|fifty|material)?$/)"
+        },
+        "drawOfferedBy": {
+          ".validate": "newData.isString() && newData.val().length <= 1 && newData.val().matches(/^[wb]?$/)"
+        },
+        "illegalMoveAttempt": {
+          ".validate": "newData.isString() && newData.val().length <= 1 && newData.val().matches(/^[wb]?$/)"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}

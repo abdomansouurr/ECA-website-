@@ -114,7 +114,7 @@ function agBotRec(P) {
 // ================= القايمة: من الجهاز فوراً + الأحدث من السيرفر =================
 async function agSync(older) {
   const A = arena.archive, uid = agUid(); if (!uid || A.busy || !window.fbArchiveList) return;
-  A.busy = true; A.err = false; agPaint();
+  A.busy = true; agPaint();
   try {
     const c = agCache(uid), real = c.games.filter(g => !g.pending && !g.localTime && g.playedAt);   // وقت السيرفر بس
     if (older) {
@@ -133,7 +133,10 @@ async function agSync(older) {
       for (const g of agCache(uid).games.filter(x => x.pending)) { const rec = Object.assign({}, g); delete rec.pending; await ecaArchiveSave(rec); }
     }
     A.synced = uid;
-  } catch (e) { console.warn("Archive list failed:", e && e.code); A.err = true; }
+  } catch (e) {
+    // مفيش نت أو السيرفر لسه بيجهّز: الطالب بيشوف المحفوظ على جهازه من غير أي رسالة خطأ، ونحاول تاني المرة الجاية
+    console.debug("Archive sync skipped:", e && e.code); A.synced = "";
+  }
   A.busy = false; agPaint();
 }
 function agPaint() { if (tab === "arena" && arena.sub === "archive") render(); }
@@ -162,7 +165,7 @@ function agRowHTML(g, uid) {
 function arenaArchiveHTML(u) {
   const A = arena.archive, uid = agUid();
   if (!uid) return `<div class="gold-card rounded-2xl p-8 text-center text-sm text-gray-400">${AGT("سجّل دخول الأول", "Log in first")}</div>`;
-  if (A.synced !== uid && !A.busy) setTimeout(() => agSync(false), 0);
+  if (A.synced !== uid && !A.busy && Date.now() - (A.triedAt || 0) > 15000) { A.triedAt = Date.now(); setTimeout(() => agSync(false), 0); }
   const c = agCache(uid), f = A.filter;
   const list = c.games.filter(g => f === "all" || (f === "review" ? !g.analysisSummary : g.mode === f));
   const chips = AG_FILTERS.map(x => `<button type="button" role="tab" aria-selected="${f === x[0]}" onclick="ecaArchiveFilter('${x[0]}')" class="tap ag-chip${f === x[0] ? " is-on" : ""}">${esc(AGT(x[1], x[2]))} <b>${x[0] === "all" ? c.games.length : c.games.filter(g => x[0] === "review" ? !g.analysisSummary : g.mode === x[0]).length}</b></button>`).join("");
@@ -174,7 +177,6 @@ function arenaArchiveHTML(u) {
       <button type="button" onclick="arena.archive.importOpen=!arena.archive.importOpen; render();" class="tap ag-pgn w-full" aria-expanded="${A.importOpen}">📥 ${AGT("استيراد PGN", "Import PGN")}</button>
       ${A.importOpen ? `<div class="space-y-2"><textarea id="agPgnIn" dir="ltr" rows="4" class="w-full bg-black border border-yellow-500/40 rounded-xl px-3 py-2 text-xs text-white font-mono" placeholder="[Event &quot;...&quot;]&#10;1. e4 e5 2. Nf3 ..." aria-label="PGN"></textarea><button type="button" onclick="ecaArchiveImport()" class="tap ag-pgn gold-btn w-full">📥 ${AGT("استيراد وحفظ وتحليل", "Import, save and analyze")}</button></div>` : ""}
     </section>
-    ${A.err ? `<p class="text-xs text-red-300 text-center">${AGT("ما قدرناش نوصل للسيرفر — بنعرض المحفوظ على جهازك.", "Could not reach the server — showing what is saved on this device.")}</p>` : ""}
     <div class="ag-list space-y-3">${list.length ? list.map(g => agRowHTML(g, uid)).join("") : `<div class="gold-card rounded-2xl p-6 text-center text-sm text-gray-400">${A.busy ? AGT("بنحمّل أدوارك...", "Loading your games...") : AGT("مفيش أدوار هنا لسه — العب دور مباشر أو ضد البوت وهيتحفظ لوحده.", "No games here yet — play a live or bot game and it is saved automatically.")}</div>`}</div>
     ${!c.end && c.games.length ? `<button type="button" onclick="ecaArchiveMore()" class="tap ag-pgn w-full"${A.busy ? " disabled" : ""}>⬇ ${AGT("اعرض أدوار أقدم", "Show older games")}</button>` : ""}
   </div>`;

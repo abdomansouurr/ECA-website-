@@ -3,6 +3,9 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "database": {
+    "rules": "database.rules.json"
+  },
   "emulators": {
     "auth": {
       "host": "127.0.0.1",
@@ -11,6 +14,10 @@
     "firestore": {
       "host": "127.0.0.1",
       "port": 8085
+    },
+    "database": {
+      "host": "127.0.0.1",
+      "port": 9000
     },
     "ui": {
       "enabled": false
@@ -32,6 +39,7 @@
       "tailwind.input.css",
       "firestore.rules",
       "firestore.indexes.json",
+      "database.rules.json",
       "*.log",
       "rules-sim.js",
       "rules-sim.test.js",
@@ -66,7 +74,7 @@
           },
           {
             "key": "Content-Security-Policy-Report-Only",
-            "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://www.gstatic.com https://apis.google.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' blob: https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://www.gstatic.com https://lichess.org https://api.allorigins.win; worker-src 'self' blob:; frame-src 'self' blob: https://*.firebaseapp.com https://accounts.google.com https://maps.google.com https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+            "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://www.gstatic.com https://apis.google.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' blob: https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://*.firebaseapp.com https://www.gstatic.com https://lichess.org https://api.allorigins.win; worker-src 'self' blob:; frame-src 'self' blob: https://*.firebaseapp.com https://accounts.google.com https://maps.google.com https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
           }
         ]
       },

@@ -1103,11 +1103,15 @@ service cloud.firestore {
     // ================= اللعب المباشر (liveMatches): دور كامل بساعة بين طالبين =================
     // كل نقلة: من صاحب الدور بس، بتتضاف لآخر القايمة (مفيش تعديل في اللي فات)، وساعته ماينفعش تزيد عن
     // (الوقت القديم − الوقت اللي عدّى على السيرفر + الزيادة + 300ms سماح للنت). ساعة الخصم ماتتلمسش.
-    // القواعد مش بتقدر تتأكد إن النقلة قانونية (مفيش سيرفر شطرنج): الطرف التاني بيتأكد منها بـ chess.js.
+    // القواعد مش بتقدر تتأكد إن النقلة قانونية (مفيش سيرفر شطرنج)، فمحدش يقدر ينهي الدور لوحده بادعاء:
+    // - الكش مات / البات / التكرار / الخمسين / القطع الناقصة: النقلة بتتكتب ومعاها pend، والخصم (بـ chess.js) هو اللي بيأكد النتيجة.
+    // - لو النقلة أو الادعاء غلط: الخصم بيعمل شكوى (why = 'illegal')، الدور بيتلغي من غير نقط، والكوتش بيحكم بعد ما يراجع النقلات.
+    // - لو الخصم مارضيش يأكد: وقته بيخلص (timeout) أو بيختفي (abandon) والفايز بياخد الدور.
     function lmSeat(m, uid) { return m.w == uid ? 'w' : m.b == uid ? 'b' : ''; }
     function lmUci(u) { return u is string && u.matches('[a-h][1-8][a-h][1-8][qrbn]?'); }
     function lmFresh(d) {
-      return d.keys().hasOnly(['w','b','wn','bn','p','base','inc','tc','mode','tid','status','moves','n','wt','bt','at','bzw','bzb','draw','res','why','hbw','hbb','created'])
+      return d.keys().hasOnly(['w','b','wn','bn','p','base','inc','tc','mode','tid','status','moves','n','wt','bt','at','bzw','bzb','draw','res','why','hbw','hbb','created','pend'])
+        && d.get('pend', '') == ''
         && d.keys().hasAll(['w','b','wn','bn','p','base','inc','tc','mode','tid','status','moves','n','wt','bt','at','bzw','bzb','draw','res','why','hbw','hbb','created'])
         && d.base is int && d.base >= 60000 && d.base <= 900000 && d.inc is int && d.inc >= 0 && d.inc <= 10000
         && d.tc is string && d.tc.matches('[0-9]{1,2}[+][0-9]{1,2}')
@@ -1145,14 +1149,39 @@ service cloud.firestore {
       let o = resource.data; let d = request.resource.data;
       let side = o.n % 2 == 0 ? 'w' : 'b';
       return o.status == 'live' && request.auth.uid == (side == 'w' ? o.w : o.b)
-        && d.diff(o).affectedKeys().hasOnly(['moves','n','wt','bt','at','draw','status','res','why'])
+        && d.diff(o).affectedKeys().hasOnly(['moves','n','wt','bt','at','draw','pend'])
+        && o.get('pend', '') == ''
         && d.n == o.n + 1 && d.n <= 600 && d.moves.size() == o.moves.size() + 1
         && (o.n == 0 || d.moves[0:o.moves.size()] == o.moves) && lmUci(d.moves[o.moves.size()])
         && d.at == request.time && d.draw == ''
         && lmClockOk(o, d, side) && (side == 'w' ? d.bt == o.bt : d.wt == o.wt)
-        && ((d.status == 'live' && d.res == '' && d.why == '')
-          || (d.status == 'over' && ((d.why == 'checkmate' && d.res == (side == 'w' ? '1-0' : '0-1'))
-            || (d.why in ['stalemate', 'repetition', 'fifty', 'material'] && d.res == '1/2-1/2'))));
+        && d.get('pend', '') in ['', 'checkmate', 'stalemate', 'repetition', 'fifty', 'material'];
+    }
+    // الخصم (اللي عليه الدور بعد الادعاء) بيأكد: كش مات = خسارته هو، والباقي تعادل
+    function lmConfirmOk() {
+      let o = resource.data; let d = request.resource.data; let me = lmSeat(o, request.auth.uid);
+      let side = o.n % 2 == 0 ? 'w' : 'b';
+      let p = o.get('pend', '');
+      return me != '' && me == side && o.status == 'live' && p != ''
+        && d.diff(o).affectedKeys().hasOnly(['status','res','why','pend','draw'])
+        && d.status == 'over' && d.why == p && d.pend == '' && d.get('draw', '') == ''
+        && d.res == (p == 'checkmate' ? (side == 'w' ? '0-1' : '1-0') : '1/2-1/2');
+    }
+    // شكوى: آخر نقلة (أو ادعاء النهاية) غلط. الدور بيتلغي من غير نقط لحد ما الكوتش يحكم
+    function lmFlagOk() {
+      let o = resource.data; let d = request.resource.data; let me = lmSeat(o, request.auth.uid);
+      let side = o.n % 2 == 0 ? 'w' : 'b';
+      return me != '' && me == side && o.status == 'live' && o.n >= 1
+        && d.diff(o).affectedKeys().hasOnly(['status','res','why','bad','badPly','draw'])
+        && d.status == 'over' && d.res == '' && d.why == 'illegal' && d.get('draw', '') == ''
+        && d.bad == (side == 'w' ? 'b' : 'w') && d.badPly == o.n;
+    }
+    // حكم الكوتش على دور عليه شكوى (بعد ما يراجع النقلات بـ chess.js)
+    function lmJudgeOk() {
+      let o = resource.data; let d = request.resource.data;
+      return o.status == 'over' && o.why == 'illegal' && o.res == ''
+        && d.diff(o).affectedKeys().hasOnly(['res','why','judge'])
+        && d.res in ['1-0', '0-1', '1/2-1/2'] && d.why == 'forfeit' && d.judge == request.auth.uid && isStaff();
     }
     // نبضة «أنا موجود» كل كام ثانية: كل لاعب بيكتب نبضته هو بس
     function lmBeatOk() {
@@ -1199,6 +1228,16 @@ service cloud.firestore {
         && d.diff(o).affectedKeys().hasOnly(me == 'w' ? ['bzw','wt'] : ['bzb','bt'])
         && (me == 'w' ? d.bzw == true && d.wt == math.floor(o.base / 2) : d.bzb == true && d.bt == math.floor(o.base / 2));
     }
+    // كل كتابة بتروح للفرع اللي يخصها بس. الـ ?: بيقيّم فرع واحد، لكن && و || بيقيّموا كل الأطراف،
+    // فتجربة كل الفروع كانت بتعدّي حد الـ 1000 عملية في الكتابات المرفوضة
+    function lmUpdateOk() {
+      let o = resource.data; let d = request.resource.data;
+      return o.status == 'open' ? (lmJoinOk() || lmBeatOk())
+        : o.status == 'over' ? lmJudgeOk()
+        : d.n != o.n ? lmMoveOk()
+        : d.status == 'over' ? (lmResignOk() || lmDrawOk() || lmClaimOk() || lmAbortOk() || lmConfirmOk() || lmFlagOk())
+        : (lmBeatOk() || lmDrawOk() || lmBerserkOk());
+    }
     match /liveMatches/{mid} {
       // بالأسماء المستعارة بس، فأي طالب في الأكاديمية يقدر يتفرّج
       allow read: if notAnon();
@@ -1211,7 +1250,7 @@ service cloud.firestore {
              && request.resource.data.w != request.resource.data.b && request.resource.data.p == [request.resource.data.w, request.resource.data.b]
              && request.auth.uid in request.resource.data.p && lmArenaPairOk(request.resource.data, mid)));
       allow update: if notAnon() && !exists(/databases/$(database)/documents/deleted/$(request.auth.uid))
-        && (lmJoinOk() || lmMoveOk() || lmBeatOk() || lmResignOk() || lmDrawOk() || lmClaimOk() || lmAbortOk() || lmBerserkOk());
+        && lmUpdateOk();
       allow delete: if isAdmin() || (notAnon() && resource.data.status == 'open' && request.auth.uid in resource.data.p);
     }
 
