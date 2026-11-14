@@ -81,11 +81,19 @@ async function ecaArchiveSave(rec) {
   try { const r = await window.fbArchiveSave(rec); agMerge(uid, [{ gameId: rec.gameId, pending: false, localTime: true }]); agPaint(); return r; }
   catch (e) { console.warn("Archive save failed:", e && e.code); return null; }
 }
+// التصنيف (rating.js) بيستنى الدور يتسجّل على السيرفر الأول، لأن القواعد بتقرا النتيجة من الأرشيف
+const AG_SAVING = {};
+{
+  const _save = ecaArchiveSave;
+  ecaArchiveSave = function (rec) { const p = _save.apply(this, arguments); if (rec && rec.gameId) AG_SAVING[rec.gameId] = p; return p; };
+}
+window.ecaArchiveWhenSaved = gid => AG_SAVING[gid] || Promise.resolve(null);
+window.ecaArchiveCached = gid => agFind(gid);
 window.ecaArchiveBuild = ecaArchiveBuild; window.ecaArchiveSave = ecaArchiveSave;
 // دور مباشر خلص (live.js): مستند واحد للاتنين، اسمه نفس id الدور
 window.ecaArchiveFromLive = function (d, game, clocks) {
   const name = (uid, nick) => window.ecaStudentAlias ? ecaStudentAlias({ id: uid, nickname: nick || "" }) : "ECA";
-  const rec = ecaArchiveBuild({ gameId: d.id, game, white: { uid: d.w, name: name(d.w, d.wn), rating: null }, black: { uid: d.b, name: name(d.b, d.bn), rating: null },
+  const rec = ecaArchiveBuild({ gameId: d.id, game, white: { uid: d.w, name: name(d.w, d.wn), rating: window.ecaLiveRatingOf ? ecaLiveRatingOf(d.id, "w") : null }, black: { uid: d.b, name: name(d.b, d.bn), rating: window.ecaLiveRatingOf ? ecaLiveRatingOf(d.id, "b") : null },
     mode: d.mode === "arena" ? "arena" : "pvp", tc: d.tc, result: d.res, termination: d.why, clocks, participants: [d.w, d.b] });
   ecaArchiveSave(rec);
   return rec;

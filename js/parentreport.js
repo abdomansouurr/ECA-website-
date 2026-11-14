@@ -214,7 +214,7 @@ function renderParentReport(stu, opts) {
   const vault = D && D.vault, rate = vault && vault.total ? Math.round(vault.resolved / vault.total * 100) : null;
   const dojo = !D ? loading : !vault ? `<p class="pr-muted">—</p>` : `<div class="pr-dojo">${prDonut(rate, "var(--pr-teal)", PRL("نسبة الغلطات اللي اتصلّحت", "Share of mistakes fixed"))}
       <div><p><b>${vault.resolved}</b> ${PRL("من", "of")} <b>${vault.total}</b> ${PRL("غلطة قديمة اتحلّت صح بعد مراجعتها.", "past mistakes were solved correctly on review.")}</p>
-      <p class="pr-muted">${PRL("الدوجو بيرجّع كل لغز غلط بعد نص ساعة، ويوم، و3 أيام، وأسبوع لحد ما يتحل.", "The Dojo brings each missed puzzle back after 30 minutes, a day, 3 days and a week until it is solved.")}</p></div></div>`;
+      <p class="pr-muted">${PRL("«اتعلم من أخطائك» بيرجّع كل لغز غلط بعد نص ساعة، ويوم، و3 أيام، وأسبوع لحد ما يتحل.", "The Dojo brings each missed puzzle back after 30 minutes, a day, 3 days and a week until it is solved.")}</p></div></div>`;
   const bosses = !D ? loading : !(D.bosses || []).length ? `<p class="pr-muted">${PRL("مفيش واجبات زعيم لحد دلوقتي.", "No boss homework yet.")}</p>`
     : `<table class="pr-table"><thead><tr><th>${PRL("الواجب", "Homework")}</th><th>${PRL("التقدّم", "Progress")}</th><th>${PRL("الحالة", "Status")}</th></tr></thead><tbody>${D.bosses.slice(0, 8).map(b => {
       const total = b.puzzles.length, st = b.done ? `<span class="pr-pill pr-ok">✓ ${PRL("خلّص", "Completed")}</span>` : b.dueMs <= Date.now() ? `<span class="pr-pill pr-bad">${PRL("ما خلصش", "Missed")}</span>` : `<span class="pr-pill pr-wait">${PRL("شغّال", "Pending")}</span>`;
@@ -251,7 +251,7 @@ function renderParentReport(stu, opts) {
       <div class="pr-card"><h3>${PRL("ساعات التمرين أسبوعيًا", "Weekly training time")}</h3>${prBars(C.weeks.map(w => Math.round(C.wk[w].secs / 60)), wl, { color: "var(--pr-navy)", soft: "#c7d2fe", min: 30, fmt: v => v >= 60 ? (Math.round(v / 6) / 10) + (en ? "h" : "س") : v + (en ? "m" : "د"), label: PRL("رسم بياني لدقائق التمرين في آخر 8 أسابيع", "Training minutes over the last 8 weeks") })}</div>
       <div class="pr-card"><h3>${PRL("دقة التكتيك أسبوعيًا", "Weekly tactical accuracy")}</h3>${prLine(C.weeks.map(w => C.acc(C.wk[w])), wl, { color: "var(--pr-green)", max: 100, min: 0, fmt: v => v + "%", label: PRL("رسم بياني لدقة حل الألغاز", "Puzzle accuracy trend") })}</div>
       <div class="pr-card"><h3>${PRL("سرعة الحساب (ثانية لكل نقلة)", "Calculation speed (seconds per move)")}</h3>${prLine(C.weeks.map(w => C.spm(C.wk[w])), wl, { color: "var(--pr-gold)", fmt: v => v + (en ? "s" : "ث"), label: PRL("رسم بياني لسرعة الحساب", "Calculation speed trend") })}<p class="pr-muted">${PRL("كل ما الرقم يقل يبقى بيحسب أسرع.", "Lower means faster calculation.")}</p></div>
-      <div class="pr-card"><h3>${PRL("التعلم من الأخطاء (الدوجو)", "Learning from mistakes (Dojo)")}</h3>${dojo}</div>
+      <div class="pr-card"><h3>${PRL("اتعلم من أخطائك (Smart Dojo)", "Learn from your mistakes (Smart Dojo)")}</h3>${dojo}</div>
     </section>
     <section class="pr-card"><h3>${PRL("إتقان أفكار المنهج (Stappenmethode)", "Curriculum mastery (Stappenmethode)")}</h3>
       ${C.strong ? `<p class="pr-muted">${PRL("أقوى فكرة", "Strongest")}: <b>${esc(motifName(C.strong.t))}</b>${C.weak ? ` • ${PRL("محتاج تمرين", "Needs practice")}: <b>${esc(motifName(C.weak.t))}</b>` : ""}</p>` : ""}${motifs}</section>

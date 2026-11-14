@@ -56,7 +56,7 @@ function flNext(u) {
   if (ev && !ev.done) return { key: "event", icon: "🎪", title: FLL("حدث الأسبوع: ", "Weekly event: ") + lpThemeName(ev.theme), sub: FLL(`${ev.n} من ${FUN_EVENT_GOAL} لغز`, `${ev.n} of ${FUN_EVENT_GOAL} puzzles`) };
   // الدوجو: ألغاز غلط جه وقت الانتقام منها
   const due = typeof dojoDue === "function" ? dojoDue().length : 0;
-  if (due) return { key: "dojo", icon: "🥋", title: FLL("دوجو الانتقام", "Dojo Revenge"), sub: FLL(`${due} لغز تقدر تنتقم منه دلوقتي`, `${due} puzzles ready for revenge`) };
+  if (due) return { key: "dojo", icon: "🥋", title: FLL("اتعلم من أخطائك", "Learn from your mistakes"), sub: FLL(`${due} لغز تقدر تنتقم منه دلوقتي`, `${due} puzzles ready for revenge`) };
   // دور ضد بوت (هدف المكسب)
   if (ecaQuestProgress(u, "win") < 1) return { key: "bot", icon: "🤖", title: FLL("العب دور ضد بوت", "Play a game against a bot"), sub: FLL("اكسب وخد ⭐ 2", "Win to earn ⭐ 2") };
   // من غير نهاية: ألغاز درس على قد مستواه

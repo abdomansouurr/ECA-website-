@@ -413,6 +413,8 @@ function lvFinish(d) {
   if (won && window.ecaFireworks) ecaFireworks(2);
   if (lvLsGet("eca_live_cur", "") === d.id) lvLsSet("eca_live_cur", null);
   if (d.res && window.ecaArchiveFromLive) { try { L.rec = L.recs[d.id] = ecaArchiveFromLive(d, L.game, L.clkLog); } catch (e) { console.warn("Live archive failed:", e); } }
+  if (d.res && L.rec && window.ecaRateAfterLive) ecaRateAfterLive(d);
+  if (d.res && L.rec && window.ecaBlunderScan) ecaBlunderScan(L.rec);
   if (d.mode === "arena" && d.tid) lvScore(d);
 }
 // نقط الدور بيسجّلها لاعب واحد (الفايز، أو الأبيض في التعادل) عشان الاتنين مايكتبوش في نفس اللحظة.
@@ -494,7 +496,7 @@ function lvBarHTML(c) {
   const L = arena.live, d = L.doc, uid = c === "w" ? d.w : d.b, nick = c === "w" ? d.wn : d.bn, me = !L.spect && c === L.color;
   const bz = c === "w" ? d.bzw : d.bzb, pl = d.mode === "arena" ? L.players.find(p => p.uid === uid) : null, rem = lvRem(c);
   return `<div class="lv-bar${L.clk.side === c ? " is-run" : ""}${me ? " is-me" : ""}">
-    <span class="lv-who"><i class="lv-dot lv-${c}" aria-hidden="true"></i><b>${esc(lvName(uid, nick))}</b>${me ? `<em>${LVT("(انت)", "(you)")}</em>` : ""}${bz ? `<span class="lv-bz" title="Berserk">⚡</span>` : ""}${pl && pl.fire ? `<span class="lv-fire" title="Streak">🔥</span>` : ""}</span>
+    <span class="lv-who"><i class="lv-dot lv-${c}" aria-hidden="true"></i><b>${esc(lvName(uid, nick))}</b>${window.ecaEloChip ? ecaEloChip(uid, d) : ""}${me ? `<em>${LVT("(انت)", "(you)")}</em>` : ""}${bz ? `<span class="lv-bz" title="Berserk">⚡</span>` : ""}${pl && pl.fire ? `<span class="lv-fire" title="Streak">🔥</span>` : ""}</span>
     <span class="lv-clock${rem < 10000 ? " is-low" : ""}" id="lvClk_${c}" dir="ltr" role="timer" aria-label="${c === "w" ? LVT("ساعة الأبيض", "White clock") : LVT("ساعة الأسود", "Black clock")}">${lvFmt(rem)}</span></div>`;
 }
 function lvBtn(fn, label, cls, off) { return `<button type="button" onclick="${fn}" class="tap lv-btn ${cls || ""}"${off ? " disabled" : ""}>${label}</button>`; }
@@ -527,12 +529,13 @@ function lvResultHTML() {
     : won ? "🏆 " + LVT("كسبت الدور!", "You won!") : draw ? "🤝 " + LVT("تعادل", "Draw") : "💔 " + LVT("خسرت الدور", "You lost");
   const why = LV_WHY[d.why] ? LVT(LV_WHY[d.why][0], LV_WHY[d.why][1]) : "";
   const arenaOn = d.mode === "arena" && L.ar && lvSrvNow() < L.ar.endAt && !L.spect;
-  const next = arenaOn ? lvBtn("lvArenaBack(true)", "⚔️ " + LVT("انضم للطابور (Join Next Game)", "Join Next Game"), "gold-btn")
+  const next = arenaOn ? lvBtn("lvArenaBack(true)", "🏆 " + LVT("العودة إلى البطولة", "Back to the arena"), "gold-btn lv-back-arena")
     : d.mode === "arena" ? lvBtn("lvArenaBack(false)", "🏆 " + LVT("ترتيب البطولة", "Arena standings"))
     : lvBtn("lvBackLobby()", "⚔️ " + LVT("دور جديد", "New game"), "gold-btn");
   const review = d.res && !L.spect && me ? `<button type="button" onclick="lvAnalyze()" class="tap eca-gm-cta">🔬 ${LVT("تحليل الدور مع الجراند ماستر", "Analyze with the Grandmaster")}</button>
     <button type="button" onclick="lvPgn()" class="tap lv-btn">📋 ${LVT("نسخ / تحميل PGN", "Copy / download PGN")}</button>` : "";
-  return `<div class="lv-result is-${won ? "win" : draw || !d.res ? "draw" : "loss"}" role="status"><b>${head}</b>${why ? `<span>${esc(why)}</span>` : ""}
+  const rate = d.res && !L.spect && me && window.ecaRateLineHTML ? ecaRateLineHTML(d.id, won ? "win" : draw ? "draw" : "loss") : "";
+  return `<div class="lv-result is-${won ? "win" : draw || !d.res ? "draw" : "loss"}" role="status"><b>${head}</b>${why ? `<span>${esc(why)}</span>` : ""}${rate}
     <div class="lv-result-acts">${review}${next}<button type="button" onclick="arenaSub('archive')" class="tap lv-btn">📚 ${LVT("أرشيف أدواري", "My games archive")}</button></div></div>`;
 }
 function lvMovesHTML() {
@@ -744,15 +747,15 @@ function lvArenaHTML(u) {
   if (!a) return `<div class="gold-card rounded-2xl p-8 text-center text-sm text-gray-400">${LVT("بنحمّل البطولة...", "Loading the arena...")}</div>`;
   const st = lvArStatus(a), mine = L.players.find(p => p.uid === me);
   const rows = L.players.slice().sort((x, y) => y.pts - x.pts || x.games.length - y.games.length).map((p, i) =>
-    `<tr class="${p.uid === me ? "is-me" : ""}"><td>${i < 3 ? ["🥇", "🥈", "🥉"][i] : i + 1}</td><td class="lv-pn"><b>${esc(lvName(p.uid, p.n))}</b>${p.fire ? ` <span class="lv-fire" title="Streak">🔥</span>` : ""}</td><td dir="ltr"><b>${p.pts}</b></td><td>${p.games.length}</td>
+    `<tr class="${p.uid === me ? "is-me" : ""}"><td>${i < 3 ? ["🥇", "🥈", "🥉"][i] : i + 1}</td><td class="lv-pn"><b>${esc(lvName(p.uid, p.n))}</b>${window.ecaEloChip ? ecaEloChip(p.uid) : ""}${p.fire ? ` <span class="lv-fire" title="Streak">🔥</span>` : ""}</td><td dir="ltr"><b>${p.pts}</b></td><td>${p.games.length}</td>
       <td>${p.cur && lvIdOk(p.cur) && p.uid !== me ? `<button type="button" onclick="lvSpectate('${esc(p.cur)}')" class="tap lv-eye" title="${LVT("مشاهدة الدور", "Spectate")}" aria-label="${LVT("مشاهدة الدور", "Spectate")} (Spectate)">👁️</button>` : p.wait ? "⏳" : ""}</td></tr>`).join("");
   let action = "";
   if (student && st.k === "live") {
     action = mine && mine.cur ? `<button type="button" onclick="lvOpen('${esc(mine.cur)}')" class="tap lv-btn gold-btn w-full">▶ ${LVT("ارجع لدورك", "Back to your game")}</button>`
-      : mine && mine.wait ? `<div class="lv-searching" role="status"><span class="lv-pulse" aria-hidden="true">⚔️</span><b>${LVT("بندوّر على خصم قريب من نقطك...", "Finding an opponent near your score...")}</b></div><button type="button" onclick="lvQueue(false)" class="tap lv-btn w-full">⏸ ${LVT("اطلع من الطابور", "Leave the queue")}</button>`
-      : `<button type="button" onclick="lvQueue(true)" class="tap lv-btn gold-btn w-full lv-join">⚔️ ${LVT("انضم للطابور (Join Next Game)", "Join Next Game")}</button>`;
-  } else if (student && st.k === "soon") action = `<p class="lv-empty">${LVT("الطابور بيفتح أول ما البطولة تبدأ", "The queue opens when the arena starts")}</p>`;
-  const podium = st.k === "over" && L.players.length ? `<div class="lv-podium">${L.players.slice().sort((x, y) => y.pts - x.pts).slice(0, 3).map((p, i) => `<div class="lv-pod lv-pod-${i + 1}"><span>${["🥇", "🥈", "🥉"][i]}</span><b>${esc(lvName(p.uid, p.n))}</b><i dir="ltr">${p.pts}</i></div>`).join("")}</div>` : "";
+      : mine && mine.wait ? `<div class="lv-searching" role="status"><span class="lv-pulse" aria-hidden="true">⚔️</span><b>${LVT("بندوّر على خصم قريب من نقطك...", "Finding an opponent near your score...")}</b></div><button type="button" onclick="lvQueue(false)" class="tap lv-btn w-full">⏸ ${LVT("وقّف البحث عن خصم", "Stop searching")}</button>`
+      : `<button type="button" onclick="lvQueue(true)" class="tap lv-btn gold-btn w-full lv-join">⚔️ ${LVT("انضم للبطولة (Join Next Game)", "Join Next Game")}</button>`;
+  } else if (student && st.k === "soon") action = `<p class="lv-empty">${LVT("الانضمام للبطولة بيفتح أول ما تبدأ", "Joining opens when the arena starts")}</p>`;
+  const podium = st.k === "over" && L.players.length ? `<div class="lv-podium">${L.players.slice().sort((x, y) => y.pts - x.pts).slice(0, 3).map((p, i) => `<div class="lv-pod lv-pod-${i + 1}"><span>${["🥇", "🥈", "🥉"][i]}</span><b>${esc(lvName(p.uid, p.n))}</b><i dir="ltr">${p.pts}</i>${window.ecaCertArenaBtn ? ecaCertArenaBtn(a, p, i + 1, u) : ""}</div>`).join("")}</div>` : "";
   return `<div class="lv space-y-4">
     <section class="gold-card rounded-2xl p-4 space-y-3 lv-arena">
       <div class="flex flex-wrap items-center gap-2"><h3 class="font-bold text-yellow-300 flex-1 min-w-0 truncate">🏆 ${esc(a.name)}</h3><span class="lv-tag" dir="ltr">⏱ ${esc(a.tc)}</span><span class="lv-tag lv-st-${st.k}" id="lvArClock">${esc(st.t)}</span></div>
@@ -768,7 +771,7 @@ function lvArenaHTML(u) {
 }
 
 function lvTourCardHTML(u) {
-  return `<section class="gold-card rounded-2xl p-4 mb-4 lv-tour" aria-label="${LVT("بطولات الأرينا المباشرة", "Live arena tournaments")}"><div class="flex flex-wrap items-center gap-3"><span class="text-3xl" aria-hidden="true">⚡</span><div class="flex-1 min-w-0"><b class="block text-yellow-300">${LVT("بطولات الأرينا المباشرة", "Live arena tournaments")}</b><span class="text-xs text-gray-400">${u.role === "student" ? LVT("ادخل الطابور والعب أدوار بالوقت — الفوز 2 والـ 🔥 بـ 4", "Join the queue and play timed games — a win is 2, on fire 🔥 it is 4") : LVT("اعمل بطولة 30 أو 45 دقيقة وتابع الترتيب مباشر", "Create a 30 or 45 minute arena and follow the live standings")}</span></div><button type="button" onclick="lvGoArenas()" class="tap lv-btn gold-btn">🏆 ${LVT("البطولات المباشرة", "Live arenas")}</button></div></section>`;
+  return `<section class="gold-card rounded-2xl p-4 mb-4 lv-tour" aria-label="${LVT("بطولات الأرينا المباشرة", "Live arena tournaments")}"><div class="flex flex-wrap items-center gap-3"><span class="text-3xl" aria-hidden="true">⚡</span><div class="flex-1 min-w-0"><b class="block text-yellow-300">${LVT("بطولات الأرينا المباشرة", "Live arena tournaments")}</b><span class="text-xs text-gray-400">${u.role === "student" ? LVT("انضم للبطولة والعب أدوار بالوقت — الفوز 2 والـ 🔥 بـ 4", "Join the arena and play timed games — a win is 2, on fire 🔥 it is 4") : LVT("اعمل بطولة 30 أو 45 دقيقة وتابع الترتيب مباشر", "Create a 30 or 45 minute arena and follow the live standings")}</span></div><button type="button" onclick="lvGoArenas()" class="tap lv-btn gold-btn">🏆 ${LVT("البطولات المباشرة", "Live arenas")}</button></div></section>`;
 }
 function lvGoArenas() { arena.live.view = arena.live.tid ? "arena" : "lobby"; arena.sub = "live"; switchTab("arena"); }
 window.lvGoArenas = lvGoArenas;

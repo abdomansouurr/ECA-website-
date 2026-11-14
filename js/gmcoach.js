@@ -867,7 +867,7 @@
     }
     if (!sn) return;
     const Z = arena.puz;
-    const label = sub === "weekly" ? T("🎯 تحدي الكوتش الأسبوعي", "🎯 Coach's weekly challenge") : m === "boss" ? T("🐉 لغز الزعيم", "🐉 Boss puzzle") : m === "dojo" ? T("🥋 لغز من الدوجو", "🥋 Dojo puzzle")
+    const label = sub === "weekly" ? T("🎯 تحدي الكوتش الأسبوعي", "🎯 Coach's weekly challenge") : m === "boss" ? T("🐉 لغز الزعيم", "🐉 Boss puzzle") : m === "dojo" ? T("🥋 لغز من «اتعلم من أخطائك»", "🥋 Dojo puzzle")
       : Z.lesson ? T("🗺️ لغز من مغامرة الدروس", "🗺️ Adventure lesson puzzle") : Z.diff === "daily" ? T("📅 لغز اليوم", "📅 Daily puzzle") : T("🧩 لغز التدريب", "🧩 Practice puzzle");
     anaLoadLine(sn.fen, sn.moves, { ply: sn.moves.length, flip: String(sn.fen).split(" ")[1] === "b", solution: sn.solution,
       from: { sub, label, back: T("↩ العودة للتدريب", "↩ Back to training") } });

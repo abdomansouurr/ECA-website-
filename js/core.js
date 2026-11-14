@@ -1304,6 +1304,7 @@
               <h2 class="font-display font-bold text-2xl gold-gradient-text mt-2">${lang === "en" ? "Welcome, " : "أهلاً يا "}${esc(ecaStudentAlias(stu))}${activeTitle ? ` <span class="text-sm text-yellow-300">${esc(lang === "en" ? activeTitle.en : activeTitle.title)}</span>` : ""}</h2>
               <div class="hm-xp" role="progressbar" aria-valuemin="0" aria-valuemax="500" aria-valuenow="${xp % 500}" aria-label="${lang === "en" ? "Progress to the next level" : "الطريق للمستوى الجاي"}"><i style="width:${Math.round((xp % 500) / 5)}%"></i></div>
               <p class="text-xs text-sky-300 mt-1">${lang === "en" ? "Level" : "المستوى"} ${studentLevel} • ${xp} XP</p>
+              ${window.ecaRatingBadgeHTML ? `<p class="mt-2">${ecaRatingBadgeHTML(stu)}</p>` : ""}
               <p class="text-xs text-gray-400 mt-1">حضرت ${s.attC}/${s.total} درس في Step ${stu.level} • متبقي ${s.rem} درس للامتحان</p>
             </div>
             </div>
@@ -2419,6 +2420,7 @@
                 <div class="flex gap-2">
                   <button onclick="previewAndDownloadCert('${stu.id}',${idx}, false)" class="px-3 py-1.5 rounded-xl text-xs gold-btn">${lang === "en" ? "Download PDF" : "تحميل PDF"}</button>
                   <button onclick="previewAndDownloadCert('${stu.id}',${idx}, true)" class="px-3 py-1.5 rounded-xl text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">إرسال لواتساب ولي الأمر</button>
+                  ${window.ecaCertOpenStep ? `<button type="button" onclick="ecaCertOpenStep('${stu.id}',${idx})" class="tap eca-cert-cta">👑 ${lang === "en" ? "Royal certificate" : "شهادة التفوق"}</button>` : ""}
                 </div>
               </div>
             `).join("")}
@@ -2542,6 +2544,9 @@
               <input id="stuCoachInp" value="${esc(curCoach)}" onchange="assignStudentCoach('${sel.id}', this.value)" class="bg-black border border-yellow-500/40 rounded-xl px-3 py-1.5 text-xs text-white" />
             </div>
             ${certs.length ? `<button onclick="previewAndDownloadCert('${sel.id}',${certs.length - 1}, true)" class="px-3 py-1.5 rounded-xl text-xs gold-btn">إرسال آخر شهادة لولي الأمر PDF</button>` : ""}
+            ${certs.length && window.ecaCertOpenStep ? `<button type="button" onclick="ecaCertOpenStep('${sel.id}',${certs.length - 1})" class="tap eca-cert-cta">👑 ${lang === "en" ? "Royal certificate" : "شهادة التفوق والإنجاز"}</button>` : ""}
+            ${window.ecaCertOpenRating && Number.isInteger(sel.ecaPeakRating) && sel.ecaPeakRating >= 1100 ? `<button type="button" onclick="ecaCertOpenRating(${Math.floor(sel.ecaPeakRating / 100) * 100},'${sel.id}')" class="tap eca-cert-cta">🎖️ ${lang === "en" ? "Rating certificate" : "شهادة التصنيف"} ${Math.floor(sel.ecaPeakRating / 100) * 100}</button>` : ""}
+            ${window.ecaRatingBadgeHTML ? ecaRatingBadgeHTML(sel) : ""}
           </div>`;
         extraCoachControls += coachNotificationComposerHTML(sel);
       }

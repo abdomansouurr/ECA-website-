@@ -1249,6 +1249,23 @@ async function login(p, id) {
       await until(() => L.doc.n === 3 && !L.doc.local, 8000); return L.doc.wt;`);
     pl2 = pl2.ok ? await lvPlay({ w: pb, b: pa }, ["b8c6"], 3) : pl2;
     const to2 = await lvOver(pa), to2b = await lvOver(pb);
+    // ---------- 🏅 ECA rating (Elo, K=32 for the first 20 games) ----------
+    const r2 = await until(async () => { const a = await read(`users/${A}/ratings/${lg2}`), b = await read(`users/${B}/ratings/${lg2}`); return a && b ? { a, b } : null; }, 25000);
+    const ua2 = await U(A), ub2 = await U(B);
+    // Elo exactly as specified: E = 1/(1+10^((opp-me)/400)), K = 32 for the first 20 games, max(600, round(old + K(S - E)))
+    const elo = (me, opp, S) => Math.max(600, Math.round(me + 32 * (S - 1 / (1 + Math.pow(10, (opp - me) / 400)))));
+    check("🏅 rating: the winner and the loser move by Elo (E from both ratings, K = 32), whole numbers, one history row each, and the profile matches",
+      !!r2 && r2.a.res === "win" && r2.b.res === "loss" && r2.a.mode === "pvp" && r2.a.after === elo(r2.a.before, r2.a.opp, 1) && r2.b.after === elo(r2.b.before, r2.b.opp, 0)
+      && r2.a.delta === r2.a.after - r2.a.before && r2.b.delta === r2.b.after - r2.b.before && r2.a.delta > 0 && r2.b.delta < 0 && [r2.a.after, r2.b.after, r2.a.delta, r2.b.delta].every(Number.isInteger)
+      && ua2.ecaRating === r2.a.after && ub2.ecaRating === r2.b.after && ua2.ecaPeakRating >= ua2.ecaRating && ua2.ecaRatedGamesCount >= 2 && ub2.ecaRatedGamesCount >= 2 && ua2.ecaLastGame === lg2,
+      { r2, a: { r: ua2.ecaRating, p: ua2.ecaPeakRating, n: ua2.ecaRatedGamesCount }, b: { r: ub2.ecaRating, p: ub2.ecaPeakRating, n: ub2.ecaRatedGamesCount } });
+    const rateLine = (p, cls) => lv(p, `await until(() => !!document.querySelector('#lvRoot .eca-rate-line.${cls}'), 15000); await wait(1500); const e = document.querySelector('#lvRoot .eca-rate-line');
+      return e ? { t: e.textContent.replace(/\\s+/g, ' ').trim(), color: getComputedStyle(e).color } : null;`);
+    await pa.send("Page.bringToFront"); const rl2 = await rateLine(pa, "is-up");
+    await pb.send("Page.bringToFront"); const rl2b = await rateLine(pb, "is-down");
+    check("🏅 rating: the game-over card counts up to «📈 تصنيف الأكاديمية: <new> (+n)» in Netflix green (#46D369), and the loser sees «<new> (−n)» in red",
+      !!r2 && !!rl2 && rl2.t.includes(`تصنيف الأكاديمية: ${r2.a.after} (+${r2.a.delta})`) && /^📈/.test(rl2.t) && rl2.color === "rgb(70, 211, 105)"
+      && !!rl2b && rl2b.t.includes(`${r2.b.after} (−${-r2.b.delta})`) && /^📉/.test(rl2b.t) && rl2b.color !== rl2.color, { rl2, rl2b });
     check("⏱️ live: when white's clock runs out the game ends on time (0-1) for both players", pl2.ok && spend > 0 && spend < 2000 && to2.res === "0-1" && to2.why === "timeout" && /كسبت|won/i.test(to2.card) && /خسرت|lost/i.test(to2b.card), { spend, to2, to2b, pl2 });
 
     // game 3: checkmate in the same write as the move (fool's mate)
@@ -1256,6 +1273,10 @@ async function login(p, id) {
     const g3 = await lvNew(pa, 3, "w");
     await pb.send("Page.bringToFront");
     const g3c = await lvJoin(pb, g3);
+    await pa.send("Page.bringToFront");
+    const chips3 = await lv(pa, `await until(() => document.querySelectorAll('#lvRoot .lv-elo').length === 2 && ![...document.querySelectorAll('#lvRoot .lv-elo')].some(e => /…/.test(e.textContent)), 8000);
+      return [...document.querySelectorAll('#lvRoot .lv-elo')].map(e => e.textContent.trim());`);
+    check("🏅 rating: both player bars show «🏅» with the ECA rating (the student's own is the one on the profile)", chips3.length === 2 && !!ua2 && chips3.includes("🏅 " + ua2.ecaRating) && chips3.every(t => /^🏅 \d{3,4}$/.test(t)), { chips3, own: ua2 && ua2.ecaRating });
     const pl3 = await lvPlay({ w: pa, b: pb }, ["f2f3", "e7e5", "g2g4", "d8h4"]);
     const m3 = await lvOver(pb), m3a = await lvOver(pa);
     const g3doc = await read("liveMatches/" + g3);
@@ -1299,6 +1320,39 @@ async function login(p, id) {
       return { btn, why: L.doc.why, res: L.doc.res, card: ((document.querySelector('#lvRoot .lv-result') || {}).textContent || '') };`);
     await sleep(1500);
     check("⏱️ live: a game can be aborted before both sides move, with no result and no archive entry", ab.btn && ab.why === "abort" && ab.res === "" && !(await read("archivedGames/" + g5)), ab);
+
+    // ---------- 🔥 «اتعلم من أخطائك»: a blunder in a real game becomes a personal puzzle ----------
+    await pa.send("Page.bringToFront");
+    const g9 = await lvNew(pa, 3, "w");
+    await pb.send("Page.bringToFront"); await lvJoin(pb, g9);
+    const pl9 = await lvPlay({ w: pa, b: pb }, ["e2e4", "e7e5", "d1h5", "b8c6", "f1c4", "g8f6", "d2d3", "f6h5"]);
+    await pa.send("Page.bringToFront");
+    await lv(pa, `await until(() => L.san.length === 8 && L.game.turn() === 'w' && !L.inflight, 10000); await lvResign(); await until(() => L.doc.status === 'over' && L.over, 8000); return true;`);
+    await lv(pa, `switchTab('home'); return true;`);
+    const blId = `blunder_${g9}_6`;
+    const bl9 = await until(() => read(`users/${A}/mistakeVault/${blId}`), 90000, 1000);
+    check("🔥 learn from your mistakes: after the game, d3?? (Qxf7# was mate) became a personal puzzle in the background, with the position, the move played and the solution",
+      pl9.ok && !!bl9 && bl9.source === "my_game_blunder" && bl9.gameMode === "pvp" && bl9.wrongMovePlayedSan === "d3" && bl9.wrongMovePlayedUci === "d2d3" && bl9.solutionMovesUci[0] === "h5f7"
+      && bl9.fen === "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1" && bl9.resolved === false && bl9.ply === 6 && /مباراتك ضد/.test(bl9.customPromptAr) && /\(d3\)/.test(bl9.customPromptAr) && bl9.opponentName.length > 1,
+      { pl9, bl9 });
+    const blAll = await (async () => { const r = await fetch(`http://127.0.0.1:8085/v1/projects/${PROJECT}/databases/(default)/documents/users/${A}/mistakeVault?pageSize=300`, { headers: owner }); const j = await r.json(); return (j.documents || []).filter(x => x.name.includes("/blunder_")).map(x => x.name.split("/").pop()); })();
+    check("🔥 learn from your mistakes: at most 2 puzzles per game, and the same position is never added twice", blAll.filter(x => x.startsWith(`blunder_${g9}_`)).length <= 2, blAll);
+    const sol9 = await lv(pa, `window.__toasts = []; const _t = toast; toast = (m, ...r) => { __toasts.push(String(m)); return _t(m, ...r); };
+      switchTab('arena'); arena.sub = 'puzzles'; render(); dojoRows = null; await dojoRefresh(); render(); await wait(400);
+      const tab = document.querySelector('#mainView .eca-dojo-tab.is-games'); const out = { tab: tab ? tab.textContent.replace(/\\s+/g, ' ').trim() : '', tab44: !!tab && tab.getBoundingClientRect().height >= 44 };
+      out.first = dojoDue('games')[0] && dojoDue('games')[0].id;
+      dojoRows = dojoRows.filter(r => !dojoIsGame(r) || r.id === '${blId}');
+      reviewStart('games'); await until(() => arena.puz.status === 'play' && arena.puz.info && arena.puz.info.blunder, 10000); await wait(300);
+      const Z = arena.puz, ban = document.querySelector('#mainView .eca-blunder-banner'); out.id = Z.info.id; out.banner = ban ? ban.textContent.replace(/\\s+/g, ' ').trim() : ''; out.fen = Z.game.fen();
+      puzPlay({ from: 'h5', to: 'f7' }); await until(() => Z.status === 'solved', 5000); out.solved = Z.status === 'solved';
+      await until(() => __toasts.some(m => /صلحت خطأ مباراتك/.test(m)), 10000); out.toast = __toasts.filter(m => /مباراتك/.test(m)); toast = _t; return out;`);
+    const pay9 = await until(() => read(`users/${A}/economy/dojo-${blId}`), 15000);
+    const v9 = await until(async () => { const v = await read(`users/${A}/mistakeVault/${blId}`); return v && v.resolved ? v : null; }, 10000);
+    check("🔥 learn from your mistakes: «🔥 أخطاء مبارياتي (n)» (44px) opens it with «مباراة سابقة ضد … • النقلة التي لعبتها وقتها: d3 (??)»",
+      /🔥 أخطاء مبارياتي \(\d+\)/.test(sol9.tab) && sol9.tab44 && sol9.id === blId && sol9.first === blId && /مباراة سابقة ضد/.test(sol9.banner) && /النقلة التي لعبتها وقتها: d3 \(\?\?\)/.test(sol9.banner) && /^r1bqkb1r\/pppp1ppp\/2n2n2\/4p2Q/.test(sol9.fen), sol9);
+    check("🔥 learn from your mistakes: Qxf7# fixes it — «👏 ممتاز! صلحت خطأ مباراتك واتعلمت الفكرة الصح!» and the bonus XP (+40) is paid once",
+      sol9.solved && sol9.toast.some(m => /👏 ممتاز! صلحت خطأ مباراتك واتعلمت الفكرة الصح!/.test(m)) && !!pay9 && pay9.xpDelta === 40 && pay9.source === "dojo" && !!v9, { sol9, pay9: pay9 && { s: pay9.starsDelta, x: pay9.xpDelta }, v9: !!v9 });
+    await pa.ev("switchTab('home')");
 
     // ---------- 🛡️ dual-peer consensus: nobody can win by a claim alone ----------
     const injectGame = async (inject, label, noWait) => {
@@ -1352,13 +1406,13 @@ async function login(p, id) {
       return { form: true, tid: L.tid, name: L.ar && L.ar.name, view: L.view, min: L.ar && Math.round((L.ar.endAt - L.ar.startAt) / 60000) };`);
     check("🏆 arena: the coach creates a 30-minute 3+2 arena", arn.form && !!arn.tid && arn.name === "Friday Arena" && arn.view === "arena" && arn.min === 30, arn);
     const arJoin = (p, tid) => lv(p, `if (arena.sub !== 'live') { switchTab('arena'); arenaSub('live'); } lvBackLobby(); lvArenaOpen('${tid}'); await until(() => L.ar, 10000); await wait(200);
-      const btn = document.querySelector('#mainView .lv-join'); const big = !!btn && btn.getBoundingClientRect().height >= 44 && /Join Next Game/.test(btn.textContent);
+      const btn = document.querySelector('#mainView .lv-join'); const big = !!btn && btn.getBoundingClientRect().height >= 44 && /Join Next Game/.test(btn.textContent) && /انضم للبطولة/.test(btn.textContent);
       window.__q0 = Date.now(); await lvQueue(true); return big;`);
     const arenaGame = (p, ms) => lv(p, `await until(() => L.view === 'game' && L.doc && L.doc.mode === 'arena' && L.doc.status === 'live' && !L.done[L.id], ${ms || 15000}); return { id: L.id, color: L.color, ms: Date.now() - window.__q0 };`);
     await pa.send("Page.bringToFront"); const bigA = await arJoin(pa, arn.tid);
     await pb.send("Page.bringToFront"); await arJoin(pb, arn.tid);
     const r1b = await arenaGame(pb), r1a = await arenaGame(pa);
-    check("🏆 arena: «⚔️ انضم للطابور (Join Next Game)» (44px) pairs the two waiting students within 2 seconds", bigA && r1a.id && r1a.id === r1b.id && r1b.ms <= 2000 && r1a.color !== r1b.color, { bigA, r1a, r1b });
+    check("🏆 arena: «⚔️ انضم للبطولة (Join Next Game)» (44px) pairs the two waiting students within 2 seconds", bigA && r1a.id && r1a.id === r1b.id && r1b.ms <= 2000 && r1a.color !== r1b.color, { bigA, r1a, r1b });
     const W1 = r1a.color === "w" ? pa : pb, B1 = W1 === pa ? pb : pa, w1uid = W1 === pa ? A : B, b1uid = W1 === pa ? B : A;
     await W1.send("Page.bringToFront");
     const bz = await lv(W1, `const btn = !!document.querySelector('#lvRoot .lv-bzbtn'); lvBerserk(); await until(() => L.doc.bzw && !L.doc.local, 8000); return { btn, bzw: L.doc.bzw, wt: L.doc.wt, shown: lvRem('w') <= 90000 };`);
@@ -1368,6 +1422,9 @@ async function login(p, id) {
     await lvOver(W1); await lvOver(B1);
     const p1 = await until(async () => { const x = await read(`liveArenas/${arn.tid}/players/${w1uid}`); return x && x.games.length === 1 && x.cur === "" ? x : null; }, 12000);
     const p1b = await until(async () => { const x = await read(`liveArenas/${arn.tid}/players/${b1uid}`); return x && x.games.length === 1 && x.cur === "" ? x : null; }, 12000);
+    await W1.send("Page.bringToFront");
+    const backBtn = await lv(W1, `await until(() => !!document.querySelector('#lvRoot .lv-result .lv-back-arena'), 6000); const b = document.querySelector('#lvRoot .lv-result .lv-back-arena'); return b ? { t: b.textContent.replace(/\\s+/g, ' ').trim(), h: b.getBoundingClientRect().height } : null;`);
+    check("🏆 wording: after an arena game the button reads «🏆 العودة إلى البطولة» (44px)", !!backBtn && /🏆 العودة إلى البطولة/.test(backBtn.t) && backBtn.h >= 44, backBtn);
     check("🏆 arena: a berserk win scores 2 + 1 = 3, the loss scores 0, recorded once for both", pl4.ok && p1 && p1.pts === 3 && p1.streak === 1 && p1b && p1b.pts === 0 && p1b.streak === 0, { pl4, p1, p1b });
     // round 2: a third student is waiting, so the two who just played are not paired again
     await pc.send("Page.bringToFront"); await pc.ev("window.confirm = () => true; window.ecaConfirm = async () => true;"); await arJoin(pc, arn.tid);
@@ -1414,6 +1471,8 @@ async function login(p, id) {
       await until(() => P.game && P.game.history().length >= 2 && !P.thinking, 8000); await playResign(); await wait(300); render(); await wait(1500);
       return { over: P.over, rec: P._agRec ? { id: P._agRec.gameId, mode: P._agRec.mode, tc: P._agRec.timeControl, clk: P._agRec.clockTimesCentisec.length, black: P._agRec.blackName, rating: P._agRec.blackRating } : null };`);
     const lbotDoc = lbot.rec ? await until(() => read("archivedGames/" + lbot.rec.id), 10000) : null;
+    const rb = lbot.rec ? await until(() => read(`users/${A}/ratings/${lbot.rec.id}`), 25000) : null;
+    check("🏅 rating: a rated bot game counts against the bot's rating (a loss to the 300 bot: a whole-number drop of at most 40)", !!rb && rb.mode === "bot" && rb.opp === 300 && rb.res === "loss" && Number.isInteger(rb.delta) && rb.delta < 0 && rb.delta >= -40 && rb.after === rb.before + rb.delta, rb);
     check("📚 archive: a finished game against a rated academy bot saves itself (3+0 clock, bot rating)", lbot.over === "loss" && !!lbotDoc && lbotDoc.mode === "bot" && lbotDoc.timeControl === "3+0" && lbotDoc.blackRating === 300 && lbotDoc.result === "0-1", { lbot, lbotDoc: lbotDoc && { mode: lbotDoc.mode, tc: lbotDoc.timeControl, r: lbotDoc.blackRating, res: lbotDoc.result } });
     await lv(pa, `Object.assign(arena.play, { game: null, over: '', thinking: false }); return true;`);
     const arch = await lv(pa, `localStorage.removeItem('eca_saved_games_' + fbMyUid()); arena.archive.synced = ''; arena.archive.triedAt = 0; switchTab('arena'); arenaSub('lobby'); await wait(200);
@@ -1428,7 +1487,7 @@ async function login(p, id) {
       switchTab('home'); await wait(200); out.home = !!document.querySelector('#mainView .ag-home [onclick*="archive"]');
       return out;`);
     check("📚 archive: «📚 أرشيف أدواري» opens from the lobby and the profile, lists every game, and caches it on the device", arch.fromLobby && arch.home && arch.all >= 7 && arch.cached === arch.all, arch);
-    check("📚 archive: the filters show arena games, games vs friends, bot games and games that need review", arch.arena.length === (W1 === pa ? 3 : 2) && arch.arena.every(m => m === "arena") && arch.bot.length >= 1 && arch.bot.every(m => m === "bot") && arch.pvp.length === 4 && arch.pvp.every(m => m === "pvp") && arch.review === arch.all, arch);
+    check("📚 archive: the filters show arena games, games vs friends, bot games and games that need review", arch.arena.length === (W1 === pa ? 3 : 2) && arch.arena.every(m => m === "arena") && arch.bot.length >= 1 && arch.bot.every(m => m === "bot") && arch.pvp.length === 5 && arch.pvp.every(m => m === "pvp") && arch.review === arch.all, arch);
     check("📚 archive: each row has the players, result, clock, opening, date and moves, with 44px actions", /vs/.test(arch.row) && /(خسارة|Loss)/.test(arch.row) && /3\+2/.test(arch.row) && /نقلة|moves/.test(arch.row) && arch.btns, arch.row);
     const an = await lv(pa, `switchTab('arena'); arenaSub('archive'); await wait(200); ecaArchiveAnalyze('${g3}'); await wait(100);
       const out = { sub: arena.sub, plies: arena.ana.line.length, back: !!document.querySelector('#mainView .eca-ana-from') };
@@ -1664,7 +1723,7 @@ async function login(p, id) {
     check("lobby: the billboard spotlights the boss, then the current step when there is none", hero.boss && hero.step, hero);
     const rows = await pa.ev(`(() => { const out = {}, row = k => document.querySelector('.nf-row[data-row="' + k + '"]'), text = k => (row(k) || {}).textContent || '';
       out.rows = [...document.querySelectorAll('.nf-row')].map(r => r.dataset.row);
-      out.continue = /مغامرة الدروس/.test(text('continue')) && /دوجو الانتقام/.test(text('continue')) && !!row('continue').querySelector('.nf-bar');
+      out.continue = /مغامرة الدروس/.test(text('continue')) && /اتعلم من أخطائك/.test(text('continue')) && !!row('continue').querySelector('.nf-bar');
       out.pvp = /تحدي 60 ثانية/.test(text('pvp')) && /تحدي صاحبك/.test(text('pvp')) && /عجلة الحظ/.test(text('pvp'));
       out.originals = /ECA ORIGINAL/.test(text('originals')) && /تحدي الأسبوع/.test(text('originals')) && /لوحة الشرف/.test(text('originals')) && !!document.getElementById('lbSaPill');
       out.posters = row('top').querySelectorAll('.nf-num').length >= 1 && !!row('top').querySelector('.nf-poster');
@@ -1928,6 +1987,44 @@ async function login(p, id) {
     check("offline: saved only once", (await U(A)).arena.stars === aStars0 + 2, (await U(A)).arena.stars - aStars0);
     check("offline: banner goes away", !!(await until(() => pa.ev("!document.getElementById('ecaNetBanner')"), 5000)));
 
+    // ---------- wording: «العودة إلى البطولة» and «اتعلم من أخطائك» everywhere ----------
+    const banned = ["العودة إلى الطابور", "العودة للطابور", "انضم للطابور", "دوجو الأخطاء", "دوجو الانتقام"], srcHits = [];
+    for (const file of ["index.html", ...fs.readdirSync(path.join(root, "js")).filter(x => x.endsWith(".js")).map(x => "js/" + x)]) {
+      fs.readFileSync(path.join(root, file), "utf8").split("\n").forEach((line, i) => {
+        const t = line.trim(); if (t.startsWith("//") || t.startsWith("/*") || t.startsWith("*")) return;
+        for (const b of banned) { const k = line.indexOf(b); if (k >= 0 && !/(^|\s)\/\/\s/.test(line.slice(0, k))) srcHits.push(file + ":" + (i + 1) + " " + b); }
+      });
+    }
+    check("wording: no «العودة إلى الطابور», «انضم للطابور», «دوجو الأخطاء» or «دوجو الانتقام» in any screen, modal, toast or report", !srcHits.length, srcHits);
+    await pa.send("Page.bringToFront");
+    const words = await pa.ev(`(async () => { const w = ms => new Promise(r => setTimeout(r, ms)); switchTab('arena'); arena.sub = 'lobby'; render(); await w(500); const lobby = document.getElementById('mainView').textContent;
+      arena.sub = 'puzzles'; render(); await w(500); const puz = document.getElementById('mainView').textContent; switchTab('home'); for (let i = 0; i < 40 && !(tab === 'home' && document.querySelector('#mainView .hm-player')); i++) await w(150); const home = document.getElementById('mainView').textContent;
+      return { lobby: /اتعلم من أخطائك/.test(lobby), puz: /اتعلم من أخطائك/.test(puz), old: /دوجو الانتقام|دوجو الأخطاء|الطابور/.test(lobby + puz + home), badge: /تصنيف ECA: [0-9]+/.test(home) }; })()`);
+    check("wording: «اتعلم من أخطائك» on the training card and in the puzzles screen, nothing old left", words.lobby && words.puz && !words.old, words);
+    check("🏅 rating: the profile shows «🏅 تصنيف ECA: …»", words.badge, words);
+    // ---------- 👑 certificates (AcademyCertificateBuilder) ----------
+    const cert = await pa.ev(`(async () => { const o = { kind: 'arena', studentName: 'علي محمد', tournamentName: 'Friday Arena', rank: 1, rating: 1016 };
+      const cv = await AcademyCertificateBuilder.render(o), url = cv.toDataURL('image/png'), pdf = await AcademyCertificateBuilder.pdfBlob(o);
+      const head = new TextDecoder().decode(new Uint8Array(await pdf.slice(0, 8).arrayBuffer())), tail = new TextDecoder().decode(new Uint8Array(await pdf.slice(pdf.size - 6).arrayBuffer()));
+      const img = await new Promise(r => { const i = new Image(); i.onload = () => r({ w: i.naturalWidth, h: i.naturalHeight }); i.onerror = () => r(null); i.src = url; });
+      const px = cv.getContext('2d').getImageData(0, 540, 1600, 80).data; let gold = 0;
+      for (let k = 0; k < px.length; k += 16) if (px[k] > 220 && px[k + 1] > 170 && px[k + 1] < 215 && px[k + 2] < 70) gold++;
+      const kinds = []; for (const k of [{ kind: 'step', studentName: 'Ali', step: 3 }, { kind: 'rating', studentName: 'Ali', rating: 1100 }]) kinds.push((await AcademyCertificateBuilder.dataURL(k)).length > 100000);
+      await ecaCertOpen(o); await new Promise(r => setTimeout(r, 300));
+      const m = document.getElementById('ecaCertModal'), btns = m ? [...m.querySelectorAll('button')] : [];
+      return { png: url.startsWith('data:image/png;base64,') && url.length > 100000, size: img, pdf: head.startsWith('%PDF-1.4') && tail.includes('%%EOF') && pdf.size > 50000, gold, kinds,
+        open: !!m && !m.classList.contains('hidden') && !!m.querySelector('img.eca-cert-img'), btns: btns.map(b => b.textContent.trim().slice(0, 60)),
+        b44: btns.every(b => b.getBoundingClientRect().height >= 44 && b.getBoundingClientRect().width >= 44) }; })()`);
+    check("👑 certificates: a 1600×1130 PNG and a real PDF for arena, step and rating certificates, the name in gold (#F5C518)", cert.png && !!cert.size && cert.size.w === 1600 && cert.size.h === 1130 && cert.pdf && cert.gold > 40 && cert.kinds.every(Boolean), cert);
+    check("👑 certificates: «📥 تحميل الشهادة (صورة عالية الجودة / PDF)» and «📲 مشاركة عبر واتساب», all 44px", cert.open && cert.btns.some(t => /تحميل الشهادة \(صورة عالية الجودة \/ PDF\)/.test(t)) && cert.btns.some(t => /مشاركة عبر واتساب/.test(t)) && cert.b44, cert);
+    const dl = await pa.ev(`(async () => { let f = []; const o = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { f.push(this.download + '|' + this.href.slice(0, 5)); };
+      try { await ecaCertDownload('png'); await ecaCertDownload('pdf'); } finally { HTMLAnchorElement.prototype.click = o; } ecaCertClose(); return f; })()`);
+    check("👑 certificates: the download gives a .png and a .pdf file", dl.length === 2 && /\.png\|blob:/.test(dl[0]) && /\.pdf\|blob:/.test(dl[1]), dl);
+    const wa = await pa.ev(`(async () => { let u = ''; const o = window.open; window.open = x => { u = String(x); return null; }; const cs = navigator.canShare; navigator.canShare = () => false;
+      const oc = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () {};
+      try { await ecaCertOpen({ kind: 'step', studentName: 'Ali', step: 2 }); await ecaCertShare(); } finally { window.open = o; navigator.canShare = cs; HTMLAnchorElement.prototype.click = oc; ecaCertClose(); } return u; })()`);
+    check("👑 certificates: «📲 مشاركة عبر واتساب» opens WhatsApp with the message ready (and the image saved) when the device can't share files", /^https:\/\/wa\.me\/\?text=/.test(wa) && /Egypt%20Chess%20Academy/.test(wa), wa);
+
     // ---------- small phones (320px): no sideways scroll, touch targets >= 44px ----------
     await pa.send("Page.bringToFront");
     await pa.send("Emulation.setDeviceMetricsOverride", { width: 320, height: 640, deviceScaleFactor: 1, mobile: true });
@@ -1947,6 +2044,10 @@ async function login(p, id) {
     check("320px: no sideways scroll on any view", !fitBad.some(r => r.wide), fitBad.filter(r => r.wide));
     check("320px: nothing is cut off at the sides", !fitBad.some(r => r.cut.length), fitBad.filter(r => r.cut.length).map(r => ({ view: r.view, cut: r.cut })));
     check("320px: touch targets are 44px or more", !fitBad.some(r => r.small.length), fitBad.filter(r => r.small.length));
+    const cert320 = await pa.ev(`(async () => { await ecaCertOpen({ kind: 'step', studentName: 'Ali', step: 2 }); await new Promise(r => setTimeout(r, 300)); const m = document.querySelector('#ecaCertModal .eca-cert-box'); const r = m.getBoundingClientRect();
+      const small = [...document.querySelectorAll('#ecaCertModal button')].filter(b => b.getBoundingClientRect().height < 43.5 || b.getBoundingClientRect().width < 43.5).map(b => b.textContent.trim().slice(0, 20));
+      const wide = document.documentElement.scrollWidth > innerWidth + 1; ecaCertClose(); return { left: Math.round(r.left), right: Math.round(r.right), small, wide }; })()`);
+    check("320px: the certificate window fits the screen with 44px buttons", cert320.left >= 0 && cert320.right <= 321 && !cert320.small.length && !cert320.wide, cert320);
     await pa.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
     await pa.ev("switchTab('home')");
     const hb = await U(A), hs = hb.arena.stars, hh = (hb.shop && hb.shop.hints) || 0;

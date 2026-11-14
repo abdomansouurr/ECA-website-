@@ -400,6 +400,71 @@ async function runSuite(label, rules, quiet) {
   await T("dojo: sixth bonus in a day", false, Object.assign({}, rich, { arena: Object.assign({}, rich.arena, { dj: { d: today, n: 5 } }) }), db => dojoPay(db, { dj: { d: today, n: 6 } }), vaultSeed(oldVault()));
   await T("dojo: bonus without counting it", false, rich, db => econ(db, { kind: "earn", source: "dojo", key: "abc123", starsDelta: 2, xpDelta: 40, id: "dojo-abc123" }), vaultSeed(oldVault()));
   await T("dojo: counter changed with no receipt", false, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { dj: { d: today, n: 0 } }) }));
+  // «اتعلم من أخطائك»: موقف من دور الطالب نفسه بيتحول للغز شخصي
+  const BLID = "blunder_liveAAAAAAAAAAAAAAAA_6";
+  const blRow = (x = {}) => Object.assign(newVault({ puzzleId: BLID, motifs: [], stepLevel: 1, nextAt: TS.fromMillis(Date.now()), rating: 0 }), {
+    source: "my_game_blunder", opponentName: "Knight", gameMode: "pvp", playedAt: Date.now(), fen: "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1", ply: 6,
+    wrongMovePlayedUci: "d2d3", wrongMovePlayedSan: "d3", solutionMovesUci: ["h5f7"], altUci: [], motif: "mate",
+    customPromptAr: "🔥 موقف حقيقي من مباراتك ضد Knight! أنت لعبت (d3) وكانت خطأ فادح (??).. هل تقدر تلاقي النقلة الصح اللي كانت هتكسبك؟" }, x);
+  const blSeed = (x = {}) => s => s.collection("users").doc(uid).collection("mistakeVault").doc(BLID).set(blRow(Object.assign({ failedAt: tsAgo(60000) }, x)));
+  await T("blunder vault: a mistake from the student's own game becomes a puzzle", true, rich, db => vaultRef(db, BLID).set(blRow()));
+  await T("blunder vault: html in the prompt", false, rich, db => vaultRef(db, BLID).set(blRow({ customPromptAr: "<img src=x onerror=alert(1)>" })));
+  await T("blunder vault: a broken position", false, rich, db => vaultRef(db, BLID).set(blRow({ fen: "not a fen" })));
+  await T("blunder vault: another source", false, rich, db => vaultRef(db, BLID).set(blRow({ source: "coach" })));
+  await T("blunder vault: an imported game", false, rich, db => vaultRef(db, BLID).set(blRow({ gameMode: "import" })));
+  await T("blunder vault: a move that is not UCI", false, rich, db => vaultRef(db, BLID).set(blRow({ wrongMovePlayedUci: "z9z9" })));
+  await T("blunder vault: no solution", false, rich, db => vaultRef(db, BLID).set(blRow({ solutionMovesUci: [] })));
+  await T("blunder vault: an extra field", false, rich, db => vaultRef(db, BLID).set(blRow({ stars: 5 })));
+  await T("blunder vault: id does not match", false, rich, db => vaultRef(db, "blunder_liveAAAAAAAAAAAAAAAA_8").set(blRow()));
+  await T("blunder vault: a wrong try brings it back later", true, rich, db => vaultRef(db, BLID).update({ attempts: 2, failedAt: ts(), nextAt: TS.fromMillis(Date.now() + 1800000) }), blSeed());
+  await T("blunder vault: changing the solution later", false, rich, db => vaultRef(db, BLID).update({ solutionMovesUci: ["a2a3"] }), blSeed());
+  const blPay = (db, x = {}) => econ(db, Object.assign({ kind: "earn", source: "dojo", key: BLID, starsDelta: 2, xpDelta: 40, id: "dojo-" + BLID }, x), (s, a) => { a.dj = { d: today, n: 1 }; return s; });
+  await T("blunder vault: bonus XP right after fixing a game mistake", true, rich, db => blPay(db), blSeed());
+  await T("blunder vault: bonus for a game mistake already fixed", false, rich, db => blPay(db), blSeed({ resolved: true }));
+  await T("blunder vault: forged bonus", false, rich, db => blPay(db, { starsDelta: 5, xpDelta: 100 }), blSeed());
+  await T("blunder vault: bonus with nothing logged", false, rich, db => blPay(db));
+  await T("blunder vault: sixth bonus in a day", false, Object.assign({}, rich, { arena: Object.assign({}, rich.arena, { dj: { d: today, n: 5 } }) }),
+    db => econ(db, { kind: "earn", source: "dojo", key: BLID, starsDelta: 2, xpDelta: 40, id: "dojo-" + BLID }, (s, a) => { a.dj = { d: today, n: 6 }; return s; }), blSeed());
+
+  // تصنيف الأكاديمية (ECA Rating): مرة لكل دور، عدد صحيح، −40..+40، وفي اتجاه النتيجة
+  const GID = "liveAAAAAAAAAAAAAAAA";
+  const agDoc = (x = {}) => Object.assign({ gameId: GID, whiteUid: uid, whiteName: "A", whiteRating: 1000, blackUid: other, blackName: "B", blackRating: 1000, mode: "pvp", timeControl: "3+2", result: "1-0",
+    termination: "resign", pgn: "", uciMoves: "e2e4 e7e5", clockTimesCentisec: [], openingNameAr: "", analysisSummary: null, playedAt: TS.now(), participantUids: [uid, other] }, x);
+  const agSeedR = (x, more) => async s => { await s.collection("archivedGames").doc((x && x.gameId) || GID).set(agDoc(x)); if (more) await more(s); };
+  const rate = (db, x = {}) => db.runTransaction(async tx => {
+    const g = x.g || GID, ur = db.collection("users").doc(uid), mr = ur.collection("ratings").doc(g);
+    const p = (await tx.get(ur)).data(); await tx.get(mr);
+    const before = Number.isInteger(p.ecaRating) ? p.ecaRating : 1000, after = x.after != null ? x.after : before + 16;
+    const peak0 = Number.isInteger(p.ecaPeakRating) ? p.ecaPeakRating : 1000;
+    tx.update(ur, Object.assign({ ecaRating: after, ecaPeakRating: Math.max(peak0, after), ecaRatedGamesCount: (p.ecaRatedGamesCount || 0) + 1, ecaLastGame: g }, x.user || {}));
+    if (!x.noMark) tx.set(mr, Object.assign({ g, mode: "pvp", before, after, delta: after - before, opp: 1000, res: "win", at: ts() }, x.mark || {}));
+  });
+  await T("rating: a win in a live game (+16, 1000 → 1016)", true, rich, db => rate(db), agSeedR());
+  await T("rating: a loss (−16)", true, rich, db => rate(db, { after: 984, mark: { res: "loss" } }), agSeedR({ result: "0-1" }));
+  await T("rating: a draw moves it either way", true, rich, db => rate(db, { after: 992, mark: { res: "draw" } }), agSeedR({ result: "1/2-1/2" }));
+  await T("rating: a rated bot game", true, rich, db => rate(db, { mark: { mode: "bot", opp: 900 } }), agSeedR({ mode: "bot", blackUid: "bot-4", blackName: "منافس", blackRating: 900, participantUids: [uid] }));
+  await T("rating: an arena game as black", true, rich, db => rate(db, { mark: { mode: "arena" } }), agSeedR({ mode: "arena", whiteUid: other, blackUid: uid, result: "0-1" }));
+  await T("rating: more than +40 in one game", false, rich, db => rate(db, { after: 1041 }), agSeedR());
+  await T("rating: a win that lowers it", false, rich, db => rate(db, { after: 990 }), agSeedR());
+  await T("rating: a loss that raises it", false, rich, db => rate(db, { after: 1010, mark: { res: "loss" } }), agSeedR({ result: "0-1" }));
+  await T("rating: not a whole number", false, rich, db => rate(db, { after: 1016.5 }), agSeedR());
+  await T("rating: below the 600 floor", false, Object.assign({}, rich, { ecaRating: 610, ecaPeakRating: 1000, ecaRatedGamesCount: 30 }), db => rate(db, { after: 590, mark: { res: "loss" } }), agSeedR({ result: "0-1" }));
+  await T("rating: the same game counted twice", false, rich, async db => { await rate(db); await rate(db, { after: 1032 }); }, agSeedR());
+  await T("rating: an old game counted again later", false, Object.assign({}, rich, { ecaRating: 1016, ecaPeakRating: 1016, ecaRatedGamesCount: 1, ecaLastGame: "liveBBBBBBBBBBBBBBBB" }),
+    db => rate(db), agSeedR(null, s => s.collection("users").doc(uid).collection("ratings").doc(GID).set({ g: GID, mode: "pvp", before: 1000, after: 1016, delta: 16, opp: 1000, res: "win", at: ts() })));
+  await T("rating: no archived game", false, rich, db => rate(db));
+  await T("rating: a game between two other students", false, rich, db => rate(db), agSeedR({ whiteUid: "x1", blackUid: "x2", participantUids: ["x1", "x2"] }));
+  await T("rating: an imported PGN", false, rich, db => rate(db), agSeedR({ mode: "import", participantUids: [uid] }));
+  await T("rating: an unfinished game (*)", false, rich, db => rate(db), agSeedR({ result: "*" }));
+  await T("rating: the games count jumps", false, rich, db => rate(db, { user: { ecaRatedGamesCount: 5 } }), agSeedR());
+  await T("rating: a forged peak", false, rich, db => rate(db, { user: { ecaPeakRating: 1500 } }), agSeedR());
+  await T("rating: without its history row", false, rich, db => rate(db, { noMark: true }), agSeedR());
+  await T("rating: a history row that does not match", false, rich, db => rate(db, { mark: { after: 1100 } }), agSeedR());
+  await T("rating: a plain profile save cannot touch it", false, rich, db => patch(db, { ecaRating: 1400 }));
+  await T("rating: a coach sets it by hand (staff)", true, rich, () => adminCtx().collection("users").doc(uid).update({ ecaRating: 1200 }), staffSeed);
+  await T("rating: the parent-visible history is read-only", false, rich, db => db.collection("users").doc(uid).collection("ratings").doc(GID).set({ g: GID, mode: "pvp", before: 1000, after: 1040, delta: 40, opp: 1000, res: "win", at: ts() }), agSeedR());
+  await T("board: publishes the same rating as the profile", true, Object.assign({}, rich, { ecaRating: 1016 }), db => db.collection("leaderboard").doc(uid).set({ n: "", a: "", t: "", g: "A", xp: 500, wk: today, wx: 0, r: 1016 }));
+  await T("board: a forged rating", false, Object.assign({}, rich, { ecaRating: 1016 }), db => db.collection("leaderboard").doc(uid).set({ n: "", a: "", t: "", g: "A", xp: 500, wk: today, wx: 0, r: 2400 }));
   await T("cards: save motif counters and unlocked cards", true, rich, db => patch(db, { arena: Object.assign({}, rich.arena, { mot: { fork: { s: 10, t: 12 } }, cards: ["fork"] }) }));
   // emotes
   const emoteTo = (db, target, x = {}) => { const b = db.batch(); b.set(db.collection("emoteRate").doc(uid), { at: ts() }); b.set(db.collection("users").doc(target).collection("emotes").doc(), Object.assign({ from: uid, n: "", e: "🔥", at: ts() }, x)); return b.commit(); };

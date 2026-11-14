@@ -169,7 +169,30 @@ service cloud.firestore {
         && (!('examState' in changed) || examOk())
         && (!('level' in changed) || levelOk())
         && (!('certificates' in changed) || certsOk())
+        && (changed.hasAny(['ecaRating','ecaPeakRating','ecaRatedGamesCount','ecaLastGame']) ? ratingOk() : true)
         && (!changed.hasAny(['arena','shop','lastEconomy']) || economyUpdateOk());
+    }
+    // ---------- تصنيف الأكاديمية (ECA Rating) ----------
+    // الطالب بيحدّث تصنيفه بنفسه بعد دور متسجّل في الأرشيف (مباشر، بطولة، أو ضد بوت): مرة واحدة لكل دور
+    // (users/{uid}/ratings/{gameId} بيتعمل في نفس العملية)، عدد صحيح من 600 لـ 3500، والتغيير بين −40 و+40
+    // وفي اتجاه النتيجة (الفوز ماينقّصش، والخسارة ماتزوّدش). الحساب نفسه (Elo) على الجهاز، والقواعد بتحدّه
+    function ratingDoc(uid, gid) { return /databases/$(database)/documents/users/$(uid)/ratings/$(gid); }
+    function ratingOk() {
+      let d = request.resource.data;
+      let me = request.auth.uid;
+      let gid = d.get('ecaLastGame', '');
+      let g = get(/databases/$(database)/documents/archivedGames/$(gid)).data;
+      let nr = d.get('ecaRating', 1000);
+      let delta = nr - resource.data.get('ecaRating', 1000);
+      let peak = resource.data.get('ecaPeakRating', 1000);
+      return gid is string && gid.matches('[A-Za-z0-9_-]{10,60}') && gid != resource.data.get('ecaLastGame', '')
+        && !exists(ratingDoc(me, gid)) && existsAfter(ratingDoc(me, gid))
+        && g.mode in ['pvp', 'arena', 'bot'] && (g.whiteUid == me || g.blackUid == me)
+        && g.result in ['1-0', '0-1', '1/2-1/2'] && request.time < g.playedAt + duration.value(7, 'd')
+        && nr is int && nr >= 600 && nr <= 3500 && delta >= -40 && delta <= 40
+        && (g.result == '1/2-1/2' || (g.result == (g.whiteUid == me ? '1-0' : '0-1') ? delta >= 0 : delta <= 0))
+        && d.get('ecaRatedGamesCount', 0) == resource.data.get('ecaRatedGamesCount', 0) + 1
+        && d.get('ecaPeakRating', 1000) == (nr > peak ? nr : peak);
     }
 
     // مهمة الدرس اليومية: العدّاد بيزيد واحد بس، ومع حل صح متسجّل في دفتر المحاولات في نفس العملية
@@ -203,7 +226,24 @@ service cloud.firestore {
     // مكافأة العودة: اللغز لازم يكون في خزنة الغلطات ولسه ما اتحلّش، والغلطة عدّى عليها نص ساعة
     function dojoVaultOk(r) {
       let v = get(/databases/$(database)/documents/users/$(r.uid)/mistakeVault/$(r.key)).data;
-      return v.resolved == false && v.failedAt < request.time - duration.value(30, 'm');
+      // غلطة من دور حقيقي (اتعلم من أخطائك): المكافأة على طول، وبنفس حد الـ 5 في اليوم
+      return v.resolved == false && (v.get('source', '') == 'my_game_blunder' || v.failedAt < request.time - duration.value(30, 'm'));
+    }
+    // «اتعلم من أخطائك»: الموقف قبل الغلطة، النقلة اللي اتلعبت، والحل (كلها نصوص بصيغة ثابتة، من غير HTML)
+    function vaultBlunderOk(d) {
+      return d.keys().hasOnly(['puzzleId','motifs','stepLevel','failedAt','attempts','resolved','nextAt','rating','source','opponentName','gameMode','playedAt',
+          'fen','wrongMovePlayedUci','wrongMovePlayedSan','solutionMovesUci','altUci','motif','customPromptAr','ply'])
+        && d.keys().hasAll(['puzzleId','motifs','stepLevel','failedAt','attempts','resolved','nextAt','rating','source','opponentName','gameMode','playedAt',
+          'fen','wrongMovePlayedUci','wrongMovePlayedSan','solutionMovesUci','altUci','motif','customPromptAr','ply'])
+        && d.source == 'my_game_blunder' && d.gameMode in ['arena', 'pvp', 'bot']
+        && safeText(d.opponentName, 40) && d.playedAt is int && d.ply is int && d.ply >= 0 && d.ply <= 999
+        && d.fen is string && d.fen.size() <= 100 && d.fen.matches('[pnbrqkPNBRQK1-8/]{15,71} [wb] [KQkq-]{1,4} [a-h1-8-]{1,2} [0-9]{1,3} [0-9]{1,4}')
+        && d.wrongMovePlayedUci is string && d.wrongMovePlayedUci.matches('[a-h][1-8][a-h][1-8][qrbn]?')
+        && d.wrongMovePlayedSan is string && d.wrongMovePlayedSan.matches('[A-Za-z0-9+#=-]{2,10}')
+        && d.solutionMovesUci is list && d.solutionMovesUci.size() >= 1 && d.solutionMovesUci.size() <= 6
+        && d.altUci is list && d.altUci.size() <= 4
+        && d.motif is string && d.motif.matches('[A-Za-z]{0,30}')
+        && safeText(d.customPromptAr, 300);
     }
     // تحدي الأصحاب: الفايز في تحدي خلص من أقل من يوم
     function fduelWon(did, uid) {
@@ -267,7 +307,7 @@ service cloud.firestore {
         : r.source == 'arena'
           ? (r.key.matches('[A-Za-z0-9-]{1,40}') && id == 'arena-' + r.key && r.missionBonus == false && arenaPayOk(r))
         : r.source == 'dojo'
-          ? (r.key.matches('[A-Za-z0-9]{3,20}') && id == 'dojo-' + r.key && hintedOk(r, 2, 40) && r.missionBonus == false && dojoVaultOk(r))
+          ? (r.key.matches('[A-Za-z0-9]{3,20}|blunder_[A-Za-z0-9]{6,40}_[0-9]{1,3}') && id == 'dojo-' + r.key && hintedOk(r, 2, 40) && r.missionBonus == false && dojoVaultOk(r))
         : r.source == 'fduel'
           ? (r.key.matches('[A-Za-z0-9]{10,40}') && id == 'fduel-' + r.day && r.starsDelta == 3 && r.xpDelta == 60 && r.missionBonus == false && fduelWon(r.key, r.uid))
         : r.source == 'spin'
@@ -381,7 +421,7 @@ service cloud.firestore {
         ? (protectedEconomySame(resource.data.get('arena', {}), request.resource.data.get('arena', {}))
             && (resource.data.get('shop', {}) == request.resource.data.get('shop', {})
               || shopEquipOk(resource.data.get('shop', {}), request.resource.data.get('shop', {}), resource.data.get('level', 1))))
-        : (id is string && id.matches('[A-Za-z0-9-]{1,100}')
+        : (id is string && id.matches('[A-Za-z0-9_-]{1,100}')
             && !exists(economyDoc(request.auth.uid, id)) && existsAfter(economyDoc(request.auth.uid, id))
             && economyShopChangeOk(resource.data.get('shop', {}), request.resource.data.get('shop', {}), getAfter(economyDoc(request.auth.uid, id)).data));
     }
@@ -603,10 +643,12 @@ service cloud.firestore {
       // خزنة الغلطات: الطالب بيسجّل غلطاته بنفسه، ومكافأة العودة بتتفحص في قاعدة الإيصال
       match /mistakeVault/{pid} {
         allow read: if (notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))) || (isStaff() && !exists(/databases/$(database)/documents/deleted/$(uid))) || purgeable(uid);
+        // نوعين: لغز غلط من الساحة (رقمه بس)، أو «اتعلم من أخطائك»: موقف من دور الطالب نفسه (blunder_{gameId}_{ply})
         allow create: if notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))
-          && pid.matches('[A-Za-z0-9]{3,20}')
-          && request.resource.data.keys().hasOnly(['puzzleId','motifs','stepLevel','failedAt','attempts','resolved','nextAt','rating'])
-          && request.resource.data.keys().hasAll(['puzzleId','motifs','stepLevel','failedAt','attempts','resolved','nextAt','rating'])
+          && (pid.matches('blunder_[A-Za-z0-9]{6,40}_[0-9]{1,3}') ? vaultBlunderOk(request.resource.data)
+            : (pid.matches('[A-Za-z0-9]{3,20}')
+              && request.resource.data.keys().hasOnly(['puzzleId','motifs','stepLevel','failedAt','attempts','resolved','nextAt','rating'])
+              && request.resource.data.keys().hasAll(['puzzleId','motifs','stepLevel','failedAt','attempts','resolved','nextAt','rating'])))
           && request.resource.data.puzzleId == pid
           && request.resource.data.motifs is list && request.resource.data.motifs.size() <= 8
           && request.resource.data.stepLevel is int && request.resource.data.stepLevel >= 1 && request.resource.data.stepLevel <= 6
@@ -619,6 +661,25 @@ service cloud.firestore {
           && request.resource.data.resolved is bool && request.resource.data.nextAt is timestamp
           && (request.resource.data.failedAt == resource.data.failedAt || request.resource.data.failedAt == request.time)
           && (request.resource.data.attempts == resource.data.attempts || request.resource.data.attempts == resource.data.attempts + 1);
+        allow delete: if purgeable(uid);
+      }
+      // سجل تصنيف الأكاديمية: مستند لكل دور اتحسب (بيمنع حساب نفس الدور مرتين، وبيظهر للطالب وولي الأمر والكوتش)
+      match /ratings/{gid} {
+        allow read: if (notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid)))
+          || (isStaff() && !exists(/databases/$(database)/documents/deleted/$(uid)))
+          || (hasParentLink(uid) && !exists(/databases/$(database)/documents/deleted/$(uid))) || purgeable(uid);
+        allow create: if notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))
+          && request.resource.data.keys().hasOnly(['g','mode','before','after','delta','opp','res','at'])
+          && request.resource.data.keys().hasAll(['g','mode','before','after','delta','opp','res','at'])
+          && request.resource.data.g == gid
+          && getAfter(/databases/$(database)/documents/users/$(uid)).data.get('ecaLastGame', '') == gid
+          && request.resource.data.after == getAfter(/databases/$(database)/documents/users/$(uid)).data.get('ecaRating', 1000)
+          && request.resource.data.before == get(/databases/$(database)/documents/users/$(uid)).data.get('ecaRating', 1000)
+          && request.resource.data.delta == request.resource.data.after - request.resource.data.before
+          && request.resource.data.mode in ['pvp', 'arena', 'bot'] && request.resource.data.res in ['win', 'loss', 'draw']
+          && request.resource.data.opp is int && request.resource.data.opp >= 0 && request.resource.data.opp <= 4000
+          && request.resource.data.at == request.time;
+        allow update: if false;
         allow delete: if purgeable(uid);
       }
 
@@ -744,8 +805,10 @@ service cloud.firestore {
     function boardDocOk(uid) {
       let u = get(/databases/$(database)/documents/users/$(uid)).data;
       let d = request.resource.data;
-      return d.keys().hasOnly(['n','a','t','g','xp','wk','wx']) && d.keys().hasAll(['n','a','t','g','xp','wk','wx'])
+      return d.keys().hasOnly(['n','a','t','g','xp','wk','wx','r']) && d.keys().hasAll(['n','a','t','g','xp','wk','wx'])
         && u.role == 'student'
+        // تصنيف الأكاديمية بيتنشر هنا عشان الخصم يشوفه (نفس اللي في ملف الطالب بالظبط)
+        && d.get('r', 1000) == u.get('ecaRating', 1000)
         && d.n == u.get('nickname', '')
         && d.a == u.get('shop', {}).get('eq', {}).get('a', '')
         && d.t == u.get('shop', {}).get('activeTitle', '')

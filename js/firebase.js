@@ -274,7 +274,7 @@
     async function boardPublish() {
       if (!me || me.role !== "student" || !maps.core[me.uid] || !window.ecaWeekKey) return;
       const uid = me.uid, p = maps.core[uid], shop = p.shop || {}, wk = window.ecaWeekKey();
-      const row = { n: p.nickname || "", a: (shop.eq || {}).a || "", t: shop.activeTitle || "", g: p.group || "", xp: Math.max(0, (Number((p.arena || {}).xp) || 0) - (Number((p.arena || {}).chx) || 0)), wk, wx: 0 };
+      const row = { n: p.nickname || "", a: (shop.eq || {}).a || "", t: shop.activeTitle || "", g: p.group || "", xp: Math.max(0, (Number((p.arena || {}).xp) || 0) - (Number((p.arena || {}).chx) || 0)), wk, wx: 0, r: Number.isInteger(p.ecaRating) ? p.ecaRating : 1000 };
       const ref = doc(firestore, "leaderboard", uid);
       try {
         if (boardLastUid !== uid) { boardLast = null; boardLastUid = uid; }
@@ -283,7 +283,7 @@
         if (old) {
           const gain = Math.max(0, row.xp - (Number(old.xp) || 0));
           row.wx = old.wk === wk ? (Number(old.wx) || 0) + gain : gain;
-          if (["n", "a", "t", "g", "xp", "wk", "wx"].every(k => old[k] === row[k])) return;
+          if (["n", "a", "t", "g", "xp", "wk", "wx"].every(k => old[k] === row[k]) && (old.r == null ? 1000 : old.r) === row.r) return;
         }
         await setDoc(ref, row);
         boardLast = row; boardRetried = false;
@@ -423,11 +423,29 @@
     window.fbVaultList = async () => {
       if (!me || me.role !== "student") return [];
       const snap = await getDocs(query(collection(firestore, "users", me.uid, "mistakeVault"), where("resolved", "==", false), limit(200)));
-      return snap.docs.map(d => { const r = d.data(); return { id: d.id, motifs: Array.isArray(r.motifs) ? r.motifs : [], step: r.stepLevel, attempts: Number(r.attempts) || 1, rating: Number(r.rating) || 0, failedMs: r.failedAt && r.failedAt.toMillis ? r.failedAt.toMillis() : 0, nextMs: r.nextAt && r.nextAt.toMillis ? r.nextAt.toMillis() : 0 }; });
+      return snap.docs.map(d => { const r = d.data(); return { id: d.id, motifs: Array.isArray(r.motifs) ? r.motifs : [], step: r.stepLevel, attempts: Number(r.attempts) || 1, rating: Number(r.rating) || 0, failedMs: r.failedAt && r.failedAt.toMillis ? r.failedAt.toMillis() : 0, nextMs: r.nextAt && r.nextAt.toMillis ? r.nextAt.toMillis() : 0,
+        ...(r.source === "my_game_blunder" ? { source: r.source, opponentName: String(r.opponentName || ""), gameMode: r.gameMode, playedAt: Number(r.playedAt) || 0, fen: String(r.fen || ""), ply: Number(r.ply) || 0,
+          wrongMovePlayedUci: String(r.wrongMovePlayedUci || ""), wrongMovePlayedSan: String(r.wrongMovePlayedSan || ""), solutionMovesUci: Array.isArray(r.solutionMovesUci) ? r.solutionMovesUci.map(String) : [],
+          altUci: Array.isArray(r.altUci) ? r.altUci.map(String) : [], motif: String(r.motif || ""), customPromptAr: String(r.customPromptAr || "") } : {}) }; });
+    };
+    // «اتعلم من أخطائك»: موقف من دور الطالب بيتحفظ مرة واحدة (نفس الموقف مش بيتكرر حتى لو اتحل قبل كده)
+    window.fbVaultHasFen = async fen => {
+      if (!me || me.role !== "student") return true;
+      const snap = await getDocs(query(collection(firestore, "users", me.uid, "mistakeVault"), where("fen", "==", String(fen)), limit(1)));
+      return !snap.empty;
+    };
+    window.fbVaultBlunderAdd = async row => {
+      if (!me || me.role !== "student" || !/^blunder_[A-Za-z0-9]{6,40}_[0-9]{1,3}$/.test(String(row && row.puzzleId))) return false;
+      const ref = vaultRef(row.puzzleId), snap = await getDoc(ref);
+      if (snap.exists()) return false;
+      await setDoc(ref, { puzzleId: row.puzzleId, motifs: [], stepLevel: Math.min(6, Math.max(1, Number(row.step) || 1)), failedAt: serverTimestamp(), attempts: 1, resolved: false, nextAt: new Date(), rating: 0,
+        source: "my_game_blunder", opponentName: row.opponentName, gameMode: row.gameMode, playedAt: Math.round(Number(row.playedAt) || Date.now()), fen: row.fen, ply: row.ply,
+        wrongMovePlayedUci: row.wrongMovePlayedUci, wrongMovePlayedSan: row.wrongMovePlayedSan, solutionMovesUci: row.solutionMovesUci, altUci: row.altUci, motif: row.motif, customPromptAr: row.customPromptAr });
+      return true;
     };
     // غلطة جديدة أو غلطة تانية في نفس اللغز: المحاولات بتزيد والمراجعة الجاية بتبعد
     window.fbVaultFail = async (id, info) => {
-      if (!me || me.role !== "student" || !/^[A-Za-z0-9]{3,20}$/.test(String(id))) return;
+      if (!me || me.role !== "student" || !/^([A-Za-z0-9]{3,20}|blunder_[A-Za-z0-9]{6,40}_[0-9]{1,3})$/.test(String(id))) return;
       const ref = vaultRef(id), snap = await getDoc(ref);
       if (!snap.exists()) {
         if (!info) return;
@@ -442,6 +460,51 @@
     window.fbVaultResolve = async id => {
       if (!me || me.role !== "student") return;
       await updateDoc(vaultRef(id), { resolved: true });
+    };
+    // تصنيف الأكاديمية: الحساب من التصنيف اللي على السيرفر نفسه وقت الكتابة (o.calc)، والقواعد بتحد التغيير وبتمنع تكرار الدور
+    window.fbRateGame = o => window.fbSerial(async () => {
+      if (!me || me.role !== "student" || !o || !/^[A-Za-z0-9_-]{10,60}$/.test(String(o.gameId || "")) || typeof o.calc !== "function") return { ok: false };
+      const uid = me.uid, userRef = doc(firestore, "users", uid), markRef = doc(firestore, "users", uid, "ratings", o.gameId);
+      const result = await runTransaction(firestore, async tx => {
+        const [userSnap, markSnap] = await Promise.all([tx.get(userRef), tx.get(markRef)]);
+        if (!userSnap.exists()) return { ok: false };
+        if (markSnap.exists()) return { ok: true, duplicate: true, before: markSnap.data().before, after: markSnap.data().after, delta: markSnap.data().delta };
+        const p = userSnap.data(), before = Number.isInteger(p.ecaRating) ? p.ecaRating : 1000, games = Number.isInteger(p.ecaRatedGamesCount) ? p.ecaRatedGamesCount : 0;
+        const peak0 = Number.isInteger(p.ecaPeakRating) ? p.ecaPeakRating : 1000;
+        const after = o.calc(before, games), delta = after - before;
+        if (!Number.isInteger(after) || Math.abs(delta) > 40) return { ok: false };
+        const patch = { ecaRating: after, ecaPeakRating: Math.max(peak0, after), ecaRatedGamesCount: games + 1, ecaLastGame: o.gameId };
+        tx.update(userRef, patch);
+        tx.set(markRef, { g: o.gameId, mode: o.mode, before, after, delta, opp: Math.max(0, Math.min(4000, Math.round(Number(o.opp) || 0))), res: o.res, at: serverTimestamp() });
+        return { ok: true, duplicate: false, before, after, delta, profile: Object.assign({}, p, patch) };
+      });
+      if (result.ok && !result.duplicate && result.profile) {
+        maps.core[uid] = cleanDeep(result.profile);
+        synced["c:" + uid] = JSON.stringify(split(Object.assign({ id: uid }, result.profile)).core);
+        rebuild(); clearTimeout(boardTimer); boardPublish();
+      }
+      return result;
+    });
+    // تصنيف لاعبين تانيين (من صف لوحة الصدارة، فيه الاسم المستعار بس): كاش دقيقة
+    const ratingCache = new Map();
+    window.fbRatingsOf = async (uids, fresh) => {
+      const out = {}, need = [];
+      for (const u of [...new Set((uids || []).filter(x => /^[A-Za-z0-9]{10,40}$/.test(String(x))))]) {
+        const c = ratingCache.get(u);
+        if (c && !fresh && Date.now() - c.t < 60000) out[u] = c.r; else need.push(u);
+      }
+      for (let i = 0; i < need.length; i += 10) {
+        const part = need.slice(i, i + 10);
+        const rows = await Promise.all(part.map(u => getDoc(doc(firestore, "leaderboard", u)).then(s => s.exists() ? s.data() : null).catch(() => null)));
+        part.forEach((u, k) => { const r = rows[k] && Number.isInteger(rows[k].r) ? rows[k].r : 1000; ratingCache.set(u, { r, t: Date.now() }); out[u] = r; });
+      }
+      return out;
+    };
+    // آخر الأدوار اللي اتحسبت (البروفايل وتقرير ولي الأمر)
+    window.fbRatingHistory = async (sid, n) => {
+      if (!me || !/^[A-Za-z0-9]{10,40}$/.test(String(sid || ""))) return [];
+      const snap = await getDocs(query(collection(firestore, "users", sid, "ratings"), orderBy("at", "desc"), limit(Math.max(1, Math.min(50, n || 10)))));
+      return snap.docs.map(d => { const r = d.data(); return { g: d.id, mode: r.mode, before: r.before, after: r.after, delta: r.delta, opp: r.opp, res: r.res, at: r.at && r.at.toMillis ? r.at.toMillis() : 0 }; });
     };
     // صندوق الكنز: رقم الصندوق محفوظ في ملف الطالب، والجايزة من بصمة الحساب والرقم ده
     const CHEST_ITEMS = { a: "frame-silver", b: "frame-silver", c: "frame-gold", d: "frame-fire", e: "piece-ruby", f: "piece-crystal" };
@@ -905,7 +968,7 @@
         else if (source === "arena" && /^[A-Za-z0-9-]{1,40}$/.test(key) && [1, 2, 3].includes(request.rank)) id = "arena-" + key;
         else if (source === "spin") { id = "spin-" + day; spinHex = await spinHexOf(uid, day); }
         else if (source === "duel" && /^[A-Za-z0-9]{10,40}$/.test(key)) id = "duel-" + day;
-        else if (source === "dojo" && /^[A-Za-z0-9]{3,20}$/.test(key)) id = "dojo-" + key;
+        else if (source === "dojo" && /^([A-Za-z0-9]{3,20}|blunder_[A-Za-z0-9]{6,40}_[0-9]{1,3})$/.test(key)) id = "dojo-" + key;
         else if (source === "fduel" && /^[A-Za-z0-9]{10,40}$/.test(key)) id = "fduel-" + day;
         else if (source === "vision") { score = Math.floor(Number(request.score) || 0); if (score < 3 || score > 1000) return { ok: false }; id = "vision-" + day; }
         else if ((source === "boss" || source === "drop") && /^[A-Za-z0-9]{6,40}$/.test(key)) id = source + "-" + key;
@@ -962,7 +1025,8 @@
             const vault = await tx.get(doc(firestore, "users", uid, "mistakeVault", key));
             if (!vault.exists() || vault.data().resolved) return { ok: false, code: "dojo-resolved" };
             const failed = vault.data().failedAt;
-            if (!failed || !failed.toMillis || Date.now() - failed.toMillis() < 30 * 60000) return { ok: false, code: "dojo-early" };
+            // غلطة من دور الطالب نفسه (اتعلم من أخطائك): المكافأة على طول، زي القواعد
+            if (vault.data().source !== "my_game_blunder" && (!failed || !failed.toMillis || Date.now() - failed.toMillis() < 30 * 60000)) return { ok: false, code: "dojo-early" };
             const prev = arena.dj && arena.dj.d === day ? Number(arena.dj.n) || 0 : 0;
             if (prev >= 5) return { ok: false, code: "dojo-cap" };
             arena.dj = { d: day, n: prev + 1 };
@@ -1959,6 +2023,8 @@
       }
       const vault = await getDocs(collection(firestore, "users", uid, "mistakeVault"));
       for (const v of vault.docs) await deleteDoc(v.ref);
+      const ratings = await getDocs(collection(firestore, "users", uid, "ratings"));
+      for (const v of ratings.docs) await deleteDoc(v.ref);
       const bosses = await getDocs(collection(firestore, "assignments"));
       for (const a of bosses.docs) await deleteDoc(doc(firestore, "assignments", a.id, "progress", uid)).catch(() => {});
       const drops = await getDocs(collection(firestore, "liveDrops", uid, "drops"));
