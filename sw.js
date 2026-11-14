@@ -1,5 +1,5 @@
 // ECA service worker — offline support. Bump VERSION to force clients to refresh the cache.
-const VERSION = "eca-v93";
+const VERSION = "eca-v94";
 const SHELL = [
   "./", "./index.html", "./manifest.json",
   "./favicon.ico", "./img/favicon.png", "./apple-touch-icon.png",   // لوجو الأكاديمية على التاب والأيفون — أوفلاين برضه
@@ -7,11 +7,11 @@ const SHELL = [
   "./img/eca-mark.png", "./img/eca-logo.jpg",
   "./img/pieces/lichess/wK.svg", "./img/pieces/lichess/wQ.svg", "./img/pieces/lichess/wR.svg", "./img/pieces/lichess/wB.svg", "./img/pieces/lichess/wN.svg", "./img/pieces/lichess/wP.svg",
   "./img/pieces/lichess/bK.svg", "./img/pieces/lichess/bQ.svg", "./img/pieces/lichess/bR.svg", "./img/pieces/lichess/bB.svg", "./img/pieces/lichess/bN.svg", "./img/pieces/lichess/bP.svg",
-  "./vendor/chess.js", "./vendor/stockfish.js",
+  "./vendor/chess.js", "./vendor/stockfish.js", "./vendor/stockfish-19-lite-single.js", "./vendor/stockfish-19-lite-single.wasm",
   // ملفات الكود (لازم نفس ?v= اللي في index.html)
-  "./tailwind.css?v=eca-v93",
-  "./js/core.js?v=eca-v93", "./js/arena.js?v=eca-v93", "./js/extras.js?v=eca-v93", "./js/streaks.js?v=eca-v93", "./js/review.js?v=eca-v93", "./js/quality.js?v=eca-v93", "./js/announce.js?v=eca-v93", "./js/progress.js?v=eca-v93", "./js/arena2.js?v=eca-v93", "./js/ux.js?v=eca-v93", "./js/annotate.js?v=eca-v93", "./js/gamify.js?v=eca-v93", "./js/adventure.js?v=eca-v93", "./js/duel.js?v=eca-v93", "./js/fx.js?v=eca-v93", "./js/speedarena.js?v=eca-v93", "./js/loot.js?v=eca-v93", "./js/dojo.js?v=eca-v93", "./js/cards.js?v=eca-v93", "./js/stamina.js?v=eca-v93", "./js/social.js?v=eca-v93", "./js/friendduel.js?v=eca-v93", "./js/weekly.js?v=eca-v93", "./js/boss.js?v=eca-v93", "./js/command.js?v=eca-v93", "./js/lessonpuz.js?v=eca-v93", "./js/parentreport.js?v=eca-v93", "./js/care.js?v=eca-v93", "./js/fun.js?v=eca-v93", "./js/flow.js?v=eca-v93", "./js/assist.js?v=eca-v93", "./js/analyzer.js?v=eca-v93", "./js/openings.js?v=eca-v93", "./js/coach.js?v=eca-v93", "./js/gmcoach.js?v=eca-v93", "./js/daily.js?v=eca-v93", "./js/cardfx.js?v=eca-v93", "./js/lobby.js?v=eca-v93", "./js/gamenav.js?v=eca-v93", "./js/home.js?v=eca-v93", "./js/diagnostics.js?v=eca-v93", "./js/firebase.js?v=eca-v93", "./js/finance.js?v=eca-v93", "./js/homework.js?v=eca-v93", "./js/today.js?v=eca-v93", "./js/reports.js?v=eca-v93", "./js/tournaments.js?v=eca-v93", "./js/placement-data.js?v=eca-v93", "./js/placement.js?v=eca-v93",
-  "./puzzles.js?v=eca-v93", "./puzzles-themes.js?v=eca-v93"   // عشان الامتحان يشتغل أوفلاين
+  "./tailwind.css?v=eca-v94",
+  "./js/core.js?v=eca-v94", "./js/arena.js?v=eca-v94", "./js/extras.js?v=eca-v94", "./js/streaks.js?v=eca-v94", "./js/review.js?v=eca-v94", "./js/quality.js?v=eca-v94", "./js/announce.js?v=eca-v94", "./js/progress.js?v=eca-v94", "./js/arena2.js?v=eca-v94", "./js/ux.js?v=eca-v94", "./js/annotate.js?v=eca-v94", "./js/gamify.js?v=eca-v94", "./js/adventure.js?v=eca-v94", "./js/duel.js?v=eca-v94", "./js/fx.js?v=eca-v94", "./js/speedarena.js?v=eca-v94", "./js/loot.js?v=eca-v94", "./js/dojo.js?v=eca-v94", "./js/cards.js?v=eca-v94", "./js/stamina.js?v=eca-v94", "./js/social.js?v=eca-v94", "./js/friendduel.js?v=eca-v94", "./js/weekly.js?v=eca-v94", "./js/boss.js?v=eca-v94", "./js/command.js?v=eca-v94", "./js/lessonpuz.js?v=eca-v94", "./js/parentreport.js?v=eca-v94", "./js/care.js?v=eca-v94", "./js/fun.js?v=eca-v94", "./js/flow.js?v=eca-v94", "./js/assist.js?v=eca-v94", "./js/analyzer.js?v=eca-v94", "./js/openings.js?v=eca-v94", "./js/coach.js?v=eca-v94", "./js/gmcoach.js?v=eca-v94", "./js/daily.js?v=eca-v94", "./js/cardfx.js?v=eca-v94", "./js/lobby.js?v=eca-v94", "./js/gamenav.js?v=eca-v94", "./js/home.js?v=eca-v94", "./js/diagnostics.js?v=eca-v94", "./js/firebase.js?v=eca-v94", "./js/finance.js?v=eca-v94", "./js/homework.js?v=eca-v94", "./js/today.js?v=eca-v94", "./js/reports.js?v=eca-v94", "./js/tournaments.js?v=eca-v94", "./js/placement-data.js?v=eca-v94", "./js/placement.js?v=eca-v94",
+  "./puzzles.js?v=eca-v94", "./puzzles-themes.js?v=eca-v94"   // عشان الامتحان يشتغل أوفلاين
 ];
 const CDN = [
   "https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap"

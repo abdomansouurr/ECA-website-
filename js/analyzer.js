@@ -883,22 +883,27 @@
     return { steps: s, net: sign * (end - start), netRaw: sign * (last.mat - start), mate: last.mate ? last.color : "", firstLoss,
       lossRecapturable: firstLoss ? s.some(x => x.i > firstLoss.i && x.color === s[0].color && x.to === firstLoss.to && x.captured) || firstLoss.capDefenders > 0 : false };
   }
-  // النقلة تضحية؟ القطعة اللي اتلعبت بتتاكل بخسارة (SEE)، أو النقلة سابت قطعة تانية (حصان أو أكبر) تتاكل
+  // النقلة تضحية؟ (1) القطعة اللي اتلعبت راحت مربع الخصم مسيطر عليه، وقيمتها أكبر من اللي أكلته، والخصم يكسبها فعلاً (SEE ≤ −200)
+  // أو (2) النقلة سابت قطعة تانية (حصان أو أكبر) تتاكل بمكسب للخصم
   function sacrifice(fen, u) {
     let pos; try { pos = parse(fen); } catch (_) { return { is: false }; }
     const m = findMove(pos, u); if (m === undefined) return { is: false };
-    const own = see(pos, m);
+    const own = see(pos, m), mf = m & 127, mt = (m >> 7) & 127, movedV = VAL[pos.b[mf] & 7], capV = pos.b[mt] ? VAL[pos.b[mt] & 7] : 0;
+    const capture = !!pos.b[mt] || ((pos.b[mf] & 7) === 1 && mt === pos.ep);
     make(pos, m);
-    const replies = legal(pos, false);
-    if (!replies.length) { unmake(pos); return { is: false, see: own, risk: 0 }; }   // مات أو تعادل على طول: مش تضحية
+    const replies = legal(pos, false), enemyHere = attackers(pos, mt, pos.turn).length > 0;
+    if (!replies.length) { unmake(pos); return { is: false, see: own, risk: 0, capture, mate: inCheck(pos) }; }   // مات أو تعادل على طول: مش تضحية
     // الأكل على نفس المربع محسوب في SEE النقلة نفسها؛ هنا بنشوف القطع التانية اللي اتسابت
     let risk = 0, sq = "";
     const t = (m >> 7) & 127;
     for (const c of replies) { const ct = (c >> 7) & 127; if (ct === t || !pos.b[ct]) continue; const v = see(pos, c); if (v > risk) { risk = v; sq = sqName(ct); } }
     if (own < 0 && -own > risk) sq = sqName(t);
+    const check = inCheck(pos);
     unmake(pos);
-    const is = own <= -200 || risk - Math.max(0, own) >= 200;
-    return { is, see: own, risk, sq };
+    const staticSac = enemyHere && movedV > capV && own <= -200 && (pos.b[mf] & 7) !== 6;
+    const is = staticSac || risk - Math.max(0, own) >= 200;
+    // «أكل روتيني»: الأكل بيكسب خامات على طول أو تبادل عادي (مش فكرة مخفية)
+    return { is, see: own, risk, sq, capture, check, routineCapture: capture && own >= 0 };
   }
 
   // عدّ المواقف لعمق معيّن (اختبار صحة مولّد النقلات: تبييت، أخذ في المرور، ترقية)

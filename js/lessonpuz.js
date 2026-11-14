@@ -248,9 +248,9 @@ window.lpExit = lpExit;
     } catch (e) { if (Z.loadTok === tok) { console.warn("Lesson puzzles failed:", e && e.message); Z.status = "error"; } }
     if (Z.loadTok === tok) arenaRefresh();
   };
-  // التاب العادي بيرجّع الألغاز العادية
+  // التاب العادي بيرجّع الألغاز العادية — ماعدا الرجوع من رقعة التحليل (keepLesson): اللغز يكمّل من نفس المكان
   const _sub = arenaSub;
-  arenaSub = function (k) { if (k === "puzzles" && arena.puz.lesson) { arena.puz.lesson = ""; arena.puz.game = null; arena.puz.status = "idle"; } return _sub.apply(this, arguments); };
+  arenaSub = function (k) { if (k === "puzzles" && arena.puz.lesson && !arena.puz.keepLesson) { arena.puz.lesson = ""; arena.puz.game = null; arena.puz.status = "idle"; } return _sub.apply(this, arguments); };
   const _az = arenaPuzHTML;
   arenaPuzHTML = function () {
     const Z = arena.puz, u = currUser();

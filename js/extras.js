@@ -149,82 +149,11 @@
         </div>`;
     }
 
-    // ================= 5) رقعة التحليل (Stockfish + FEN/PGN + مراجعة الجراند ماستر) =================
+    // ================= 5) رقعة التحليل (Stockfish 19 + FEN/PGN + مراجعة الجراند ماستر) =================
     // الدور كله محفوظ (A.root + A.line) والرقعة بتعرض الموقف عند A.ply: تقدر ترجع وتتقدم في النقلات من غير ما تضيع.
-    // كل موقف بيتحلل مرة واحدة بـ Stockfish (MultiPV 2: أحسن نقلة وتاني أحسن نقلة)، والنتيجة بتتحفظ (ecaGM.store)
-    // فكل نقلة بتاخد تصنيفها (!! ! ★ ... ??) أول ما الموقف اللي قبلها واللي بعدها يتحللوا. لو Stockfish مش شغال: محرك الموقف.
-    arena.ana = { game: null, flip: false, sel: null, last: null, ev: null, evFen: "", evTurn: "w", fenInp: "", pgnInp: "", root: "", line: [], ply: 0, showLines: true };
-    let anaWorker = null, anaJob = null, anaQueue = [], anaSfDead = false, anaWatch = 0;
-    const ANA_LIVE = "go depth 18 movetime 1400", ANA_BG = "go depth 14 movetime 500";
-    function anaEngine() {
-      if (anaWorker || anaSfDead) return anaWorker;
-      try {
-        anaWorker = new Worker(URL.createObjectURL(new Blob([stockfishBoot()], { type: "application/javascript" })));
-        anaWorker.onmessage = e => anaOnMsg(String(e.data));
-        anaWorker.onerror = () => anaSfFail();
-        anaWorker.postMessage("uci"); anaWorker.postMessage("setoption name MultiPV value 2"); anaWorker.postMessage("isready");
-      } catch (_) { anaSfFail(); }
-      return anaWorker;
-    }
-    // Stockfish وقع أو مردّش: نكمّل بمحرك الموقف (نفس النتيجة شكلاً، والتصنيف والشرح شغالين)
-    function anaSfFail() {
-      anaSfDead = true; clearTimeout(anaWatch);
-      try { if (anaWorker) anaWorker.terminate(); } catch (_) {}
-      anaWorker = null;
-      const j = anaJob; anaJob = null; if (j) anaQueue.unshift(j);
-      anaPump();
-    }
-    const anaInternal = () => anaSfDead || (window.ecaGM && ecaGM.engine === "internal");
-    const anaKnown = fen => !!(window.ecaGM && ecaGM.get(fen));
-    // الموقف الحالي أولاً، وبعده اللي قبله (عشان تصنيف النقلة)، وبعدهم باقي الدور في الخلفية
-    function anaWant(fen, live, front) {
-      if (!fen || anaKnown(fen)) return;
-      if (anaJob && anaJob.fen === fen) return;
-      const old = anaQueue.find(j => j.fen === fen);
-      anaQueue = anaQueue.filter(j => j.fen !== fen);
-      const job = old || { fen, lines: [], depth: 0 };
-      job.live = job.live || !!live;
-      if (front) anaQueue.unshift(job); else if (live) { const i = anaQueue.findIndex(j => !j.live); anaQueue.splice(i < 0 ? anaQueue.length : i, 0, job); } else anaQueue.push(job);
-    }
-    function anaPump() {
-      if (anaJob || !anaQueue.length) return;
-      const job = anaJob = anaQueue.shift();
-      let g = null; try { g = new ChessCls(job.fen); } catch (_) {}
-      if (!g || g.isGameOver()) {
-        if (g && window.ecaGM) ecaGM.store(job.fen, { fen: job.fen, lines: [], depth: 99, src: "sf", over: g.isCheckmate() ? "mate" : "stalemate" });
-        anaJob = null; anaDone(job.fen); return anaPump();
-      }
-      if (anaInternal()) {
-        if (!window.ecaGM) { anaJob = null; return; }
-        ecaGM.internal(job.fen, { multiPV: 2, maxNodes: job.live ? 260000 : 140000, budget: job.live ? 2500 : 1500 }).then(r => {
-          if (anaJob === job) anaJob = null;
-          if (r) { r.src = "eca"; ecaGM.store(job.fen, r); }
-          anaDone(job.fen); anaPump();
-        });
-        return;
-      }
-      const w = anaEngine(); if (!w) return anaSfFail();
-      clearTimeout(anaWatch); anaWatch = setTimeout(() => { if (anaJob === job) anaSfFail(); }, 9000);
-      w.postMessage("position fen " + job.fen); w.postMessage(job.live ? ANA_LIVE : ANA_BG);
-    }
-    function anaOnMsg(line) {
-      const job = anaJob; if (!job) return;
-      if (line.startsWith("bestmove")) {
-        clearTimeout(anaWatch); anaJob = null;
-        const lines = job.lines.filter(Boolean);
-        if (lines.length && window.ecaGM) ecaGM.store(job.fen, { fen: job.fen, lines, depth: job.depth, src: "sf" });
-        anaDone(job.fen); return anaPump();
-      }
-      if (!line.startsWith("info") || line.indexOf(" pv ") < 0 || / (lower|upper)bound/.test(line)) return;
-      const k = Number((line.match(/ multipv (\d+)/) || [0, 1])[1]) - 1; if (k < 0 || k > 1) return;
-      const cp = line.match(/ score cp (-?\d+)/), mt = line.match(/ score mate (-?\d+)/), d = +((line.match(/ depth (\d+)/) || [])[1] || 0);
-      const pv = ((line.match(/ pv (.+)$/) || [])[1] || "").trim().split(/\s+/).filter(Boolean);
-      if (!pv.length) return;
-      job.lines[k] = { uci: pv[0], pv, cp: cp ? Number(cp[1]) : null, mate: mt ? Number(mt[1]) : null, depth: d };
-      if (k === 0) job.depth = d;
-      const A = arena.ana;
-      if (k === 0 && A.game && A.game.fen() === job.fen && !A.gmFollow) { A.ev = anaWhite(job.lines[0], job.fen); A.evFen = job.fen; anaPaint(); }
-    }
+    // التحليل كله من خدمة المحرك في gmcoach.js (ecaGM.analyze): Stockfish 19 بـ MultiPV 3، والموقف الحالي أولاً،
+    // وبعده اللي قبله (عشان تصنيف النقلة)، وبعدهم الدور كله في الخلفية (مراجعة الدور). لو Stockfish مش متاح: محرك الموقف.
+    arena.ana = { game: null, flip: false, sel: null, last: null, ev: null, evFen: "", evTurn: "w", fenInp: "", pgnInp: "", root: "", line: [], ply: 0, showLines: true, from: null, review: null, retry: null, solution: null };
     // التقييم للعرض من ناحية الأبيض (بالبيدق) + الخط بالـ uci
     function anaWhite(l, fen) { const s = fen.split(" ")[1] === "b" ? -1 : 1; return { depth: l.depth || 0, cp: l.cp != null ? s * l.cp / 100 : null, mate: l.mate != null ? s * l.mate : null, pv: (l.pv || []).join(" ") }; }
     // نتيجة اتحفظت لموقف: نحدّث تقييم الموقف الحالي وتصنيف النقلات اللي بقى عندها اللي قبلها واللي بعدها
@@ -234,28 +163,30 @@
       if (fen === cur && r && !A.gmFollow) { A.ev = r.over ? { over: r.over === "mate" ? "mate" : "draw" } : r.lines[0] ? anaWhite(r.lines[0], cur) : A.ev; A.evFen = cur; }
       let changed = false;
       A.line.forEach((mv, i) => { if (!mv.rv && anaClassify(i + 1)) changed = true; });
-      anaPaint(changed);
+      anaPaint(changed || fen === cur);
     }
     function anaClassify(p) {
       const A = arena.ana, mv = A.line[p - 1];
       if (!mv || mv.rv || !window.ecaGM) return mv ? mv.rv : null;
       const pre = ecaGM.get(mv.before), post = ecaGM.get(mv.after);
       const book = p <= 12 && window.EcaOpeningBook && EcaOpeningBook.lookup(mv.after);
-      if (!book && (!pre || !post)) return null;
-      try { mv.rv = ecaGM.review({ preFen: mv.before, uci: mv.uci, pre: pre || { lines: [] }, post: post || { lines: [] }, ply: p }); } catch (e) { console.warn("GM review:", e); return null; }
-      if (p === A.ply && mv.rv && !A.gmFollow) ecaGM.sound(mv.rv.tier);
+      if (!book && (!pre || !post || (pre.multi || 1) < 3 && !pre.over)) return null;
+      const prev = A.line[p - 2];
+      try { mv.rv = ecaGM.review({ preFen: mv.before, uci: mv.uci, pre: pre || { lines: [] }, post: post || { lines: [] }, ply: p, prevFen: prev ? prev.before : null, prevUci: prev ? prev.uci : null }); } catch (e) { console.warn("GM review:", e); return null; }
+      if (p === A.ply && mv.rv && !A.gmFollow && !A.review) ecaGM.sound(mv.rv.tier);
       return mv.rv;
     }
-    // كل ما الموقف يتغير: الحالي الأول، وبعدين اللي قبله، وبعدين الدور كله في الخلفية (مراجعة الدور)
+    // كل ما الموقف يتغير: الحالي الأول (والتقييم بيتحدّث وهو بيفكّر)، وبعدين اللي قبله، وبعدين الدور كله في الخلفية
     function anaAnalyze() {
-      const A = arena.ana, g = A.game; if (!g) return;
-      const cur = g.fen(), r = window.ecaGM ? ecaGM.get(cur) : null;
+      const A = arena.ana, g = A.game; if (!g || !window.ecaGM) return;
+      const cur = g.fen(), r = ecaGM.get(cur);
       A.evFen = cur; A.evTurn = g.turn();
-      A.ev = g.isGameOver() ? { over: g.isCheckmate() ? "mate" : "draw" } : r && r.lines[0] ? anaWhite(r.lines[0], cur) : null;
-      anaWant(cur, true, true);
-      if (A.ply > 0) anaWant(A.line[A.ply - 1].before, true);
-      A.line.forEach(mv => { anaWant(mv.before, false); anaWant(mv.after, false); });
-      anaPump(); anaDone(cur);
+      A.ev = g.isGameOver() ? { over: g.isCheckmate() ? "mate" : "draw" } : r && r.lines && r.lines[0] ? anaWhite(r.lines[0], cur) : null;
+      const then = f => () => anaDone(f);
+      ecaGM.analyze(cur, { multiPV: 3, depth: 18, movetime: 1500, prio: 0, onInfo: l => { if (A.game && A.game.fen() === cur && !A.gmFollow) { A.ev = anaWhite(l, cur); A.evFen = cur; anaPaint(false); } } }).then(then(cur));
+      if (A.ply > 0) { const b = A.line[A.ply - 1].before; ecaGM.analyze(b, { multiPV: 3, depth: 16, movetime: 1200, prio: 0 }).then(then(b)); }
+      A.line.forEach(mv => [mv.before, mv.after].forEach(f => ecaGM.analyze(f, { multiPV: 3, depth: 14, movetime: 700, prio: 2 }).then(then(f))));
+      anaDone(cur);
     }
     function anaEvalHTML() {
       const A = arena.ana, ev = A.ev;
@@ -264,7 +195,7 @@
       else if (ev) {
         if (ev.mate !== null) { pct = ev.mate > 0 ? 100 : 0; txt = "كش مات في " + Math.abs(ev.mate) + " — " + (ev.mate > 0 ? "للأبيض" : "للأسود"); pill = (ev.mate > 0 ? "M" : "-M") + Math.abs(ev.mate); }
         else if (ev.cp !== null) { pct = 50 + Math.max(-10, Math.min(10, ev.cp)) * 5; txt = "التقييم: " + (ev.cp > 0 ? "+" : "") + ev.cp.toFixed(2) + " • العمق " + ev.depth; pill = (ev.cp > 0 ? "+" : "") + ev.cp.toFixed(1); }
-        if (A.showLines) try {
+        if (A.showLines && !A.retry) try {
           const c = new ChessCls(A.evFen), san = [];
           for (const u of ev.pv.split(" ").slice(0, 8)) { const r = uciMove(c, u); if (!r) break; san.push(r.san); }
           line = san.join(" ");
@@ -288,23 +219,112 @@
       for (let i = 0; i < A.line.length; i += 2) rows += `<div class="eca-ana-row"><span class="eca-ana-no">${i / 2 + 1}.</span>${cell(i)}${cell(i + 1)}</div>`;
       return rows || `<div class="p-3 text-center text-gray-500">—</div>`;
     }
+    const ANA_BAD = ["INACCURACY", "MISTAKE", "MISSED_WIN", "BLUNDER"];
     function anaCardHTML() {
       const A = arena.ana, mv = A.line[A.ply - 1];
+      if (A.retry) {
+        const bad = A.line[A.retry.ply - 1];
+        return `<div class="eca-ana-retry" role="status"><b>🔄 لاقي نقلة أحسن من <bdi dir="ltr" class="eca-san">${esc(bad ? bad.san : "")}</bdi></b><p>حرّك على الرقعة. لو لاقيت أفضل نقلة (أو نقلة قريبة منها جداً) الكوتش هيقولك.</p><button type="button" onclick="anaRetryCancel()" class="tap eca-gm-back">✕ إلغاء</button></div>`;
+      }
       if (!mv) return `<p class="eca-ana-tip">🧑‍🏫 حرّك أي نقلة (للأبيض أو للأسود) والكوتش هيقيّمها زي Chess.com ويشرحلك ليه.</p>`;
       if (!mv.rv) return `<p class="eca-ana-tip">⏳ الكوتش بيحلل نقلة <bdi dir="ltr" class="eca-san">${esc(mv.san)}</bdi>...</p>`;
-      return window.ecaGM ? ecaGM.cardHTML(mv.rv, {}) : "";
+      // لحظة مهمة (غلطة): «جرب تلاقي أفضل نقلة» و«عرض أفضل خط»
+      const extra = ANA_BAD.includes(mv.rv.tier) && mv.rv.bestUci ? `<div class="grid grid-cols-2 gap-2 mt-2"><button type="button" onclick="anaRetry()" class="tap eca-gm-retry">🔄 جرب تلاقي أفضل نقلة</button><button type="button" onclick="anaBestLine()" class="tap eca-gm-bestline">▶ عرض أفضل خط</button></div>` : "";
+      return window.ecaGM ? ecaGM.cardHTML(mv.rv, { extra }) : "";
     }
-    // تحديث الأجزاء اللي بتتغير بس (التقييم، النقلات، الكارت، الأسهم) من غير ما الصفحة كلها تترسم تاني
+    // جاي من تدريب (لغز / دور ضد البوت): رجوع لنفس المكان + «اعرض الحل»
+    function anaFromHTML() {
+      const A = arena.ana, f = A.from; if (!f) return "";
+      return `<div class="gold-card rounded-2xl p-4 space-y-2 eca-ana-from"><div class="text-sm font-bold text-yellow-300">${esc(f.label || "")}</div>
+        <div class="grid ${A.solution && A.solution.length ? "grid-cols-2" : "grid-cols-1"} gap-2"><button type="button" onclick="anaBackToTraining()" class="tap rounded-xl text-xs font-bold gold-btn">${esc(f.back || "↩ العودة للتدريب")}</button>${A.solution && A.solution.length ? `<button type="button" onclick="anaShowSolution()" class="tap rounded-xl text-xs font-bold bg-emerald-900/40 border border-emerald-400/50 text-emerald-300">★ اعرض الحل على الرقعة</button>` : ""}</div></div>`;
+    }
+    // ملخص مراجعة الدور: الدقة لكل لاعب، عدد كل درجة، وأهم لحظات الدور
+    function anaReviewHTML() {
+      const A = arena.ana, R = A.review; if (!R || !window.ecaGM) return "";
+      const n = A.line.length, done = A.line.filter(m => m.rv).length, me = R.side, op = me === "w" ? "b" : "w";
+      const side = c => A.line.filter(m => m.rv && m.rv.color === c).map(m => m.rv);
+      const acc = list => list.length ? Math.round(list.reduce((s, rv) => s + (rv.tier === "BOOK" ? 100 : ecaGM.accuracy(rv.winLoss)), 0) / list.length * 10) / 10 : null;
+      const mine = side(me), a1 = acc(mine), a2 = acc(side(op));
+      const order = ["BRILLIANT", "GREAT", "BEST", "EXCELLENT", "GOOD", "BOOK", "INACCURACY", "MISTAKE", "MISSED_WIN", "BLUNDER"];
+      const chips = order.map(k => { const t = ecaGM.tier(k), c = mine.filter(rv => rv.tier === k).length; return `<div class="eca-rev-chip" data-tier="${k}" style="--gm:${t.color}"><span class="eca-gm-mini">${t.sym}</span><span>${esc(t.ar)}</span><b>${c}</b></div>`; }).join("");
+      const km = A.line.map((m, i) => ({ m, i })).filter(x => x.m.rv && x.m.rv.color === me && ["MISTAKE", "BLUNDER", "MISSED_WIN"].includes(x.m.rv.tier));
+      const kmHTML = km.length ? km.map(x => { const t = ecaGM.tier(x.m.rv.tier), no = Math.floor(x.i / 2) + 1; return `<button type="button" onclick="anaGo(${x.i + 1})" class="tap eca-rev-km" data-tier="${x.m.rv.tier}" style="--gm:${t.color}">⚡ <bdi dir="ltr">${no}${x.i % 2 ? "..." : "."} ${esc(x.m.san)}</bdi> <span class="eca-gm-mini">${t.sym}</span></button>`; }).join("")
+        : `<p class="text-xs text-gray-400">${done < n ? "بنكمّل المراجعة..." : "مفيش أخطاء كبيرة في الدور ده — برافو!"}</p>`;
+      const pct = v => v == null ? "—" : v.toFixed(1) + "%";
+      return `<div class="gold-card rounded-2xl p-4 space-y-3 eca-rev" aria-label="مراجعة الدور">
+        <div class="flex items-center justify-between gap-2"><b class="text-yellow-300">📊 مراجعة الدور مع الجراند ماستر</b>${done < n ? `<span class="eca-rev-prog" dir="ltr">⏳ ${done}/${n}</span>` : `<span class="eca-rev-prog is-done">✔</span>`}</div>
+        <div class="grid grid-cols-2 gap-2"><div class="eca-rev-acc is-me"><span>دقتك</span><b id="anaAccMe" dir="ltr">${pct(a1)}</b></div><div class="eca-rev-acc"><span>${esc(R.bot || "الخصم")}</span><b id="anaAccBot" dir="ltr">${pct(a2)}</b></div></div>
+        <div class="eca-rev-chips">${chips}</div>
+        <div><div class="text-xs font-bold text-yellow-400 mb-1">⚡ أهم لحظات الدور (Key Moments)</div><div class="eca-rev-kms">${kmHTML}</div></div>
+      </div>`;
+    }
+    // تحديث الأجزاء اللي بتتغير بس (التقييم، النقلات، الكارت، المراجعة، الأسهم) من غير ما الصفحة كلها تترسم تاني
     function anaPaint(full) {
       const el = document.getElementById("anaEval"); if (el) { el.innerHTML = anaEvalHTML(); applyLang(); }
       const ml = document.getElementById("anaMoves"); if (ml && full !== false) ml.innerHTML = anaMovesHTML();
       const gc = document.getElementById("anaGM"); if (gc) { const h = anaCardHTML(); if (gc.__h !== h) { gc.__h = h; gc.innerHTML = h; applyLang(); } }
+      const rc = document.getElementById("anaReview"); if (rc && full !== false) { const h = anaReviewHTML(); if (rc.__h !== h) { rc.__h = h; rc.innerHTML = h; applyLang(); } }
       if (window.ecaGM && tab === "arena" && arena.sub === "analysis") ecaGM.repaint();
+    }
+    // موقف + نقلات جاهزة (من لغز أو دور ضد البوت) على رقعة التحليل
+    function anaLoadLine(rootFen, ucis, o) {
+      o = o || {}; const A = arena.ana;
+      if (A.gmFollow && window.ecaGM) ecaGM.followStop(A, true);
+      let g; try { g = new ChessCls(rootFen); } catch (_) { g = new ChessCls(); }
+      const root = g.fen(), line = [];
+      for (const u of ucis || []) { const before = g.fen(); let r = null; try { r = uciMove(g, u); } catch (_) {} if (!r) break; line.push({ uci: r.from + r.to + (r.promotion || ""), san: r.san, before, after: g.fen(), rv: null }); }
+      A.root = root; A.line = line; A.retry = null; A.from = o.from || null; A.solution = o.solution || null; A.review = o.review || null;
+      A.flip = !!o.flip; A.fenInp = ""; A.pgnInp = "";
+      anaGo(o.ply != null ? Math.min(o.ply, line.length) : line.length, true);
+      setTimeout(anaAnalyze, 0);
+    }
+    function anaBackToTraining() {
+      const A = arena.ana, f = A.from; if (!f) return;
+      if (A.gmFollow && window.ecaGM) ecaGM.followStop(A, true);
+      A.from = null; A.solution = null; A.retry = null; A.review = null;
+      // درس المغامرة: الرجوع للألغاز مايقفلش الدرس (التاب العادي بيقفله)
+      arena.puz.keepLesson = true;
+      try { arenaSub(f.sub); } finally { arena.puz.keepLesson = false; }
+      // اللغز اللي اتحلل كان خلص: يكمّل للغز الجاي من نفس المكان
+      if (f.sub === "puzzles" && ["solved", "shown"].includes(arena.puz.status) && typeof puzLoad === "function") puzLoad();
+    }
+    function anaShowSolution() {
+      const A = arena.ana; if (!A.solution || !A.solution.length || !window.ecaGM) return;
+      A.retry = null; anaGo(0, true);
+      ecaGM.followStart(A, A.root, A.solution, A.root.split(" ")[1] === "b" ? "b" : "w", "★ الحل");
+    }
+    // «🔄 جرب تلاقي أفضل نقلة»: الرقعة بترجع للموقف قبل الغلطة، والدور نفسه مش بيتمسح
+    function anaRetry() {
+      const A = arena.ana, p = A.ply, mv = A.line[p - 1]; if (!mv || !mv.rv) return;
+      if (A.gmFollow && window.ecaGM) ecaGM.followStop(A, true);
+      A.retry = { ply: p, fen: mv.before };
+      anaGo(p - 1, true);
+      arenaRefresh(); anaAnalyze();
+    }
+    function anaRetryCancel() { const A = arena.ana, r = A.retry; A.retry = null; if (r) anaGo(r.ply); else arenaRefresh(); }
+    // النقلة اللي الطالب جرّبها: أفضل نقلة أو قريبة منها (خسارة ≤ 2% من نسبة المكسب) = صح
+    function anaRetryTry(u) {
+      const A = arena.ana, r = A.retry, res = window.ecaGM ? ecaGM.get(r.fen) : null;
+      const lines = (res && res.lines) || [], best = lines[0], hit = lines.find(l => l.uci === u);
+      const W = window.GrandmasterMoveClassifier;
+      const ok = !!best && (best.uci === u || (!!hit && W && W.winPct(W.evCp(best)) - W.winPct(W.evCp(hit)) <= 2));
+      if (ok) {
+        A.retry = null; toast("✔ برافو! لاقيت أفضل نقلة"); if (window.ecaGM) ecaGM.sound("BEST");
+        anaGo(r.ply);
+      } else { toast("مش هي — فكّر تاني: الخصم بيهدد إيه؟ وفين أقوى نقلة إجبارية؟"); if (window.ecaGM) ecaGM.sound("INACCURACY"); A.sel = null; arenaRefresh(); }
+    }
+    // «▶ عرض أفضل خط»: من الموقف قبل الغلطة، أفضل خط المحرك على الرقعة بأسهم مرقّمة
+    function anaBestLine() {
+      const A = arena.ana, mv = A.line[A.ply - 1], rv = mv && mv.rv; if (!rv || !rv.bestUci || !window.ecaGM) return;
+      const res = ecaGM.get(mv.before), pv = res && res.lines && res.lines[0] ? res.lines[0].pv.slice(0, 6) : [rv.bestUci];
+      A.retry = null; anaGo(A.ply - 1, true);
+      ecaGM.followStart(A, mv.before, pv, rv.color, "★ أفضل خط");
     }
     // الدور من الأول لحد النقلة n (من غير ما نمسح اللي بعدها)
     function anaGo(n, quiet) {
       const A = arena.ana; if (!ChessCls) return;
       if (A.gmFollow && !quiet && window.ecaGM) return ecaGM.followStop(A);
+      if (!quiet && A.retry && Number(n) !== A.retry.ply - 1) A.retry = null;   // التنقل في الدور بيلغي المحاولة
       n = Math.max(0, Math.min(A.line.length, Number(n) || 0));
       let g; try { g = new ChessCls(A.root || undefined); } catch (_) { g = new ChessCls(); }
       for (let i = 0; i < n; i++) if (!uciMove(g, A.line[i].uci)) { n = i; break; }
@@ -318,6 +338,8 @@
       const mv = pickOrMove(A, sq, g.turn());
       if (mv) {
         const play = m => {
+          // وضع «جرب تلاقي أفضل نقلة»: النقلة بتتقيّم بس، والدور نفسه مش بيتغير
+          if (A.retry && g.fen() === A.retry.fen) { const c = new ChessCls(g.fen()); let t = null; try { t = c.move(m); } catch (_) {} if (t) anaRetryTry(t.from + t.to + (t.promotion || "")); return; }
           const before = g.fen(); let r = null; try { r = g.move(m); } catch (_) {}
           if (r) {
             A.line = A.line.slice(0, A.ply);   // نقلة جديدة من النص: الخط القديم بعدها بيتشال
@@ -336,6 +358,7 @@
     function anaSet(g) {
       const A = arena.ana, h = g.history({ verbose: true });
       if (A.gmFollow && window.ecaGM) ecaGM.followStop(A, true);
+      A.review = null; A.solution = null; A.retry = null;
       A.root = h.length ? h[0].before : g.fen();
       A.line = h.map(m => ({ uci: m.from + m.to + (m.promotion || ""), san: m.san, before: m.before, after: m.after, rv: null }));
       A.ply = A.line.length; A.game = g; A.sel = null; A.last = lastOf(g);
@@ -370,6 +393,8 @@
             <div id="anaGM">${anaCardHTML()}</div>
           </div>
           <div class="min-w-0 lg:col-span-2 space-y-4">
+            ${anaFromHTML()}
+            <div id="anaReview">${anaReviewHTML()}</div>
             <div class="gold-card rounded-2xl p-5 space-y-3">
               <div class="text-xs text-gray-400">حرّك القطع للونين بحرية والمحرك هيقيّم الوضع على طول.</div>
               <div class="grid grid-cols-3 gap-2">

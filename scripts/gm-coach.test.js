@@ -13,7 +13,7 @@ const root = path.join(__dirname, "..");
   const strip = h => String(h).replace(/<[^>]+>/g, "").replace(/\s+/g, " ");
   const deep = (fen, multi) => A.deepSearch(fen, { multiPV: multi || 2, maxNodes: 150000, budget: 5000 });
   // the whole review the app does: engine before + after the move, then classify and explain
-  const rev = (fen, u, o) => { const post = new Chess(fen); post.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] }); return G.review(Object.assign({ preFen: fen, uci: u, pre: deep(fen, 2), post: deep(post.fen(), 1) }, o || {})); };
+  const rev = (fen, u, o) => { const post = new Chess(fen); post.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] }); return G.review(Object.assign({ preFen: fen, uci: u, pre: deep(fen, 3), post: deep(post.fen(), 1) }, o || {})); };
 
   // ---------- move generation + search ----------
   T("perft: start position depth 4 = 197281", A.perft("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 4) === 197281);
@@ -35,33 +35,57 @@ const root = path.join(__dirname, "..");
   // ---------- Win% and the 10 classes (pure) ----------
   T("Win%: 0cp = 50%, +100cp ≈ 59.1%, −100cp ≈ 40.9%", Math.abs(G.winPct(0) - 50) < 1e-9 && Math.abs(G.winPct(100) - 59.1) < 0.1 && Math.abs(G.winPct(-100) - 40.9) < 0.1);
   const C = (o) => G.classify(Object.assign({ book: false, isBest: false, puzzle: false, sacrifice: false, second: null }, o)).tier;
+  // الحدود بالظبط: أفضل ≤ 1%، ممتازة ≤ 3%، جيدة ≤ 6.5%، غير دقيقة ≤ 11.5%، خطأ ≤ 22%، وأكتر = خطأ فادح
   const cases = [
     ["BOOK", { book: true, best: { cp: 30 }, after: { cp: 30 } }],
-    ["BRILLIANT", { isBest: true, sacrifice: true, best: { mate: 2 }, after: { mate: 2 } }],
+    ["BRILLIANT", { isBest: true, sacrifice: true, best: { mate: 2 }, second: { cp: -300 }, after: { mate: 2 } }],
     ["GREAT", { isBest: true, best: { cp: 300 }, second: { cp: -50 }, after: { cp: 300 } }],
     ["BEST", { isBest: true, best: { cp: 50 }, second: { cp: 30 }, after: { cp: 50 } }],
-    ["EXCELLENT", { best: { cp: 50 }, after: { cp: 40 } }],
-    ["GOOD", { best: { cp: 50 }, after: { cp: 10 } }],
-    ["INACCURACY", { best: { cp: 50 }, after: { cp: -30 } }],
-    ["MISTAKE", { best: { cp: 50 }, after: { cp: -150 } }],
+    ["BEST", { best: { cp: 50 }, after: { cp: 40 } }],            // 0.9% (≤ 1%)
+    ["EXCELLENT", { best: { cp: 50 }, after: { cp: 20 } }],       // 2.8%
+    ["GOOD", { best: { cp: 50 }, after: { cp: -10 } }],           // 5.5%
+    ["INACCURACY", { best: { cp: 50 }, after: { cp: -60 } }],     // 10.1%
+    ["MISTAKE", { best: { cp: 50 }, after: { cp: -150 } }],       // 18.1%
     ["MISSED_WIN", { best: { mate: 1 }, after: { cp: 20 } }],
     ["BLUNDER", { best: { cp: 50 }, after: { cp: -400 } }]
   ];
   for (const [want, o] of cases) T(`class ${want} from the Win% loss`, C(o) === want, { got: C(o), o });
   T("class BLUNDER: walking into a forced mate", C({ best: { cp: 0 }, after: { mate: -2 } }) === "BLUNDER");
+  T("class BLUNDER: a mistake-sized drop that loses a clear piece", C({ best: { cp: 100 }, after: { cp: -100 }, lossCp: -320 }) === "BLUNDER");
   T("class: a sacrifice that is not the best move is never brilliant", C({ sacrifice: true, best: { cp: 300 }, after: { cp: 100 } }) !== "BRILLIANT");
-  T("class: in a puzzle, a wrong move that keeps the edge is at least an inaccuracy", C({ puzzle: true, best: { cp: 900 }, after: { cp: 880 } }) === "INACCURACY");
+  T("class: in a puzzle, a wrong move that keeps the edge is at least an inaccuracy", C({ puzzle: true, isBest: false, best: { cp: 900 }, after: { cp: 880 } }) === "INACCURACY");
+  // «عبقرية» محتاجة gap ≥ 12%، و«عظيمة» نادرة: gap ≥ 18% + قلبة/إنقاذ/فكرة هادية، ومش للأكل الروتيني ولا الانتشار ولا المات في نقلة
+  T("calibration: a sacrifice when another move also mates (gap 0%) is BEST, not brilliant", C({ isBest: true, sacrifice: true, best: { mate: 2 }, second: { mate: 4 }, after: { mate: 2 } }) === "BEST");
+  T("calibration: gap 15% (under 18%) is BEST, not great", C({ isBest: true, best: { cp: 120 }, second: { cp: -40 }, after: { cp: 120 } }) === "BEST");
+  T("calibration: two moves win easily (+6 vs +4.5) is BEST, not great", C({ isBest: true, best: { cp: 600 }, second: { cp: 450 }, after: { cp: 600 } }) === "BEST");
+  T("calibration: a routine capture (free piece) is BEST, not great", C({ isBest: true, best: { cp: 500 }, second: { cp: -20 }, after: { cp: 500 }, routine: true }) === "BEST");
+  T("calibration: plain development is BEST, not great", C({ isBest: true, best: { cp: 200 }, second: { cp: -60 }, after: { cp: 200 }, development: true }) === "BEST");
+  T("calibration: mate in one is BEST, not great", C({ isBest: true, best: { mate: 1 }, second: { cp: 0 }, after: { mate: 1 }, mateNow: true }) === "BEST");
+  T("calibration: the only move that saves a lost game (rescue) is GREAT", C({ isBest: true, best: { cp: 10 }, second: { cp: -250 }, after: { cp: 10 } }) === "GREAT");
+  T("calibration: a quiet only move (gap ≥ 18%) is GREAT", C({ isBest: true, best: { cp: 80 }, second: { cp: -140 }, after: { cp: 80 }, quiet: true }) === "GREAT");
+  T("accuracy (Lichess formula): 0% loss ≈ 100, 10% loss ≈ 63.6, 50% loss ≈ 8", Math.abs(G.accuracy(0) - 100) < 0.01 && Math.abs(G.accuracy(10) - 63.6) < 0.2 && G.accuracy(50) > 7 && G.accuracy(50) < 9);
   T("badges and colors are Chess.com's", G.TIERS.BRILLIANT.sym === "!!" && G.TIERS.BRILLIANT.color === "#1BACA6" && G.TIERS.GREAT.color === "#5C8BB0" && G.TIERS.BEST.color === "#81B64C" && G.TIERS.EXCELLENT.color === "#96BC4B"
     && G.TIERS.GOOD.color === "#97AF8B" && G.TIERS.BOOK.color === "#A88865" && G.TIERS.INACCURACY.color === "#F7C631" && G.TIERS.MISTAKE.color === "#E68A00" && G.TIERS.MISSED_WIN.color === "#E69D00" && G.TIERS.BLUNDER.color === "#CA3431" && G.TIERS.BLUNDER.sym === "??");
 
   // ---------- the 10 classes on real positions (engine + explanation) ----------
+  { const r = rev("3r3k/1n4pp/1q3p2/5P2/5r2/8/4Q1PP/4R2K w - - 0 39", "e2e8");
+    T("real: Qe8+!! (queen sacrifice, the only way to win: back-rank mate) is BRILLIANT with its badge and Arabic title", r.tier === "BRILLIANT" && r.gap >= 12 && r.text.title.startsWith("!! نقلة عبقرية") && /تضحية/.test(strip(r.text.verdict)), { tier: r.tier, gap: r.gap, title: r.text.title });
+    T("real: the brilliant move's line ends in the back-rank mate", /الصف الأخير/.test(strip(r.text.continuation)) && /#/.test(strip(r.text.continuation)), strip(r.text.continuation)); }
   { const r = rev("5r1k/6pp/7N/3Q4/8/8/8/6K1 w - - 0 1", "d5g8");
-    T("real: Qg8+!! (queen sacrifice, smothered mate) is BRILLIANT with its badge and Arabic title", r.tier === "BRILLIANT" && r.text.title.startsWith("!! نقلة عبقرية") && /تضحية/.test(strip(r.text.verdict)), { tier: r.tier, title: r.text.title });
-    T("real: the brilliant move's line names the decoy and the smothered mate", /مات الخنق/.test(strip(r.text.continuation)) && r.refLine.steps.length === 3, strip(r.text.continuation)); }
+    T("real: Qg8+ (smothered mate) — Nf7+ mates too, so the gap is 0%: BEST, not brilliant (strict rule)", r.tier === "BEST" && r.gap < 12, { tier: r.tier, gap: r.gap }); }
+  { const r = rev("8/1KN5/1P6/2q3kp/8/8/8/8 w - - 0 55", "c7e6");
+    T("real: Ne6+ (fork of king and queen, every other move loses) is GREAT", r.tier === "GREAT" && r.gap >= 18 && /شوكة مزدوجة/.test(strip(r.text.verdict)), { tier: r.tier, gap: r.gap, v: strip(r.text.verdict) }); }
+  { const r = rev("8/8/5p2/4kP1K/8/8/8/8 w - - 5 56", "h5g6");
+    T("real: Kg6 (the only winning king move in a pawn ending, a quiet move) is GREAT", r.tier === "GREAT" && r.gap >= 18, { tier: r.tier, gap: r.gap }); }
   { const r = rev("r3k3/8/8/1N6/8/8/8/4K3 w - - 0 1", "b5c7");
     T("real: Nc7+ (the only move that saves the game, a fork) is GREAT", r.tier === "GREAT" && /شوكة مزدوجة/.test(strip(r.text.verdict)), { tier: r.tier, v: strip(r.text.verdict) }); }
-  { const best = deep("r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4").lines[0].uci, r = rev("r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4", best);
-    T("real: the engine's own move is BEST (★)", r.tier === "BEST" || r.tier === "GREAT", r.tier); }
+  { const r = rev("4k3/8/8/8/3q4/8/8/3RK3 w - - 0 1", "d1d4");
+    T("real: taking a free queen (routine capture) is BEST, never great", r.tier === "BEST", { tier: r.tier, gap: r.gap }); }
+  // معايرة: أحسن نقلة للمحرك في مواقف عادية → أفضل/ممتازة، و«عظيمة» بس لو gap ≥ 18%
+  { const fens = ["r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4", "r2q1rk1/pp2bppp/2n1pn2/3p4/2PP4/2N1PN2/PP3PPP/R2QKB1R w KQ - 0 9",
+      "r1b2rk1/pp1nqppp/2p1pn2/3p4/2PP4/2NBPN2/PPQ2PPP/R3K2R w KQ - 0 10", "2kr3r/ppp2ppp/2n1b3/2b1p3/4P3/2N1BN2/PPP2PPP/R3KB1R w KQ - 0 10", "rnbqkb1r/pp2pppp/3p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 2 5"];
+    const got = fens.map(f => { const b = deep(f, 3).lines[0].uci, r = rev(f, b); return { tier: r.tier, gap: r.gap }; });
+    T("calibration: the engine's best move in 5 ordinary positions is never GREAT without a ≥18% gap", got.every(x => ["BEST", "EXCELLENT", "GOOD"].includes(x.tier) || (x.tier === "GREAT" && x.gap >= 18)) && got.filter(x => x.tier === "GREAT").length <= 1, got); }
   { const r = rev("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "e2e4", { ply: 1 });
     T("real: 1.e4 is a BOOK move named «King's Pawn Opening» / «افتتاح بيدق الملك»", r.tier === "BOOK" && r.book.eco === "B00" && strip(r.text.verdict).includes("افتتاح بيدق الملك"), { tier: r.tier, book: r.book }); }
   { const r = rev("6k1/5ppp/8/8/8/8/r4PPP/3R2K1 w - - 0 1", "h2h3");

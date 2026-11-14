@@ -14,7 +14,7 @@ let pass = 0, fail = 0; const failures = [];
 function check(name, ok, detail) { ok ? pass++ : (fail++, failures.push(name)); console.log(ok ? "PASS" : "FAIL", name, detail === undefined ? "" : "=> " + (typeof detail === "string" ? detail : JSON.stringify(detail))); }
 
 // ---------- static server with the emulator connection added ----------
-const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp" };
+const types = { ".html": "text/html", ".js": "text/javascript", ".wasm": "application/wasm", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp" };
 function patchFirebase(src) {
   const swap = (from, to) => { if (!src.includes(from)) throw new Error("firebase.js patch missing: " + from); src = src.replace(from, () => to); };
   swap('projectId: "eca-chess"', `projectId: "${PROJECT}"`);
@@ -729,6 +729,11 @@ async function login(p, id) {
           back.click(); await wait(150);
           out.followBack = !Z.gmFollow && Z.status === 'play' && g.fen() === pick.pre && !document.querySelector('#mainView .eca-gm-followbar, #mainView .eca-gm-num');
         }
+        // النقلة الغلط بعد ما الرقعة رجعت: الشارة + سهم باهت مكانها بيفضلوا 3 ثواني وأكتر (لحد النقلة الجاية)
+        await wait(3000);
+        const pb = document.querySelector('#mainView .eca-gm-svg .eca-gm-sqbadge[data-sq="' + pick.m.to + '"]');
+        out.badgeStays = !!pb && getComputedStyle(pb).opacity === '1' && getComputedStyle(pb).display !== 'none' && !!document.querySelector('#mainView .eca-gm-svg .eca-gm-ghost') && !!document.querySelector('#mainView .eca-gm-card .eca-gm-badge');
+        out.analyzeBtn = !!document.querySelector('#mainView .eca-gm-card .eca-gm-analyze');
         const second = g.moves({ verbose: true }).find(m => { const u = m.from + m.to + (m.promotion || ''); return u !== Z.sol[Z.idx] && nonMate(g.fen(), m); });
         puzPlay({ from: second.from, to: second.to, promotion: second.promotion });
         out.secondLocked = Z.isRefuting === true;
@@ -741,6 +746,7 @@ async function login(p, id) {
     check("coach: the coach card appears at once under the board with the squares in LTR", refA.title && refA.panelEarly && refA.panelSquares && refA.panelBelow, refA);
     check("GM coach: the wrong move gets a class (?! ? ⚡ ??) with its Chess.com badge, color and Arabic title, in a 4-layer card", refA.gmBad && refA.gmLayers === 4 && refA.gmBadge && refA.gmTitle, refA);
     check("GM coach: in a running puzzle the card never shows the solution", refA.gmNoSolution, refA);
+    check("GM coach: the wrong move's badge and faded arrow stay on the board 3 seconds after it restores (until the next move), and the card has «🔬 Analyze»", refA.badgeStays && refA.analyzeBtn, refA);
     check("GM coach: «▶ show the follow-up» (44px) plays the line on the board with numbered arrows, and «↩ back» (44px) restores the exact position", refA.followSize >= 44 && refA.followOn && refA.followSteps >= 2 && refA.followNums === refA.followSteps && refA.backSize >= 44 && refA.followBack, refA);
     check("coach: «got it — try again» (44px) and the 2.6s timer bring back the position, and the explanation stays to read", refA.skipLabel && refA.skipSize >= 44 && refA.skipRestored && refA.panelStays && refA.secondLocked && refA.autoRestored, refA);
     check("coach: two wrong moves on one puzzle log it in the mistake vault once", refA.vaultWrites === 1, refA.vaultWrites);
@@ -782,24 +788,127 @@ async function login(p, id) {
       const wait = ms => new Promise(r => setTimeout(r, ms)), Z = arena.puz, out = {}, notes = [], real = window.sfxNotes;
       window.sfxNotes = function (n) { notes.push(n.join('-')); };
       const craft = (fen, sol) => { coachCancelAll(); const g = new ChessCls(fen); Object.assign(Z, { game: g, sol: [sol], idx: 0, color: g.turn(), flip: false, last: null, counted: true, status: 'play', review: false, info: { id: 'craft', rating: 1200, themes: [] }, coachPanel: null, coachStage: 0, coachKey: null, gmNote: null, gmBadge: null }); render(); return g; };
+      const vis = el => !!el && getComputedStyle(el).opacity === '1' && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden';
       try {
-        craft('5r1k/6pp/7N/3Q4/8/8/8/6K1 w - - 0 1', 'd5g8'); puzPlay({ from: 'd5', to: 'g8' }); await wait(150);
+        // Qe8+!! : تضحية بالوزير هي الطريقة الوحيدة للمكسب (مات الصف الأخير) — بتبدأ ★ والمحرك (MultiPV 3) بيرقّيها لـ !!
+        craft('3r3k/1n4pp/1q3p2/5P2/5r2/8/4Q1PP/4R2K w - - 0 39', 'e2e8'); puzPlay({ from: 'e2', to: 'e8' }); clearTimeout(Z.nextTimer);
+        out.first = Z.gmBadge && Z.gmBadge.tier;
+        for (let i = 0; i < 50 && !(Z.gmBadge && Z.gmBadge.tier === 'BRILLIANT'); i++) await wait(100);
         let b = document.querySelector('#mainView .eca-gm-svg .eca-gm-sqbadge'), n = document.querySelector('#mainView .eca-gm-note');
         out.brilliant = Z.gmBadge && Z.gmBadge.tier; out.bSym = b ? b.querySelector('text').textContent : ''; out.bColor = b ? b.querySelector('circle').getAttribute('fill') : '';
         out.bNote = n ? n.textContent.replace(/\\s+/g, ' ') : ''; out.bSound = notes.includes('1047-1319-1568-2093');
-        const sq = document.querySelector('#mainView .eca-sq[data-sq="g8"]'), br = b && b.getBoundingClientRect(), sr = sq && sq.getBoundingClientRect();
+        const sq = document.querySelector('#mainView .eca-sq[data-sq="e8"]'), br = b && b.getBoundingClientRect(), sr = sq && sq.getBoundingClientRect();
         out.onSquare = !!br && !!sr && br.left >= sr.left - 2 && br.right <= sr.right + 14 && br.top >= sr.top - 14 && br.bottom <= sr.bottom + 2;
-        craft('r3k3/8/8/1N6/8/8/8/4K3 w - - 0 1', 'b5c7'); puzPlay({ from: 'b5', to: 'c7' });
-        for (let i = 0; i < 40 && !(Z.gmBadge && Z.gmBadge.tier === 'GREAT'); i++) await wait(100);
+        // الشارة ثابتة: بعد 3 ثواني ورسم الرقعة من جديد لسه موجودة وظاهرة، هي والملاحظة
+        render(); await wait(3000);
+        b = document.querySelector('#mainView .eca-gm-svg .eca-gm-sqbadge[data-sq="e8"]'); n = document.querySelector('#mainView .eca-gm-note');
+        out.stays = vis(b) && b.querySelector('text').textContent === '!!' && vis(n);
+        // Ne6+! : شوكة الملك والوزير، وكل نقلة تانية بتخسر
+        craft('8/1KN5/1P6/2q3kp/8/8/8/8 w - - 0 55', 'c7e6'); puzPlay({ from: 'c7', to: 'e6' }); clearTimeout(Z.nextTimer);
+        for (let i = 0; i < 50 && !(Z.gmBadge && Z.gmBadge.tier === 'GREAT'); i++) await wait(100);
         b = document.querySelector('#mainView .eca-gm-svg .eca-gm-sqbadge');
         out.great = Z.gmBadge && Z.gmBadge.tier; out.gSym = b ? b.querySelector('text').textContent : ''; out.gColor = b ? b.querySelector('circle').getAttribute('fill') : '';
         out.gSound = notes.includes('880-1175-1480');
+        // أكل وزير سايب = أكل روتيني: بيفضل ★ (مش «عظيمة») حتى لو كل النقلات التانية أسوأ بكتير
+        craft('4k3/8/8/8/3q4/8/8/3RK3 w - - 0 1', 'd1d4'); puzPlay({ from: 'd1', to: 'd4' }); clearTimeout(Z.nextTimer); await wait(2500);
+        out.routine = Z.gmBadge && Z.gmBadge.tier;
       } finally { window.sfxNotes = real; }
       clearTimeout(Z.nextTimer); Z.status = 'idle'; Z.game = null; Z.counted = false; puzLoad();
       for (let i = 0; i < 60 && !(Z.status === 'play' && Z.game); i++) await wait(250);
       return out; })()`);
-    check("GM coach: a queen sacrifice that mates (Qg8+!!) gets the teal «!!» badge on its square, a note and the brilliant chime", gmP.brilliant === "BRILLIANT" && gmP.bSym === "!!" && gmP.bColor === "#1BACA6" && gmP.onSquare && /تضحية/.test(gmP.bNote) && gmP.bSound, gmP);
-    check("GM coach: the only saving move (Nc7+ fork) is upgraded to the blue «!» GREAT badge by the engine in the background", gmP.great === "GREAT" && gmP.gSym === "!" && gmP.gColor === "#5C8BB0" && gmP.gSound, gmP);
+    check("GM coach: the only winning sacrifice (Qe8+!!) starts as ★ and the engine upgrades it to the teal «!!» badge on its square, with a note and the chime", gmP.first === "BEST" && gmP.brilliant === "BRILLIANT" && gmP.bSym === "!!" && gmP.bColor === "#1BACA6" && gmP.onSquare && /تضحية/.test(gmP.bNote) && gmP.bSound, gmP);
+    check("GM coach: a puzzle badge and its note stay fully visible 3 seconds later, after the board redraws", gmP.stays, gmP);
+    check("GM coach: the only move that wins (Ne6+ fork) is upgraded to the blue «!» GREAT badge", gmP.great === "GREAT" && gmP.gSym === "!" && gmP.gColor === "#5C8BB0" && gmP.gSound, gmP);
+    check("GM coach: calibrated tiers — taking a free queen is ★ BEST, never «! great»", gmP.routine === "BEST", gmP);
+    // ---------- GM coach: «🔬 open on the analysis board» from a puzzle mistake, then back to training ----------
+    const af = await pa.ev(`(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms)), Z = arena.puz, A = arena.ana, out = {};
+      const until = async (f, ms) => { for (let t = 0; t < ms; t += 100) { if (f()) return true; await wait(100); } return false; };
+      coachCancelAll();
+      const fen = '6k1/8/8/4n3/8/8/3Q2P1/6K1 w - - 0 1', g = new ChessCls(fen);
+      Object.assign(Z, { game: g, sol: ['d2d3'], idx: 0, color: 'w', flip: false, last: null, counted: true, status: 'play', review: false, info: { id: 'craft', rating: 1200, themes: [] }, coachPanel: null, coachStage: 0, coachKey: null, gmNote: null, gmBadge: null });
+      render(); puzPlay({ from: 'g2', to: 'g3' });
+      out.card = await until(() => Z.coachPanel && Z.coachPanel.rv, 8000); await wait(100);
+      const b = document.querySelector('#mainView .eca-gm-card .eca-gm-analyze');
+      out.btnSize = b ? Math.round(Math.min(b.getBoundingClientRect().width, b.getBoundingClientRect().height)) : 0;
+      if (b) b.click(); await wait(300);
+      out.sub = arena.sub; out.root = A.root === g.fen(); out.line = A.line.map(m => m.uci).join(' '); out.ply = A.ply; out.from = A.from && A.from.sub; out.solution = (A.solution || []).join(' ');
+      out.rv = await until(() => A.line[0] && A.line[0].rv, 20000); await wait(400);
+      out.tier = A.line[0] && A.line[0].rv && A.line[0].rv.tier;
+      out.badge = !!document.querySelector('#mainView .eca-board .eca-gm-svg .eca-gm-sqbadge[data-sq="g3"]');
+      out.green = !!document.querySelector('#mainView .eca-gm-svg .eca-gm-best'); out.gmCard = !!document.querySelector('#anaGM .eca-gm-card');
+      out.backBtn = !!document.querySelector('#mainView .eca-ana-from button[onclick="anaBackToTraining()"]');
+      anaShowSolution(); await wait(700); out.solShown = !!A.gmFollow && /الحل/.test(A.gmFollow.title) && A.game.fen() !== A.root;
+      ecaGMFollowStop(); await wait(150);
+      anaBackToTraining(); await wait(300);
+      out.backSub = arena.sub; out.backGame = Z.game === g; out.backStatus = Z.status; out.back = arena.sub === 'puzzles' && Z.game === g && Z.status === 'play' && !A.from && !!Z.lesson;
+      Z.status = 'idle'; Z.game = null; Z.counted = false; puzLoad();
+      for (let i = 0; i < 60 && !(Z.status === 'play' && Z.game); i++) await wait(250);
+      return out; })()`);
+    check("GM coach: «🔬 open on the analysis board» (44px) in the mistake card loads the puzzle's exact start, the wrong move and the solution", af.card && af.btnSize >= 44 && af.sub === "analysis" && af.root && af.line === "g2g3" && af.ply === 1 && af.from === "puzzles" && af.solution === "d2d3", af);
+    check("GM coach: on the analysis board the wrong move has its badge and card, the best move its green arrow, and «★ show the solution» plays it", af.rv && ["MISTAKE", "BLUNDER", "INACCURACY"].includes(af.tier) && af.badge && af.green && af.gmCard && af.solShown, af);
+    check("GM coach: «↩ back to training» returns to the same puzzle where the student left it", af.backBtn && af.back, af);
+    // ---------- GM coach: a bot game — persistent badges, then «📊 Game Review» with accuracy and key moments ----------
+    const bg = await pa.ev(`(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms)), P = arena.play, A = arena.ana, out = {};
+      const until = async (f, ms) => { for (let t = 0; t < ms; t += 100) { if (f()) return true; await wait(100); } return false; };
+      const vis = el => !!el && getComputedStyle(el).opacity === '1' && getComputedStyle(el).display !== 'none';
+      switchTab('arena'); arenaSub('play'); await wait(200);
+      P.level = 0; P.colorChoice = 'w'; P.tc = 0; playStart(); await wait(200);
+      playClick('e2'); playClick('e4');
+      out.book = await until(() => P.gmBadge && P.gmBadge.tier === 'BOOK', 5000);
+      await wait(3000);   // البوت رد، والرقعة اترسمت كذا مرة
+      const b = document.querySelector('#mainView .eca-gm-svg .eca-gm-sqbadge[data-sq="e4"]');
+      out.stays = vis(b) && P.game.history().length >= 2;
+      out.listChip = ((document.querySelector('#mainView [data-gm-moves] .eca-mv-cell[data-tier="BOOK"] .eca-gm-mini') || {}).textContent || '') === '📖';
+      // دور خلص فيه غلطة: 3.Qxe5+?? Nxe5
+      P.thinking = false;
+      const g = new ChessCls(); ['e4', 'e5', 'Qh5', 'Nc6', 'Qxe5+', 'Nxe5', 'Nc3', 'Nf6'].forEach(m => g.move(m));
+      Object.assign(P, { game: g, color: 'w', over: 'loss', reason: '', sel: null, last: null, clk: null, pre: null }); render(); await wait(200);
+      const cta = document.querySelector('#mainView .eca-gm-result .eca-gm-cta'), all = document.querySelectorAll('#mainView .eca-gm-cta');
+      out.cta = !!cta && /Game Review/.test(cta.textContent) && Math.min(cta.getBoundingClientRect().width, cta.getBoundingClientRect().height) >= 44 && all.length >= 2;
+      if (cta) cta.click(); await wait(300);
+      out.sub = arena.sub; out.lineLen = A.line.length; out.ply0 = A.ply === 0; out.review = !!A.review && A.review.side === 'w';
+      out.done = await until(() => A.line.length === 8 && A.line.every(m => m.rv), 60000); await wait(400);
+      const rc = document.getElementById('anaReview');
+      out.accMe = ((document.getElementById('anaAccMe') || {}).textContent || ''); out.accBot = ((document.getElementById('anaAccBot') || {}).textContent || '');
+      out.chips = rc ? rc.querySelectorAll('.eca-rev-chip').length : 0;
+      const km = rc ? [...rc.querySelectorAll('.eca-rev-km')] : [];
+      out.kms = km.length; out.kmSize = km.every(k => k.getBoundingClientRect().height >= 44);
+      out.qx = A.line[4].rv && A.line[4].rv.tier;
+      out.greatOk = A.line.every(m => !m.rv || m.rv.tier !== 'GREAT' || m.rv.gap >= 18);
+      out.tiers = A.line.map(m => m.rv && m.rv.tier).join(',');
+      const k5 = km.find(k => k.getAttribute('onclick') === 'anaGo(5)');
+      if (k5) { k5.click(); await wait(300); }
+      out.jumped = A.ply === 5 && !!document.querySelector('#anaGM .eca-gm-card[data-tier="BLUNDER"]');
+      const rb = document.querySelector('#anaGM .eca-gm-retry'); if (rb) rb.click(); await wait(300);
+      out.retryOn = !!A.retry && A.ply === 4 && A.game.fen() === A.line[4].before && !!document.querySelector('#anaGM .eca-ana-retry') && !document.querySelector('#mainView .eca-gm-svg .eca-gm-best');
+      anaClick('h5'); anaClick('e5'); await wait(150);
+      out.retryWrong = !!A.retry && A.line.length === 8 && A.ply === 4;
+      const best = ((ecaGM.get(A.line[4].before) || {}).lines || [])[0] || {};
+      if (best.uci) { anaClick(best.uci.slice(0, 2)); anaClick(best.uci.slice(2, 4)); } await wait(300);
+      out.retryRight = !A.retry && A.ply === 5 && A.line.length === 8 && A.line[4].uci === 'h5e5';
+      const bl = document.querySelector('#anaGM .eca-gm-bestline'); if (bl) bl.click(); await wait(700);
+      out.bestLine = !!A.gmFollow && /أفضل خط/.test(A.gmFollow.title) && !!document.querySelector('#mainView .eca-gm-svg .eca-gm-num');
+      ecaGMFollowStop(); await wait(150);
+      anaBackToTraining(); await wait(200);
+      out.backToGame = arena.sub === 'play' && P.game === g;
+      // مراجعة دور تاني وبعدين خروج على طول: شغل المراجعة في الخلفية بيقف بره رقعة التحليل
+      const g2 = new ChessCls(); ['d4', 'Nf6', 'Bf4', 'g6', 'e3', 'Bg7', 'h3', 'O-O', 'Nf3', 'd6'].forEach(m => g2.move(m));
+      Object.assign(P, { game: g2, over: 'draw' }); ecaGameReview('play'); await wait(150);
+      arenaSub('lobby'); await wait(1800);
+      const q = ecaGM.queue(); out.paused = !q.running || q.running.prio < 2; out.waiting = q.waiting.filter(p => p === 2).length > 0;
+      // back to the lesson puzzle the next tests start from
+      arena.puz.keepLesson = true; arenaSub('puzzles'); arena.puz.keepLesson = false;
+      for (let i = 0; i < 60 && !(arena.puz.status === 'play' && arena.puz.game); i++) await wait(250);
+      return out; })()`);
+    check("GM bot game: the student's move gets its badge (📖) on the board and in the move list, still fully visible 3 seconds later after the bot's reply", bg.book && bg.stays && bg.listChip, bg);
+    check("GM bot game: a finished game shows «📊 تحليل الدور مع الجراند ماستر (Game Review)» (44px) under the board and in the controls", bg.cta, bg);
+    check("GM game review: opens the whole game (move 1 to the end) on the analysis board in review mode", bg.sub === "analysis" && bg.lineLen === 8 && bg.ply0 && bg.review, bg);
+    check("GM game review: accuracy % for the student and the bot, a count for all 10 classes, and key moments", bg.done && /^\d+(\.\d)?%$/.test(bg.accMe) && /^\d+(\.\d)?%$/.test(bg.accBot) && bg.chips === 10 && bg.kms >= 1 && bg.kmSize && bg.qx === "BLUNDER", bg);
+    check("GM game review: «⚡» jumps to the blunder, «🔄 retry» keeps the game and accepts only the best move, «▶ best line» plays it", bg.jumped && bg.retryOn && bg.retryWrong && bg.retryRight && bg.bestLine, bg);
+    check("GM game review: calibrated — no «! great» without a ≥18% gap; «↩ back» returns to the game", bg.greatOk && bg.backToGame, bg);
+    check("GM sweep: leaving the analysis board pauses the background review (nothing keeps running in other modes)", bg.paused && bg.waiting, bg);
     if (process.env.E2E_SHOTS) {
       const shotOk = await pa.ev(`(async () => { const Z = arena.puz, g = Z.game, want = Z.sol[Z.idx], pre = g.fen();
         const m = g.moves({ verbose: true }).find(x => { const u = x.from + x.to + (x.promotion || ''); if (u === want) return false; const r = findRefutationMove(pre, u, want); return r && 'BCDE'.includes(r.kind); });
@@ -906,6 +1015,11 @@ async function login(p, id) {
         out.sqBadge = !!sb && sb.querySelector('circle').getAttribute('fill') === '#CA3431' && sb.querySelector('text').textContent === '??';
         out.green = !!document.querySelector('#mainView .eca-gm-svg .eca-gm-best'); out.red = !!document.querySelector('#mainView .eca-gm-svg .eca-gm-threat');
         out.thud = notes.includes('110-82');
+        // الشارة ثابتة: بعد 3 ثواني (والتقييم بيتحدّث) لسه ظاهرة ومن غير ما الانيميشن يتعاد
+        await wait(3000);
+        const sb1 = document.querySelector('#mainView .eca-board .eca-gm-svg .eca-gm-sqbadge[data-tier="BLUNDER"]');
+        out.anaStays = !!sb1 && getComputedStyle(sb1).opacity === '1' && getComputedStyle(sb1).display !== 'none' && !sb1.classList.contains('is-new') && !!document.querySelector('#anaGM .eca-gm-card .eca-gm-badge');
+        const preRes = ecaGM.get(A.line[0].before) || {}; out.depth = preRes.depth || 0; out.multi = (preRes.lines || []).length; out.preSrc = preRes.src;
         anaLines(); await wait(100); out.hidden = !document.querySelector('#mainView .eca-gm-svg .eca-gm-best, #mainView .eca-gm-svg .eca-gm-threat');
         anaLines(); await wait(100); out.shown = !!document.querySelector('#mainView .eca-gm-svg .eca-gm-best');
         // the follow-up on the board, then back to the position
@@ -920,8 +1034,8 @@ async function login(p, id) {
         anaGo(0); await wait(60); out.navStart = A.ply === 0 && A.game.fen() === A.root && A.line.length === 1;
         anaStep(1); await wait(60); out.navNext = A.ply === 1 && A.game.fen() === f0;
         out.navBtns = [...document.querySelectorAll('#mainView .eca-ana-nav button')].every(b => b.getBoundingClientRect().height >= 44 && b.getBoundingClientRect().width >= 44 && (b.title || b.getAttribute('aria-label')));
-        // brilliant: queen sacrifice into a smothered mate
-        anaSet(new ChessCls('5r1k/6pp/7N/3Q4/8/8/8/6K1 w - - 0 1')); await wait(100); anaClick('d5'); anaClick('g8');
+        // brilliant: Qe8+!! — the queen sacrifice is the only way to win (back-rank mate)
+        anaSet(new ChessCls('3r3k/1n4pp/1q3p2/5P2/5r2/8/4Q1PP/4R2K w - - 0 39')); await wait(100); anaClick('e2'); anaClick('e8');
         out.brOk = await until(() => A.line[0] && A.line[0].rv, 25000); out.brilliant = A.line[0].rv && A.line[0].rv.tier;
         out.brChime = notes.includes('1047-1319-1568-2093');
         // the site's own engine when Stockfish isn't there
@@ -937,7 +1051,9 @@ async function login(p, id) {
     check("GM analysis: green arrow for the best move, red for the opponent's reply, and the 👁 toggle hides and shows them", gmA.green && gmA.red && gmA.hidden && gmA.shown, gmA);
     check("GM analysis: «▶ show the follow-up» plays the line with numbered arrows (board locked), «↩ back» restores it", gmA.followMoved && gmA.locked && gmA.steps >= 1 && gmA.back, gmA);
     check("GM analysis: ⏮ ◀ ▶ ⏭ step through the game without losing moves (44px buttons with labels)", gmA.navStart && gmA.navNext && gmA.navBtns, gmA);
-    check("GM analysis: the queen sacrifice into a smothered mate (Qg8+) is BRILLIANT with the chime", gmA.brOk && gmA.brilliant === "BRILLIANT" && gmA.brChime, gmA);
+    check("GM analysis: the only winning queen sacrifice (Qe8+) is BRILLIANT with the chime", gmA.brOk && gmA.brilliant === "BRILLIANT" && gmA.brChime, gmA);
+    check("GM analysis: the move badge is still fully visible 3 seconds later without replaying its animation", gmA.anaStays, gmA);
+    check("GM analysis: Stockfish 19 (WASM) analyzes with MultiPV 3 at depth 12 or more", gmA.preSrc === "sf" && gmA.multi === 3 && gmA.depth >= 12, gmA);
     check("GM analysis: without Stockfish the site's own engine (Web Worker) reviews the move", gmA.inOk && gmA.internalSrc === "eca" && !!gmA.internalTier && gmA.internalCard, gmA);
     // ---------- daily puzzle: once a day (Cairo time), then locked with a live countdown ----------
     await pa.send("Page.bringToFront");
