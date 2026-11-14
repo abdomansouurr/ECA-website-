@@ -47,14 +47,20 @@
     }
 
     // ---------- 2) اللعب ضد البوت: وقت + premoves + ترقية + إنهاء عند الخروج ----------
-    const PLAY_TC = [[0, 0, "بدون وقت", "No clock"], [60, 0, "1+0", "1+0"], [180, 0, "3+0", "3+0"], [180, 2, "3+2", "3+2"], [300, 0, "5+0", "5+0"], [600, 0, "10+0", "10+0"], [900, 10, "15+10", "15+10"]];
-    arena.play.tc = Math.min(PLAY_TC.length - 1, Number(lsGet("ECA_TC", "0")) || 0);
+    // نفس أوقات اللعب المباشر (live.js) عشان بوتات الأكاديمية تتلعب بأي وقت منهم
+    const PLAY_TC = [[0, 0, "بدون وقت", "No clock"], [60, 0, "1+0", "1+0"], [120, 1, "2+1", "2+1"], [180, 0, "3+0", "3+0"], [180, 2, "3+2", "3+2"], [300, 0, "5+0", "5+0"], [300, 3, "5+3", "5+3"], [600, 0, "10+0", "10+0"], [600, 5, "10+5", "10+5"], [900, 10, "15+10", "15+10"]];
+    {
+      // الاختيار بيتحفظ باسم الوقت (القديم كان رقم في قايمة أقصر)
+      const OLD = ["No clock", "1+0", "3+0", "3+2", "5+0", "10+0", "15+10"], saved = lsGet("ECA_TC_L", "") || OLD[Number(lsGet("ECA_TC", "0")) || 0] || "No clock";
+      arena.play.tc = Math.max(0, PLAY_TC.findIndex(t => t[3] === saved));
+    }
     arena.play.pre = null; arena.play.promo = null; arena.play.clk = null; arena.play.reason = "";
     const fmtClock = ms => { ms = Math.max(0, ms); if (ms < 10000) return (ms / 1000).toFixed(1); const s = Math.ceil(ms / 1000); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
     const clkRem = (P, c) => P.clk[c] - (P.game.turn() === c && !P.over ? Date.now() - P.clk.last : 0);
     function playClockSwitch(mover) {
       const P = arena.play, c = P.clk; if (!c) return;
       const now = Date.now(); c[mover] = Math.max(0, c[mover] - (now - c.last)) + P.inc * 1000; c.last = now;
+      (P.clkLog = P.clkLog || [])[P.game.history().length - 1] = c[mover];   // الوقت بعد كل نقلة (للأرشيف)
     }
     // مفيش كش مات ممكن بالمادة اللي مع الطرف ده (ملك لوحده أو ملك + حصان/فيل)؟
     function noMatingMaterial(g, color) {
@@ -87,7 +93,7 @@
       const P = arena.play, tc = PLAY_TC[P.tc] || PLAY_TC[0];
       P.game = new ChessCls(); P.over = ""; P.reason = ""; P.sel = null; P.last = null; P.thinking = false; P.pre = null; P.promo = null;
       P.color = P.colorChoice === "r" ? (Math.random() < .5 ? "w" : "b") : P.colorChoice; P.flip = P.color === "b";
-      P.inc = tc[1]; P.clk = tc[0] ? { w: tc[0] * 1000, b: tc[0] * 1000, last: Date.now() } : null;
+      P.inc = tc[1]; P.clk = tc[0] ? { w: tc[0] * 1000, b: tc[0] * 1000, last: Date.now() } : null; P.clkLog = [];
       render();
       if (P.color === "b") playEngine();
     };
@@ -211,7 +217,7 @@
       arenaPlayHTML = function () {
         let h = _ap(), P = arena.play;
         if (!P.game) {
-          const tcb = PLAY_TC.map((t, i) => `<button onclick="arena.play.tc=${i}; lsSet('ECA_TC', ${i}); render();" class="px-3 py-1.5 rounded-lg text-xs font-bold border ${P.tc === i ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border-yellow-500/20'}" dir="ltr">${aL(t[2], t[3])}</button>`).join("");
+          const tcb = PLAY_TC.map((t, i) => `<button onclick="arena.play.tc=${i}; lsSet('ECA_TC_L', '${t[3]}'); render();" class="px-3 py-1.5 rounded-lg text-xs font-bold border ${P.tc === i ? 'gold-btn' : 'bg-zinc-900 text-gray-300 border-yellow-500/20'}" dir="ltr">${aL(t[2], t[3])}</button>`).join("");
           h = h.replace('<button onclick="playStart()" class="w-full py-3 rounded-xl text-sm gold-btn">ابدأ الدور</button>',
             `${P.level === COACH_BOT ? `<div><div class="text-[12px] text-gray-400 mb-1">${aL("مستوى Coach", "Coach level")}</div><div class="flex flex-wrap gap-1.5" dir="ltr">${COACH_LEVELS.map((_, i) => `<button type="button" onclick="setCoachLevel(${i + 1})" aria-label="${aL("مستوى", "Level")} ${i + 1}" class="tap px-3 rounded-lg text-xs font-bold border ${(P.coachLevel || 1) === i + 1 ? "gold-btn" : "bg-zinc-900 text-gray-300 border-yellow-500/20"}">${i + 1}</button>`).join("")}</div><p class="text-xs text-yellow-300 mt-2">${ecaCoachRewardText(P.coachLevel || 1)}</p></div>` : ""}<div><div class="text-[11px] text-gray-400 mb-1">${aL("الوقت", "Time control")}</div><div class="flex flex-wrap gap-1.5">${tcb}</div></div><button onclick="playStart()" class="w-full py-3 rounded-xl text-sm gold-btn">ابدأ الدور</button>`);
         } else {

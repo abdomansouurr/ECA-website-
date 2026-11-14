@@ -42,9 +42,9 @@ const root = path.join(__dirname, "..");
     ["GREAT", { isBest: true, best: { cp: 300 }, second: { cp: -50 }, after: { cp: 300 } }],
     ["BEST", { isBest: true, best: { cp: 50 }, second: { cp: 30 }, after: { cp: 50 } }],
     ["BEST", { best: { cp: 50 }, after: { cp: 40 } }],            // 0.9% (≤ 1%)
-    ["EXCELLENT", { best: { cp: 50 }, after: { cp: 20 } }],       // 2.8%
-    ["GOOD", { best: { cp: 50 }, after: { cp: -10 } }],           // 5.5%
-    ["INACCURACY", { best: { cp: 50 }, after: { cp: -60 } }],     // 10.1%
+    ["EXCELLENT", { best: { cp: 50 }, after: { cp: 30 } }],       // 1.8%
+    ["GOOD", { best: { cp: 50 }, after: { cp: 20 } }],            // 2.8%، 30 سنتي
+    ["INACCURACY", { best: { cp: 50 }, after: { cp: -20 } }],     // ~70 سنتي، 6.4%
     ["MISTAKE", { best: { cp: 50 }, after: { cp: -150 } }],       // 18.1%
     ["MISSED_WIN", { best: { mate: 1 }, after: { cp: 20 } }],
     ["BLUNDER", { best: { cp: 50 }, after: { cp: -400 } }]
@@ -63,6 +63,19 @@ const root = path.join(__dirname, "..");
   T("calibration: mate in one is BEST, not great", C({ isBest: true, best: { mate: 1 }, second: { cp: 0 }, after: { mate: 1 }, mateNow: true }) === "BEST");
   T("calibration: the only move that saves a lost game (rescue) is GREAT", C({ isBest: true, best: { cp: 10 }, second: { cp: -250 }, after: { cp: 10 } }) === "GREAT");
   T("calibration: a quiet only move (gap ≥ 18%) is GREAT", C({ isBest: true, best: { cp: 80 }, second: { cp: -140 }, after: { cp: 80 }, quiet: true }) === "GREAT");
+  // تدرّج ?! / ? / ?? (الخطأ الفادح بس للحاجة اللي بتقلب الدور)
+  const G2 = (o) => G.classify(Object.assign({ book: false, isBest: false, puzzle: false, sacrifice: false, second: null }, o));
+  T("graduation: ~70cp / ~6% drop is INACCURACY (?!)", G2({ best: { cp: 50 }, after: { cp: -20 } }).tier === "INACCURACY");
+  T("graduation: ~150cp / ~14% drop (a pawn or the edge) is MISTAKE (?)", G2({ best: { cp: 50 }, after: { cp: -100 } }).tier === "MISTAKE" && Math.abs(G2({ best: { cp: 50 }, after: { cp: -100 } }).winLoss - 13.7) < 0.3);
+  T("graduation: +4.5 → +2.8 (still winning) is INACCURACY, not a blunder", G2({ best: { cp: 450 }, after: { cp: 280 } }).tier === "INACCURACY");
+  T("graduation: +5.0 → +2.8 is never a blunder", G2({ best: { cp: 500 }, after: { cp: 280 } }).tier !== "BLUNDER");
+  T("graduation: still clearly winning (≥ +2.5) after missing mate is at worst MISTAKE", G2({ best: { mate: 3 }, after: { cp: 300 } }).tier === "MISTAKE");
+  T("graduation: hanging a piece (net −320) turns an equal game lost → BLUNDER (??)", G2({ best: { cp: 30 }, after: { cp: -300 }, lossCp: -320 }).tier === "BLUNDER");
+  T("graduation: a severe drop (>20%, >250cp, ends below +2) is BLUNDER", G2({ best: { cp: 100 }, after: { cp: -260 } }).tier === "BLUNDER");
+  T("graduation: walking into a forced mate is BLUNDER", G2({ best: { cp: 300 }, after: { mate: -3 } }).tier === "BLUNDER");
+  T("graduation: >20% but only 250cp is MISTAKE, not a blunder", G2({ best: { cp: 100 }, after: { cp: -150 } }).tier === "MISTAKE");
+  T("graduation: missing a mate and staying equal (no piece lost) is MISSED_WIN (⚡)", G2({ best: { mate: 2 }, after: { cp: 40 } }).tier === "MISSED_WIN");
+  T("graduation: 115–240cp drop is MISTAKE even if the Win% drop is small", G2({ best: { cp: 900 }, after: { cp: 700 } }).tier === "INACCURACY" && G2({ best: { cp: 150 }, after: { cp: -20 } }).tier === "MISTAKE");
   T("accuracy (Lichess formula): 0% loss ≈ 100, 10% loss ≈ 63.6, 50% loss ≈ 8", Math.abs(G.accuracy(0) - 100) < 0.01 && Math.abs(G.accuracy(10) - 63.6) < 0.2 && G.accuracy(50) > 7 && G.accuracy(50) < 9);
   T("badges and colors are Chess.com's", G.TIERS.BRILLIANT.sym === "!!" && G.TIERS.BRILLIANT.color === "#1BACA6" && G.TIERS.GREAT.color === "#5C8BB0" && G.TIERS.BEST.color === "#81B64C" && G.TIERS.EXCELLENT.color === "#96BC4B"
     && G.TIERS.GOOD.color === "#97AF8B" && G.TIERS.BOOK.color === "#A88865" && G.TIERS.INACCURACY.color === "#F7C631" && G.TIERS.MISTAKE.color === "#E68A00" && G.TIERS.MISSED_WIN.color === "#E69D00" && G.TIERS.BLUNDER.color === "#CA3431" && G.TIERS.BLUNDER.sym === "??");
@@ -141,6 +154,36 @@ const root = path.join(__dirname, "..");
   for (const [key, fen, line, ply] of concepts) T(`concept on the board: ${key}`, has(fen, line, ply, key), K(fen, line));
   T("concept: a queen that just got sacrificed is not called a fork", !has("5r1k/6pp/7N/3Q4/8/8/8/6K1 w - - 0 1", ["d5g8"], 0, "fork"));
 
+  // ---------- GroundTruthTacticalAnalyzer: the hint comes from the real solution move ----------
+  { const GT = globalThis.GroundTruthTacticalAnalyzer;
+    const e = (fen, line) => GT.effect(fen, line);
+    const fork = e("r3k3/8/8/1N6/8/8/8/4K3 w - - 0 1", ["b5c7", "e8d7", "c7a8"]);
+    T("ground truth: Nc7+ is a fork on the king and the rook, from b5 to c7", fork.motive === "fork" && fork.from === "b5" && fork.to === "c7" && fork.fork.targets.map(t => t.sq).sort().join() === "a8,e8", fork);
+    const m1 = e("6k1/5ppp/8/8/8/8/r4PPP/3R2K1 w - - 0 1", ["d1d8"]);
+    T("ground truth: Rd8# is mate now, the enemy king on g8", m1.motive === "mateNow" && m1.enemyKing === "g8", m1);
+    const m2 = e("3r3k/1n4pp/1q3p2/5P2/5r2/8/4Q1PP/4R2K w - - 0 39", ["e2e8", "d8e8", "e1e8"]);
+    T("ground truth: Qe8+ starts mate in 2 (back rank)", m2.motive === "mate" && m2.mateIn === 2 && m2.matePattern && m2.matePattern.key === "backRank", m2);
+    const fc = e("4k3/8/8/8/3q4/8/8/3RK3 w - - 0 1", ["d1d4"]);
+    T("ground truth: Rxd4 takes an undefended queen (SEE +900)", fc.motive === "freeCapture" && fc.captured === "q" && fc.see === 900 && !fc.defended, fc);
+    const wc = e("4k3/8/1p6/2r5/8/3N4/8/4K3 w - - 0 1", ["d3c5", "b6c5"]);
+    T("ground truth: Nxc5 wins the exchange even though the rook is defended (SEE > 0, defended)", wc.motive === "winCapture" && wc.defended && wc.see > 0, wc);
+    const pin = e("4k3/8/2n5/8/8/8/8/4KB2 w - - 0 1", ["f1b5"]);
+    T("ground truth: Bb5 pins the knight on c6 to the king on e8", pin.motive === "pin" && pin.pin.front.sq === "c6" && pin.pin.behind.sq === "e8", pin);
+    const sk = e("8/8/8/q3k3/8/8/8/6KR w - - 0 1", ["h1h5"]);
+    T("ground truth: Rh5+ skewers the king and the queen", sk.motive === "skewer" && sk.skewer.behind.type === "q", sk);
+    const pr = e("8/4P1k1/8/8/8/8/6K1/8 w - - 0 1", ["e7e8q"]);
+    T("ground truth: e8=Q is a promotion", pr.motive === "promotion", pr);
+    T("SEE: doubled rooks (X-ray) make Rxd5 lose 400", GT.calculateSEE("3rk3/3r4/8/3p4/8/8/3R4/3RK3 w - - 0 1", "d2", "d5") === -400);
+    const al = P.allowedAfter("6k1/8/8/4n3/8/8/3Q2P1/6K1 w - - 0 1", "g2g3");
+    T("allowed after the wrong move: g3?? lets the knight check (Nf3+)", al && al.check, al);
+    const al2 = P.allowedAfter("4k3/8/8/3p4/8/3Q4/8/4K3 w - - 0 1", "d3c4");
+    T("allowed after the wrong move: Qc4?? lets dxc4 win the queen (SEE)", al2 && al2.capture && al2.capture.sq === "c4" && al2.capture.type === "q" && al2.capture.gain === 900, al2); }
+  // ---------- a wrong puzzle move is compared with the real solution ----------
+  { const r = rev("6k1/8/8/4n3/8/8/3Q2P1/6K1 w - - 0 1", "g2g3", { puzzle: true, isBest: false, hideBest: true, solution: ["d2d3"] });
+    const c = strip(r.text.compare);
+    T("puzzle card: the comparison says what the wrong move allowed (check) and nothing about the solution move itself", /كش/.test(c) && !/d2|d3/.test(c), c); }
+  { const r = rev("r3k3/8/8/1N6/8/8/8/4K3 w - - 0 1", "e1e2", { puzzle: true, isBest: false, hideBest: true, solution: ["b5c7", "e8d7", "c7a8"] });
+    T("puzzle card: the hidden best move names what the solution did (a fork on e8 and a8) without the move", /شوكة مزدوجة/.test(strip(r.text.best)) && /a8/.test(strip(r.text.best)) && !/b5|c7/.test(strip(r.text.best)), strip(r.text.best)); }
   // ---------- puzzles never show the solution ----------
   { const r = rev("6k1/5ppp/8/8/8/8/r4PPP/3R2K1 w - - 0 1", "h2h3", { puzzle: true, hideBest: true, isBest: false });
     const t = strip(r.text.best);

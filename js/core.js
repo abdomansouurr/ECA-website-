@@ -2225,7 +2225,8 @@
     }));
     let bgLast = 0;
     function anim(now) {
-      const still = bgStill || bgRoot.classList.contains("eca-calm");
+      // وانت على رقعة (لغز، دور، تحليل) أو التاب مستخبي: الخلفية بتقف (فريم في الثانية) عشان الرقعة تفضل 60 فريم
+      const still = bgStill || bgRoot.classList.contains("eca-calm") || document.hidden || (typeof tab !== "undefined" && tab === "arena" && typeof arena !== "undefined" && arena.sub !== "lobby");
       if (!still && now && now - bgLast < 32) { requestAnimationFrame(anim); return; }
       bgLast = now || 0;
       ctx.clearRect(0, 0, cv.width, cv.height);

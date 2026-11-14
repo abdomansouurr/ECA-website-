@@ -906,6 +906,57 @@
     return { is, see: own, risk, sq, capture, check, routineCapture: capture && own >= 0 };
   }
 
+  // ================= GroundTruthTacticalAnalyzer: التلميح من نقلة الحل الحقيقية (مش تخمين) =================
+  // بنلعب نقلة الحل (والردود اللي بعدها من الحل نفسه) على نسخة من الرقعة ونشوف أثرها بالظبط:
+  // مات؟ شوكة؟ ربط/سيخ؟ هجوم بالكشف؟ أكل بيكسب (SEE)؟ تضحية بتشتت مدافع؟ ترقية؟ كش؟ تهديد هادي؟
+  function groundTruth(fen, line) {
+    let pos0; try { pos0 = parse(fen); } catch (_) { return null; }
+    const w = walkLine(fen, (line || []).slice(0, 8), 8), s0 = w.steps[0];
+    if (!s0) return null;
+    const me = s0.color, steps = w.steps, find = k => s0.concepts.find(c => c.key === k);
+    const mateStep = steps.find(s => s.mate), mateIn = mateStep && mateStep.color === me ? Math.floor(mateStep.i / 2) + 1 : 0;
+    const enemyKing = sqName(kingOf(pos0, pos0.turn ^ 8));
+    const v = verifyLine(fen, (line || []).slice(0, 6), 6);
+    // تهديد بعد نقلة هادية: أحسن أكل لينا في النقلة الجاية (SEE) لو الخصم ما عملش حاجة
+    let threat = null;
+    if (!s0.captured && !s0.check) {
+      const p = parse(s0.fen); p.turn ^= 8;
+      for (const c of legal(p, true)) { const t = (c >> 7) & 127, g = see(p, c); if (g > 0 && (!threat || g > threat.gain)) threat = { gain: g, sq: sqName(t), type: TYPE[p.b[t] & 7] }; }
+    }
+    const lineConcept = k => { for (const s of steps) { if (s.color !== me) continue; const c = s.concepts.find(x => x.key === k); if (c) return c; } return null; };
+    const e = {
+      piece: s0.piece, from: s0.from, to: s0.to, captured: s0.captured, capSq: s0.capSq, promo: s0.promo, check: s0.check, mate: s0.mate, mateIn,
+      see: s0.see, defended: s0.capDefenders > 0 || s0.recapture, net: v.net, enemyKing,
+      fork: find("fork"), pin: find("pinAbs") || find("pinRel"), skewer: find("skewer"), discovered: find("discoveredCheck") || find("discovered"),
+      deflection: s0.concepts.find(c => c.key === "deflection" || c.key === "decoy" || c.key === "removalGuard") || null,
+      matePattern: mateStep && mateStep.color === me ? (mateStep.concepts.find(c => ["backRank", "smothered", "arabian", "anastasia"].includes(c.key)) || null) : null,
+      lineFork: lineConcept("fork"), trapped: find("trapped"), threat
+    };
+    e.motive = e.mate ? "mateNow" : mateIn ? "mate" : e.fork ? "fork" : e.pin ? "pin" : e.skewer ? "skewer" : e.discovered ? "discovered"
+      : e.captured && e.see > 0 ? (e.defended ? "winCapture" : "freeCapture") : e.deflection ? e.deflection.key
+      : e.see < 0 && v.net >= 0 ? "sacrifice" : e.promo ? "promotion" : e.trapped ? "trapped" : e.check ? "check" : e.threat ? "threat" : v.net >= 100 ? "winMaterial" : "quiet";
+    return e;
+  }
+  // بعد النقلة u: الخصم يقدر ياكل حاجة ويكسب (SEE > 0)؟ عنده كش؟ عنده مات في نقلة؟ (كله على نقلات قانونية فعلاً)
+  function allowedAfter(fen, u) {
+    let pos; try { pos = parse(fen); } catch (_) { return null; }
+    const m = findMove(pos, u); if (m === undefined) return null;
+    make(pos, m);
+    let capture = null, check = false, mate1 = false;
+    for (const r of legal(pos, false)) {
+      const t = (r >> 7) & 127;
+      if (pos.b[t]) { const g = see(pos, r); if (g > 0 && (!capture || g > capture.gain)) capture = { gain: g, sq: sqName(t), type: TYPE[pos.b[t] & 7] }; }
+      make(pos, r);
+      if (inCheck(pos)) { check = true; if (!legal(pos, false).length) mate1 = true; }
+      unmake(pos);
+      if (mate1) break;
+    }
+    unmake(pos);
+    return { capture, check, mate1 };
+  }
+  // calculateSEE(fen, from, to): مكسب اللي بيلعب النقلة بعد سلسلة الأكل كلها على المربع (بالأشعة X)
+  function calculateSEE(fen, from, to) { return seeUci(fen, from + to) || seeUci(fen, from + to + "q"); }
+
   // عدّ المواقف لعمق معيّن (اختبار صحة مولّد النقلات: تبييت، أخذ في المرور، ترقية)
   function perft(fen, depth) {
     const pos = parse(fen);
@@ -916,7 +967,8 @@
   function seeUci(fen, u) { let pos; try { pos = parse(fen); } catch (_) { return 0; } const m = legal(pos, false).find(x => uci(x) === u); return m === undefined ? 0 : see(pos, m); }
 
   root.ChessPositionAnalyzer = { findExactRefutation, diagnoseMistakeReason, features, analyze, parse, toFen, VAL, MATE, deepSearch, see: seeUci, quietMaterial, perft };
-  root.PositionConceptAnalyzer = { walkLine, verifyLine, sacrifice, concepts: (fen, line, max) => walkLine(fen, line, max).steps.map(s => s.concepts) };
+  root.PositionConceptAnalyzer = { walkLine, verifyLine, sacrifice, groundTruth, calculateSEE, allowedAfter, concepts: (fen, line, max) => walkLine(fen, line, max).steps.map(s => s.concepts) };
+  root.GroundTruthTacticalAnalyzer = { effect: groundTruth, calculateSEE };
   // جوه Web Worker (من غير DOM): البحث العميق بيشتغل هنا عشان الصفحة ما تقفش
   if (typeof window === "undefined" && typeof importScripts === "function" && typeof postMessage === "function") {
     root.onmessage = e => {

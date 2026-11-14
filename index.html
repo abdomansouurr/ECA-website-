@@ -7,9 +7,9 @@
   <link rel="manifest" href="manifest.json" />
   <!-- لوجو الأكاديمية على تاب المتصفح: ICO في الجذر (الفولباك الأضمن — المتصفحات بتطلبه من /favicon.ico مباشرة)
        + PNG للتاب الحديث + apple-touch للآيفون — كلهم بنفس اللوجو ومع رقم نسخة يكسر الكاش -->
-  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v94" />
-  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v94" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v94" />
+  <link rel="icon" sizes="48x48" href="favicon.ico?v=eca-v95" />
+  <link rel="icon" type="image/png" sizes="128x128" href="img/favicon.png?v=eca-v95" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=eca-v95" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="ECA Chess" />
@@ -306,7 +306,7 @@
     @keyframes ecaRewardPop { 0% { opacity: 0; transform: translateY(12px) scale(.8); } 25% { opacity: 1; transform: translateY(0) scale(1.08); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px) scale(1); } }
     @media (prefers-reduced-motion: reduce) { .eca-reward-pop { animation: none; } }
 
-    /* ===== eca-v94: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
+    /* ===== eca-v95: تحسينات الواجهة (بدون أي تغيير في الألوان) ===== */
     @keyframes ecaItemIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     .stagger-in > *, .st-item { animation-duration: .24s; }
     .stagger-in > *:nth-child(1) { animation-delay: 0.045s }
@@ -935,6 +935,129 @@
     .game-card-analysis:is(.hover-active, :hover) .gc-tsq { animation: anPulse 1.8s ease-out infinite; } .game-card-analysis:is(.hover-active, :hover) .gc-tsq-b { animation-delay: .2s; }
     @keyframes anDraw { 0% { stroke-dashoffset: 100; } 35%, 100% { stroke-dashoffset: 0; } }
     @keyframes anPulse { 0%, 30% { opacity: 0; transform: scale(.8); } 45% { opacity: .9; transform: scale(1.08); } 100% { opacity: 0; transform: scale(1); } }
+    /* ===== كروت اللعب المباشر والأرشيف (cardfx.js) ===== */
+    .game-card-live { --gc-glow: 229,9,20; } .game-card-archive { --gc-glow: 245,197,24; }
+    .gc-chclock { left: 50%; top: 10%; width: 112px; height: 62px; margin-left: -56px; border-radius: 12px; background: linear-gradient(180deg, #3b2a14, #1c1209); border: 2px solid #F5C518; box-shadow: 0 6px 14px rgba(0,0,0,.45); }
+    .gc-cc-face { top: 14px; width: 44px; height: 26px; border-radius: 6px; background: #0b0b0b; color: #fde68a; font: 800 13px/26px ui-monospace, monospace; text-align: center; }
+    .gc-cc-l { left: 6px; } .gc-cc-r { right: 6px; color: #fca5a5; }
+    .gc-cc-btn { top: -9px; width: 26px; height: 9px; border-radius: 4px 4px 0 0; background: #F5C518; }
+    .gc-cc-btn-l { left: 15px; } .gc-cc-btn-r { right: 15px; transform: translateY(4px); }
+    .gc-livedot { left: 10%; top: 12%; width: 12px; height: 12px; border-radius: 50%; background: #E50914; box-shadow: 0 0 10px #E50914; }
+    .gc-tickring { left: 50%; top: 4%; width: 120px; height: 120px; margin-left: -60px; border-radius: 50%; border: 2px dashed rgba(229,9,20,.7); opacity: 0; }
+    .gc-cc-flag { right: 8%; top: 4%; color: #fca5a5; font-size: 22px; opacity: 0; }
+    .game-card-live:is(.hover-active, :hover) .gc-cc-btn-l { animation: ccPress .9s steps(1, end) infinite; }
+    .game-card-live:is(.hover-active, :hover) .gc-cc-btn-r { animation: ccPress .9s steps(1, end) .45s infinite; }
+    .game-card-live:is(.hover-active, :hover) .gc-cc-r { animation: ccBlink .9s ease-in-out infinite; }
+    .game-card-live:is(.hover-active, :hover) .gc-livedot { animation: ccLive 1s ease-in-out infinite; }
+    .game-card-live:is(.hover-active, :hover) .gc-tickring { animation: ccSpin 3s linear infinite; }
+    .game-card-live:is(.hover-active, :hover) .gc-tickring:nth-child(3) { animation-direction: reverse; }
+    .game-card-live:is(.hover-active, :hover) .gc-cc-flag { animation: ccFlag 1.8s ease-out infinite; }
+    @keyframes ccPress { 0% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+    @keyframes ccBlink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+    @keyframes ccLive { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: .5; } }
+    @keyframes ccSpin { to { transform: rotate(360deg); opacity: .9; } from { opacity: .9; } }
+    @keyframes ccFlag { 0%, 40% { opacity: 0; transform: translateY(6px) rotate(-12deg); } 60% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+    .gc-books { left: 50%; top: 8%; width: 96px; height: 76px; margin-left: -48px; }
+    .gc-bk { bottom: 0; width: 22px; border-radius: 3px; border: 2px solid rgba(0,0,0,.35); }
+    .gc-bk1 { left: 8px; height: 66px; background: linear-gradient(90deg, #7c2d12, #b45309); }
+    .gc-bk2 { left: 34px; height: 74px; background: linear-gradient(90deg, #14532d, #15803d); }
+    .gc-bk3 { left: 60px; height: 58px; background: linear-gradient(90deg, #1e3a8a, #2563eb); transform-origin: bottom left; transform: rotate(8deg); }
+    .gc-scroll { right: 4%; top: 58%; padding: 2px 6px; border-radius: 6px; background: #f5ecd2; color: #3b2a14; font: 900 11px/16px ui-monospace, monospace; }
+    .gc-pg { left: 50%; top: 18%; width: 34px; height: 44px; margin-left: -6px; border-radius: 2px 6px 6px 2px; background: #f5ecd2; transform-origin: left center; opacity: 0; }
+    .gc-acc { color: #F5C518; font: 900 14px/1 system-ui, sans-serif; opacity: 0; }
+    .game-card-archive:is(.hover-active, :hover) .gc-bk2 { animation: bkPull 1.6s ease-in-out infinite; }
+    .game-card-archive:is(.hover-active, :hover) .gc-pg { animation: pgFlip 1.5s ease-in-out infinite; }
+    .game-card-archive:is(.hover-active, :hover) .gc-pg2 { animation-delay: .3s; } .game-card-archive:is(.hover-active, :hover) .gc-pg3 { animation-delay: .6s; }
+    .game-card-archive:is(.hover-active, :hover) .gc-acc { animation: accPop 1.5s ease-out infinite; }
+    @keyframes bkPull { 0%, 100% { transform: none; } 50% { transform: translateY(-10px); } }
+    @keyframes pgFlip { 0% { opacity: 0; transform: rotateY(0); } 20% { opacity: 1; } 100% { opacity: 0; transform: rotateY(-170deg); } }
+    @keyframes accPop { 0%, 30% { opacity: 0; transform: translateY(8px) scale(.8); } 50% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-8px); } }
+    /* ===== الشطرنج المباشر (live.js) ===== */
+    .lv-label { margin-bottom: 6px; font-size: 12px; color: #a3a3a3; }
+    .lv-tcs { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+    .lv-tc, .lv-side, .lv-btn, .lv-eye, .lv-resume, .ag-chip, .ag-pgn { min-height: 44px; border-radius: 12px; font-size: 13px; font-weight: 800; }
+    .lv-tc { background: #141414; border: 1px solid rgba(245,197,24,.25); color: #e5e5e5; font-variant-numeric: tabular-nums; }
+    .lv-tc.is-on, .lv-side.is-on { background: linear-gradient(180deg, #F5C518, #b8860b); color: #111; border-color: #F5C518; }
+    .lv-sides { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .lv-side { background: #141414; border: 1px solid rgba(245,197,24,.25); color: #e5e5e5; }
+    .lv-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 12px; background: #18181b; border: 1px solid rgba(245,197,24,.3); color: #fde68a; }
+    .lv-btn:disabled { opacity: .45; }
+    .lv-btn.gold-btn { color: #111; }
+    .lv-resume { display: block; width: 100%; background: #7f1d1d; border: 1px solid #E50914; color: #fff; }
+    .lv-open { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: rgba(0,0,0,.35); border: 1px solid rgba(245,197,24,.15); }
+    .lv-open .lv-who { flex: 1; min-width: 0; }
+    .lv-who { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: #f5f5f5; font-size: 14px; }
+    .lv-who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lv-who em { font-style: normal; font-size: 12px; color: #a3a3a3; }
+    .lv-dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #a3a3a3; flex: none; }
+    .lv-dot.lv-w { background: #fafafa; } .lv-dot.lv-b { background: #111; }
+    .lv-tag { display: inline-flex; align-items: center; min-height: 28px; padding: 0 8px; border-radius: 999px; background: rgba(245,197,24,.12); border: 1px solid rgba(245,197,24,.3); color: #fde68a; font-size: 12px; font-weight: 700; }
+    .lv-st-live { background: rgba(229,9,20,.18); border-color: #E50914; color: #fecaca; } .lv-st-over { color: #a3a3a3; }
+    .lv-bad { background: rgba(229,9,20,.18); border-color: #E50914; color: #fecaca; }
+    .lv-empty { font-size: 13px; color: #a3a3a3; text-align: center; padding: 8px; }
+    .lv-input, .lv-link { width: 100%; min-height: 44px; padding: 0 12px; border-radius: 12px; background: #000; border: 1px solid rgba(245,197,24,.4); color: #fff; font-size: 13px; }
+    .lv-create { padding-top: 10px; border-top: 1px dashed rgba(245,197,24,.25); }
+    .lv-game { display: grid; gap: 10px; max-width: 640px; margin: 0 auto; }
+    .lv-head { display: flex; flex-wrap: wrap; gap: 6px; }
+    .lv-board-wrap { display: grid; gap: 6px; }
+    .lv-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; padding: 4px 6px 4px 12px; border-radius: 12px; background: #15110a; border: 1px solid rgba(245,197,24,.25); }
+    .lv-bar.is-run { border-color: #F5C518; box-shadow: 0 0 0 1px #F5C518 inset; }
+    .lv-clock { min-width: 92px; padding: 4px 10px; border-radius: 10px; background: #0b0b0b; color: #f3d266; font-size: 24px; font-weight: 900; text-align: center; font-variant-numeric: tabular-nums; }
+    .lv-bar.is-run .lv-clock { background: #F5C518; color: #111; }
+    .lv-clock.is-low { color: #fecaca; background: #7f1d1d; } .lv-bar.is-run .lv-clock.is-low { background: #E50914; color: #fff; }
+    .lv-bz, .lv-fire { font-size: 14px; }
+    .eca-sq.lv-pf::before { content: ""; position: absolute; inset: 0; background: rgba(27,172,166,.62); }
+    .eca-sq.lv-pt::before { content: ""; position: absolute; inset: 0; background: rgba(229,9,20,.55); }
+    .lv-actions { display: flex; flex-wrap: wrap; gap: 8px; } .lv-actions .lv-btn { flex: 1 1 120px; }
+    .lv-resign { color: #fecaca; border-color: rgba(229,9,20,.5); }
+    .lv-bzbtn { background: linear-gradient(90deg, #E50914, #b20710); color: #fff; border-color: #E50914; }
+    .lv-ok { background: #14532d; border-color: #22c55e; color: #dcfce7; }
+    .lv-tip, .lv-spect { font-size: 12px; color: #a3a3a3; text-align: center; }
+    .lv-conn, .lv-offer { display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(229,9,20,.12); border: 1px solid #E50914; color: #fecaca; font-size: 13px; }
+    .lv-offer { background: rgba(34,197,94,.1); border-color: #22c55e; color: #dcfce7; }
+    .lv-conn-n { justify-self: center; padding: 2px 12px; border-radius: 999px; background: #E50914; color: #fff; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .lv-claim { min-height: 44px; border-radius: 12px; background: #E50914; color: #fff; font-weight: 900; }
+    .lv-result { display: grid; gap: 8px; padding: 14px; border-radius: 14px; background: #15110a; border: 1px solid rgba(245,197,24,.4); text-align: center; color: #e5e5e5; }
+    .lv-result b { font-size: 20px; color: #fde68a; } .lv-result.is-win b { color: #86efac; } .lv-result.is-loss b { color: #fca5a5; }
+    .lv-result-acts { display: grid; gap: 8px; }
+    .lv-moves { display: flex; flex-wrap: wrap; gap: 4px 10px; max-height: 120px; overflow-y: auto; padding: 8px 10px; border-radius: 12px; background: rgba(0,0,0,.4); font: 12px/1.6 ui-monospace, monospace; color: #e5e5e5; }
+    .lv-mv i { font-style: normal; color: #737373; margin-inline-end: 3px; }
+    .lv-wait .lv-pulse, .lv-searching .lv-pulse { display: inline-block; font-size: 34px; animation: lvPulse 1.2s ease-in-out infinite; }
+    .lv-searching { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px; color: #fde68a; }
+    @keyframes lvPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+    .lv-mine { display: flex; flex-wrap: wrap; gap: 10px; font-size: 14px; color: #e5e5e5; }
+    .lv-join { font-size: 15px; }
+    .lv-table { width: 100%; border-collapse: collapse; font-size: 13px; color: #e5e5e5; }
+    .lv-table th { padding: 6px 4px; color: #F5C518; font-size: 12px; text-align: start; }
+    .lv-table td { padding: 4px; border-top: 1px solid rgba(245,197,24,.12); }
+    .lv-table tr.is-me td { background: rgba(245,197,24,.1); }
+    .lv-pn { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lv-eye { min-width: 44px; background: #18181b; border: 1px solid rgba(245,197,24,.3); }
+    .lv-podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; align-items: end; }
+    .lv-pod { display: grid; gap: 2px; padding: 8px 4px; border-radius: 12px; background: rgba(245,197,24,.1); text-align: center; color: #fde68a; font-size: 12px; overflow: hidden; }
+    .lv-pod span { font-size: 24px; } .lv-pod b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .lv-pod-1 { padding-top: 16px; background: rgba(245,197,24,.2); }
+    @media (prefers-reduced-motion: reduce) { .lv-wait .lv-pulse, .lv-searching .lv-pulse { animation: none; } }
+    /* ===== أرشيف الأدوار (archive.js) ===== */
+    .ag-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ag-chip { padding: 0 12px; background: #141414; border: 1px solid rgba(245,197,24,.25); color: #e5e5e5; }
+    .ag-chip b { margin-inline-start: 4px; color: #F5C518; } .ag-chip.is-on { background: linear-gradient(180deg, #F5C518, #b8860b); color: #111; } .ag-chip.is-on b { color: #111; }
+    .ag-pgn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 12px; background: #18181b; border: 1px solid rgba(245,197,24,.3); color: #fde68a; }
+    .ag-pgn.gold-btn { color: #111; }
+    .ag-sync { font-size: 12px; color: #a3a3a3; }
+    .ag-row { display: grid; gap: 8px; padding: 12px; border-radius: 16px; background: #120f09; border: 1px solid rgba(245,197,24,.2); }
+    .ag-row[data-res="win"] { border-inline-start: 4px solid #22c55e; } .ag-row[data-res="loss"] { border-inline-start: 4px solid #E50914; } .ag-row[data-res="draw"] { border-inline-start: 4px solid #a3a3a3; }
+    .ag-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .ag-mode { font-size: 20px; flex: none; }
+    .ag-players { flex: 1; min-width: 0; color: #f5f5f5; font-size: 14px; overflow-wrap: anywhere; }
+    .ag-vs { color: #737373; font-size: 12px; }
+    .ag-res { flex: none; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 900; background: #262626; color: #e5e5e5; }
+    .ag-res.is-win { background: #14532d; color: #bbf7d0; } .ag-res.is-loss { background: #7f1d1d; color: #fecaca; }
+    .ag-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: #a3a3a3; }
+    .ag-acc { color: #86efac; font-weight: 800; } .ag-need { color: #fcd34d; }
+    .ag-actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    @media (min-width: 560px) { .ag-actions { grid-template-columns: 2fr 1fr; } }
+    .eca-ana-clk { margin-inline-start: 4px; font-style: normal; font-size: 12px; color: #a3a3a3; font-variant-numeric: tabular-nums; }
+    .eca-ana-pre { border-inline-start: 3px solid var(--gm); padding-inline-start: 8px; }
     /* أقل حركة: الكارت بينوّر بس من غير مؤثرات */
     html.eca-calm .game-card:is(.hover-active, :hover) .game-card-media *, html.eca-calm .game-card:is(.hover-active, :hover) .game-card-media *::before { animation: none; } html.eca-calm .game-card:is(.hover-active, :hover) .gc-fx { opacity: 0 !important; }
     /* الكارت كله زرار واحد: اللي جواه ما يمسكش الماوس، فالـ hover بيوصل للكارت نفسه دايماً */
@@ -1003,7 +1126,7 @@
     .eca-gm-followbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 auto 10px; padding: 6px 8px 6px 14px; border-radius: 10px; background: #181818; border: 1px solid #81B64C; color: #fff; font-size: 13px; animation: coIn .2s ease-out; }
     .eca-gm-back { flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 8px; background: #F5C518; color: #111; font-size: 12px; font-weight: 800; white-space: nowrap; }
     .eca-gm-svg { position: absolute; inset: 0; z-index: 21; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-    .eca-gm-sqbadge circle { stroke: #fff; stroke-width: 3; filter: drop-shadow(0 2px 3px rgba(0,0,0,.55)); }
+    .eca-gm-sqbadge circle { stroke: #fff; stroke-width: 3; }
     .eca-gm-sqbadge text, .eca-gm-num text { fill: #fff; font: 900 22px/1 system-ui, sans-serif; }
     /* الشارة ثابتة: مفيش حاجة بتخفيها، والانيميشن أول مرة بس (forwards) */
     .eca-gm-sqbadge { transform-box: fill-box; transform-origin: center; opacity: 1 !important; visibility: visible !important; }
@@ -1011,6 +1134,12 @@
     .eca-gm-ghost { stroke-width: 12; stroke-linecap: round; stroke-dasharray: 18 12; opacity: .45; }
     .eca-gm-ghost-head { fill: #CA3431; opacity: .45; }
     .eca-gm-below { margin: 10px auto 0; display: grid; gap: 8px; }
+    .eca-gm-above { margin: 0 auto 10px; display: grid; gap: 8px; }
+    .eca-an-toggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 44px; padding: 0 14px; border-radius: 12px; background: #141414; border: 1px solid rgba(255,255,255,.14); color: #d4d4d4; font-size: 13px; font-weight: 700; }
+    .eca-an-toggle b { padding: 3px 10px; border-radius: 999px; background: #2a2a2a; color: #a3a3a3; font-size: 12px; font-weight: 900; }
+    .eca-an-toggle.is-on { border-color: #81B64C; color: #fff; } .eca-an-toggle.is-on b { background: #81B64C; color: #0b1a05; }
+    .eca-gm-compare { margin-top: 6px; padding: 6px 8px; border-radius: 8px; background: rgba(56,189,248,.08); border: 1px dashed rgba(56,189,248,.35); color: #e0f2fe; }
+    .eca-gm-why { border-color: #F7C631; background: #2a2208; color: #fde68a; }
     .eca-gm-below > .eca-gm-note { margin: 0; }
     .eca-gm-analyze { width: 100%; min-height: 44px; padding: 0 12px; border-radius: 12px; background: #0f2a3a; border: 1px solid #38bdf8; color: #e0f2fe; font-size: 13px; font-weight: 800; }
     .eca-gm-actions .eca-gm-analyze { margin-top: 8px; }
@@ -1018,8 +1147,10 @@
     .eca-gm-retry { background: #F5C518; color: #111; } .eca-gm-bestline { background: #1f2937; color: #bbf7d0; border: 1px solid #81B64C; }
     .eca-gm-result { display: grid; gap: 6px; padding: 12px 14px; border-radius: 14px; background: linear-gradient(135deg, #1c1208, #141414); border: 1px solid rgba(229,9,20,.55); color: #e5e5e5; font-size: 13px; }
     .eca-gm-result b { color: #fff; font-size: 16px; }
-    .eca-gm-cta { width: 100%; min-height: 48px; padding: 0 14px; border-radius: 12px; background: linear-gradient(90deg, #E50914, #b20710); color: #fff; font-size: 14px; font-weight: 900; box-shadow: 0 0 0 1px rgba(255,255,255,.12) inset, 0 0 18px rgba(229,9,20,.55); animation: gmGlow 2.2s ease-in-out infinite; }
-    @keyframes gmGlow { 0%, 100% { box-shadow: 0 0 0 1px rgba(255,255,255,.12) inset, 0 0 12px rgba(229,9,20,.45); } 50% { box-shadow: 0 0 0 1px rgba(255,255,255,.2) inset, 0 0 26px rgba(229,9,20,.85); } }
+    .eca-gm-cta { position: relative; isolation: isolate; width: 100%; min-height: 48px; padding: 0 14px; border-radius: 12px; background: linear-gradient(90deg, #E50914, #b20710); color: #fff; font-size: 14px; font-weight: 900; box-shadow: 0 0 0 1px rgba(255,255,255,.12) inset, 0 0 14px rgba(229,9,20,.5); }
+    /* التوهّج طبقة ثابتة بيتغير شفافيتها بس (الـ GPU) بدل ما الـ box-shadow يترسم من الأول كل فريم */
+    .eca-gm-cta::after { content: ""; position: absolute; inset: -4px; z-index: -1; border-radius: 14px; box-shadow: 0 0 26px rgba(229,9,20,.85); opacity: 0; animation: gmGlow 2.2s ease-in-out infinite; pointer-events: none; }
+    @keyframes gmGlow { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
     .eca-mv-cell { display: inline-flex; align-items: center; min-width: 5rem; color: #fff; }
     .eca-ana-retry { display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px; background: #181818; border: 1px solid #F5C518; color: #e5e5e5; font-size: 13px; }
     .eca-ana-retry b { color: #fff; }
@@ -1052,7 +1183,7 @@
     .eca-ana-mv[data-tier="BLUNDER"], .eca-ana-mv[data-tier="MISTAKE"], .eca-ana-mv[data-tier="MISSED_WIN"], .eca-ana-mv[data-tier="INACCURACY"], .eca-ana-mv[data-tier="BRILLIANT"], .eca-ana-mv[data-tier="GREAT"] { color: var(--gm); font-weight: 800; }
     .eca-ana-tip { margin: 0; padding: 10px 12px; border-radius: 12px; background: #181818; border: 1px dashed rgba(245,197,24,.35); color: #cfcfcf; font-size: 13px; }
     @keyframes gmPop { from { transform: scale(.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-    @media (prefers-reduced-motion: reduce) { .eca-gm-sqbadge.is-new, .eca-gm-note.is-new, .eca-gm-followbar, .eca-gm-cta { animation: none !important; } .eca-gm-mine, .eca-gm-opp { animation: none; stroke-dashoffset: 0; } }
+    @media (prefers-reduced-motion: reduce) { .eca-gm-sqbadge.is-new, .eca-gm-note.is-new, .eca-gm-followbar, .eca-gm-cta::after { animation: none !important; } .eca-gm-mine, .eca-gm-opp { animation: none; stroke-dashoffset: 0; } }
     /* لغز اليوم (daily.js): تقويم بتتقلب ورقته وشمس بتلف */
     .game-card-daily { --gc-glow: 245,197,24; }
     .gc-cal { left: 50%; top: 4%; width: 70px; height: 76px; margin-left: -35px; border-radius: 8px; background: #fff; box-shadow: 0 6px 14px rgba(0,0,0,.45); overflow: hidden; }
@@ -1351,8 +1482,8 @@
     html[data-ecap="piece-gold"] .eca-pc.w, .eca-skin-piece-gold .eca-pc.w { color: #fde68a; text-shadow: 0 0 1px #78350f, 0 0 1px #78350f, 0 1px 3px rgba(0,0,0,.5); }
     html[data-ecap="piece-gold"] .eca-pc.b, .eca-skin-piece-gold .eca-pc.b { color: #7c2d12; text-shadow: 0 0 1px #fde047, 0 1px 2px rgba(0,0,0,.45); }
   </style>
-  <script>window.ECA_VERSION = "eca-v94";</script>
-  <link rel="stylesheet" href="tailwind.css?v=eca-v94" />
+  <script>window.ECA_VERSION = "eca-v95";</script>
+  <link rel="stylesheet" href="tailwind.css?v=eca-v95" />
 </head>
 <body class="min-h-screen flex flex-col relative">
   <a href="#mainView" class="skip-link">تخطّي إلى المحتوى</a>
@@ -1516,54 +1647,56 @@
     } catch (_) {}
   </script>
   <script type="application/json" id="ecaLazyModules">{"finance":"js/finance.js"}</script>
-  <script src="js/core.js?v=eca-v94"></script>
+  <script src="js/core.js?v=eca-v95"></script>
   <!-- ساحة التدريب: العب ضد الكمبيوتر + ألغاز على الرقعة + تدريب الرؤية -->
-  <script src="js/arena.js?v=eca-v94"></script>
+  <script src="js/arena.js?v=eca-v95"></script>
 
   <!-- بنك الألغاز اتنقل لـ puzzles.js وبيتحمّل وقت الحاجة بس (loadPuzzleBank) -->
 
   <!-- صفحات ECA الإضافية: لعبة البيادق، رقعة التحليل، الرتب والشارات، صفحات المعلومات، الفوتر، الأخبار -->
-  <script src="js/extras.js?v=eca-v94"></script>
-  <script src="js/streaks.js?v=eca-v94"></script>
-  <script src="js/review.js?v=eca-v94"></script>
-  <script src="js/quality.js?v=eca-v94"></script>
-  <script src="js/announce.js?v=eca-v94"></script>
-  <script src="js/progress.js?v=eca-v94"></script>
-  <script src="js/arena2.js?v=eca-v94"></script>
+  <script src="js/extras.js?v=eca-v95"></script>
+  <script src="js/streaks.js?v=eca-v95"></script>
+  <script src="js/review.js?v=eca-v95"></script>
+  <script src="js/quality.js?v=eca-v95"></script>
+  <script src="js/announce.js?v=eca-v95"></script>
+  <script src="js/progress.js?v=eca-v95"></script>
+  <script src="js/arena2.js?v=eca-v95"></script>
   <!-- homework, coach dashboards, tournaments, and placement test load on demand via loadModule -->
-  <script src="js/ux.js?v=eca-v94"></script>
-  <script src="js/annotate.js?v=eca-v94"></script>
-  <script src="js/gamify.js?v=eca-v94"></script>
-  <script src="js/adventure.js?v=eca-v94"></script>
-  <script src="js/duel.js?v=eca-v94"></script>
-  <script src="js/fx.js?v=eca-v94"></script>
-  <script src="js/speedarena.js?v=eca-v94"></script>
-  <script src="js/loot.js?v=eca-v94"></script>
-  <script src="js/dojo.js?v=eca-v94"></script>
-  <script src="js/cards.js?v=eca-v94"></script>
-  <script src="js/stamina.js?v=eca-v94"></script>
-  <script src="js/social.js?v=eca-v94"></script>
-  <script src="js/friendduel.js?v=eca-v94"></script>
-  <script src="js/weekly.js?v=eca-v94"></script>
-  <script src="js/boss.js?v=eca-v94"></script>
-  <script src="js/command.js?v=eca-v94"></script>
-  <script src="js/lessonpuz.js?v=eca-v94"></script>
-  <script src="js/parentreport.js?v=eca-v94"></script>
-  <script src="js/care.js?v=eca-v94"></script>
-  <script src="js/fun.js?v=eca-v94"></script>
-  <script src="js/flow.js?v=eca-v94"></script>
-  <script src="js/assist.js?v=eca-v94"></script>
-  <script src="js/analyzer.js?v=eca-v94"></script>
-  <script src="js/openings.js?v=eca-v94"></script>
-  <script src="js/coach.js?v=eca-v94"></script>
-  <script src="js/gmcoach.js?v=eca-v94"></script>
-  <script src="js/daily.js?v=eca-v94"></script>
-  <script src="js/cardfx.js?v=eca-v94"></script>
-  <script src="js/lobby.js?v=eca-v94"></script>
-  <script src="js/gamenav.js?v=eca-v94"></script>
-  <script src="js/home.js?v=eca-v94"></script>
+  <script src="js/ux.js?v=eca-v95"></script>
+  <script src="js/annotate.js?v=eca-v95"></script>
+  <script src="js/gamify.js?v=eca-v95"></script>
+  <script src="js/adventure.js?v=eca-v95"></script>
+  <script src="js/duel.js?v=eca-v95"></script>
+  <script src="js/fx.js?v=eca-v95"></script>
+  <script src="js/speedarena.js?v=eca-v95"></script>
+  <script src="js/loot.js?v=eca-v95"></script>
+  <script src="js/dojo.js?v=eca-v95"></script>
+  <script src="js/cards.js?v=eca-v95"></script>
+  <script src="js/stamina.js?v=eca-v95"></script>
+  <script src="js/social.js?v=eca-v95"></script>
+  <script src="js/friendduel.js?v=eca-v95"></script>
+  <script src="js/weekly.js?v=eca-v95"></script>
+  <script src="js/boss.js?v=eca-v95"></script>
+  <script src="js/command.js?v=eca-v95"></script>
+  <script src="js/lessonpuz.js?v=eca-v95"></script>
+  <script src="js/parentreport.js?v=eca-v95"></script>
+  <script src="js/care.js?v=eca-v95"></script>
+  <script src="js/fun.js?v=eca-v95"></script>
+  <script src="js/flow.js?v=eca-v95"></script>
+  <script src="js/assist.js?v=eca-v95"></script>
+  <script src="js/analyzer.js?v=eca-v95"></script>
+  <script src="js/openings.js?v=eca-v95"></script>
+  <script src="js/coach.js?v=eca-v95"></script>
+  <script src="js/gmcoach.js?v=eca-v95"></script>
+  <script src="js/daily.js?v=eca-v95"></script>
+  <script src="js/cardfx.js?v=eca-v95"></script>
+  <script src="js/lobby.js?v=eca-v95"></script>
+  <script src="js/gamenav.js?v=eca-v95"></script>
+  <script src="js/home.js?v=eca-v95"></script>
+  <script src="js/live.js?v=eca-v95"></script>
+  <script src="js/archive.js?v=eca-v95"></script>
 
   <!-- Firebase: Auth + Firestore (per-document sync, role-based) -->
-  <script type="module" src="js/firebase.js?v=eca-v94"></script>
+  <script type="module" src="js/firebase.js?v=eca-v95"></script>
 </body>
 </html>

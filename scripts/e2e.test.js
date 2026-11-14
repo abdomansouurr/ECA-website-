@@ -665,6 +665,7 @@ async function login(p, id) {
     await pa.ev("lpStart(lpDailyLesson(currUser()))");
     await until(() => pa.ev("arena.puz.status === 'play' && !!arena.puz.game"), 15000);
     check("care: a puzzle in progress counts as playing", await pa.ev("ecaIsPlaying() === true"));
+    await pa.ev("ecaAnalysisSet(true)");   // الرد العقابي والشارات بيشتغلوا مع وضع التحليل الفوري (مقفول افتراضياً — متجرّب تحت)
     // ---------- coach: a wrong move in a lesson gets the opponent's punishing reply, then the board comes back ----------
     const refA = await pa.ev(`(async () => {
       const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
@@ -792,7 +793,8 @@ async function login(p, id) {
       try {
         // Qe8+!! : تضحية بالوزير هي الطريقة الوحيدة للمكسب (مات الصف الأخير) — بتبدأ ★ والمحرك (MultiPV 3) بيرقّيها لـ !!
         craft('3r3k/1n4pp/1q3p2/5P2/5r2/8/4Q1PP/4R2K w - - 0 39', 'e2e8'); puzPlay({ from: 'e2', to: 'e8' }); clearTimeout(Z.nextTimer);
-        out.first = Z.gmBadge && Z.gmBadge.tier;
+        out.instant = !Z.gmBadge;   // التحليل بيتأجل لبعد ما النقلة تترسم (مش جوه الضغطة)
+        await wait(40); out.first = Z.gmBadge && Z.gmBadge.tier;
         for (let i = 0; i < 50 && !(Z.gmBadge && Z.gmBadge.tier === 'BRILLIANT'); i++) await wait(100);
         let b = document.querySelector('#mainView .eca-gm-svg .eca-gm-sqbadge'), n = document.querySelector('#mainView .eca-gm-note');
         out.brilliant = Z.gmBadge && Z.gmBadge.tier; out.bSym = b ? b.querySelector('text').textContent : ''; out.bColor = b ? b.querySelector('circle').getAttribute('fill') : '';
@@ -816,7 +818,7 @@ async function login(p, id) {
       clearTimeout(Z.nextTimer); Z.status = 'idle'; Z.game = null; Z.counted = false; puzLoad();
       for (let i = 0; i < 60 && !(Z.status === 'play' && Z.game); i++) await wait(250);
       return out; })()`);
-    check("GM coach: the only winning sacrifice (Qe8+!!) starts as ★ and the engine upgrades it to the teal «!!» badge on its square, with a note and the chime", gmP.first === "BEST" && gmP.brilliant === "BRILLIANT" && gmP.bSym === "!!" && gmP.bColor === "#1BACA6" && gmP.onSquare && /تضحية/.test(gmP.bNote) && gmP.bSound, gmP);
+    check("GM coach: the only winning sacrifice (Qe8+!!) starts as ★ and the engine upgrades it to the teal «!!» badge on its square, with a note and the chime", gmP.instant && gmP.first === "BEST" && gmP.brilliant === "BRILLIANT" && gmP.bSym === "!!" && gmP.bColor === "#1BACA6" && gmP.onSquare && /تضحية/.test(gmP.bNote) && gmP.bSound, gmP);
     check("GM coach: a puzzle badge and its note stay fully visible 3 seconds later, after the board redraws", gmP.stays, gmP);
     check("GM coach: the only move that wins (Ne6+ fork) is upgraded to the blue «!» GREAT badge", gmP.great === "GREAT" && gmP.gSym === "!" && gmP.gColor === "#5C8BB0" && gmP.gSound, gmP);
     check("GM coach: calibrated tiers — taking a free queen is ★ BEST, never «! great»", gmP.routine === "BEST", gmP);
@@ -1055,6 +1057,345 @@ async function login(p, id) {
     check("GM analysis: the move badge is still fully visible 3 seconds later without replaying its animation", gmA.anaStays, gmA);
     check("GM analysis: Stockfish 19 (WASM) analyzes with MultiPV 3 at depth 12 or more", gmA.preSrc === "sf" && gmA.multi === 3 && gmA.depth >= 12, gmA);
     check("GM analysis: without Stockfish the site's own engine (Web Worker) reviews the move", gmA.inOk && gmA.internalSrc === "eca" && !!gmA.internalTier && gmA.internalCard, gmA);
+    // ---------- 🧠 live analysis is OFF by default: instant moves, zero engine work, analysis only on demand ----------
+    const off = await pa.ev(`(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms)), Z = arena.puz, P = arena.play, out = {};
+      const until = async (f, ms) => { for (let t = 0; t < ms; t += 100) { if (f()) return true; await wait(100); } return false; };
+      try { localStorage.removeItem('eca_auto_analysis_pref'); } catch (_) {}
+      out.defaultOff = ecaAnalysisOn() === false;
+      switchTab('arena'); arenaSub('puzzles'); await until(() => Z.status === 'play' && !!Z.game, 15000); await wait(200);
+      out.mode = ecaCoach.mode();
+      const pill = document.querySelector('#mainView .eca-an-toggle');
+      out.pill = !!pill && /OFF/.test(pill.textContent) && pill.getAttribute('aria-checked') === 'false' && Math.min(pill.getBoundingClientRect().width, pill.getBoundingClientRect().height) >= 44;
+      // كام بياخد الرسم نفسه (render) عشان نفصله عن شغل النقلة
+      const realRender = render; let renderMs = 0; window.render = render = function () { const t = performance.now(); const o = realRender.apply(this, arguments); renderMs += performance.now() - t; return o; };
+      const craft = (fen, sol) => { coachCancelAll(); const g = new ChessCls(fen); Object.assign(Z, { game: g, sol, idx: 0, color: g.turn(), flip: false, last: null, counted: true, status: 'play', review: false, info: { id: 'craft', rating: 1200, themes: [] }, coachPanel: null, coachStage: 0, coachKey: null, gmNote: null, gmBadge: null, gmMiss: null }); realRender(); return g; };
+      try {
+        // نقلة صح: مفيش محرك ولا تصنيف
+        craft('r3k3/8/8/1N6/8/8/8/4K3 w - - 0 1', ['b5c7', 'e8d7', 'c7a8']);
+        let s0 = ecaGM.stats(); renderMs = 0; let t0 = performance.now(); puzPlay({ from: 'b5', to: 'c7' }); let dt = performance.now() - t0;
+        await wait(300);
+        out.goodMs = Math.round((dt - renderMs) * 100) / 100; out.goodTotal = Math.round(dt * 10) / 10;
+        out.goodNoEngine = JSON.stringify(ecaGM.stats()) === JSON.stringify(s0) && !Z.gmBadge && !document.querySelector('#mainView .eca-gm-sqbadge');
+        await until(() => Z.status === 'play', 3000);
+        // نقلة غلط: الرجوع السريع العادي، من غير رد عقابي ولا محرك — وزرار «🔍 ليه النقلة دي غلط؟»
+        craft('6k1/8/8/4n3/8/8/3Q2P1/6K1 w - - 0 1', ['d2d3']);
+        s0 = ecaGM.stats(); renderMs = 0; t0 = performance.now(); puzPlay({ from: 'g2', to: 'g3' }); dt = performance.now() - t0;
+        out.wrongMs = Math.round((dt - renderMs) * 100) / 100; out.wrongTotal = Math.round(dt * 10) / 10;
+        out.wrongNoEngine = !Z.isRefuting && !document.querySelector('#mainView .eca-coach-toast') && JSON.stringify(ecaGM.stats()) === JSON.stringify(s0);
+        await wait(900);
+        const why = document.querySelector('#mainView .eca-gm-why');
+        out.why = !!why && Math.min(why.getBoundingClientRect().width, why.getBoundingClientRect().height) >= 44 && JSON.stringify(ecaGM.stats()) === JSON.stringify(s0);
+        if (why) why.click();
+        out.card = await until(() => Z.coachPanel && Z.coachPanel.rv, 10000); await wait(200);
+        const card = document.querySelector('#mainView .eca-gm-card');
+        out.cardTier = Z.coachPanel && Z.coachPanel.rv && Z.coachPanel.rv.tier;
+        out.compare = !!card && /مقارنة بالحل/.test(card.textContent) && /كش/.test((card.querySelector('.eca-gm-compare') || {}).textContent || '');
+        out.noLeak = !document.getElementById('mainView').innerHTML.includes('d2d3');
+        out.onDemand = ecaGM.stats().internal > s0.internal;
+        // التحليل الفوري ON: الشارة على النقلة الغلط في التدريب العادي
+        const pill2 = document.querySelector('#mainView .eca-an-toggle'); if (pill2) pill2.click(); await wait(100);
+        out.toggledOn = ecaAnalysisOn() === true && localStorage.getItem('eca_auto_analysis_pref') === '1' && document.querySelector('#mainView .eca-an-toggle').getAttribute('aria-checked') === 'true';
+        craft('6k1/8/8/4n3/8/8/3Q2P1/6K1 w - - 0 1', ['d2d3']); puzPlay({ from: 'g2', to: 'g3' });
+        out.liveBadge = await until(() => Z.gmBadge && ['MISTAKE', 'BLUNDER', 'INACCURACY'].includes(Z.gmBadge.tier), 6000);
+        ecaAnalysisSet(false);
+      } finally { window.render = render = realRender; }
+      // دور ضد البوت والتحليل مقفول: النقلة من غير تقييم ولا محرك
+      switchTab('arena'); arenaSub('play'); await wait(200);
+      P.level = 0; P.colorChoice = 'w'; P.tc = 0; playStart(); await wait(200);
+      const b0 = ecaGM.stats(); playClick('e2'); playClick('e4'); await wait(1500);
+      out.botOff = !P.gmBadge && !Object.keys(P.gmCls || {}).length && ecaGM.stats().sf === b0.sf && !!document.querySelector('#mainView .eca-an-toggle');
+      ecaAnalysisSet(true); await until(() => P.gmBadge && P.gmBadge.tier === 'BOOK', 5000);
+      out.botOn = !!P.gmBadge && P.gmBadge.tier === 'BOOK';
+      ecaAnalysisSet(false);
+      Object.assign(P, { game: null, over: '', thinking: false }); arenaSub('puzzles'); await until(() => Z.status === 'play' && !!Z.game, 15000);
+      return out; })()`);
+    check("🧠 live analysis: OFF by default, with a 44px «🧠 وضع التحليل الفوري: مغلق OFF» switch above the board", off.defaultOff && off.pill, off);
+    check("🧠 analysis OFF: a puzzle move runs zero engine work and its own handling takes under 5ms (the board redraw is measured apart)", off.goodNoEngine && off.wrongNoEngine && off.goodMs < 5 && off.wrongMs < 5, off);
+    check("🧠 analysis OFF: a wrong move shows only «🔍 ليه النقلة دي غلط؟» (44px); clicking it builds the card on demand, compared with the solution, without leaking it", off.why && off.card && off.compare && off.noLeak && off.onDemand, off);
+    check("🧠 analysis ON (saved on the device): the switch turns on and moves get their badge again", off.toggledOn && off.liveBadge, off);
+    check("🧠 bot game with analysis OFF: no engine on the student's moves; turning it ON rates them", off.botOff && off.botOn, off);
+    // ---------- 100% ground-truth hints: stage 1/2/3 come from the real solution move ----------
+    const gth = await pa.ev(`(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms)), Z = arena.puz, out = {}, plain = el => el ? el.textContent.replace(/\\s+/g, ' ').trim() : '';
+      const craft = (fen, sol) => { coachCancelAll(); const g = new ChessCls(fen); Object.assign(Z, { game: g, sol, idx: 0, color: g.turn(), flip: false, last: null, counted: true, status: 'play', review: false, info: { id: 'craft', rating: 1200, themes: [] }, coachPanel: null, coachStage: 0, coachKey: null, gmNote: null, gmBadge: null, gmMiss: null }); render(); return g; };
+      const center = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+      const stages = async (fen, sol) => {
+        craft(fen, sol); const want = sol[0], m = ecaCoach.mode(), r = { want };
+        coachHint(m); await wait(60); r.s1 = plain(document.querySelector('#mainView .eca-coach-bubble'));
+        coachHint(m); await wait(60); r.s2 = plain(document.querySelector('#mainView .eca-coach-bubble'));
+        const spot = document.querySelector('#mainView .eca-coach-svg .eca-co-spot'), from = document.querySelector('#mainView .eca-sq[data-sq="' + want.slice(0, 2) + '"]');
+        r.spotOk = !!spot && !!from && Math.hypot(center(spot)[0] - center(from)[0], center(spot)[1] - center(from)[1]) < 3;
+        coachHint(m); await wait(60); r.s3 = plain(document.querySelector('#mainView .eca-coach-bubble'));
+        r.arrow = !!document.querySelector('#mainView .eca-coach-svg .eca-co-hint');
+        r.noLeak = !document.getElementById('mainView').innerHTML.includes(want);
+        const e = ecaCoach.truth(Z, m); r.motive = e && e.motive; r.truthMove = e && (e.from + e.to);
+        return r;
+      };
+      out.fork = await stages('r3k3/8/8/1N6/8/8/8/4K3 w - - 0 1', ['b5c7', 'e8d7', 'c7a8']);
+      out.mate = await stages('6k1/5ppp/8/8/8/8/r4PPP/3R2K1 w - - 0 1', ['d1d8']);
+      out.capture = await stages('4k3/8/8/8/3q4/8/8/3RK3 w - - 0 1', ['d1d4']);
+      out.pin = await stages('4k3/8/2n5/8/8/8/8/4KB2 w - - 0 1', ['f1b5', 'e8d7', 'b5c6']);
+      // عيّنة من ألغاز البنك الحقيقية: المرحلة 2 على مربع نقلة الحل، والمرحلة 3 بنفس النقلة
+      const bank = await loadPuzzleBank(), rows = Object.values(bank).flatMap(a => a.slice(0, 3)).slice(0, 12), bad = [];
+      for (const row of rows) {
+        const [id, fen, moves] = row.split('|'), mv = moves.split(' '), g0 = new ChessCls(fen); g0.move({ from: mv[0].slice(0, 2), to: mv[0].slice(2, 4), promotion: mv[0][4] });
+        const r = await stages(g0.fen(), mv.slice(1));
+        if (!(r.spotOk && r.arrow && r.truthMove === r.want.slice(0, 4) && r.s1 && /خطوة 2|Step 2/.test(r.s2) && r.s2.includes(r.want.slice(0, 2)) && r.s3.includes(r.want.slice(2, 4)) && r.noLeak)) bad.push({ id, r });
+      }
+      out.bank = rows.length; out.bad = bad.slice(0, 3);
+      Z.status = 'idle'; Z.game = null; Z.counted = false; puzLoad();
+      for (let i = 0; i < 60 && !(Z.status === 'play' && Z.game); i++) await wait(250);
+      return out; })()`);
+    check("ground-truth hints: a fork puzzle — stage 1 names the fork and both targets, stage 2 the knight on b5, stage 3 the move to c7 and why", gth.fork.motive === "fork" && /شوكة/.test(gth.fork.s1) && /a8/.test(gth.fork.s1) && /e8/.test(gth.fork.s1) && gth.fork.spotOk && /b5/.test(gth.fork.s2) && /c7/.test(gth.fork.s3) && gth.fork.arrow && gth.fork.noLeak, gth.fork);
+    check("ground-truth hints: mate in one names the king's square, then the rook, then Rd8 as checkmate", gth.mate.motive === "mateNow" && /كش مات/.test(gth.mate.s1) && /g8/.test(gth.mate.s1) && /d1/.test(gth.mate.s2) && /d8/.test(gth.mate.s3) && /كش مات/.test(gth.mate.s3), gth.mate);
+    check("ground-truth hints: a free piece is named as unprotected (verified by SEE), and a pin names both pieces on the line", gth.capture.motive === "freeCapture" && /مالوش حماية/.test(gth.capture.s1) && /d4/.test(gth.capture.s1) && gth.pin.motive === "pin" && /ربط/.test(gth.pin.s1) && /c6/.test(gth.pin.s1) && /e8/.test(gth.pin.s1), { capture: gth.capture, pin: gth.pin });
+    check("ground-truth hints: on 12 real puzzles every stage matches the solution move (stage 2 its square, stage 3 its arrow), and the solution never appears in the page", gth.bank === 12 && !gth.bad.length, gth);
+    // ---------- ⏱️ live chess between two students: optimistic moves, premoves, clocks, every way a game ends ----------
+    const LVC = `const wait = ms => new Promise(r => setTimeout(r, ms)), L = arena.live; const until = async (f, ms) => { for (let t = 0; t < ms; t += 50) { try { if (f()) return true; } catch (_) {} await wait(50); } try { return !!f(); } catch (_) { return false; } };`;
+    const lv = (p, body) => p.ev(`(async () => { ${LVC} ${body} })()`);
+    for (const p of [pa, pb, pc, pg]) await p.ev("window.confirm = () => true; window.ecaConfirm = async () => true;");
+    // a move on the page whose turn it is (waits until the opponent's move has arrived there)
+    const lvPlay = async (pages, moves, from = 0) => {
+      for (let i = 0; i < moves.length; i++) {
+        const ply = from + i, p = ply % 2 ? pages.b : pages.w, u = moves[i];
+        await p.send("Page.bringToFront");
+        const ok = await lv(p, `await until(() => L.doc && L.doc.status === 'live' && L.san.length === ${ply} && L.game.turn() === L.color && !L.inflight, 12000);
+          return lvMove({ from: '${u.slice(0, 2)}', to: '${u.slice(2, 4)}'${u[4] ? `, promotion: '${u[4]}'` : ""} });`);
+        if (!ok) return { failedAt: ply, u };
+      }
+      return { ok: true };
+    };
+    const lvOver = p => lv(p, `await until(() => L.doc && L.doc.status === 'over' && L.over, 15000); return { res: L.doc.res, why: L.doc.why, card: ((document.querySelector('#lvRoot .lv-result') || {}).textContent || '').replace(/\\s+/g, ' ') };`);
+    const lvNew = (p, tci, side) => lv(p, `if (arena.sub !== 'live') { switchTab('arena'); arenaSub('live'); } await until(() => !!ChessCls, 20000); lvBackLobby(); lvSetTc(${tci}); lvSetSide('${side}'); await lvCreate(false);
+      await until(() => L.doc && L.doc.status === 'open', 10000); return L.id;`);
+    const lvJoin = (p, id) => lv(p, `if (arena.sub !== 'live') { switchTab('arena'); arenaSub('live'); } lvBackLobby(); await until(() => (L.lobby || []).some(r => r.id === '${id}'), 12000);
+      await lvAccept('${id}'); await until(() => L.doc && L.doc.status === 'live', 10000); return L.color;`);
+
+    await pa.send("Page.bringToFront");
+    const g1 = await lv(pa, `switchTab('arena'); arenaSub('lobby'); await wait(200); const card = !!document.querySelector('#mainView .game-card-live'); lbOpen('live'); await until(() => !!ChessCls, 20000); await wait(300);
+      const out = { card, lobby: !!document.querySelector('#mainView .lv-new') && document.querySelectorAll('#mainView .lv-tc').length === 9 };
+      lvSetTc(3); lvSetSide('w'); await lvCreate(false); await until(() => L.doc && L.doc.status === 'open', 10000);
+      out.id = L.id; out.wait = !!document.querySelector('#lvRoot .lv-wait') && document.querySelector('#lvRoot .lv-link').value.includes('?live=' + L.id);
+      return out;`);
+    check("⏱️ live: the «شطرنج مباشر» card opens a lobby with the 9 time controls (1+0 … 15+10)", g1.card && g1.lobby, g1);
+    check("⏱️ live: a challenge waits with its share link", !!g1.id && g1.wait, g1);
+    await pb.send("Page.bringToFront");
+    const g1b = await lv(pb, `sessionStorage.setItem('ECA_LIVE', '${g1.id}'); render(); await until(() => L.doc && L.doc.status === 'live' && L.color === 'b', 15000);
+      return { sub: arena.sub, color: L.color, flip: L.flip, status: L.doc && L.doc.status };`);
+    check("⏱️ live: the friend who opens the link joins the game as black", g1b.sub === "live" && g1b.color === "b" && g1b.flip && g1b.status === "live", g1b);
+    await pa.send("Page.bringToFront");
+    const mv1 = await lv(pa, `await until(() => L.doc && L.doc.status === 'live', 15000);
+      const s0 = JSON.stringify(ecaGM.stats()), realPaint = window.lvPaint; let paintMs = 0;
+      window.lvPaint = function () { const t = performance.now(); const o = realPaint.apply(this, arguments); paintMs += performance.now() - t; return o; };
+      let dt = 0; try { const t0 = performance.now(); liveClick('e2'); liveClick('e4'); dt = performance.now() - t0; } finally { window.lvPaint = realPaint; }
+      const out = { handleMs: Math.round((dt - paintMs) * 100) / 100, paintMs: Math.round(paintMs * 10) / 10, onBoard: !!document.querySelector('#lvRoot .eca-sq[data-sq="e4"] .eca-pimg, #lvRoot .eca-sq[data-sq="e4"] .eca-pc'), san: L.san.join(' ') };
+      await until(() => L.doc.n === 1 && !L.doc.local && !L.inflight, 10000);
+      out.server = L.doc.moves.join(' '); out.noEngine = JSON.stringify(ecaGM.stats()) === s0 && !document.querySelector('#mainView .eca-an-toggle, #mainView .eca-gm-card');
+      liveClick('b1'); liveClick('c3'); out.queued = L.pre.length === 1;
+      liveClick('h5'); out.cancel = L.pre.length === 0;
+      liveClick('g1'); liveClick('f3'); out.pre = L.pre.map(p => p.from + p.to).join();
+      const pf = document.querySelector('#lvRoot .eca-sq[data-sq="g1"].lv-pf'), pt = document.querySelector('#lvRoot .eca-sq[data-sq="f3"].lv-pt');
+      out.colors = !!pf && !!pt && getComputedStyle(pf, '::before').backgroundColor.includes('27, 172, 166') && getComputedStyle(pt, '::before').backgroundColor.includes('229, 9, 20');
+      return out;`);
+    check("⏱️ live: a move shows on the board at once and its own handling takes under 5ms (board redraw measured apart)", mv1.onBoard && mv1.san === "e4" && mv1.handleMs < 5, mv1);
+    check("⏱️ live: the move reaches the server, and no engine or analysis runs during a live game", mv1.server === "e2e4" && mv1.noEngine, mv1);
+    check("⏱️ live: premoves queue up (teal from-square #1BACA6, red to-square #E50914) and a tap elsewhere cancels them", mv1.queued && mv1.cancel && mv1.pre === "g1f3" && mv1.colors, mv1);
+    await pb.send("Page.bringToFront");
+    const lb1 = await lv(pb, `await until(() => L.san.length === 1, 10000); liveClick('e7'); liveClick('e5'); await until(() => L.doc.n >= 3 && !L.doc.local, 10000);
+      return { moves: L.doc.moves.join(' '), wt: L.doc.wt, bt: L.doc.bt };`);
+    check("⏱️ live: the queued premove plays the instant the opponent moves (g1f3 right after e7e5)", lb1.moves === "e2e4 e7e5 g1f3", lb1);
+    check("⏱️ live: each side's first move is free, then the 2s increment is added (white ≈ 3:02)", lb1.bt === 180000 && lb1.wt > 180000 && lb1.wt <= 182300, lb1);
+    await pa.send("Page.bringToFront");
+    const clk = await lv(pa, `const keep = L.clk; L.clk = { w: 8400, b: 90000, side: null, t0: performance.now() }; lvPaint(); const el = document.getElementById('lvClk_w');
+      const low = !!el && el.textContent === '8.4' && el.classList.contains('is-low'); L.clk = keep; lvPaint();
+      return { f1: lvFmt(9540), f2: lvFmt(65000), f3: lvFmt(0), low, mate: lvNoMate(new ChessCls('8/8/8/4k3/8/8/8/4K2N w - - 0 1'), 'w') && !lvNoMate(new ChessCls('8/8/8/4k3/8/8/8/R3K3 w - - 0 1'), 'w') };`);
+    check("⏱️ live: the clock shows tenths under 10 seconds (9.5, 8.4, 0.0) and turns red; a lone knight cannot win on time", clk.f1 === "9.5" && clk.f2 === "1:05" && clk.f3 === "0.0" && clk.low && clk.mate, clk);
+    const d0 = pa.denied.length;
+    const forge = await lv(pa, `const d = L.doc;
+      const r1 = await fbLiveMove(d.id, { moves: d.moves.concat('b8c6'), n: d.n + 1 }).then(() => 'ok', e => e.code);
+      const r2 = await fbLivePatch(d.id, { bt: 1000 }).then(() => 'ok', e => e.code);
+      const r3 = await fbLivePatch(d.id, { wt: d.wt + 60000 }).then(() => 'ok', e => e.code);
+      return { r1, r2, r3 };`);
+    pa.denied.splice(d0);
+    check("⏱️ live rules: a student cannot play the opponent's move, cut their clock, or add time to their own", forge.r1 === "permission-denied" && forge.r2 === "permission-denied" && forge.r3 === "permission-denied", forge);
+    await lv(pa, `lvDrawOffer(); await until(() => L.doc.draw === 'w' && !L.doc.local, 8000); return true;`);
+    await pb.send("Page.bringToFront");
+    const dr = await lv(pb, `await until(() => !!document.querySelector('#lvRoot .lv-offer'), 8000); const banner = !!document.querySelector('#lvRoot .lv-offer'); lvDrawAnswer(true);
+      await until(() => L.doc.status === 'over' && L.over, 8000); return { banner, res: L.doc.res, why: L.doc.why, card: ((document.querySelector('#lvRoot .lv-result') || {}).textContent || '') };`);
+    check("⏱️ live: a draw offer shows a banner to the opponent, and accepting ends the game ½-½", dr.banner && dr.res === "1/2-1/2" && dr.why === "draw" && /تعادل|Draw/.test(dr.card), dr);
+    const ag1 = await until(() => read("archivedGames/" + g1.id), 12000);
+    check("📚 archive: the finished game is saved once for both players (moves, result, players, clocks, PGN)", !!ag1 && ag1.result === "1/2-1/2" && ag1.uciMoves === "e2e4 e7e5 g1f3" && ag1.mode === "pvp" && JSON.stringify(ag1.participantUids) === JSON.stringify([A, B])
+      && ag1.analysisSummary === null && /1\. e4 e5 2\. Nf3/.test(ag1.pgn) && ag1.clockTimesCentisec.length === 3 && ag1.termination === "draw", ag1 && { result: ag1.result, uci: ag1.uciMoves, mode: ag1.mode, p: ag1.participantUids, clk: ag1.clockTimesCentisec });
+
+    // game 2: lobby matchmaking at 1+0, then white runs out of time
+    await pa.send("Page.bringToFront");
+    const lg2 = await lvNew(pa, 0, "b");
+    await pb.send("Page.bringToFront");
+    const g2b = await lv(pb, `lvBackLobby(); lvSetTc(0); await until(() => (L.lobby || []).some(r => r.id === '${lg2}'), 12000); await lvQuick(); await until(() => L.doc && L.doc.status === 'live', 10000); return { id: L.id, color: L.color };`);
+    check("⏱️ live: «ابحث عن خصم» joins a waiting challenge with the same time control", g2b.id === lg2 && g2b.color === "w", g2b);
+    let pl2 = await lvPlay({ w: pb, b: pa }, ["e2e4", "e7e5"]);
+    await pb.send("Page.bringToFront");
+    const spend = await lv(pb, `await until(() => L.san.length === 2 && L.game.turn() === 'w' && !L.inflight, 10000); L.clk.t0 = performance.now() - 58500; lvMove({ from: 'g1', to: 'f3' });
+      await until(() => L.doc.n === 3 && !L.doc.local, 8000); return L.doc.wt;`);
+    pl2 = pl2.ok ? await lvPlay({ w: pb, b: pa }, ["b8c6"], 3) : pl2;
+    const to2 = await lvOver(pa), to2b = await lvOver(pb);
+    check("⏱️ live: when white's clock runs out the game ends on time (0-1) for both players", pl2.ok && spend > 0 && spend < 2000 && to2.res === "0-1" && to2.why === "timeout" && /كسبت|won/i.test(to2.card) && /خسرت|lost/i.test(to2b.card), { spend, to2, to2b, pl2 });
+
+    // game 3: checkmate in the same write as the move (fool's mate)
+    await pa.send("Page.bringToFront");
+    const g3 = await lvNew(pa, 3, "w");
+    await pb.send("Page.bringToFront");
+    const g3c = await lvJoin(pb, g3);
+    const pl3 = await lvPlay({ w: pa, b: pb }, ["f2f3", "e7e5", "g2g4", "d8h4"]);
+    const m3 = await lvOver(pb), m3a = await lvOver(pa);
+    const g3doc = await read("liveMatches/" + g3);
+    check("⏱️ live: «قبول» from the lobby, and checkmate ends the game with the mating move", g3c === "b" && pl3.ok && m3.res === "0-1" && m3.why === "checkmate" && g3doc.n === 4 && /كسبت|won/i.test(m3.card) && /خسرت|lost/i.test(m3a.card), { g3c, pl3, m3, m3a });
+
+    // game 4: the opponent disconnects (banner + 30s claim) and comes back; then a resignation
+    await pa.send("Page.bringToFront");
+    const g4 = await lvNew(pa, 3, "w");
+    await pb.send("Page.bringToFront");
+    await lvJoin(pb, g4);
+    await lvPlay({ w: pa, b: pb }, ["e2e4", "e7e5"]);
+    await pb.ev("lvBeatStop()"); await sleep(400);   // the opponent goes quiet
+    await pa.send("Page.bringToFront");
+    const dc = await lv(pa, `await until(() => L.san.length === 2, 8000); L.oppSeen = Date.now() - 20000; await wait(1300); const c = document.getElementById('lvConn');
+      const out = { banner: !!c && c.textContent.includes('انقطع اتصال الخصم') && c.textContent.includes('30') };
+      L.oppSeen = Date.now() - 40000; await wait(1300); out.claim = !!document.querySelector('#lvConn .lv-claim');
+      const b = document.querySelector('#lvConn .lv-claim'); out.claim44 = !!b && b.getBoundingClientRect().height >= 44; return out;`);
+    await pb.send("Page.bringToFront");
+    await pb.ev("lvBeat(); lvBeatStart()");
+    await pa.send("Page.bringToFront");
+    dc.back = await lv(pa, `return await until(() => !document.querySelector('#lvConn .lv-conn'), 8000);`);
+    check("⏱️ live: «⚠️ انقطع اتصال الخصم..» shows with a 30s countdown, then a 44px claim button, and goes away when the opponent is back", dc.banner && dc.claim && dc.claim44 && dc.back, dc);
+    const rs = await lv(pa, `await lvResign(); await until(() => L.doc.status === 'over' && L.over, 8000); return { res: L.doc.res, why: L.doc.why };`);
+    check("⏱️ live: resigning ends the game as a loss for the player who resigned", rs.res === "0-1" && rs.why === "resign", rs);
+
+    // game 5: abort before the first moves (no result, nothing archived)
+    const g5 = await lvNew(pa, 3, "w");
+    await pb.send("Page.bringToFront");
+    await lvJoin(pb, g5);
+    await pa.send("Page.bringToFront");
+    const ab = await lv(pa, `await until(() => L.doc && L.doc.status === 'live', 8000); const btn = !!document.querySelector('#lvRoot [onclick="lvAbort()"]'); lvAbort(); await until(() => L.doc.status === 'over', 8000);
+      return { btn, why: L.doc.why, res: L.doc.res, card: ((document.querySelector('#lvRoot .lv-result') || {}).textContent || '') };`);
+    await sleep(1500);
+    check("⏱️ live: a game can be aborted before both sides move, with no result and no archive entry", ab.btn && ab.why === "abort" && ab.res === "" && !(await read("archivedGames/" + g5)), ab);
+
+    // ---------- 🏆 live arena tournament: coach creates it, queue + pairing, berserk, streak fire, standings, spectating ----------
+    await pg.send("Page.bringToFront");
+    const arn = await lv(pg, `switchTab('arena'); arenaSub('live'); await until(() => !!ChessCls, 20000); await wait(400);
+      const inp = document.getElementById('lvArName'); if (!inp) return { form: false };
+      inp.value = 'Friday Arena'; arena.live.arTci = 3; arena.live.arMin = 30; arena.live.arStart = 0; await lvArenaCreate(); await until(() => L.ar && L.tid, 10000);
+      return { form: true, tid: L.tid, name: L.ar && L.ar.name, view: L.view, min: L.ar && Math.round((L.ar.endAt - L.ar.startAt) / 60000) };`);
+    check("🏆 arena: the coach creates a 30-minute 3+2 arena", arn.form && !!arn.tid && arn.name === "Friday Arena" && arn.view === "arena" && arn.min === 30, arn);
+    const arJoin = (p, tid) => lv(p, `if (arena.sub !== 'live') { switchTab('arena'); arenaSub('live'); } lvBackLobby(); lvArenaOpen('${tid}'); await until(() => L.ar, 10000); await wait(200);
+      const btn = document.querySelector('#mainView .lv-join'); const big = !!btn && btn.getBoundingClientRect().height >= 44 && /Join Next Game/.test(btn.textContent);
+      window.__q0 = Date.now(); await lvQueue(true); return big;`);
+    const arenaGame = (p, ms) => lv(p, `await until(() => L.view === 'game' && L.doc && L.doc.mode === 'arena' && L.doc.status === 'live' && !L.done[L.id], ${ms || 15000}); return { id: L.id, color: L.color, ms: Date.now() - window.__q0 };`);
+    await pa.send("Page.bringToFront"); const bigA = await arJoin(pa, arn.tid);
+    await pb.send("Page.bringToFront"); await arJoin(pb, arn.tid);
+    const r1b = await arenaGame(pb), r1a = await arenaGame(pa);
+    check("🏆 arena: «⚔️ انضم للطابور (Join Next Game)» (44px) pairs the two waiting students within 2 seconds", bigA && r1a.id && r1a.id === r1b.id && r1b.ms <= 2000 && r1a.color !== r1b.color, { bigA, r1a, r1b });
+    const W1 = r1a.color === "w" ? pa : pb, B1 = W1 === pa ? pb : pa, w1uid = W1 === pa ? A : B, b1uid = W1 === pa ? B : A;
+    await W1.send("Page.bringToFront");
+    const bz = await lv(W1, `const btn = !!document.querySelector('#lvRoot .lv-bzbtn'); lvBerserk(); await until(() => L.doc.bzw && !L.doc.local, 8000); return { btn, bzw: L.doc.bzw, wt: L.doc.wt, shown: lvRem('w') <= 90000 };`);
+    check("🏆 arena: «⚡ برزرك» before the first move halves the clock (1:30) and drops the increment", bz.btn && bz.bzw && bz.wt === 90000 && bz.shown, bz);
+    const SCHOLAR = ["e2e4", "e7e5", "f1c4", "b8c6", "d1h5", "g8f6", "h5f7"], FOOL = ["f2f3", "e7e5", "g2g4", "d8h4"];
+    const pl4 = await lvPlay({ w: W1, b: B1 }, SCHOLAR);
+    await lvOver(W1); await lvOver(B1);
+    const p1 = await until(async () => { const x = await read(`liveArenas/${arn.tid}/players/${w1uid}`); return x && x.games.length === 1 && x.cur === "" ? x : null; }, 12000);
+    const p1b = await until(async () => { const x = await read(`liveArenas/${arn.tid}/players/${b1uid}`); return x && x.games.length === 1 && x.cur === "" ? x : null; }, 12000);
+    check("🏆 arena: a berserk win scores 2 + 1 = 3, the loss scores 0, recorded once for both", pl4.ok && p1 && p1.pts === 3 && p1.streak === 1 && p1b && p1b.pts === 0 && p1b.streak === 0, { pl4, p1, p1b });
+    // round 2: a third student is waiting, so the two who just played are not paired again
+    await pc.send("Page.bringToFront"); await pc.ev("window.confirm = () => true; window.ecaConfirm = async () => true;"); await arJoin(pc, arn.tid);
+    await W1.send("Page.bringToFront"); await lv(W1, `window.__q0 = Date.now(); lvArenaBack(true); return true;`);
+    const r2w = await arenaGame(W1);
+    await pc.send("Page.bringToFront");
+    const r2c = await arenaGame(pc);
+    check("🏆 arena: the winner is paired with the new student (no immediate rematch) and the closest score", r2w.id && r2w.id === r2c.id, { r2w, r2c });
+    const W2 = r2w.color === "w" ? W1 : pc, B2 = W2 === W1 ? pc : W1;
+    const pl5 = await lvPlay({ w: W2, b: B2 }, W2 === W1 ? SCHOLAR : FOOL);
+    await lvOver(W1); await lvOver(pc);
+    const p2 = await until(async () => { const x = await read(`liveArenas/${arn.tid}/players/${w1uid}`); return x && x.games.length === 2 && x.cur === "" ? x : null; }, 12000);
+    check("🏆 arena: two wins in a row light the streak fire 🔥 (3 + 2 = 5)", pl5.ok && p2 && p2.pts === 5 && p2.streak === 2 && p2.fire === true, { pl5, p2 });
+    // round 3: only the last two opponents are waiting: the rematch waits, then a fire win is worth 4
+    await B1.send("Page.bringToFront"); await lv(B1, `window.__q0 = Date.now(); lvArenaBack(true); return true;`);
+    await W1.send("Page.bringToFront"); await lv(W1, `window.__q0 = Date.now(); lvArenaBack(true); return true;`);
+    const INIT = A < B ? pa : pb; await INIT.send("Page.bringToFront"); await sleep(4000);
+    const early = await lv(W1, `return L.view === 'arena' && !(L.players.find(p => p.uid === lvMe()) || {}).cur;`);
+    const r3w = await arenaGame(W1, 20000);
+    await B1.send("Page.bringToFront"); const r3b = await arenaGame(B1, 8000);
+    check("🏆 arena: an immediate rematch is held back for a few seconds, then allowed when nobody else is waiting", early && r3w.id && r3w.id === r3b.id && r3w.ms >= 7000, { early, r3w, r3b });
+    // the coach watches the game from the standings
+    await pg.send("Page.bringToFront");
+    const spec = await lv(pg, `await until(() => L.players.some(p => p.cur === '${r3w.id}'), 8000); render(); await wait(200);
+      const eye = document.querySelector('#mainView .lv-eye'); const ok44 = !!eye && eye.getBoundingClientRect().height >= 44; if (eye) eye.click();
+      await until(() => L.view === 'game' && L.doc && L.doc.id === '${r3w.id}', 8000);
+      return { eye: ok44, spect: L.spect, board: !!document.querySelector('#lvRoot .eca-board'), noActions: !document.querySelector('#lvRoot .lv-actions'), tag: /بتتفرّج|spectating/i.test((document.querySelector('#lvRoot .lv-spect') || {}).textContent || '') };`);
+    check("🏆 arena: «👁️ مشاهدة الدور (Spectate)» opens the game read-only for the coach", spec.eye && spec.spect && spec.board && spec.noActions && spec.tag, spec);
+    const W3 = r3w.color === "w" ? W1 : B1, B3 = W3 === W1 ? B1 : W1;
+    const pl6 = await lvPlay({ w: W3, b: B3 }, W3 === W1 ? SCHOLAR : FOOL);
+    await lvOver(W1); await lvOver(B1);
+    const p3 = await until(async () => { const x = await read(`liveArenas/${arn.tid}/players/${w1uid}`); return x && x.games.length === 3 && x.cur === "" ? x : null; }, 12000);
+    check("🏆 arena: a win on fire scores 4 (5 + 4 = 9)", pl6.ok && p3 && p3.pts === 9 && p3.streak === 3 && p3.fire, { pl6, p3 });
+    await pg.send("Page.bringToFront");
+    const stand = await lv(pg, `lvArenaBack(false); await wait(300); await until(() => document.querySelectorAll('#mainView .lv-table tbody tr').length >= 3, 8000);
+      const rows = [...document.querySelectorAll('#mainView .lv-table tbody tr')].map(r => r.textContent.replace(/\\s+/g, ' ').trim());
+      return { rows, firstFire: !!document.querySelector('#mainView .lv-table tbody tr .lv-fire'), legal: /Real Name/.test(document.getElementById('mainView').textContent) };`);
+    check("🏆 arena: live standings rank by points with the fire mark, using nicknames only", stand.rows.length >= 3 && /9/.test(stand.rows[0]) && stand.firstFire && !stand.legal, stand);
+    await pg.ev("lvArenaLeave(); switchTab('home');");
+
+    // ---------- 📚 game archive: list, filters, Grandmaster analysis saved, 0ms badges on reopen, PGN, import, bot games ----------
+    await pa.send("Page.bringToFront");
+    const lbot = await lv(pa, `const P = arena.play; switchTab('arena'); arenaSub('play'); await wait(200); P.level = 0; P.colorChoice = 'w'; P.tc = 3; playStart(); await wait(100); playDo({ from: 'e2', to: 'e4' });
+      await until(() => P.game && P.game.history().length >= 2 && !P.thinking, 8000); await playResign(); await wait(300); render(); await wait(1500);
+      return { over: P.over, rec: P._agRec ? { id: P._agRec.gameId, mode: P._agRec.mode, tc: P._agRec.timeControl, clk: P._agRec.clockTimesCentisec.length, black: P._agRec.blackName, rating: P._agRec.blackRating } : null };`);
+    const lbotDoc = lbot.rec ? await until(() => read("archivedGames/" + lbot.rec.id), 10000) : null;
+    check("📚 archive: a finished game against a rated academy bot saves itself (3+0 clock, bot rating)", lbot.over === "loss" && !!lbotDoc && lbotDoc.mode === "bot" && lbotDoc.timeControl === "3+0" && lbotDoc.blackRating === 300 && lbotDoc.result === "0-1", { lbot, lbotDoc: lbotDoc && { mode: lbotDoc.mode, tc: lbotDoc.timeControl, r: lbotDoc.blackRating, res: lbotDoc.result } });
+    await lv(pa, `Object.assign(arena.play, { game: null, over: '', thinking: false }); return true;`);
+    const arch = await lv(pa, `localStorage.removeItem('eca_saved_games_' + fbMyUid()); arena.archive.synced = ''; switchTab('arena'); arenaSub('lobby'); await wait(200);
+      const fromLobby = !!document.querySelector('#mainView .nf-row [onclick="lbOpen(\\'archive\\')"]');
+      lbOpen('archive'); await until(() => document.querySelectorAll('#mainView .ag-row').length >= 5 && !arena.archive.busy, 15000);
+      const rows = () => [...document.querySelectorAll('#mainView .ag-row')], out = { fromLobby, all: rows().length };
+      ecaArchiveFilter('arena'); out.arena = rows().map(r => r.dataset.mode); ecaArchiveFilter('bot'); out.bot = rows().map(r => r.dataset.mode);
+      ecaArchiveFilter('pvp'); out.pvp = rows().map(r => r.dataset.mode); ecaArchiveFilter('review'); out.review = rows().length; ecaArchiveFilter('all');
+      const row = rows().find(r => r.dataset.gid === '${g3}');
+      out.row = row ? row.textContent.replace(/\\s+/g, ' ') : ''; out.btns = row ? [...row.querySelectorAll('button')].every(b => b.getBoundingClientRect().height >= 44) : false;
+      out.cached = JSON.parse(localStorage.getItem('eca_saved_games_' + fbMyUid()) || '{}').games.length;
+      switchTab('home'); await wait(200); out.home = !!document.querySelector('#mainView .ag-home [onclick*="archive"]');
+      return out;`);
+    check("📚 archive: «📚 أرشيف أدواري» opens from the lobby and the profile, lists every game, and caches it on the device", arch.fromLobby && arch.home && arch.all >= 7 && arch.cached === arch.all, arch);
+    check("📚 archive: the filters show arena games, games vs friends, bot games and games that need review", arch.arena.length === (W1 === pa ? 3 : 2) && arch.arena.every(m => m === "arena") && arch.bot.length >= 1 && arch.bot.every(m => m === "bot") && arch.pvp.length === 4 && arch.pvp.every(m => m === "pvp") && arch.review === arch.all, arch);
+    check("📚 archive: each row has the players, result, clock, opening, date and moves, with 44px actions", /vs/.test(arch.row) && /(خسارة|Loss)/.test(arch.row) && /3\+2/.test(arch.row) && /نقلة|moves/.test(arch.row) && arch.btns, arch.row);
+    const an = await lv(pa, `switchTab('arena'); arenaSub('archive'); await wait(200); ecaArchiveAnalyze('${g3}'); await wait(100);
+      const out = { sub: arena.sub, plies: arena.ana.line.length, back: !!document.querySelector('#mainView .eca-ana-from') };
+      out.saved = await until(() => arena.ana.archive && arena.ana.archive.saved, 90000);
+      out.import = !!document.querySelector('#mainView [onclick="ecaArchiveImport()"]') && !!document.querySelector('#mainView [onclick="arenaSub(\\'archive\\')"]');
+      return out;`);
+    const sum = await until(async () => { const d = await read("archivedGames/" + g3); return d && d.analysisSummary ? d.analysisSummary : null; }, 15000);
+    check("📚 archive: «🔬 تحليل الدور مع الجراند ماستر» opens the game on the analysis board and saves the summary (accuracy + every move's grade)", an.sub === "analysis" && an.plies === 4 && an.back && an.saved && !!sum && sum.compactMoveTiers.length === 4 && /X/.test(sum.compactMoveTiers) && sum.whiteAccuracy >= 0 && sum.blackAccuracy > sum.whiteAccuracy, { an, sum });
+    check("📚 archive: the analysis board has «📥 استيراد PGN» and a way back to the archive", an.import, an);
+    const re = await lv(pa, `anaBackToTraining(); await wait(200); const s0 = JSON.stringify(ecaGM.stats()); const t0 = performance.now(); ecaArchiveAnalyze('${g3}'); const ms = performance.now() - t0;
+      const badges = document.querySelectorAll('#anaMoves .eca-ana-mv[data-tier]').length, board = !!document.querySelector('#mainView .eca-gm-sqbadge, #mainView [class*="sqbadge"]') || true;
+      const rev = (document.getElementById('anaReview') || {}).textContent || '';
+      return { ms: Math.round(ms), badges, sameEngine: JSON.stringify(ecaGM.stats()) === s0, saved: /💾/.test(rev), acc: /%/.test(rev) };`);
+    check("📚 archive: reopening an analyzed game shows every move's badge and the accuracy at once, before any engine work", re.badges === 4 && re.sameEngine && re.saved && re.acc, re);
+    const pgn = await lv(pa, `const rec = JSON.parse(localStorage.getItem('eca_saved_games_' + fbMyUid())).games.find(g => g.gameId === '${g1.id}'); const t = ecaArchivePgnOf(rec); return t || '';`);
+    check("📚 archive: «📋 نسخ / تحميل PGN» gives a full PGN with headers and the clock after every move", /\[White "/.test(pgn) && /\[TimeControl "180\+2"\]/.test(pgn) && /1\. e4 \{\[%clk 0:03:00\.0\]\} e5/.test(pgn) && /1\/2-1\/2$/.test(pgn), pgn.slice(0, 400));
+    const imp = await lv(pa, `await ecaArchiveImport('[Event "Club"]\\n[White "Petrosian"]\\n[Black "Tal"]\\n[Result "1-0"]\\n\\n1. e4 d6 2. d4 Nf6 3. Nc3 g6 1-0'); await wait(1500); return { sub: arena.sub, plies: arena.ana.line.length };`);
+    const impDoc = await until(async () => { for (const id of (await list("archivedGames")).filter(x => x.startsWith("imp"))) { const d = await read("archivedGames/" + id); if (d && d.whiteName === "Petrosian") return d; } return null; }, 10000);
+    check("📚 archive: «📥 استيراد PGN» saves the game to the archive and opens it for analysis", imp.sub === "analysis" && imp.plies === 6 && !!impDoc && impDoc.mode === "import" && impDoc.result === "1-0" && JSON.stringify(impDoc.participantUids) === JSON.stringify([A]), { imp, impDoc: impDoc && { mode: impDoc.mode, res: impDoc.result, p: impDoc.participantUids } });
+    await pc.send("Page.bringToFront");
+    const dc0 = pc.denied.length;
+    const tamper = await pc.ev(`(async () => ({ read: await fbArchiveGet('${g1.id}').then(() => 'ok', e => e.code), sum: await fbArchiveSummary('${g1.id}', { whiteAccuracy: 1, blackAccuracy: 1, tierCounts: {}, compactMoveTiers: 'X', at: 1 }).then(() => 'ok', e => e.code),
+      del: await fbArchiveSave({ gameId: '${g1.id}', whiteUid: fbMyUid(), whiteName: 'x', whiteRating: null, blackUid: '', blackName: 'y', blackRating: null, mode: 'bot', timeControl: '-', result: '1-0', termination: '', pgn: '', uciMoves: '', clockTimesCentisec: [], openingNameAr: '', participantUids: [fbMyUid()] }).then(() => 'ok', e => e.code) }))()`);
+    pc.denied.splice(dc0);
+    check("📚 archive rules: a classmate cannot read, grade or overwrite someone else's game", tamper.read === "permission-denied" && tamper.sum === "permission-denied" && tamper.del === "permission-denied", tamper);
+    await pc.ev("switchTab('home')");
+    await pa.send("Page.bringToFront");
+    await pa.ev("switchTab('home')");
+    await pb.ev("(() => { lvArenaLeave(); switchTab('home'); })()");
     // ---------- daily puzzle: once a day (Cairo time), then locked with a live countdown ----------
     await pa.send("Page.bringToFront");
     const dly = await pa.ev(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {}, u = currUser(), Z = arena.puz;
@@ -1526,6 +1867,7 @@ async function login(p, id) {
         .map(e => (e.id ? "#" + e.id : (typeof e.className === "string" ? e.className : e.tagName).slice(0, 50)) + " " + Math.round(e.getBoundingClientRect().left) + ".." + Math.round(e.getBoundingClientRect().right));
       return { wide: wide ? document.documentElement.scrollWidth : 0, small: [...new Set(small)].slice(0, 40), cut: cut.slice(0, 8) }; })()`;
     const views = [["home", "switchTab('home')"]].concat(["lobby", "play", "puzzles", "lessons", "rush", "vision", "pawns", "duel", "friend", "speed", "weekly", "boss", "cards", "analysis"].map(v => [v, `switchTab('arena'); arena.sub='${v}'; render();`]));
+    views.push(["live", "switchTab('arena'); arena.live.view='lobby'; arena.live.tid=''; arena.sub='live'; render();"], ["archive", "switchTab('arena'); arena.sub='archive'; render();"], ["live game", `switchTab('arena'); arena.sub='live'; render(); lvOpen('${g3}');`], ["arena", `switchTab('arena'); arena.sub='live'; lvArenaOpen('${arn.tid}');`]);
     const fitBad = [];
     for (const [name, go] of views) { await pa.ev(go); await sleep(700); const r = await pa.ev(fit); if (r.wide || r.small.length || r.cut.length) fitBad.push({ view: name, ...r }); }
     check("320px: no sideways scroll on any view", !fitBad.some(r => r.wide), fitBad.filter(r => r.wide));

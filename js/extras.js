@@ -163,6 +163,7 @@
       if (fen === cur && r && !A.gmFollow) { A.ev = r.over ? { over: r.over === "mate" ? "mate" : "draw" } : r.lines[0] ? anaWhite(r.lines[0], cur) : A.ev; A.evFen = cur; }
       let changed = false;
       A.line.forEach((mv, i) => { if (!mv.rv && anaClassify(i + 1)) changed = true; });
+      if (changed && A.archive && window.ecaArchiveMaybeSave) ecaArchiveMaybeSave(A);
       anaPaint(changed || fen === cur);
     }
     function anaClassify(p) {
@@ -183,6 +184,9 @@
       A.evFen = cur; A.evTurn = g.turn();
       A.ev = g.isGameOver() ? { over: g.isCheckmate() ? "mate" : "draw" } : r && r.lines && r.lines[0] ? anaWhite(r.lines[0], cur) : null;
       const then = f => () => anaDone(f);
+      // نقلة جديدة / تنقّل: البحث اللي شغال على موقف تاني بيقف على طول (ويرجع كشغل خلفية للمراجعة)
+      const prevFen = A.ply > 0 ? A.line[A.ply - 1].before : "", keep = [ecaGM.key(cur), prevFen ? ecaGM.key(prevFen) : ""];
+      ecaGM.cancelWhere(j => j.prio === 0 && !keep.includes(j.key), true);
       ecaGM.analyze(cur, { multiPV: 3, depth: 18, movetime: 1500, prio: 0, onInfo: l => { if (A.game && A.game.fen() === cur && !A.gmFollow) { A.ev = anaWhite(l, cur); A.evFen = cur; anaPaint(false); } } }).then(then(cur));
       if (A.ply > 0) { const b = A.line[A.ply - 1].before; ecaGM.analyze(b, { multiPV: 3, depth: 16, movetime: 1200, prio: 0 }).then(then(b)); }
       A.line.forEach(mv => [mv.before, mv.after].forEach(f => ecaGM.analyze(f, { multiPV: 3, depth: 14, movetime: 700, prio: 2 }).then(then(f))));
@@ -213,12 +217,14 @@
       const A = arena.ana; let rows = "";
       const cell = j => {
         const mv = A.line[j]; if (!mv) return `<span class="eca-ana-mv is-empty"></span>`;
-        const rv = mv.rv, t = rv && window.ecaGM ? ecaGM.tier(rv.tier) : null;
-        return `<button type="button" onclick="anaGo(${j + 1})" class="eca-ana-mv${A.ply === j + 1 ? " is-on" : ""}"${t ? ` data-tier="${rv.tier}" style="--gm:${t.color}" title="${esc(t.ar)}"` : ""}>${t ? `<span class="eca-gm-mini" aria-hidden="true">${t.sym}</span>` : ""}<span>${esc(mv.san)}</span></button>`;
+        const rv = mv.rv || mv.pre, t = rv && window.ecaGM ? ecaGM.tier(rv.tier) : null;
+        return `<button type="button" onclick="anaGo(${j + 1})" class="eca-ana-mv${A.ply === j + 1 ? " is-on" : ""}"${t ? ` data-tier="${rv.tier}" style="--gm:${t.color}" title="${esc(t.ar)}"` : ""}>${t ? `<span class="eca-gm-mini" aria-hidden="true">${t.sym}</span>` : ""}<span>${esc(mv.san)}</span>${mv.clk ? `<i class="eca-ana-clk">${anaClk(mv.clk)}</i>` : ""}</button>`;
       };
       for (let i = 0; i < A.line.length; i += 2) rows += `<div class="eca-ana-row"><span class="eca-ana-no">${i / 2 + 1}.</span>${cell(i)}${cell(i + 1)}</div>`;
       return rows || `<div class="p-3 text-center text-gray-500">—</div>`;
     }
+    // الوقت اللي كان فاضل (من سنتي ثانية): 1:05 أو 8.4
+    function anaClk(cs) { const ms = Math.max(0, Number(cs) || 0) * 10; if (ms < 10000) return (Math.floor(ms / 100) / 10).toFixed(1); const t = Math.round(ms / 1000); return Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0"); }
     const ANA_BAD = ["INACCURACY", "MISTAKE", "MISSED_WIN", "BLUNDER"];
     function anaCardHTML() {
       const A = arena.ana, mv = A.line[A.ply - 1];
@@ -227,6 +233,7 @@
         return `<div class="eca-ana-retry" role="status"><b>🔄 لاقي نقلة أحسن من <bdi dir="ltr" class="eca-san">${esc(bad ? bad.san : "")}</bdi></b><p>حرّك على الرقعة. لو لاقيت أفضل نقلة (أو نقلة قريبة منها جداً) الكوتش هيقولك.</p><button type="button" onclick="anaRetryCancel()" class="tap eca-gm-back">✕ إلغاء</button></div>`;
       }
       if (!mv) return `<p class="eca-ana-tip">🧑‍🏫 حرّك أي نقلة (للأبيض أو للأسود) والكوتش هيقيّمها زي Chess.com ويشرحلك ليه.</p>`;
+      if (!mv.rv && mv.pre && window.ecaGM && ecaGM.tier(mv.pre.tier)) { const t = ecaGM.tier(mv.pre.tier); return `<p class="eca-ana-tip eca-ana-pre" style="--gm:${t.color}"><span class="eca-gm-mini" aria-hidden="true">${t.sym}</span> <b>${esc(t.ar)}</b>: <bdi dir="ltr" class="eca-san">${esc(mv.san)}</bdi> — ⏳ الكوتش بيجهّز الشرح...</p>`; }
       if (!mv.rv) return `<p class="eca-ana-tip">⏳ الكوتش بيحلل نقلة <bdi dir="ltr" class="eca-san">${esc(mv.san)}</bdi>...</p>`;
       // لحظة مهمة (غلطة): «جرب تلاقي أفضل نقلة» و«عرض أفضل خط»
       const extra = ANA_BAD.includes(mv.rv.tier) && mv.rv.bestUci ? `<div class="grid grid-cols-2 gap-2 mt-2"><button type="button" onclick="anaRetry()" class="tap eca-gm-retry">🔄 جرب تلاقي أفضل نقلة</button><button type="button" onclick="anaBestLine()" class="tap eca-gm-bestline">▶ عرض أفضل خط</button></div>` : "";
@@ -241,18 +248,20 @@
     // ملخص مراجعة الدور: الدقة لكل لاعب، عدد كل درجة، وأهم لحظات الدور
     function anaReviewHTML() {
       const A = arena.ana, R = A.review; if (!R || !window.ecaGM) return "";
-      const n = A.line.length, done = A.line.filter(m => m.rv).length, me = R.side, op = me === "w" ? "b" : "w";
-      const side = c => A.line.filter(m => m.rv && m.rv.color === c).map(m => m.rv);
+      const rvOf = m => m.rv || m.pre || null, full = A.line.every(m => m.rv), saved = !full && R.summary;
+      const n = A.line.length, done = A.line.filter(rvOf).length, me = R.side, op = me === "w" ? "b" : "w";
+      const side = c => A.line.filter(m => rvOf(m) && rvOf(m).color === c).map(rvOf);
       const acc = list => list.length ? Math.round(list.reduce((s, rv) => s + (rv.tier === "BOOK" ? 100 : ecaGM.accuracy(rv.winLoss)), 0) / list.length * 10) / 10 : null;
-      const mine = side(me), a1 = acc(mine), a2 = acc(side(op));
+      const mine = side(me), sv = c => Number(c === "w" ? R.summary.whiteAccuracy : R.summary.blackAccuracy);
+      const a1 = saved ? sv(me) : acc(mine.filter(rv => rv.winLoss != null || rv.tier === "BOOK")), a2 = saved ? sv(op) : acc(side(op).filter(rv => rv.winLoss != null || rv.tier === "BOOK"));
       const order = ["BRILLIANT", "GREAT", "BEST", "EXCELLENT", "GOOD", "BOOK", "INACCURACY", "MISTAKE", "MISSED_WIN", "BLUNDER"];
       const chips = order.map(k => { const t = ecaGM.tier(k), c = mine.filter(rv => rv.tier === k).length; return `<div class="eca-rev-chip" data-tier="${k}" style="--gm:${t.color}"><span class="eca-gm-mini">${t.sym}</span><span>${esc(t.ar)}</span><b>${c}</b></div>`; }).join("");
-      const km = A.line.map((m, i) => ({ m, i })).filter(x => x.m.rv && x.m.rv.color === me && ["MISTAKE", "BLUNDER", "MISSED_WIN"].includes(x.m.rv.tier));
-      const kmHTML = km.length ? km.map(x => { const t = ecaGM.tier(x.m.rv.tier), no = Math.floor(x.i / 2) + 1; return `<button type="button" onclick="anaGo(${x.i + 1})" class="tap eca-rev-km" data-tier="${x.m.rv.tier}" style="--gm:${t.color}">⚡ <bdi dir="ltr">${no}${x.i % 2 ? "..." : "."} ${esc(x.m.san)}</bdi> <span class="eca-gm-mini">${t.sym}</span></button>`; }).join("")
+      const km = A.line.map((m, i) => ({ m, i, rv: rvOf(m) })).filter(x => x.rv && x.rv.color === me && ["MISTAKE", "BLUNDER", "MISSED_WIN"].includes(x.rv.tier));
+      const kmHTML = km.length ? km.map(x => { const t = ecaGM.tier(x.rv.tier), no = Math.floor(x.i / 2) + 1; return `<button type="button" onclick="anaGo(${x.i + 1})" class="tap eca-rev-km" data-tier="${x.rv.tier}" style="--gm:${t.color}">⚡ <bdi dir="ltr">${no}${x.i % 2 ? "..." : "."} ${esc(x.m.san)}</bdi> <span class="eca-gm-mini">${t.sym}</span></button>`; }).join("")
         : `<p class="text-xs text-gray-400">${done < n ? "بنكمّل المراجعة..." : "مفيش أخطاء كبيرة في الدور ده — برافو!"}</p>`;
       const pct = v => v == null ? "—" : v.toFixed(1) + "%";
       return `<div class="gold-card rounded-2xl p-4 space-y-3 eca-rev" aria-label="مراجعة الدور">
-        <div class="flex items-center justify-between gap-2"><b class="text-yellow-300">📊 مراجعة الدور مع الجراند ماستر</b>${done < n ? `<span class="eca-rev-prog" dir="ltr">⏳ ${done}/${n}</span>` : `<span class="eca-rev-prog is-done">✔</span>`}</div>
+        <div class="flex items-center justify-between gap-2"><b class="text-yellow-300">📊 مراجعة الدور مع الجراند ماستر</b>${saved ? `<span class="eca-rev-prog is-done" title="التحليل محفوظ">💾 ✔</span>` : done < n ? `<span class="eca-rev-prog" dir="ltr">⏳ ${done}/${n}</span>` : `<span class="eca-rev-prog is-done">✔</span>`}</div>
         <div class="grid grid-cols-2 gap-2"><div class="eca-rev-acc is-me"><span>دقتك</span><b id="anaAccMe" dir="ltr">${pct(a1)}</b></div><div class="eca-rev-acc"><span>${esc(R.bot || "الخصم")}</span><b id="anaAccBot" dir="ltr">${pct(a2)}</b></div></div>
         <div class="eca-rev-chips">${chips}</div>
         <div><div class="text-xs font-bold text-yellow-400 mb-1">⚡ أهم لحظات الدور (Key Moments)</div><div class="eca-rev-kms">${kmHTML}</div></div>
@@ -273,7 +282,13 @@
       let g; try { g = new ChessCls(rootFen); } catch (_) { g = new ChessCls(); }
       const root = g.fen(), line = [];
       for (const u of ucis || []) { const before = g.fen(); let r = null; try { r = uciMove(g, u); } catch (_) {} if (!r) break; line.push({ uci: r.from + r.to + (r.promotion || ""), san: r.san, before, after: g.fen(), rv: null }); }
-      A.root = root; A.line = line; A.retry = null; A.from = o.from || null; A.solution = o.solution || null; A.review = o.review || null;
+      const tiers = String(o.tiers || ""), clocks = Array.isArray(o.clocks) ? o.clocks : [];
+      line.forEach((mv, i) => {
+        const t = window.ecaArchiveTier ? ecaArchiveTier(tiers[i]) : null;
+        if (t) mv.pre = { tier: t, color: mv.before.split(" ")[1] === "b" ? "b" : "w" };
+        if (Number(clocks[i]) > 0) mv.clk = Number(clocks[i]);
+      });
+      A.root = root; A.line = line; A.retry = null; A.from = o.from || null; A.solution = o.solution || null; A.review = o.review || null; A.archive = o.archive || null;
       A.flip = !!o.flip; A.fenInp = ""; A.pgnInp = "";
       anaGo(o.ply != null ? Math.min(o.ply, line.length) : line.length, true);
       setTimeout(anaAnalyze, 0);
@@ -358,7 +373,7 @@
     function anaSet(g) {
       const A = arena.ana, h = g.history({ verbose: true });
       if (A.gmFollow && window.ecaGM) ecaGM.followStop(A, true);
-      A.review = null; A.solution = null; A.retry = null;
+      A.review = null; A.solution = null; A.retry = null; A.archive = null;
       A.root = h.length ? h[0].before : g.fen();
       A.line = h.map(m => ({ uci: m.from + m.to + (m.promotion || ""), san: m.san, before: m.before, after: m.after, rv: null }));
       A.ply = A.line.length; A.game = g; A.sel = null; A.last = lastOf(g);

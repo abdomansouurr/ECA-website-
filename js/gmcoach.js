@@ -34,7 +34,10 @@
   const flipEv = e => (e ? { cp: e.cp == null ? null : -e.cp, mate: e.mate == null ? null : -e.mate } : null);
   // حدود Win% بالظبط (Chess.com): أفضل ≤ 1، ممتازة ≤ 3، جيدة ≤ 6.5، غير دقيقة ≤ 11.5، خطأ ≤ 22، وأكتر = خطأ فادح.
   // gap = Win%(أحسن نقلة) − Win%(تاني أحسن نقلة) من MultiPV 3: عبقرية محتاجة ≥ 12، وعظيمة ≥ 18
-  const LIM = { best: 1.0, brilliant: 1.5, excellent: 3.0, good: 6.5, inaccuracy: 11.5, mistake: 22.0, gapBrilliant: 12, gapGreat: 18 };
+  const LIM = { best: 1.0, brilliant: 1.5, gapBrilliant: 12, gapGreat: 18 };
+  // تدرّج الأخطاء: غير دقيقة 3.5–9.5% (أو 45–115 سنتي)، خطأ 9.5–20% (أو 115–240 سنتي)، خطأ فادح بس لو:
+  // (الوقعة > 20% وأكتر من 250 سنتي والتقييم بعدها < +2) أو مات إجباري أو قطعة سايبة (≥ 280) قلبت الدور خسران
+  const ERR = { excellent: 2.0, inaccFrom: 3.5, inaccuracy: 9.5, mistake: 20.0, inaccCpMin: 45, inaccCpMax: 115, blunderCp: 250, blunderBelow: 200, piece: 280, stillWin: 250, missedFrom: 280 };
   const r1 = v => Math.round(v * 10) / 10;
   // التصنيف بالترتيب: كتاب ← عبقرية ← عظيمة ← أفضل ← ممتازة ← جيدة ← غير دقيقة ← خطأ ← فرصة فوز ضائعة ← خطأ فادح.
   // o = { book, isBest, puzzle, sacrifice, best, second, after, lossCp, tacticalWin, routine, mateNow, development, quiet, zwischenzug }
@@ -57,14 +60,24 @@
       if ((c1 >= 150 && c2 <= 30) || saves || o.quiet === true || o.zwischenzug === true) return out("GREAT");
     }
     if (top) return out("BEST");
-    if (o.after && o.after.mate != null && o.after.mate < 0 && !(o.best && o.best.mate != null && o.best.mate < 0)) return out("BLUNDER");   // دخل في مات
-    let t = winLoss <= LIM.excellent ? "EXCELLENT" : winLoss <= LIM.good ? "GOOD" : winLoss <= LIM.inaccuracy ? "INACCURACY" : winLoss <= LIM.mistake ? "MISTAKE" : "";
+    // ===== الأخطاء متدرّجة: ?! ← ? ← ?? (الخطأ الفادح بس للحاجة اللي بتقلب الدور فعلاً) =====
+    const mateAgainst = !!(o.after && o.after.mate != null && o.after.mate < 0) && !(o.best && o.best.mate != null && o.best.mate < 0);
+    if (mateAgainst) return out("BLUNDER");                                    // دخل في مات إجباري
+    const pieceLoss = o.lossCp != null && o.lossCp <= -ERR.piece;               // خسر قطعة خفيفة أو أكبر صافي (بعد كل الأكل المضاد)
+    const stillWinning = cP >= ERR.stillWin;                                    // لسه كسبان بوضوح بعد النقلة
+    // قطعة سايبة قلبت دور متعادل/كسبان لخسران
+    if (pieceLoss && !stillWinning && c1 >= -50 && cP <= -100) return out("BLUNDER");
+    // فرصة فوز ضائعة: كان في مات أو ≥ +2.8 والنقلة رجّعت التقييم لتعادل/غموض (−0.4 لـ +1.1) من غير ما تسيب قطعة
+    if ((c1 >= ERR.missedFrom || bestMate) && cP >= -40 && cP <= 110 && !pieceLoss && o.tacticalWin !== false) return out("MISSED_WIN");
+    let t;
+    if (winLoss > ERR.mistake && cpLoss > ERR.blunderCp && cP < ERR.blunderBelow) t = "BLUNDER";
+    else if (winLoss > ERR.inaccuracy || cpLoss > ERR.inaccCpMax) t = "MISTAKE";
+    else if (winLoss >= ERR.inaccFrom || (cpLoss >= ERR.inaccCpMin && !pieceLoss)) t = "INACCURACY";
+    else t = winLoss <= ERR.excellent ? "EXCELLENT" : "GOOD";
+    // لسه كسبان بوضوح (≥ +2.5) ومفيش مات عليك: عمرها ما تبقى خطأ فادح — بالكتير «?» لو الوقعة كبيرة جداً، وغير كده «?!»
+    if (stillWinning && (t === "BLUNDER" || t === "MISTAKE")) t = winLoss > ERR.mistake ? "MISTAKE" : "INACCURACY";
     if (o.puzzle && (t === "EXCELLENT" || t === "GOOD")) t = "INACCURACY";
-    if (t === "MISTAKE" && o.lossCp <= -250 && cP < 300) t = "BLUNDER";   // خسر قطعة واضحة والموقف مش لسه كسبان
-    if (t) return out(t);
-    // 9) فرصة فوز ضائعة: كان في مات أو مكسب ≥ +3 والنقلة نزّلت التقييم لأقل من +1.2 من غير ما تخسر هي نفسها (≥ −0.5)
-    if ((c1 >= 300 || bestMate) && cP < 120 && cP >= -50 && !(o.lossCp <= -200) && o.tacticalWin !== false) return out("MISSED_WIN");
-    return out("BLUNDER");
+    return out(t);
   }
   // دقة النقلة من خسارة Win% (معادلة Lichess) — مراجعة الدور بتاخد متوسطها لكل لاعب
   const accuracy = winLoss => Math.max(0, Math.min(100, 103.1668 * Math.exp(-0.04354 * Math.max(0, winLoss)) - 3.1669));
@@ -206,7 +219,7 @@
         }
         if (fl && L.net <= -70) {
           const tw = tradeWords(L, rv.color);
-          if (fl.capDefenders === 0 && !L.lossRecapturable) return head + T(` بتسيب ${P(fl.captured)} في ${SQ(fl.capSq)} <b>من غير أي حماية</b>، والخصم بياكله مجاناً.`, ` leaves ${P(fl.captured)} on ${SQ(fl.capSq)} <b>with no protection</b>, and it's taken for free.`);
+          if (fl.capDefenders === 0 && !fl.recapture && !L.lossRecapturable) return head + T(` بتسيب ${P(fl.captured)} في ${SQ(fl.capSq)} <b>من غير أي حماية</b>، والخصم بياكله مجاناً.`, ` leaves ${P(fl.captured)} on ${SQ(fl.capSq)} <b>with no protection</b>, and it's taken for free.`);
           return head + T(` صحيح ${P(fl.captured)} في ${SQ(fl.capSq)} عليه حماية، لكن بعد سلسلة الأكل والأكل المضاد بتخسر ${lossWords(L.net)} صافي${tw ? ` (${tw})` : ""}.`,
             ` ${P(fl.captured)} on ${SQ(fl.capSq)} is protected, but after the whole exchange you lose ${lossWords(L.net)}${tw ? ` (${tw})` : ""}.`);
         }
@@ -219,11 +232,55 @@
       }
     }
   }
+  // أثر نقلة الحل الحقيقية (GroundTruth) بالكلام — الفكرة والهدف بس، من غير القطعة اللي اتحركت ولا مربعها (الحل مايتكشفش)
+  function truthIdea(e) {
+    if (!e) return "";
+    const pairs = ts => (ts || []).slice(0, 2).map(x => P(x.type) + " " + SQ(x.sq)).join(T(" و", " and "));
+    switch (e.motive) {
+      case "mateNow": return T(`<b>كش مات</b> على الملك في ${SQ(e.enemyKing)}`, `<b>checkmate</b> on the king on ${SQ(e.enemyKing)}`);
+      case "mate": return T(`<b>كش مات في ${e.mateIn}</b> على الملك في ${SQ(e.enemyKing)}`, `<b>mate in ${e.mateIn}</b> on the king on ${SQ(e.enemyKing)}`);
+      case "fork": return T(`<b>شوكة مزدوجة</b> على ${pairs(e.fork.targets)}`, `a <b>fork</b> on ${pairs(e.fork.targets)}`);
+      case "pin": return T(`<b>ربط</b> ${P(e.pin.front.type)} في ${SQ(e.pin.front.sq)} بـ${P(e.pin.behind.type)}`, `a <b>pin</b> of ${P(e.pin.front.type)} on ${SQ(e.pin.front.sq)} to ${P(e.pin.behind.type)}`);
+      case "skewer": return T(`<b>سيخ</b> على ${P(e.skewer.front.type)} و${P(e.skewer.behind.type)} اللي وراه`, `a <b>skewer</b> on ${P(e.skewer.front.type)} and ${P(e.skewer.behind.type)} behind it`);
+      case "discovered": return T(`<b>${e.discovered.check ? "كش" : "هجوم"} بالكشف</b> على ${P(e.discovered.target)} في ${SQ(e.discovered.targetSq)}`, `a <b>discovered ${e.discovered.check ? "check" : "attack"}</b> on ${P(e.discovered.target)} on ${SQ(e.discovered.targetSq)}`);
+      case "freeCapture": return T(`أكل ${P(e.captured)} في ${SQ(e.capSq)} <b>اللي مالوش حماية</b>`, `taking ${P(e.captured)} on ${SQ(e.capSq)}, <b>which had no protection</b>`);
+      case "winCapture": return T(`أكل على ${SQ(e.capSq)} <b>بيكسب خامات</b> بعد سلسلة الأكل كلها`, `a capture on ${SQ(e.capSq)} that <b>wins material</b> after all the recaptures`);
+      case "deflection": return T(`<b>تشتيت</b> ${P(e.deflection.defender.type)} اللي بيحمي ${SQ(e.deflection.target)}`, `<b>deflecting</b> ${P(e.deflection.defender.type)}, the defender of ${SQ(e.deflection.target)}`);
+      case "decoy": return T(`<b>استدراج</b> ${P(e.deflection.piece)} لمربع ${SQ(e.deflection.sq)}`, `a <b>decoy</b> of ${P(e.deflection.piece)} to ${SQ(e.deflection.sq)}`);
+      case "removalGuard": return T(`<b>إزالة المدافع</b>: ${P(e.deflection.guard.type)} اللي حامي ${SQ(e.deflection.target)}`, `<b>removing the guard</b>: ${P(e.deflection.guard.type)}, which guards ${SQ(e.deflection.target)}`);
+      case "sacrifice": return T("<b>تضحية محسوبة</b> بتكسب بعدها", "a <b>calculated sacrifice</b> that wins afterwards");
+      case "promotion": return T("<b>ترقية البيدق</b>", "<b>promoting the pawn</b>");
+      case "trapped": return T(`<b>حبس</b> ${P(e.trapped.target.type)} في ${SQ(e.trapped.target.sq)}`, `<b>trapping</b> ${P(e.trapped.target.type)} on ${SQ(e.trapped.target.sq)}`);
+      case "check": return T(`<b>كش</b> إجباري على الملك في ${SQ(e.enemyKing)}`, `a forcing <b>check</b> on the king on ${SQ(e.enemyKing)}`);
+      case "threat": return T(`تهديد هادي على ${P(e.threat.type)} في ${SQ(e.threat.sq)}`, `a quiet threat on ${P(e.threat.type)} on ${SQ(e.threat.sq)}`);
+      case "winMaterial": return T("سلسلة إجبارية <b>بتكسب خامات</b>", "a forcing line that <b>wins material</b>");
+      default: return "";
+    }
+  }
+  // اللي النقلة الغلط سمحت بيه للخصم على طول (متأكدين منه بـ SEE والنقلات القانونية)
+  function allowsText(a) {
+    if (!a) return "";
+    if (a.mate1) return T("وبعدها الخصم عنده <b>كش مات في نقلة</b>!", "and then your opponent has <b>mate in one</b>!");
+    if (a.capture && a.capture.gain >= 100) return T(`وبعدها الخصم يقدر ياكل ${P(a.capture.type)} في ${SQ(a.capture.sq)} ويكسب ${lossWords(a.capture.gain)} حتى بعد الأكل المضاد.`, `and then your opponent can take ${P(a.capture.type)} on ${SQ(a.capture.sq)} and win ${lossWords(a.capture.gain)} even after the recaptures.`);
+    if (a.check) return T("وبعدها الخصم عنده كش على ملكك.", "and then your opponent has a check on your king.");
+    return "";
+  }
+  // مقارنة النقلة الغلط بالحل الحقيقي: اللي نقلتك سمحت بيه + اللي الحل كان بيعمله (من غير ما الحل نفسه يتكتب)
+  function compareText(rv) {
+    const at = allowsText(rv.allows), ti = truthIdea(rv.truth);
+    if (!at && !ti) return "";
+    return T(`🔎 مقارنة بالحل: ${at ? "نقلتك " + at.replace(/^و/, "") : "نقلتك مش بتسيب حاجة تتاكل على طول"}${ti ? ` — والنقلة الصح كانت بتعمل ${ti}` : ""}.`,
+      `🔎 Compared with the solution: ${at ? "your move — " + at.replace(/^and /, "") : "your move leaves nothing hanging at once"}${ti ? ` — the right move made ${ti}` : ""}.`);
+  }
   // الطبقة 3: أفضل نقلة وليه بتنجح (في اللغز الشغال: الفكرة بس من غير النقلة)
   function bestText(rv) {
     if (rv.isBest) return T("✔ أنت لعبت أفضل نقلة في الموقف.", "✔ You played the best move.") + (rv.tier === "GREAT" && rv.second ? " " + T(`تاني أحسن نقلة كانت هتدّي ${evalWords(rv.second)} بس.`, `The next best only gives ${evalWords(rv.second)}.`) : "");
     const bl = rv.bestLine;
     const ideas = bl ? bl.steps.filter(s => s.color === rv.color).slice(0, 2).flatMap(s => s.concepts).filter(c => TACTICS.includes(c.key) || c.key === "passedPawn" || c.key === "outpost" || c.key === "openFile" || c.key === "development") : [];
+    if (rv.hideBest && rv.truth) {
+      const ti = truthIdea(rv.truth);
+      if (ti) return T(`★ النقلة الصح كانت بتعمل حاجة نقلتك فوّتتها: ${ti}. «مساعدة الكوتش» توصّلك ليها خطوة بخطوة.`, `★ The right move did something yours missed: ${ti}. «Coach help» walks you to it step by step.`);
+    }
     if (rv.hideBest) {
       const idea = ideas.length ? cName(ideas[0].key) : (rv.themes && rv.themes.length && typeof LP_NAMES !== "undefined" && LP_NAMES[rv.themes[0]] ? LP_NAMES[rv.themes[0]][EN() ? 1 : 0] : T("تكتيك إجباري", "a forcing tactic"));
       return T(`★ في نقلة أقوى في الموقف ده — فكرتها: <b>${H(idea)}</b>. «مساعدة الكوتش» توصّلك ليها خطوة بخطوة.`, `★ There's a stronger move here — its idea: <b>${H(idea)}</b>. «Coach help» walks you to it step by step.`);
@@ -294,8 +351,10 @@
       refLine, bestLine, sans: sanList(o.preFen, refLine.steps.map(s => s.uci)), bestSans: bestLine ? sanList(o.preFen, bestLine.steps.map(s => s.uci)) : [],
       hideBest: !!o.hideBest, puzzle: !!o.puzzle, themes: o.themes || [], diag: o.diag || null, bestUci: best ? best.uci : "", refUci: refPv[0] || "",
       ply: o.ply, sym: TIERS[cls.tier].sym, color2: TIERS[cls.tier].color });
+    rv.truth = o.solution && o.solution.length && PCA.groundTruth ? PCA.groundTruth(o.preFen, o.solution.slice(0, 6)) : null;
+    rv.allows = PCA.allowedAfter ? PCA.allowedAfter(o.preFen, o.uci) : null;
     rv.evalTxt = evalText(after, mover);
-    rv.text = { title: `${TIERS[rv.tier].sym} ${tierName(rv.tier)} (${TIERS[rv.tier].en})`, verdict: verdictText(rv), continuation: continuationText(rv), best: bestText(rv), rule: ruleText(rv) };
+    rv.text = { compare: rv.puzzle && !GOOD_TIERS.includes(cls.tier) ? compareText(rv) : "", title: `${TIERS[rv.tier].sym} ${tierName(rv.tier)} (${TIERS[rv.tier].en})`, verdict: verdictText(rv), continuation: continuationText(rv), best: bestText(rv), rule: ruleText(rv) };
     return rv;
   }
   function cardHTML(rv, o) {
@@ -304,7 +363,7 @@
     const followBtn = o.follow === false ? "" : `<button type="button" onclick="ecaGMFollow()" class="tap eca-gm-follow">▶ ${T("وريني التكملة على الرقعة", "Show the follow-up on the board")}</button>`;
     return `<section class="eca-coach-panel eca-gm-card${o.keep ? " eca-fs-keep" : ""}" data-tier="${rv.tier}" style="--gm:${t.color}" aria-label="${T("شرح الكوتش", "Coach explanation")}">
       <header><span class="eca-gm-badge" aria-hidden="true">${t.sym}</span><span class="eca-gm-head"><b class="eca-gm-title">${H(rv.text.title)}</b>${rv.evalTxt ? `<span class="eca-gm-eval" dir="ltr" title="${T("التقييم بعد النقلة", "Evaluation after the move")}">${H(rv.evalTxt)}</span>` : ""}</span>${o.close ? `<button type="button" onclick="coachPanelClose()" class="tap eca-coach-x" title="${T("اقفل الشرح", "Close")}" aria-label="${T("اقفل الشرح", "Close")}">✕</button>` : ""}</header>
-      <div class="eca-gm-layer" data-layer="1"><h4>1. ${T("الحكم المباشر", "The verdict")}</h4><p>${rv.text.verdict}</p>${diag}</div>
+      <div class="eca-gm-layer" data-layer="1"><h4>1. ${T("الحكم المباشر", "The verdict")}</h4><p>${rv.text.verdict}</p>${rv.text.compare ? `<p class="eca-gm-compare">${rv.text.compare}</p>` : ""}${diag}</div>
       <div class="eca-gm-layer" data-layer="2"><h4>2. ${T("سيناريو التكملة المحسوب", "The calculated continuation")}</h4><p>${rv.text.continuation}</p></div>
       <div class="eca-gm-layer" data-layer="3"><h4>3. ${T("البديل الأفضل ولماذا ينجح", "The best move and why it works")}</h4><p>${rv.text.best}</p></div>
       <div class="eca-gm-layer eca-gm-actions" data-layer="4">${followBtn}${o.extra || ""}</div>
@@ -315,9 +374,10 @@
   if (typeof document === "undefined" || typeof arena === "undefined") return;   // Node: الجزء الثابت بس
 
   // ================= المحرك: Web Worker لمحرك الموقف (من غير ما الصفحة تقف) =================
-  const GM = { cache: new Map(), w: null, wid: 0, pend: new Map(), failed: false, engine: "auto" };
+  const GM = { cache: new Map(), w: null, wid: 0, pend: new Map(), failed: false, engine: "auto", calls: { internal: 0, sf: 0 } };
   function workerSrc() { const s = document.querySelector('script[src*="js/analyzer.js"]'); return s ? s.src : new URL("js/analyzer.js", document.baseURI).href; }
   function internal(fen, opts) {
+    GM.calls.internal++;
     return new Promise(resolve => {
       const local = () => setTimeout(() => { let r = null; try { r = root.ChessPositionAnalyzer.deepSearch(fen, opts); } catch (_) {} resolve(r); }, 0);
       if (GM.failed || typeof Worker === "undefined") return local();
@@ -335,13 +395,15 @@
   }
   // أحسن نتيجة معروفة لكل موقف (Stockfish أولى، وبعدها الأعمق)
   const fkey = fen => String(fen).split(" ").slice(0, 4).join(" ");
+  // كاش LRU لـ 500 موقف: الرجوع لموقف اتحلل قبل كده (أو التنقل في رقعة التحليل) = 0ms
+  const CACHE_MAX = 500;
   function store(fen, r) {
     if (!r) return;
     const k = fkey(fen), old = GM.cache.get(k);
-    if (!old || (r.src === "sf" && old.src !== "sf") || (r.src === old.src && (r.depth || 0) >= (old.depth || 0))) GM.cache.set(k, r);
-    if (GM.cache.size > 400) GM.cache.delete(GM.cache.keys().next().value);
+    if (!old || (r.src === "sf" && old.src !== "sf") || (r.src === old.src && (r.depth || 0) >= (old.depth || 0))) { GM.cache.delete(k); GM.cache.set(k, r); }
+    while (GM.cache.size > CACHE_MAX) GM.cache.delete(GM.cache.keys().next().value);
   }
-  const get = fen => GM.cache.get(fkey(fen)) || null;
+  const get = fen => { const k = fkey(fen), r = GM.cache.get(k); if (r) { GM.cache.delete(k); GM.cache.set(k, r); } return r || null; };
 
   // ================= Stockfish 19 (WASM lite، خيط واحد) للتحليل والمراجعة =================
   // عمق 12-16 بـ MultiPV 3 في أقل من ثانية ونص. طابور بأولويات: 0 = الموقف اللي قدامك، 1 = نقلات دور شغال،
@@ -382,11 +444,25 @@
       pump();
       return p.promise;
     }
-    const job = { fen, key: k, multiPV: o.multiPV, depth: o.depth, movetime: o.movetime, prio: o.prio, onInfo: o.onInfo || null, lines: [], depthDone: 0, started: false };
+    const job = { fen, key: k, multiPV: o.multiPV, depth: o.depth, movetime: o.movetime, prio: o.prio, tag: o.tag || "", onInfo: o.onInfo || null, lines: [], depthDone: 0, started: false };
     const promise = new Promise(res => { job.resolve = res; });
     SF.pend.set(k, { job, promise }); SF.q.push(job);
+    GM.calls.sf++;
     pump();
     return promise;
+  }
+  // إلغاء شغل بقى ملوش لازمة (نقلة جديدة، دور جديد، خروج من الشاشة):
+  // اللي في الطابور بيتشال، واللي شغال بيتوقف على طول بـ «stop» (Stockfish بيرد في ~15ms).
+  // requeue = النتيجة لسه مفيدة لمراجعة الدور بعدين: بترجع للطابور كشغل خلفية بدل ما تتلغي
+  function cancelWhere(pred, requeue) {
+    const drop = SF.q.filter(pred);
+    SF.q = SF.q.filter(j => !pred(j));
+    drop.forEach(j => { if (requeue) { j.prio = 2; SF.q.push(j); } else { SF.pend.delete(j.key); try { j.resolve(null); } catch (_) {} } });
+    const j = SF.job;
+    if (j && !j.stopping && pred(j)) {
+      j.stopping = true; j.requeue = !!requeue;
+      if (SF.w && !useInternal()) { try { SF.w.postMessage("stop"); } catch (_) {} }
+    }
   }
   const eligible = j => j.prio < 2 || (typeof tab !== "undefined" && tab === "arena" && arena.sub === "analysis");
   function finish(job, r) {
@@ -406,7 +482,11 @@
     if (g.isGameOver()) return finish(job, { fen: job.fen, lines: [], depth: 99, src: "sf", multi: 9, over: g.isCheckmate() ? "mate" : g.isStalemate() ? "stalemate" : "draw" });
     SF.job = job; job.started = true;
     if (useInternal()) {
-      internal(job.fen, { multiPV: job.multiPV, maxNodes: job.prio === 0 ? 260000 : 150000, budget: 2500 }).then(r => { if (r) { r.src = "eca"; r.multi = job.multiPV; } finish(job, r); });
+      internal(job.fen, { multiPV: job.multiPV, maxNodes: job.prio === 0 ? 260000 : 150000, budget: 2500 }).then(r => {
+        if (r) { r.src = "eca"; r.multi = job.multiPV; }
+        if (job.stopping && !job.requeue) { SF.job = null; SF.pend.delete(job.key); try { job.resolve(null); } catch (_) {} return pump(); }
+        job.stopping = false; job.requeue = false; finish(job, r);
+      });
       return;
     }
     const w = sfBoot();
@@ -420,6 +500,13 @@
     const job = SF.job; if (!job) return;
     if (line.startsWith("bestmove")) {
       clearTimeout(SF.watch);
+      if (job.stopping) {
+        // اتوقف قبل ما يخلص: النتيجة الناقصة مش بتتحفظ (عشان التصنيف مايتبنيش على عمق قليل)
+        SF.job = null; job.stopping = false; job.started = false; job.lines = []; job.depthDone = 0;
+        if (job.requeue) { job.requeue = false; job.prio = 2; job.onInfo = null; SF.q.push(job); }
+        else { SF.pend.delete(job.key); try { job.resolve(null); } catch (_) {} }
+        return pump();
+      }
       const lines = job.lines.filter(Boolean);
       return finish(job, lines.length ? { fen: job.fen, lines, depth: job.depthDone, src: "sf", multi: job.multiPV } : null);
     }
@@ -462,19 +549,41 @@
   }
   function stateOf(m) { return typeof coachState === "function" ? coachState(m) : null; }
   const btn = (fn, label, cls) => `<button type="button" onclick="${fn}" class="tap ${cls || "eca-gm-analyze"}">${label}</button>`;
+
+  // ================= 🧠 وضع التحليل الفوري: اختياري ومقفول افتراضياً =================
+  // مقفول = الألغاز والأدوار ضد البوت من غير أي محرك ولا تصنيف على كل نقلة (اللعب على طول). التحليل متاح وقت ما الطالب يطلبه:
+  // «🔍 ليه النقلة دي غلط؟» أو «📊 تحليل الدور» أو «🔬 رقعة التحليل». الاختيار بيتحفظ على الجهاز (eca_auto_analysis_pref)
+  const PREF = "eca_auto_analysis_pref";
+  function analysisOn() { try { return localStorage.getItem(PREF) === "1"; } catch (_) { return false; } }
+  function setAnalysis(v) {
+    try { localStorage.setItem(PREF, v ? "1" : "0"); } catch (_) {}
+    if (!v) cancelWhere(j => j.prio === 1);   // تقييم نقلات الدور اللي في الطابور بيتلغي على طول
+    if (typeof toast === "function") toast(v ? T("🧠 التحليل الفوري اشتغل: كل نقلة هتتقيّم", "🧠 Live analysis is on: every move gets rated") : T("⚡ التحليل الفوري اتقفل: اللعب على طول، والتحليل وقت ما تطلبه", "⚡ Live analysis is off: instant play, analysis on demand"));
+    if (typeof arenaRefresh === "function") arenaRefresh();
+  }
+  window.ecaAnalysisOn = analysisOn;
+  window.ecaAnalysisSet = setAnalysis;
+  window.ecaAnalysisToggle = () => setAnalysis(!analysisOn());
+  function togglePill() {
+    const on = analysisOn();
+    return `<button type="button" onclick="ecaAnalysisToggle()" class="tap eca-an-toggle${on ? " is-on" : ""}" role="switch" aria-checked="${on}" title="${T("مقفول = لعب أسرع، وتقدر تحلل أي نقلة وقت ما تحب", "Off = instant play; you can still analyze any move on demand")}"><span>🧠 ${T("وضع التحليل الفوري", "Live analysis")}:</span><b>${on ? T("مفعل ON", "ON") : T("مغلق OFF", "OFF")}</b></button>`;
+  }
   // الشارة والأسهم والملاحظة بتتحط في مكانها، ولو نفس الرسم موجود بالظبط مش بنلمسه (من غير وميض)
   function place(mv, board, svg, above, below) {
-    mv.querySelectorAll(".eca-gm-followbar").forEach(e => e.remove());
     if (board) {
       const old = [...board.children].find(e => e.classList && e.classList.contains("eca-gm-svg"));
       if (svg) {
         if (!old || old.__h !== svg) { if (old) old.remove(); board.insertAdjacentHTML("beforeend", `<svg class="eca-gm-svg" viewBox="0 0 800 800" preserveAspectRatio="none" aria-hidden="true">${svg}</svg>`); board.lastElementChild.__h = svg; }
       } else if (old) old.remove();
-      if (above) board.insertAdjacentHTML("beforebegin", above);
+      // فوق الرقعة (زرار التحليل الفوري / شريط التكملة) وتحتها (الملاحظة والأزرار): بيتغيّروا بس لو المحتوى اتغيّر
+      mv.querySelectorAll(".eca-gm-above").forEach(e => { if (e.nextElementSibling !== board) e.remove(); });
+      const oa = board.previousElementSibling && board.previousElementSibling.classList.contains("eca-gm-above") ? board.previousElementSibling : null;
+      if (above) { if (!oa || oa.__h !== above) { if (oa) oa.remove(); board.insertAdjacentHTML("beforebegin", `<div class="eca-gm-above">${above}</div>`); board.previousElementSibling.__h = above; } }
+      else if (oa) oa.remove();
       const ob = board.nextElementSibling && board.nextElementSibling.classList.contains("eca-gm-below") ? board.nextElementSibling : null;
       if (below) { if (!ob || ob.__h !== below) { if (ob) ob.remove(); board.insertAdjacentHTML("afterend", `<div class="eca-gm-below">${below}</div>`); board.nextElementSibling.__h = below; } }
       else if (ob) ob.remove();
-    } else mv.querySelectorAll(".eca-gm-svg, .eca-gm-below").forEach(e => e.remove());
+    } else mv.querySelectorAll(".eca-gm-svg, .eca-gm-below, .eca-gm-above").forEach(e => e.remove());
   }
   function gmPaint() {
     const mv = document.getElementById("mainView");
@@ -483,6 +592,8 @@
     const m = here && typeof coachMode === "function" ? coachMode() : "";
     // تكملة شغالة لوضع مش ظاهر دلوقتي: بتقف والرقعة بترجع
     [arena.puz, arena.boss, arena.ana].forEach(S => { if (S && S.gmFollow && (!m || stateOf(m) !== S)) followStop(S, true); });
+    // بره رقعة التحليل: تحليل الموقف اللي كان شغال هناك بيقف (ويرجع للطابور كشغل خلفية لما ترجع)
+    if (!here || arena.sub !== "analysis") { const j = SF.job; if (j && j.prio !== 1 && !j.stopping) cancelWhere(x => x === j, true); }
     if (!here) return;
     if (arena.sub === "analysis") pump();   // مراجعة الدور بتكمّل لما ترجع لرقعة التحليل
     const board = mv.querySelector(".eca-board"), sub = arena.sub;
@@ -493,6 +604,7 @@
         botWatch(P, sub);
         const B = P.gmBadge;
         if (board && B && B.game === P.game) svg += badgeSVG(board, B.sq, B.tier, "bot:" + gid(P.game) + ":" + B.ply);
+        if (board) above += togglePill();
         if (P.over) below = resultCard(sub, P);
       }
     } else if (m && board) {
@@ -518,8 +630,11 @@
           }
           if (m === "analysis") svg += anaArrows(board, S);
           else {
+            above += togglePill();
             const card = S.coachPanel && S.coachPanel.game === S.game, N = S.gmNote;
             if (N && N.game === S.game && !card) below += N.html;
+            // التحليل مقفول: نقلة غلط = زرار «🔍 ليه النقلة دي غلط؟» بس (الشرح بيتحسب لما يدوس عليه)
+            if (!card && S.gmMiss) below += btn("ecaExplainMistake()", T("🔍 ليه النقلة دي غلط؟ (تحليل الموقف)", "🔍 Why was that move wrong? (analyze)"), "eca-gm-analyze eca-gm-why");
             if (!card) below += analyzeBar(S, m);
           }
         }
@@ -653,7 +768,7 @@
       if (shown && refPv[0] !== shown) { const r2 = await internal(fenAfter(post, shown), { multiPV: 1, maxNodes: 80000, budget: 1500 }); refPv = [shown].concat(r2 && r2.lines[0] ? r2.lines[0].pv : []); }
       if (S.gmTok !== tok || S.game !== g) return;
       let rv = null;
-      try { rv = review({ preFen: R.pre, uci: wrong, pre, post: aft, puzzle: true, isBest: false, hideBest: true, refPv, themes: R.themes, diag: R.diag }); }
+      try { rv = review({ preFen: R.pre, uci: wrong, pre, post: aft, puzzle: true, isBest: false, hideBest: true, refPv, themes: R.themes, diag: R.diag, solution: R.sol || (S.sol || []).slice(S.idx || 0) }); }
       catch (e) { console.warn("GM review:", e); return; }   // الشرح المبدئي بيفضل، من غير ما يقع حاجة
       // الشرح القديم (نوع الغلطة) بيفضل بس لو الحساب العميق متفق معاه على الخسارة
       const keepDiag = diagHTML && (R.diag.type === "MISSED_TACTICAL_WIN" || R.diag.type === "WALKED_INTO_MATE" || rv.refLine.net <= -70 || rv.refLine.mate);
@@ -675,29 +790,60 @@
       repaint();
     });
   }
+  // «🔍 ليه النقلة دي غلط؟»: الشرح الكامل للغلطة الأخيرة، بيتحسب بس لما الطالب يطلبه (مش على كل نقلة)
+  function explainMistake() {
+    const m = typeof coachMode === "function" ? coachMode() : ""; const S = m ? stateOf(m) : null;
+    const M = S && S.gmMiss; if (!M) return;
+    if (M.game !== S.game) return analyzeFrom("prev");   // الزعيم بدأ المحاولة من الأول: نفتح المحاولة اللي فاتت في رقعة التحليل
+    S.gmMiss = null;
+    // الرد العقابي وسبب الغلطة (analyzer.js) بعد ما الضغطة تخلص، والباقي في الـ Worker
+    S.coachPanel = { game: S.game, idx: S.idx, rv: null, html: `<section class="eca-coach-panel eca-gm-card" data-tier=""><header><span class="eca-gm-badge" aria-hidden="true">⏳</span><span class="eca-gm-head"><b class="eca-gm-title">${T("الكوتش بيحلل الغلطة...", "The coach is analyzing the mistake...")}</b></span></header></section>` };
+    if (typeof arenaRefresh === "function") arenaRefresh();
+    setTimeout(() => {
+      if (S.game !== M.game) return;
+      const an = root.ChessPositionAnalyzer ? root.ChessPositionAnalyzer.analyze(M.pre, M.uci, M.sol[0] || "", M.themes || [], null) : null;
+      const ref = an && an.refutation ? { from: an.refutation.from, to: an.refutation.to, promotion: an.refutation.promotion || "" } : null;
+      puzzleWrong(S, { pre: M.pre, wrongUci: M.uci, ref, diag: an ? an.diag : null, themes: M.themes || [], sol: M.sol });
+      if (typeof arenaRefresh === "function") arenaRefresh();
+    }, 16);
+  }
+  window.ecaExplainMistake = explainMistake;
   {
     const _pp = puzPlay;
+    // النقلة نفسها بتتلعب على طول (من غير محرك). أي تحليل بيتأجل لبعد ما الرقعة تترسم، وبيتلغي لو جت نقلة تانية (gmTok)
     puzPlay = function (mv) {
       const Z = arena.puz, m = typeof coachMode === "function" ? coachMode() : "", g = Z.game, st = Z.status, idx = Z.idx, pre = g ? g.fen() : "";
-      if (st === "play") { snap(Z); Z.gmNote = null; Z.gmBadge = null; }
+      if (st === "play") { snap(Z); Z.gmNote = null; Z.gmBadge = null; Z.gmMiss = null; Z.gmTok = (Z.gmTok || 0) + 1; }
       const out = _pp.apply(this, arguments);
       try {
         if (st === "play" && g && Z.game === g && m && typeof coachHintOk === "function" && coachHintOk(m)) {
-          if (Z.idx > idx || Z.status === "solved") puzzleGood(Z, pre, uciOf(pre, mv));
-          else if (Z.status === "wrong" && !Z.isRefuting) puzzleWrongBadge(Z, pre, uciOf(pre, mv));
+          const live = analysisOn(), tok = Z.gmTok;
+          if (Z.idx > idx || Z.status === "solved") { if (live) { const u = uciOf(pre, mv); setTimeout(() => { if (Z.gmTok === tok) puzzleGood(Z, pre, u); }, 16); } }
+          else if (Z.status === "wrong" && !Z.isRefuting) {
+            const u = uciOf(pre, mv);
+            Z.gmWrongUci = u; Z.gmWrongPre = pre; Z.gmFailed = true;
+            if (live) setTimeout(() => { if (Z.gmTok === tok) puzzleWrongBadge(Z, pre, u); }, 16);
+            else Z.gmMiss = { game: g, pre, uci: u, sol: (Z.sol || []).slice(idx), themes: (Z.info && Z.info.themes) || [] };
+          }
         }
       } catch (e) { console.warn("GM puzzle:", e); }
       return out;
     };
     window.puzPlay = puzPlay;
     const _pl = puzLoad;
-    puzLoad = function () { const Z = arena.puz; if (Z.gmFollow) followStop(Z, true); Z.gmNote = null; Z.gmBadge = null; return _pl.apply(this, arguments); };
+    puzLoad = function () { const Z = arena.puz; if (Z.gmFollow) followStop(Z, true); Z.gmNote = null; Z.gmBadge = null; Z.gmMiss = null; Z.gmTok = (Z.gmTok || 0) + 1; return _pl.apply(this, arguments); };
     const _bm = bossMove;
     bossMove = function (mv) {
       const B = arena.boss, g = B.game, st = B.status, idx = B.idx, pre = g ? g.fen() : "";
-      if (st === "play") { snap(B); B.gmNote = null; B.gmBadge = null; }
+      if (st === "play") { snap(B); B.gmNote = null; B.gmBadge = null; B.gmMiss = null; B.gmTok = (B.gmTok || 0) + 1; }
       const out = _bm.apply(this, arguments);
-      try { if (st === "play" && g && B.game === g && (B.idx > idx || B.status === "hit")) puzzleGood(B, pre, uciOf(pre, mv)); } catch (e) { console.warn("GM boss:", e); }
+      try {
+        if (st === "play" && g && B.game === g) {
+          const live = analysisOn(), tok = B.gmTok, u = uciOf(pre, mv);
+          if (B.idx > idx || B.status === "hit") { if (live) setTimeout(() => { if (B.gmTok === tok) puzzleGood(B, pre, u); }, 16); }
+          else if (B.status === "block" && !B.isRefuting) { B.gmWrongUci = u; B.gmWrongPre = pre; B.gmFailed = true; if (!live) B.gmMiss = { game: g, pre, uci: u, sol: (B.sol || []).slice(idx), themes: (B.pz && B.pz.themes) || [] }; }
+        }
+      } catch (e) { console.warn("GM boss:", e); }
       return out;
     };
   }
@@ -748,19 +894,26 @@
   // ================= الأدوار ضد البوت: شارة لكل نقلة ليك + «📊 تحليل الدور مع الجراند ماستر» =================
   function botWatch(P, sub) {
     const g = P.game; if (!g) return;
-    if (P.gmGame !== g) { P.gmGame = g; P.gmCls = {}; P.gmPend = {}; P.gmBadge = null; }
+    if (P.gmGame !== g) {
+      // دور جديد: تقييم نقلات الدور القديم اللي لسه في الطابور بيتلغي على طول
+      if (P.gmGame) { const old = "bot:" + gid(P.gmGame); cancelWhere(j => j.tag === old); }
+      P.gmGame = g; P.gmCls = {}; P.gmPend = {}; P.gmBadge = null;
+    }
     const h = g.history({ verbose: true });
     Object.keys(P.gmCls).forEach(i => { if (+i >= h.length || P.gmCls[i].uci !== huci(h[+i])) delete P.gmCls[i]; });   // تراجع
     let last = -1; for (let i = h.length - 1; i >= 0; i--) if (h[i].color === P.color) { last = i; break; }
     if (P.gmBadge && P.gmBadge.ply !== last) P.gmBadge = null;   // نقلة جديدة ليك: الشارة القديمة بتمشي
     if (!P.gmBadge && last >= 0 && P.gmCls[last]) P.gmBadge = { game: g, sq: h[last].to, tier: P.gmCls[last].tier, ply: last };
+    if (!analysisOn()) return;   // التحليل الفوري مقفول: مفيش محرك على نقلات الدور خالص
     for (let i = 0; i < h.length; i++) if (h[i].color === P.color && !P.gmCls[i] && !P.gmPend[i]) { P.gmPend[i] = true; classifyPly(P, g, h, i, sub); }
   }
   function classifyPly(P, g, h, i, sub) {
-    const m = h[i], u = huci(m), ply = i + 1;
+    const m = h[i], u = huci(m), ply = i + 1, tag = "bot:" + gid(g);
+    const book = ply <= 12 && root.EcaOpeningBook && EcaOpeningBook.lookup(m.after);
     const done = (pre, post) => {
       delete P.gmPend[i];
-      if (P.game !== g) return;
+      if (P.game !== g || !analysisOn()) return;
+      if (pre === undefined || (pre === null && post === null && !book)) return;   // اتلغى (دور جديد / التحليل اتقفل)
       const hh = g.history({ verbose: true }); if (!hh[i] || huci(hh[i]) !== u) return;
       let rv = null;
       try { rv = review({ preFen: m.before, uci: u, pre: pre || { lines: [] }, post: post || { lines: [] }, ply, prevFen: i ? h[i - 1].before : null, prevUci: i ? huci(h[i - 1]) : null }); } catch (e) { console.warn("GM bot review:", e); return; }
@@ -771,8 +924,8 @@
       if (el && typeof tab !== "undefined" && tab === "arena" && arena.sub === sub) el.outerHTML = movesListHTML(g);
       repaint();
     };
-    if (ply <= 12 && root.EcaOpeningBook && EcaOpeningBook.lookup(m.after)) return done(null, null);   // كتاب: من غير محرك
-    Promise.all([analyze(m.before, { multiPV: 3, depth: 12, movetime: 700, prio: 1 }), analyze(m.after, { multiPV: 1, depth: 12, movetime: 600, prio: 1 })]).then(([a, b]) => done(a, b));
+    if (book) return done(null, null);   // كتاب: من غير محرك
+    Promise.all([analyze(m.before, { multiPV: 3, depth: 12, movetime: 700, prio: 1, tag }), analyze(m.after, { multiPV: 1, depth: 12, movetime: 600, prio: 1, tag })]).then(([a, b]) => (a && b ? done(a, b) : done(undefined)));
   }
   {
     const _ml = movesListHTML;
@@ -836,12 +989,14 @@
       svg += arrow(green, "eca-gm-best", "#81B64C");
       svg += arrow(red, "eca-gm-threat", "#CA3431");
     }
-    if (rv && mv) svg += badgeSVG(board, mv.uci.slice(2, 4), rv.tier, "ana:" + A.ply + ":" + mv.uci);
+    const bt = rv || (mv && mv.pre);   // دور من الأرشيف: الشارة المحفوظة بتظهر على طول لحد ما التحليل يخلص
+    if (bt && mv) svg += badgeSVG(board, mv.uci.slice(2, 4), bt.tier, "ana:" + A.ply + ":" + mv.uci);
     return svg;
   }
 
   window.ecaGM = { internal, analyze, store, get, review, classify, accuracy, cardHTML, sound, repaint, follow: followNow, followStart, followStop, tiers: TIERS, tier: k => TIERS[k] || null,
-    puzzleWrong, puzzleGood, snapOf, analyzeFrom, gameReview, botWatch,
+    puzzleWrong, puzzleGood, snapOf, analyzeFrom, gameReview, botWatch, explainMistake, cancelWhere, key: fkey, analysisOn, setAnalysis,
+    stats: () => Object.assign({}, GM.calls),
     get engine() { return GM.engine; }, set engine(v) { GM.engine = v; }, get sfReady() { return !!SF.w && !SF.dead; }, cache: GM.cache,
     queue: () => ({ running: SF.job ? { prio: SF.job.prio, fen: SF.job.fen } : null, waiting: SF.q.map(j => j.prio), engine: useInternal() ? "eca" : "sf" }) };
 })(typeof window !== "undefined" ? window : globalThis);

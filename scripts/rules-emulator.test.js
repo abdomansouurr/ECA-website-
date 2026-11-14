@@ -601,6 +601,155 @@ async function runSuite(label, rules, quiet) {
     await spinT("drop: free chest that keeps the drop", false, who, rich, async db => { await sendChest(); return chestDrop(db, who, { xp: 150, keep: true }); });
     await spinT("drop: free chest with a bigger prize", false, who, rich, async db => { await sendChest(); return chestDrop(db, who, { xp: 300 }); }); }
 
+  // ---------- live chess games, arena tournaments and the game archive ----------
+  {
+    const LM = "liveAAAAAAAAAAAAAAAA", third = "third1", coachU = "coach1", TID = "arenaAAAAAA", AG = "gameAAAAAAAAAAAA";
+    const ctxOf = who => env.authenticatedContext(who, { firebase: { sign_in_provider: "password" } }).firestore();
+    const withNick = (n, user) => Object.assign({}, rich, { nickname: n, username: user });
+    const withPeople = async s => {
+      await s.collection("users").doc(other).set(withNick("Tiger", "other_1"));
+      await s.collection("users").doc(third).set(withNick("Owl", "third_1"));
+      await s.collection("staff").doc(coachU).set({ role: "coach", name: "C", username: "c" });
+    };
+    const TT = async (name, expect, who, fn, seed) => {
+      await env.clearFirestore();
+      await seedAs(async s => { await s.collection("users").doc(uid).set(withNick("Falcon", "ali_1")); await withPeople(s); if (seed) await seed(s); });
+      let got = true, msg = "";
+      try { await fn(ctxOf(who)); } catch (e) { got = false; msg = String(e.message).replace(/\s+/g, " ").slice(0, 300); }
+      const lim = !got && /1000 expressions/.test(msg); if (lim) limited++;
+      const ok = got === expect; ok ? pass++ : (fail++, failures.push(name + " :: " + msg));
+      if (!ok || !quiet) console.log(ok ? "OK  " : "FAIL", expect ? "allow" : "deny ", name, lim ? "[HIT-1000-LIMIT]" : "");
+    };
+    const lmRef = db => db.collection("liveMatches").doc(LM);
+    const lmDoc = (x = {}) => Object.assign({ w: uid, b: other, wn: "Falcon", bn: "Tiger", p: [uid, other], base: 180000, inc: 2000, tc: "3+2", mode: "pvp", tid: "", status: "live", moves: [], n: 0, wt: 180000, bt: 180000, at: tsAgo(1000), bzw: false, bzb: false, draw: "", res: "", why: "", hbw: tsAgo(1000), hbb: tsAgo(1000), created: tsAgo(60000) }, x);
+    const lmSeed = d => s => s.collection("liveMatches").doc(LM).set(typeof d === "function" ? d() : d);
+    const open0 = (x = {}) => Object.assign(lmDoc({ status: "open", b: "", bn: "", p: [uid] }), { at: ts(), hbw: ts(), hbb: ts(), created: ts() }, x);
+    const mv = x => db => lmRef(db).update(Object.assign({ at: ts() }, x));
+    const mid = (x = {}) => () => lmDoc(Object.assign({ moves: ["e2e4", "e7e5"], n: 2, wt: 100000, bt: 90000, at: tsAgo(5000) }, x));
+    const M3 = ["e2e4", "e7e5", "g1f3"];
+    // a challenge and joining it
+    await TT("live: open a challenge as white", true, uid, db => lmRef(db).set(open0()));
+    await TT("live: open a challenge as black", true, uid, db => lmRef(db).set(open0({ w: "", wn: "", b: uid, bn: "Falcon" })));
+    await TT("live: open a challenge with a legal name", false, uid, db => lmRef(db).set(open0({ wn: "Ali" })));
+    await TT("live: open a game already live against a classmate", false, uid, db => lmRef(db).set(open0({ status: "live", b: other, bn: "Tiger", p: [uid, other] })));
+    await TT("live: open a challenge with the clock already cut", false, uid, db => lmRef(db).set(open0({ bt: 1000 })));
+    await TT("live: open a challenge in someone else's seat", false, uid, db => lmRef(db).set(open0({ w: other, wn: "Tiger", p: [other] })));
+    await TT("live: join a challenge by its link", true, other, db => lmRef(db).update({ b: other, bn: "Tiger", p: [uid, other], status: "live", at: ts(), hbw: ts(), hbb: ts() }), lmSeed(lmDoc({ status: "open", b: "", bn: "", p: [uid] })));
+    await TT("live: join your own challenge", false, uid, db => lmRef(db).update({ b: uid, bn: "Falcon", p: [uid, uid], status: "live", at: ts(), hbw: ts(), hbb: ts() }), lmSeed(lmDoc({ status: "open", b: "", bn: "", p: [uid] })));
+    // moves: only the player whose turn it is, appended at the end, and never with more time than the server allows
+    await TT("live: white plays the first move", true, uid, mv({ moves: ["e2e4"], n: 1 }), lmSeed(lmDoc()));
+    await TT("live: play on the opponent's turn (forge their move)", false, uid, mv({ moves: ["e2e4", "e7e5"], n: 2 }), lmSeed(lmDoc({ moves: ["e2e4"], n: 1 })));
+    await TT("live: a spectator plays a move", false, third, mv({ moves: ["e2e4"], n: 1 }), lmSeed(lmDoc()));
+    await TT("live: rewrite an earlier move", false, uid, mv({ moves: ["d2d4", "e7e5", "g1f3"], n: 3 }), lmSeed(mid()));
+    await TT("live: two moves in one write", false, uid, mv({ moves: ["e2e4", "e7e5", "g1f3", "b8c6"], n: 4 }), lmSeed(mid()));
+    await TT("live: a move that is not a move", false, uid, mv({ moves: ["e2e4", "e7e5", "<b>x"], n: 3, wt: 95500 }), lmSeed(mid()));
+    await TT("live: honest clock after 5 seconds (+2s increment)", true, uid, mv({ moves: M3, n: 3, wt: 95500 }), lmSeed(mid()));
+    await TT("live: inflate your own clock", false, uid, mv({ moves: M3, n: 3, wt: 101000 }), lmSeed(mid()));
+    await TT("live: keep your clock as if no time passed", false, uid, mv({ moves: M3, n: 3, wt: 100000 }), lmSeed(mid()));
+    await TT("live: cut the opponent's clock", false, uid, mv({ moves: M3, n: 3, wt: 95500, bt: 1000 }), lmSeed(mid()));
+    await TT("live: the first move cannot add time", false, uid, mv({ moves: ["e2e4"], n: 1, wt: 185000 }), lmSeed(lmDoc()));
+    await TT("live: checkmate with the move", true, uid, mv({ moves: ["e2e4", "e7e5", "d1h5"], n: 3, wt: 95500, status: "over", res: "1-0", why: "checkmate" }), lmSeed(mid()));
+    await TT("live: checkmate that gives the win to the opponent", false, uid, mv({ moves: ["e2e4", "e7e5", "d1h5"], n: 3, wt: 95500, status: "over", res: "0-1", why: "checkmate" }), lmSeed(mid()));
+    await TT("live: stalemate with the move is a draw", true, uid, mv({ moves: M3, n: 3, wt: 95500, status: "over", res: "1/2-1/2", why: "stalemate" }), lmSeed(mid()));
+    await TT("live: stalemate written as a win", false, uid, mv({ moves: M3, n: 3, wt: 95500, status: "over", res: "1-0", why: "stalemate" }), lmSeed(mid()));
+    // resign, draw offers, flags and abandoned games
+    await TT("live: resign", true, uid, db => lmRef(db).update({ status: "over", res: "0-1", why: "resign" }), lmSeed(mid()));
+    await TT("live: resign but write a win", false, uid, db => lmRef(db).update({ status: "over", res: "1-0", why: "resign" }), lmSeed(mid()));
+    await TT("live: offer a draw", true, uid, db => lmRef(db).update({ draw: "w" }), lmSeed(mid()));
+    await TT("live: offer a draw in the opponent's name", false, uid, db => lmRef(db).update({ draw: "b" }), lmSeed(mid()));
+    await TT("live: accept the opponent's draw offer", true, other, db => lmRef(db).update({ draw: "", status: "over", res: "1/2-1/2", why: "draw" }), lmSeed(mid({ draw: "w" })));
+    await TT("live: accept your own draw offer", false, uid, db => lmRef(db).update({ draw: "", status: "over", res: "1/2-1/2", why: "draw" }), lmSeed(mid({ draw: "w" })));
+    await TT("live: decline a draw offer", true, other, db => lmRef(db).update({ draw: "" }), lmSeed(mid({ draw: "w" })));
+    const flagged = (x = {}) => () => lmDoc(Object.assign({ moves: M3, n: 3, wt: 90000, bt: 4000, at: tsAgo(6000) }, x));
+    await TT("live: claim the win when the opponent's clock ran out", true, uid, db => lmRef(db).update({ status: "over", res: "1-0", why: "timeout" }), lmSeed(flagged()));
+    await TT("live: claim on time before the opponent's clock runs out", false, uid, db => lmRef(db).update({ status: "over", res: "1-0", why: "timeout" }), lmSeed(flagged({ bt: 60000 })));
+    await TT("live: claim on time while your own clock is running", false, other, db => lmRef(db).update({ status: "over", res: "0-1", why: "timeout" }), lmSeed(flagged()));
+    await TT("live: draw on time when you cannot mate", true, uid, db => lmRef(db).update({ status: "over", res: "1/2-1/2", why: "material" }), lmSeed(flagged()));
+    await TT("live: claim the win after 30s without the opponent", true, uid, db => lmRef(db).update({ status: "over", res: "1-0", why: "abandon" }), lmSeed(mid({ hbb: tsAgo(40000) })));
+    await TT("live: claim abandon while the opponent is online", false, uid, db => lmRef(db).update({ status: "over", res: "1-0", why: "abandon" }), lmSeed(mid({ hbb: tsAgo(5000) })));
+    await TT("live: abort before both players moved", true, uid, db => lmRef(db).update({ status: "over", why: "abort" }), lmSeed(lmDoc({ moves: ["e2e4"], n: 1 })));
+    await TT("live: abort a game in progress", false, uid, db => lmRef(db).update({ status: "over", why: "abort" }), lmSeed(mid()));
+    await TT("live: heartbeat", true, uid, db => lmRef(db).update({ hbw: ts() }), lmSeed(mid()));
+    await TT("live: write the opponent's heartbeat", false, uid, db => lmRef(db).update({ hbb: ts() }), lmSeed(mid()));
+    await TT("live: berserk in a friendly game", false, uid, db => lmRef(db).update({ bzw: true, wt: 90000 }), lmSeed(lmDoc()));
+    await TT("live: a classmate watches the game", true, third, db => lmRef(db).get(), lmSeed(mid()));
+    await TT("live: move after the game ended", false, uid, mv({ moves: M3, n: 3, wt: 95500 }), lmSeed(mid({ status: "over", res: "0-1", why: "resign" })));
+    // arena tournaments
+    const aRef = db => db.collection("liveArenas").doc(TID), pRef = (db, who) => aRef(db).collection("players").doc(who);
+    const arenaDoc = (x = {}) => { const t0 = Date.now() - 60000; return Object.assign({ name: "Friday Arena", tc: "3+2", base: 180000, inc: 2000, minutes: 30, startAt: TS.fromMillis(t0), endAt: TS.fromMillis(t0 + 30 * 60000), by: coachU, created: tsAgo(120000) }, x); };
+    const pl = (n, x = {}) => Object.assign({ n, pts: 0, streak: 0, fire: false, games: [], wait: false, since: tsAgo(5000), cur: "", last: "" }, x);
+    const arenaSeed = (players = {}, match) => async s => {
+      await s.collection("liveArenas").doc(TID).set(arenaDoc());
+      for (const [who, d] of Object.entries(players)) await s.collection("liveArenas").doc(TID).collection("players").doc(who).set(d);
+      if (match) await s.collection("liveMatches").doc(LM).set(typeof match === "function" ? match() : match);
+    };
+    await TT("arena: coach creates a 30-minute arena", true, coachU, db => aRef(db).set(Object.assign(arenaDoc(), { created: ts() })));
+    await TT("arena: a student creates an arena", false, uid, db => aRef(db).set(Object.assign(arenaDoc({ by: uid }), { created: ts() })));
+    await TT("arena: end time that does not match the length", false, coachU, db => aRef(db).set(Object.assign(arenaDoc({ minutes: 45 }), { created: ts() })));
+    await TT("arena: join with the nickname", true, uid, db => pRef(db, uid).set(pl("Falcon", { wait: true, since: ts() })), arenaSeed());
+    await TT("arena: join with free points", false, uid, db => pRef(db, uid).set(pl("Falcon", { pts: 10, since: ts() })), arenaSeed());
+    await TT("arena: join with a legal name", false, uid, db => pRef(db, uid).set(pl("Ali", { since: ts() })), arenaSeed());
+    await TT("arena: sign a classmate up", false, uid, db => pRef(db, other).set(pl("Tiger", { since: ts() })), arenaSeed());
+    await TT("arena: join the queue", true, uid, db => pRef(db, uid).update({ wait: true, since: ts() }), arenaSeed({ [uid]: pl("Falcon") }));
+    await TT("arena: put a classmate in the queue", false, uid, db => pRef(db, other).update({ wait: true, since: ts() }), arenaSeed({ [other]: pl("Tiger") }));
+    const pair = (x = {}) => db => { const b = db.batch();
+      b.set(lmRef(db), Object.assign(lmDoc({ mode: "arena", tid: TID }), { at: ts(), hbw: ts(), hbb: ts(), created: ts() }, x));
+      b.update(pRef(db, uid), { wait: false, cur: LM, last: other }); b.update(pRef(db, other), { wait: false, cur: LM, last: uid }); return b.commit(); };
+    const waiting = { [uid]: pl("Falcon", { wait: true }), [other]: pl("Tiger", { wait: true }) };
+    await TT("arena: pair two waiting players into a game", true, uid, pair(), arenaSeed(waiting));
+    await TT("arena: pair a player who is not in the queue", false, uid, pair(), arenaSeed({ [uid]: pl("Falcon", { wait: true }), [other]: pl("Tiger") }));
+    await TT("arena: pairing with a different clock", false, uid, pair({ base: 600000, wt: 600000, bt: 600000, tc: "10+0", inc: 0 }), arenaSeed(waiting));
+    await TT("arena: pairing two classmates from outside", false, third, pair(), arenaSeed(waiting));
+    const am = (x = {}) => lmDoc(Object.assign({ mode: "arena", tid: TID }, x));
+    await TT("arena: berserk before the first move", true, uid, db => lmRef(db).update({ bzw: true, wt: 90000 }), lmSeed(am()));
+    await TT("arena: berserk that keeps more than half", false, uid, db => lmRef(db).update({ bzw: true, wt: 120000 }), lmSeed(am()));
+    await TT("arena: berserk after moving", false, uid, db => lmRef(db).update({ bzw: true, wt: 90000 }), lmSeed(am({ moves: ["e2e4", "e7e5"], n: 2 })));
+    await TT("arena: berserk the opponent", false, uid, db => lmRef(db).update({ bzb: true, bt: 90000 }), lmSeed(am()));
+    const over = (res, x = {}) => am(Object.assign({ status: "over", res, why: res === "1/2-1/2" ? "draw" : "resign", moves: ["e2e4", "e7e5"], n: 2 }, x));
+    const scoreSeed = (mine, match) => arenaSeed({ [uid]: mine, [other]: pl("Tiger", { cur: LM, last: uid }) }, match);
+    const score = (who, x) => db => pRef(db, who).update(Object.assign({ games: [LM], cur: "" }, x));
+    await TT("arena: a win is 2 points", true, uid, score(uid, { pts: 2, streak: 1 }), scoreSeed(pl("Falcon", { cur: LM }), over("1-0")));
+    await TT("arena: a draw is 1 point", true, uid, score(uid, { pts: 1 }), scoreSeed(pl("Falcon", { cur: LM }), over("1/2-1/2")));
+    await TT("arena: third win in a row is 4 points (fire)", true, uid, db => pRef(db, uid).update({ pts: 8, streak: 3, fire: true, games: ["gA", "gB", LM], cur: "" }), scoreSeed(pl("Falcon", { pts: 4, streak: 2, fire: true, games: ["gA", "gB"], cur: LM }), over("1-0")));
+    await TT("arena: fire points without the streak", false, uid, db => pRef(db, uid).update({ pts: 6, streak: 2, fire: true, games: ["gA", LM], cur: "" }), scoreSeed(pl("Falcon", { pts: 2, streak: 1, games: ["gA"], cur: LM }), over("1-0")));
+    await TT("arena: berserk win adds 1 point", true, uid, score(uid, { pts: 3, streak: 1 }), scoreSeed(pl("Falcon", { cur: LM }), over("1-0", { bzw: true, wt: 90000 })));
+    await TT("arena: a loss written as a win", false, uid, score(uid, { pts: 2, streak: 1 }), scoreSeed(pl("Falcon", { cur: LM }), over("0-1")));
+    await TT("arena: a loss is 0 and ends the streak", true, uid, score(uid, { pts: 4, streak: 0, fire: false }), scoreSeed(pl("Falcon", { pts: 4, streak: 2, fire: true, cur: LM }), over("0-1")));
+    await TT("arena: record the opponent's loss too", true, uid, score(other, {}), scoreSeed(pl("Falcon", { cur: LM }), over("1-0")));
+    await TT("arena: count the same game twice", false, uid, db => pRef(db, uid).update({ pts: 4, streak: 2, fire: true, games: [LM, LM], cur: "" }), scoreSeed(pl("Falcon", { pts: 2, streak: 1, games: [LM], cur: LM }), over("1-0")));
+    await TT("arena: points for a game still being played", false, uid, score(uid, { pts: 2, streak: 1 }), scoreSeed(pl("Falcon", { cur: LM }), am({ moves: ["e2e4"], n: 1 })));
+    await TT("arena: an aborted game gives no points", false, uid, score(uid, { pts: 2, streak: 1 }), scoreSeed(pl("Falcon", { cur: LM }), am({ status: "over", why: "abort" })));
+    // the game archive
+    const agRef = (db, id = AG) => db.collection("archivedGames").doc(id);
+    const ag = (x = {}) => Object.assign({ gameId: AG, whiteUid: uid, whiteName: "Falcon", whiteRating: null, blackUid: "bot-3", blackName: "Bot", blackRating: 1200, mode: "bot", timeControl: "5+0", result: "1-0", termination: "checkmate",
+      pgn: '[Event "ECA"]\n[White "Falcon"]\n\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0', uciMoves: "e2e4 e7e5 d1h5 b8c6 f1c4 g8f6 h5f7", clockTimesCentisec: [30000, 30000, 29500], openingNameAr: "افتتاح", analysisSummary: null, playedAt: ts(), participantUids: [uid] }, x);
+    const summary = { whiteAccuracy: 88.4, blackAccuracy: 61.2, tierCounts: { BEST: 3, BLUNDER: 1 }, compactMoveTiers: "KKTIXTT", at: Date.now() };
+    await TT("archive: save a bot game", true, uid, db => agRef(db).set(ag()));
+    await TT("archive: save an imported PGN", true, uid, db => agRef(db).set(ag({ mode: "import", whiteUid: "", blackUid: "", blackRating: null })));
+    await TT("archive: save a bot game into a classmate's archive", false, uid, db => agRef(db).set(ag({ whiteUid: other, participantUids: [other] })));
+    await TT("archive: save with an analysis already attached", false, uid, db => agRef(db).set(ag({ analysisSummary: summary })));
+    await TT("archive: save HTML in the PGN", false, uid, db => agRef(db).set(ag({ pgn: "<img src=x onerror=alert(1)>" })));
+    const liveOver = () => lmDoc({ status: "over", res: "1-0", why: "resign", moves: ["e2e4", "e7e5"], n: 2 });
+    const agLive = (x = {}) => ag(Object.assign({ gameId: LM, mode: "pvp", blackUid: other, blackName: "Tiger", blackRating: null, timeControl: "3+2", result: "1-0", termination: "resign", uciMoves: "e2e4 e7e5", participantUids: [uid, other] }, x));
+    await TT("archive: save a finished live game", true, uid, db => agRef(db, LM).set(agLive()), lmSeed(liveOver));
+    await TT("archive: the opponent saves the same live game", true, other, db => agRef(db, LM).set(agLive()), lmSeed(liveOver));
+    await TT("archive: save a lost live game as a win", false, uid, db => agRef(db, LM).set(agLive()), lmSeed(() => lmDoc({ status: "over", res: "0-1", why: "resign", moves: ["e2e4", "e7e5"], n: 2 })));
+    await TT("archive: save a live game with other moves", false, uid, db => agRef(db, LM).set(agLive({ uciMoves: "d2d4 d7d5" })), lmSeed(liveOver));
+    await TT("archive: save a live game that is still running", false, uid, db => agRef(db, LM).set(agLive()), lmSeed(mid()));
+    const stored = s => s.collection("archivedGames").doc(AG).set(ag({ playedAt: tsAgo(60000) }));
+    await TT("archive: list your own games", true, uid, db => db.collection("archivedGames").where("participantUids", "array-contains", uid).get(), stored);
+    await TT("archive: read a classmate's game", false, third, db => agRef(db).get(), stored);
+    await TT("archive: list a classmate's games", false, third, db => db.collection("archivedGames").where("participantUids", "array-contains", uid).get(), stored);
+    await TT("archive: the coach reads a student's game", true, coachU, db => agRef(db).get(), stored);
+    await TT("archive: attach the analysis summary", true, uid, db => agRef(db).update({ analysisSummary: summary }), stored);
+    await TT("archive: the coach attaches the analysis summary", true, coachU, db => agRef(db).update({ analysisSummary: summary }), stored);
+    await TT("archive: a classmate attaches an analysis", false, third, db => agRef(db).update({ analysisSummary: summary }), stored);
+    await TT("archive: an analysis with a fake accuracy", false, uid, db => agRef(db).update({ analysisSummary: Object.assign({}, summary, { whiteAccuracy: 140 }) }), stored);
+    await TT("archive: change the result later", false, uid, db => agRef(db).update({ result: "0-1" }), stored);
+    await TT("archive: overwrite a classmate's game", false, third, db => agRef(db).set(ag({ whiteUid: third, participantUids: [third] })), stored);
+    await TT("archive: delete your own game", false, uid, db => agRef(db).delete(), stored);
+  }
+
   // staff: notification batch sizes
   const notif = () => ({ type: "announcement", titleAr: "t", titleEn: "t", bodyAr: "b", bodyEn: "b", createdAt: ts(), read: false });
   const seedStudents = async s => { await staffSeed(s); for (let i = 0; i < 12; i++) await s.collection("users").doc("s" + i).set(fresh); };

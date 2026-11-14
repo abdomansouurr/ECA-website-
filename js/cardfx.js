@@ -32,7 +32,9 @@ const GameCardAnimator = (() => {
     puzzle: `<span class="gc-piece">🧩</span>`,
     vision: `<span class="gc-scope"></span><span class="gc-eye">👁️</span>`,
     pawns: `<span class="gc-march"><i>♟</i><i>♟</i><i>♟</i></span>`,
-    analysis: `<span class="gc-mini"></span><span class="gc-an gc-an-n">♞</span><span class="gc-an gc-an-b">♝</span>`
+    analysis: `<span class="gc-mini"></span><span class="gc-an gc-an-n">♞</span><span class="gc-an gc-an-b">♝</span>`,
+    live: `<span class="gc-chclock"><i class="gc-cc-face gc-cc-l">3:00</i><i class="gc-cc-face gc-cc-r">2:58</i><b class="gc-cc-btn gc-cc-btn-l"></b><b class="gc-cc-btn gc-cc-btn-r"></b></span>`,
+    archive: `<span class="gc-books"><i class="gc-bk gc-bk1"></i><i class="gc-bk gc-bk2"></i><i class="gc-bk gc-bk3"></i></span><span class="gc-scroll">PGN</span>`
   };
   const FX = {
     daily: stage(`<i class="gc-page"></i>${ring("gc-dray", 3, 0.3)}`),
@@ -60,6 +62,8 @@ const GameCardAnimator = (() => {
     puzzle: stage(`<i class="gc-mag">🔍</i><i class="gc-bang">!</i>`),
     vision: stage(`<i class="gc-sweep"></i>${at("gc-coord", [[6, 10, 0, "e4"], [72, 6, 0.5, "g7"], [10, 70, 1, "b3"], [74, 72, 1.5, "d5"]])}`),
     pawns: stage(`<i class="gc-pcrown">👑</i>`),
+    live: stage(`<i class="gc-livedot"></i>${ring("gc-tickring", 2, 0.5)}<i class="gc-cc-flag">⚑</i>`),
+    archive: stage(`<i class="gc-pg gc-pg1"></i><i class="gc-pg gc-pg2"></i><i class="gc-pg gc-pg3"></i>${at("gc-acc", [[10, 66, 0, "!!"], [78, 58, 0.5, "★"], [44, 80, 1, "?!"]])}`),
     analysis: stage(`<i class="gc-tsq gc-tsq-a"></i><i class="gc-tsq gc-tsq-b"></i><svg class="gc-arrows" viewBox="0 0 4 4"><line class="gc-ar-g" x1="1.5" y1="2.5" x2="0.5" y2="0.5" pathLength="100" /><line class="gc-ar-g gc-ar-g2" x1="1.5" y1="2.5" x2="3.5" y2="1.5" pathLength="100" /><line class="gc-ar-y" x1="3.5" y1="3.5" x2="0.5" y2="0.5" pathLength="100" /></svg>`)
   };
   const KINDS = Object.keys(HERO);

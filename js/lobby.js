@@ -8,7 +8,8 @@ const LB_MODES = {
   play: ["🤖", "العب ضد الكمبيوتر", "Play the computer"], puzzles: ["🧩", "ألغاز على الرقعة", "Board puzzles"], lessons: ["📚", "ألغاز الدروس", "Lesson puzzles"],
   rush: ["⚡", "تحدي 60 ثانية", "Puzzle Rush"], duel: ["⚔️", "مبارزة مباشرة", "Live duel"], speed: ["🏆", "بطولة السرعة", "Speed arena"],
   cards: ["🃏", "ألبوم البطاقات", "Card album"], friend: ["🤝", "تحدي صاحبك", "Friend challenge"], weekly: ["🏅", "تحدي الأسبوع", "Weekly challenge"],
-  boss: ["🐉", "واجب الزعيم", "Boss homework"], pawns: ["♟️", "حرب البيادق", "Pawn wars"], vision: ["👁️", "رؤية الرقعة", "Board vision"], analysis: ["🔍", "تحليل الأدوار", "Game analysis"]
+  boss: ["🐉", "واجب الزعيم", "Boss homework"], pawns: ["♟️", "حرب البيادق", "Pawn wars"], vision: ["👁️", "رؤية الرقعة", "Board vision"], analysis: ["🔍", "تحليل الأدوار", "Game analysis"],
+  live: ["⏱️", "شطرنج مباشر", "Live chess"], archive: ["📚", "أرشيف أدواري", "My games archive"]
 };
 function ecaModeName(k) { const m = LB_MODES[k]; return m ? m[0] + " " + (lang === "en" ? m[2] : m[1]) : LB("ساحة التدريب", "Training arena"); }
 window.ecaModeName = ecaModeName;
@@ -95,7 +96,7 @@ function lbScroll(btn, dir) {
 window.lbScroll = lbScroll;
 
 // كل كارت ليه حركة خاصة بيه لما يصحى (cardfx.js)، ومفيش لعبة متكررة في صفين
-const LB_MORE = { play: "bot", puzzles: "puzzle", vision: "vision", pawns: "pawns", analysis: "analysis" };
+const LB_MORE = { play: "bot", puzzles: "puzzle", vision: "vision", pawns: "pawns", analysis: "analysis", archive: "archive" };
 function lbRowsHTML(u) {
   const student = u.role === "student", st = lbStep(u), dj = student ? lbDojo(u) : { total: null, due: 0 }, boss = lbBoss();
   const mission = student && typeof lpDailyCount === "function" ? lpDailyCount(u) : 0, goal = typeof LP_GOAL !== "undefined" ? LP_GOAL : 10;
@@ -113,6 +114,7 @@ function lbRowsHTML(u) {
   ].filter(Boolean);
   const best = student && typeof funRushBest === "function" ? funRushBest(u) : 0, spun = student && typeof ecaSpinDone === "function" && ecaSpinDone(u);
   const pvp = [
+    { go: "lbOpen('live')", accent: "nf-red", fx: "live", icon: "⏱️", badge: "LIVE", title: LB("شطرنج مباشر", "Live chess"), tag: LB("بالوقت • ضد زمايلك • بطولات أرينا", "On the clock • vs classmates • arenas"), live: true },
     { go: "lbOpen('rush')", accent: "nf-violet", fx: "speed", icon: "⚡", title: LB("تحدي 60 ثانية", "Puzzle Rush"), tag: best ? LB(`أحسن نتيجة النهاردة: ${best}`, `Today's best: ${best}`) : LB("60 ثانية • +5 ⭐", "60 seconds • +5 ⭐") },
     { go: "lbOpen('friend')", accent: "nf-violet", fx: "knights", icon: "🤝", title: LB("تحدي صاحبك", "Friend challenge"), tag: LB("5 ألغاز • +3 ⭐", "5 puzzles • +3 ⭐") },
     { go: "lbOpen('duel')", accent: "nf-violet", fx: "duel", icon: "⚔️", title: LB("مبارزة مباشرة", "Live duel"), tag: LB("1 ضد 1 • +3 ⭐", "1v1 • +3 ⭐") },

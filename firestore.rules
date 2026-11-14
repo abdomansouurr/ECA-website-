@@ -1100,6 +1100,234 @@ service cloud.firestore {
             && placementResultOk(request.resource.data, resource.data.total));
       allow delete: if isStaff();
     }
+    // ================= اللعب المباشر (liveMatches): دور كامل بساعة بين طالبين =================
+    // كل نقلة: من صاحب الدور بس، بتتضاف لآخر القايمة (مفيش تعديل في اللي فات)، وساعته ماينفعش تزيد عن
+    // (الوقت القديم − الوقت اللي عدّى على السيرفر + الزيادة + 300ms سماح للنت). ساعة الخصم ماتتلمسش.
+    // القواعد مش بتقدر تتأكد إن النقلة قانونية (مفيش سيرفر شطرنج): الطرف التاني بيتأكد منها بـ chess.js.
+    function lmSeat(m, uid) { return m.w == uid ? 'w' : m.b == uid ? 'b' : ''; }
+    function lmUci(u) { return u is string && u.matches('[a-h][1-8][a-h][1-8][qrbn]?'); }
+    function lmFresh(d) {
+      return d.keys().hasOnly(['w','b','wn','bn','p','base','inc','tc','mode','tid','status','moves','n','wt','bt','at','bzw','bzb','draw','res','why','hbw','hbb','created'])
+        && d.keys().hasAll(['w','b','wn','bn','p','base','inc','tc','mode','tid','status','moves','n','wt','bt','at','bzw','bzb','draw','res','why','hbw','hbb','created'])
+        && d.base is int && d.base >= 60000 && d.base <= 900000 && d.inc is int && d.inc >= 0 && d.inc <= 10000
+        && d.tc is string && d.tc.matches('[0-9]{1,2}[+][0-9]{1,2}')
+        && d.moves == [] && d.n == 0 && d.wt == d.base && d.bt == d.base
+        && d.bzw == false && d.bzb == false && d.draw == '' && d.res == '' && d.why == ''
+        && d.created == request.time && d.at == request.time && d.hbw == request.time && d.hbb == request.time;
+    }
+    // دور البطولة بيتعمل مع التوفيق نفسه في نفس العملية: الاتنين كانوا مستنيين في الطابور، والبطولة شغالة، ونفس نظام الوقت
+    function lmArenaPairOk(d, mid) {
+      let t = get(/databases/$(database)/documents/liveArenas/$(d.tid)).data;
+      let pw = /databases/$(database)/documents/liveArenas/$(d.tid)/players/$(d.w);
+      let pb = /databases/$(database)/documents/liveArenas/$(d.tid)/players/$(d.b);
+      return request.time >= t.startAt && request.time < t.endAt && d.base == t.base && d.inc == t.inc && d.tc == t.tc
+        && get(pw).data.wait == true && get(pb).data.wait == true
+        && getAfter(pw).data.cur == mid && getAfter(pb).data.cur == mid
+        && d.wn == get(pw).data.n && d.bn == get(pb).data.n;
+    }
+    function lmJoinOk() {
+      let o = resource.data; let d = request.resource.data; let me = request.auth.uid;
+      return o.status == 'open' && o.mode == 'pvp' && !(me in o.p)
+        && d.diff(o).affectedKeys().hasOnly(['w','b','wn','bn','p','status','at','hbw','hbb'])
+        && d.status == 'live' && d.at == request.time && d.hbw == request.time && d.hbb == request.time
+        && (o.w == ''
+          ? (d.w == me && d.b == o.b && d.bn == o.bn && duelNickOk(d.wn) && d.p == [o.b, me])
+          : (o.b == '' && d.b == me && d.w == o.w && d.wn == o.wn && duelNickOk(d.bn) && d.p == [o.w, me]));
+    }
+    function lmClockOk(o, d, side) {
+      let old = side == 'w' ? o.wt : o.bt;
+      let nt = side == 'w' ? d.wt : d.bt;
+      let inc = (side == 'w' ? o.bzw : o.bzb) ? 0 : o.inc;
+      // أول نقلة لكل لاعب مابتاكلش من الوقت (زي Lichess)
+      return nt is int && nt >= 0 && (o.n < 2 ? nt == old : nt <= old - (request.time.toMillis() - o.at.toMillis()) + inc + 300);
+    }
+    function lmMoveOk() {
+      let o = resource.data; let d = request.resource.data;
+      let side = o.n % 2 == 0 ? 'w' : 'b';
+      return o.status == 'live' && request.auth.uid == (side == 'w' ? o.w : o.b)
+        && d.diff(o).affectedKeys().hasOnly(['moves','n','wt','bt','at','draw','status','res','why'])
+        && d.n == o.n + 1 && d.n <= 600 && d.moves.size() == o.moves.size() + 1
+        && (o.n == 0 || d.moves[0:o.moves.size()] == o.moves) && lmUci(d.moves[o.moves.size()])
+        && d.at == request.time && d.draw == ''
+        && lmClockOk(o, d, side) && (side == 'w' ? d.bt == o.bt : d.wt == o.wt)
+        && ((d.status == 'live' && d.res == '' && d.why == '')
+          || (d.status == 'over' && ((d.why == 'checkmate' && d.res == (side == 'w' ? '1-0' : '0-1'))
+            || (d.why in ['stalemate', 'repetition', 'fifty', 'material'] && d.res == '1/2-1/2'))));
+    }
+    // نبضة «أنا موجود» كل كام ثانية: كل لاعب بيكتب نبضته هو بس
+    function lmBeatOk() {
+      let o = resource.data; let d = request.resource.data; let me = lmSeat(o, request.auth.uid);
+      return me != '' && o.status in ['open', 'live']
+        && d.diff(o).affectedKeys().hasOnly([me == 'w' ? 'hbw' : 'hbb']) && (me == 'w' ? d.hbw : d.hbb) == request.time;
+    }
+    // استسلام (أو خلص وقته هو): النتيجة دايماً خسارة اللي كتب
+    function lmResignOk() {
+      let o = resource.data; let d = request.resource.data; let me = lmSeat(o, request.auth.uid);
+      return me != '' && o.status == 'live' && d.diff(o).affectedKeys().hasOnly(['status','res','why','draw'])
+        && d.status == 'over' && d.why in ['resign', 'timeout'] && d.res == (me == 'w' ? '0-1' : '1-0') && d.draw == '';
+    }
+    // عرض تعادل ← قبول أو رفض من الخصم بس
+    function lmDrawOk() {
+      let o = resource.data; let d = request.resource.data; let me = lmSeat(o, request.auth.uid);
+      let opp = me == 'w' ? 'b' : 'w';
+      return me != '' && o.status == 'live' && (
+        (o.draw == '' && d.diff(o).affectedKeys().hasOnly(['draw']) && d.draw == me)
+        || (o.draw == opp && d.diff(o).affectedKeys().hasOnly(['draw']) && d.draw == '')
+        || (o.draw == opp && d.diff(o).affectedKeys().hasOnly(['draw','status','res','why']) && d.draw == '' && d.status == 'over' && d.res == '1/2-1/2' && d.why == 'draw'));
+    }
+    // إعلان الفوز: وقت الخصم خلص فعلاً على ساعة السيرفر، أو الخصم اختفى أكتر من 30 ثانية
+    function lmClaimOk() {
+      let o = resource.data; let d = request.resource.data; let me = lmSeat(o, request.auth.uid);
+      let side = o.n % 2 == 0 ? 'w' : 'b';
+      let flagged = o.n >= 2 && request.time.toMillis() - o.at.toMillis() > (side == 'w' ? o.wt : o.bt);
+      let win = me == 'w' ? '1-0' : '0-1';
+      return me != '' && o.status == 'live' && d.diff(o).affectedKeys().hasOnly(['status','res','why']) && d.status == 'over'
+        && ((d.why == 'timeout' && me != side && flagged && d.res == win)
+          || (d.why == 'material' && me != side && flagged && d.res == '1/2-1/2')
+          || (d.why == 'abandon' && o.n >= 2 && request.time.toMillis() > (me == 'w' ? o.hbb : o.hbw).toMillis() + 30000 && d.res == win));
+    }
+    // إلغاء قبل ما الاتنين يلعبوا أول نقلة (من غير نتيجة)
+    function lmAbortOk() {
+      let o = resource.data; let d = request.resource.data;
+      return lmSeat(o, request.auth.uid) != '' && o.status == 'live' && o.n < 2
+        && d.diff(o).affectedKeys().hasOnly(['status','why']) && d.status == 'over' && d.why == 'abort';
+    }
+    // برزرك في البطولة: قبل أول نقلة ليك، نص الوقت ومن غير زيادة (+1 لو كسبت)
+    function lmBerserkOk() {
+      let o = resource.data; let d = request.resource.data; let me = lmSeat(o, request.auth.uid);
+      return me != '' && o.mode == 'arena' && o.status == 'live' && (me == 'w' ? o.n == 0 && o.bzw == false : o.n <= 1 && o.bzb == false)
+        && d.diff(o).affectedKeys().hasOnly(me == 'w' ? ['bzw','wt'] : ['bzb','bt'])
+        && (me == 'w' ? d.bzw == true && d.wt == math.floor(o.base / 2) : d.bzb == true && d.bt == math.floor(o.base / 2));
+    }
+    match /liveMatches/{mid} {
+      // بالأسماء المستعارة بس، فأي طالب في الأكاديمية يقدر يتفرّج
+      allow read: if notAnon();
+      allow create: if notAnon() && !exists(/databases/$(database)/documents/deleted/$(request.auth.uid)) && mid.matches('[A-Za-z0-9]{10,40}')
+        && lmFresh(request.resource.data)
+        && ((request.resource.data.mode == 'pvp' && request.resource.data.tid == '' && request.resource.data.status == 'open'
+             && ((request.resource.data.w == request.auth.uid && request.resource.data.b == '' && request.resource.data.bn == '' && duelNickOk(request.resource.data.wn) && request.resource.data.p == [request.auth.uid])
+              || (request.resource.data.b == request.auth.uid && request.resource.data.w == '' && request.resource.data.wn == '' && duelNickOk(request.resource.data.bn) && request.resource.data.p == [request.auth.uid])))
+          || (request.resource.data.mode == 'arena' && request.resource.data.status == 'live' && request.resource.data.tid is string && request.resource.data.tid.size() > 0
+             && request.resource.data.w != request.resource.data.b && request.resource.data.p == [request.resource.data.w, request.resource.data.b]
+             && request.auth.uid in request.resource.data.p && lmArenaPairOk(request.resource.data, mid)));
+      allow update: if notAnon() && !exists(/databases/$(database)/documents/deleted/$(request.auth.uid))
+        && (lmJoinOk() || lmMoveOk() || lmBeatOk() || lmResignOk() || lmDrawOk() || lmClaimOk() || lmAbortOk() || lmBerserkOk());
+      allow delete: if isAdmin() || (notAnon() && resource.data.status == 'open' && request.auth.uid in resource.data.p);
+    }
+
+    // ================= بطولات الأرينا المباشرة (liveArenas) =================
+    function laOk(d) {
+      return d.keys().hasOnly(['name','tc','base','inc','minutes','startAt','endAt','by','created'])
+        && d.keys().hasAll(['name','tc','base','inc','minutes','startAt','endAt','by','created'])
+        && safeText(d.name, 60) && d.name.size() >= 2 && d.tc is string && d.tc.matches('[0-9]{1,2}[+][0-9]{1,2}')
+        && d.base is int && d.base >= 60000 && d.base <= 900000 && d.inc is int && d.inc >= 0 && d.inc <= 10000
+        && d.minutes is int && d.minutes >= 10 && d.minutes <= 180
+        && d.startAt is timestamp && d.endAt == d.startAt + duration.value(d.minutes, 'm') && d.endAt > request.time
+        && d.by == request.auth.uid;
+    }
+    // نقط الأرينا: فوز 2، تعادل 1، خسارة 0 — بعد فوزين ورا بعض (🔥) الفوز بـ 4، والبرزرك +1 لو كسبت
+    function laScoreOk(tid, uid) {
+      let o = resource.data; let d = request.resource.data;
+      let gid = d.games[d.games.size() - 1];
+      let m = get(/databases/$(database)/documents/liveMatches/$(gid)).data;
+      let seat = m.w == uid ? 'w' : 'b';
+      let won = (seat == 'w' && m.res == '1-0') || (seat == 'b' && m.res == '0-1');
+      let drawn = m.res == '1/2-1/2';
+      let bz = seat == 'w' ? m.bzw : m.bzb;
+      return d.diff(o).affectedKeys().hasOnly(['pts','streak','fire','games','cur'])
+        && m.tid == tid && m.status == 'over' && uid in m.p && request.auth.uid in m.p && o.cur == gid
+        && d.games.size() == o.games.size() + 1 && d.games.size() <= 200 && (o.games.size() == 0 || d.games[0:o.games.size()] == o.games) && !(gid in o.games)
+        && d.cur == ''
+        && (m.res == ''
+          ? (d.pts == o.pts && d.streak == o.streak)
+          : (d.streak == (won ? o.streak + 1 : 0)
+            && d.pts == o.pts + (won ? ((o.streak >= 2 ? 4 : 2) + (bz ? 1 : 0)) : (drawn ? 1 : 0))))
+        && d.fire == (d.streak >= 2);
+    }
+    // التوفيق: أي لاعب من الاتنين بيكتب للاتنين، بس لدور اتعمل في نفس العملية وهو فيه
+    function laPairOk(tid, uid) {
+      let o = resource.data; let d = request.resource.data;
+      let m = getAfter(/databases/$(database)/documents/liveMatches/$(d.cur)).data;
+      return o.wait == true && d.diff(o).affectedKeys().hasOnly(['wait','cur','last'])
+        && d.wait == false && d.cur is string && d.cur.size() >= 10
+        && m.tid == tid && m.status == 'live' && m.created == request.time && uid in m.p && request.auth.uid in m.p
+        && d.last == (m.w == uid ? m.b : m.w);
+    }
+    // الطالب بيدخل الطابور أو بيخرج منه (وهو مش في دور شغال)
+    function laQueueOk(tid, uid) {
+      let o = resource.data; let d = request.resource.data;
+      let t = get(/databases/$(database)/documents/liveArenas/$(tid)).data;
+      return request.auth.uid == uid && d.diff(o).affectedKeys().hasOnly(['wait','since'])
+        && d.wait is bool && d.since == request.time && o.cur == ''
+        && (d.wait == false || (request.time >= t.startAt && request.time < t.endAt));
+    }
+    match /liveArenas/{tid} {
+      allow read: if notAnon();
+      allow create: if isStaff() && tid.matches('[A-Za-z0-9]{6,40}') && laOk(request.resource.data) && request.resource.data.created == request.time;
+      allow update: if isStaff() && laOk(request.resource.data) && request.resource.data.created == resource.data.created;
+      allow delete: if isStaff();
+      match /players/{uid} {
+        allow read: if notAnon();
+        allow create: if notAnon() && request.auth.uid == uid && !exists(/databases/$(database)/documents/deleted/$(uid))
+          && request.resource.data.keys().hasOnly(['n','pts','streak','fire','games','wait','since','cur','last'])
+          && request.resource.data.keys().hasAll(['n','pts','streak','fire','games','wait','since','cur','last'])
+          && duelNickOk(request.resource.data.n) && request.resource.data.pts == 0 && request.resource.data.streak == 0 && request.resource.data.fire == false
+          && request.resource.data.games == [] && request.resource.data.cur == '' && request.resource.data.last == ''
+          && request.resource.data.wait is bool && request.resource.data.since == request.time
+          && request.time < get(/databases/$(database)/documents/liveArenas/$(tid)).data.endAt;
+        allow update: if notAnon() && !exists(/databases/$(database)/documents/deleted/$(request.auth.uid))
+          && (laQueueOk(tid, uid) || laPairOk(tid, uid) || laScoreOk(tid, uid));
+        allow delete: if isStaff();
+      }
+    }
+
+    // ================= أرشيف الأدوار (archivedGames): مستند صغير واحد لكل دور، بيتكتب مرة واحدة =================
+    function agSummaryOk(s) {
+      return s is map && s.keys().hasOnly(['whiteAccuracy','blackAccuracy','tierCounts','compactMoveTiers','at'])
+        && s.whiteAccuracy is number && s.whiteAccuracy >= 0 && s.whiteAccuracy <= 100
+        && s.blackAccuracy is number && s.blackAccuracy >= 0 && s.blackAccuracy <= 100
+        && s.tierCounts is map && s.tierCounts.size() <= 12
+        && s.compactMoveTiers is string && s.compactMoveTiers.size() <= 700 && s.compactMoveTiers.matches('[A-Z.]*')
+        && s.at is int;
+    }
+    function agFresh(d, gid) {
+      return d.keys().hasOnly(['gameId','whiteUid','whiteName','whiteRating','blackUid','blackName','blackRating','mode','timeControl','result','termination','pgn','uciMoves','clockTimesCentisec','openingNameAr','analysisSummary','playedAt','participantUids'])
+        && d.keys().hasAll(['gameId','whiteUid','whiteName','whiteRating','blackUid','blackName','blackRating','mode','timeControl','result','termination','pgn','uciMoves','clockTimesCentisec','openingNameAr','analysisSummary','playedAt','participantUids'])
+        && d.gameId == gid && d.mode in ['pvp', 'arena', 'bot', 'import']
+        && d.whiteUid is string && d.whiteUid.size() <= 40 && d.blackUid is string && d.blackUid.size() <= 40
+        && safeText(d.whiteName, 40) && safeText(d.blackName, 40)
+        && (d.whiteRating == null || (d.whiteRating is int && d.whiteRating >= 0 && d.whiteRating <= 4000))
+        && (d.blackRating == null || (d.blackRating is int && d.blackRating >= 0 && d.blackRating <= 4000))
+        && d.timeControl is string && d.timeControl.size() <= 12 && d.timeControl.matches('[0-9+-]*')
+        && d.result in ['1-0', '0-1', '1/2-1/2', '*'] && d.termination is string && d.termination.matches('[a-z-]{0,20}')
+        && d.pgn is string && d.pgn.size() <= 20000 && d.pgn.matches('[^<>`]*')
+        && d.uciMoves is string && d.uciMoves.size() <= 6000 && d.uciMoves.matches('[a-h1-8qrbn ]*')
+        && d.clockTimesCentisec is list && d.clockTimesCentisec.size() <= 700
+        && d.openingNameAr is string && d.openingNameAr.size() <= 160 && d.openingNameAr.matches('[^<>`]*')
+        && d.analysisSummary == null && d.playedAt == request.time
+        && d.participantUids is list && request.auth.uid in d.participantUids;
+    }
+    // دور مباشر: لازم يطابق الدور اللي خلص فعلاً (اللاعبين، النتيجة، والنقلات)، فمحدش يقدر يزوّر دور ضد زميله
+    function agLiveOk(d, gid) {
+      let m = get(/databases/$(database)/documents/liveMatches/$(gid)).data;
+      return m.status == 'over' && m.res != '' && d.mode == m.mode && d.whiteUid == m.w && d.blackUid == m.b
+        && d.participantUids == [m.w, m.b] && d.result == m.res && d.uciMoves == m.moves.join(' ');
+    }
+    match /archivedGames/{gid} {
+      allow read: if isStaff() || (notAnon() && request.auth.uid in resource.data.participantUids);
+      allow create: if notAnon() && !exists(/databases/$(database)/documents/deleted/$(request.auth.uid)) && gid.matches('[A-Za-z0-9_-]{10,60}')
+        && agFresh(request.resource.data, gid)
+        && (request.resource.data.mode in ['bot', 'import']
+          ? (request.resource.data.participantUids == [request.auth.uid]
+             && (request.resource.data.mode == 'import' || request.resource.data.whiteUid == request.auth.uid || request.resource.data.blackUid == request.auth.uid))
+          : agLiveOk(request.resource.data, gid));
+      // التحليل (الدقة ودرجة كل نقلة) بيتحفظ مرة بعد ما الطالب يحلل الدور — اللاعبين أو الكوتش بس، ومفيش حاجة تانية بتتغير
+      allow update: if notAnon() && (request.auth.uid in resource.data.participantUids || isStaff())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['analysisSummary'])
+        && agSummaryOk(request.resource.data.analysisSummary);
+      allow delete: if isAdmin();
+    }
+
     // أقفال منع إعادة الاختبار (جهاز / حساب شطرنج): تتكتب مرة واحدة فقط مع وثيقة الاختبار، والكوتش بس هو اللي يمسحها (إعادة الفتح)
     match /placementLocks/{key} {
       allow get: if signedIn();

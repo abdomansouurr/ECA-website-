@@ -119,16 +119,16 @@ function coachSfx(kind) {
 function coachStartRefute(S, mode, pre, r, want, onDone, last0) {
   coachClear();
   const wrong = coachUci(r), themes = (S.info && S.info.themes) || (S.pz && S.pz.themes) || [], explicit = S.refutations || (S.pz && S.pz.refutations);
-  // محرك البحث (analyzer.js) هو الأساس: الرد الدقيق + سبب الغلطة. ولو مش متاح، الطريقة السريعة القديمة
-  let ref = null, diag = null;
-  const an = window.ChessPositionAnalyzer ? ChessPositionAnalyzer.analyze(pre, wrong, want, themes, explicit) : null;
-  if (an && an.diag) { diag = an.diag; if (an.refutation) ref = { from: an.refutation.from, to: an.refutation.to, promotion: an.refutation.promotion || "", target: an.refutation.to, kind: diag.type }; }
-  else ref = findRefutationMove(pre, wrong, want, explicit);
   S.isRefuting = true; S.coachPanel = null;
-  S.refute = { mode, game: S.game, pre, last0, wrong: r.to, wrongUci: wrong, ref, diag, themes, kind: diag ? diag.type : ref ? ref.kind : "F", onDone, shown: false, gain: an && an.refutation ? an.refutation.gain : 0 };
+  S.refute = { mode, game: S.game, pre, last0, wrong: r.to, wrongUci: wrong, ref: null, diag: null, themes, kind: "F", onDone, shown: false, gain: 0, sol: (S.sol || []).slice(S.idx || 0) };
   coachTimers.push(setTimeout(() => {
     const R = S.refute;
     if (!R || R.game !== S.game) return;
+    // البحث بيحصل هنا (بعد ما النقلة اترسمت)، مش جوه حدث الضغط/السحب: النقلة نفسها مالهاش أي تأخير
+    const an = window.ChessPositionAnalyzer ? ChessPositionAnalyzer.analyze(pre, wrong, want, themes, explicit) : null;
+    if (an && an.diag) { R.diag = an.diag; if (an.refutation) R.ref = { from: an.refutation.from, to: an.refutation.to, promotion: an.refutation.promotion || "", target: an.refutation.to, kind: an.diag.type }; }
+    else R.ref = findRefutationMove(pre, wrong, want, explicit);
+    R.kind = R.diag ? R.diag.type : R.ref ? R.ref.kind : "F"; R.gain = an && an.refutation ? an.refutation.gain : 0;
     if (R.ref) { const m = coachTry(S.game, coachUci(R.ref)); if (m) S.last = [m.from, m.to]; else { R.ref = null; if (R.diag) R.diag = Object.assign({}, R.diag, { vectors: [] }); } }
     R.shown = true;
     // كش مات أو خسارة قطعة كاملة = خبطة الخطأ الفادح، وغير كده التحذير الهادي
@@ -259,7 +259,7 @@ function coachIsWrong(S, mv) {
   puzPlay = function (mv) {
     const Z = arena.puz, m = coachMode();
     if (Z.status === "play") Z.coachPanel = null;   // نقلة جديدة: شرح الغلطة اللي فاتت بيقفل
-    if (Z.status === "play" && coachRefuteOk(m) && coachIsWrong(Z, mv)) {
+    if (Z.status === "play" && coachRefuteOk(m) && coachLive() && coachIsWrong(Z, mv)) {
       const g = Z.game, pre = g.fen(), want = Z.sol[Z.idx], last0 = Z.last;
       const r = g.move(mv);
       Z.last = [r.from, r.to]; Z.status = "wrong"; Z.flash = { [r.to]: "bad" }; Z.sel = null;
@@ -276,7 +276,7 @@ function coachIsWrong(S, mv) {
   bossMove = async function (mv) {
     const B = arena.boss;
     if (B.status === "play") B.coachPanel = null;
-    if (B.status === "play" && B.game && !B.busy && coachIsWrong(B, mv)) {
+    if (B.status === "play" && B.game && !B.busy && coachLive() && coachIsWrong(B, mv)) {
       const g = B.game, pre = g.fen(), want = B.sol[B.idx], last0 = B.last;
       const r = g.move(mv);
       B.last = [r.from, r.to]; B.flash = { [r.to]: "bad" }; B.sel = null; B.status = "block";
@@ -308,8 +308,95 @@ function coachMotif(S, m) {
   for (const t of ((S.info && S.info.themes) || (S.pz && S.pz.themes) || [])) if (COACH_MOTIF[t]) return COACH_MOTIF[t];
   return "default";
 }
-// خطوة 1 بتقرا الموقف الحقيقي (analyzer.js): قطع الخصم على نفس الخط، القطع السايبة، مربعات هروب الملك. ولو مفيش حاجة واضحة، سؤال الفكرة
+// وضع التحليل الفوري (gmcoach.js): مقفول افتراضياً — الرد العقابي بيشتغل بس لو الطالب فتحه
+function coachLive() { return !window.ecaAnalysisOn || window.ecaAnalysisOn(); }
+// ================= التلميحات من الحل نفسه (GroundTruthTacticalAnalyzer) =================
+// في الألغاز: نقلة الحل الحقيقية (S.sol في الذاكرة) — في رقعة التحليل: أحسن خط للمحرك. مفيش تخمين من شكل الموقف
+function coachTruth(S, m) {
+  if (!S || !S.game || !window.GroundTruthTacticalAnalyzer) return null;
+  const fen = S.game.fen();
+  const line = m === "analysis" ? (S.ev && S.ev.pv && S.evFen === fen ? S.ev.pv.split(" ").filter(Boolean) : []) : (S.sol || []).slice(S.idx || 0);
+  if (!line.length) return null;
+  const key = fen + "|" + line.slice(0, 6).join(" ");
+  if (S.gtKey !== key) { S.gtKey = key; try { S.gtVal = GroundTruthTacticalAnalyzer.effect(fen, line.slice(0, 6)); } catch (_) { S.gtVal = null; } }
+  return S.gtVal;
+}
+const coachPairs = ts => (ts || []).slice(0, 2).map(x => `${ckbP(x.type)} ${CCL("في", "on")} ${ckbS(x.sq)}`).join(CCL(" و", " and "));
+// خطوة 1: الفكرة والهدف (من غير القطعة اللي هتتحرك)
+function coachTruthStep1(e) {
+  if (!e) return "";
+  const K = ckbS(e.enemyKing);
+  switch (e.motive) {
+    case "mateNow": return CCL(`💡 خطوة 1: في <b>كش مات في نقلة واحدة</b>! ملك الخصم في ${K} — دوّر على الكش اللي مايسيبلوش مهرب.`, `💡 Step 1: There's <b>mate in one</b>! The enemy king is on ${K} — find the check that leaves no escape.`);
+    case "mate": return CCL(`💡 خطوة 1: في <b>كش مات في ${e.mateIn}</b> على الملك في ${K} — ابدأ بنقلة إجبارية.`, `💡 Step 1: There's <b>mate in ${e.mateIn}</b> against the king on ${K} — start with a forcing move.`);
+    case "fork": return CCL(`💡 خطوة 1: في نقلة بتعمل <b>شوكة مزدوجة</b> على ${coachPairs(e.fork.targets)} في نفس الوقت!`, `💡 Step 1: One move makes a <b>fork</b> on ${coachPairs(e.fork.targets)} at once!`);
+    case "pin": return CCL(`💡 خطوة 1: ${ckbP(e.pin.front.type)} في ${ckbS(e.pin.front.sq)} و${ckbP(e.pin.behind.type)} في ${ckbS(e.pin.behind.sq)} على نفس الخط — في <b>ربط</b> جاهز.`, `💡 Step 1: ${ckbP(e.pin.front.type)} on ${ckbS(e.pin.front.sq)} and ${ckbP(e.pin.behind.type)} on ${ckbS(e.pin.behind.sq)} share a line — a <b>pin</b> is ready.`);
+    case "skewer": return CCL(`💡 خطوة 1: ${ckbP(e.skewer.front.type)} في ${ckbS(e.skewer.front.sq)} ووراه ${ckbP(e.skewer.behind.type)} في ${ckbS(e.skewer.behind.sq)} — في <b>سيخ</b> جاهز.`, `💡 Step 1: ${ckbP(e.skewer.front.type)} on ${ckbS(e.skewer.front.sq)} with ${ckbP(e.skewer.behind.type)} behind it — a <b>skewer</b> is ready.`);
+    case "discovered": return CCL(`💡 خطوة 1: ${ckbP(e.discovered.by)} في ${ckbS(e.discovered.bySq)} مستخبي ورا قطعة من قطعك — لو اتحركت هيهاجم ${ckbP(e.discovered.target)} في ${ckbS(e.discovered.targetSq)} (<b>${e.discovered.check ? "كش بالكشف" : "هجوم بالكشف"}</b>).`, `💡 Step 1: ${ckbP(e.discovered.by)} on ${ckbS(e.discovered.bySq)} hides behind one of your pieces — move it and it hits ${ckbP(e.discovered.target)} on ${ckbS(e.discovered.targetSq)} (<b>discovered ${e.discovered.check ? "check" : "attack"}</b>).`);
+    case "freeCapture": return CCL(`💡 خطوة 1: ${ckbP(e.captured)} بتاع الخصم في ${ckbS(e.capSq)} <b>مالوش حماية</b> — تقدر تكسبه.`, `💡 Step 1: The enemy ${ckbP(e.captured)} on ${ckbS(e.capSq)} is <b>unprotected</b> — you can win it.`);
+    case "winCapture": return CCL(`💡 خطوة 1: في أكل على ${ckbS(e.capSq)} <b>بيكسب خامات</b> حتى بعد ما الخصم ياخد تاني.`, `💡 Step 1: A capture on ${ckbS(e.capSq)} <b>wins material</b> even after the recapture.`);
+    case "deflection": return CCL(`💡 خطوة 1: ${ckbP(e.deflection.defender.type)} في ${ckbS(e.deflection.defender.sq)} بيحمي ${ckbS(e.deflection.target)} — <b>شتّت المدافع</b> ده.`, `💡 Step 1: ${ckbP(e.deflection.defender.type)} on ${ckbS(e.deflection.defender.sq)} guards ${ckbS(e.deflection.target)} — <b>deflect that defender</b>.`);
+    case "decoy": return CCL(`💡 خطوة 1: الحل فيه <b>استدراج</b>: اشد ${ckbP(e.deflection.piece)} بتاع الخصم لمربع ${ckbS(e.deflection.sq)}.`, `💡 Step 1: The solution is a <b>decoy</b>: lure the enemy ${ckbP(e.deflection.piece)} to ${ckbS(e.deflection.sq)}.`);
+    case "removalGuard": return CCL(`💡 خطوة 1: ${ckbP(e.deflection.guard.type)} في ${ckbS(e.deflection.guard.sq)} هو اللي حامي ${ckbS(e.deflection.target)} — <b>شيل المدافع</b>.`, `💡 Step 1: ${ckbP(e.deflection.guard.type)} on ${ckbS(e.deflection.guard.sq)} guards ${ckbS(e.deflection.target)} — <b>remove the guard</b>.`);
+    case "sacrifice": return CCL("💡 خطوة 1: الحل فيه <b>تضحية</b> — متخافش تدّي قطعة لو بعدها بتكسب أكتر.", "💡 Step 1: The solution is a <b>sacrifice</b> — don't fear giving a piece if you win more after it.");
+    case "promotion": return CCL("💡 خطوة 1: بيدقك قريب جداً من <b>الترقية</b>.", "💡 Step 1: Your pawn is very close to <b>promoting</b>.");
+    case "trapped": return CCL(`💡 خطوة 1: ${ckbP(e.trapped.target.type)} بتاع الخصم في ${ckbS(e.trapped.target.sq)} <b>هيبقى محبوس</b> من غير مربع هروب.`, `💡 Step 1: The enemy ${ckbP(e.trapped.target.type)} on ${ckbS(e.trapped.target.sq)} <b>can be trapped</b>.`);
+    case "check": return CCL(`💡 خطوة 1: ابدأ بـ <b>كش</b> يجبر ملك الخصم في ${K} يتحرك.`, `💡 Step 1: Start with a <b>check</b> that forces the king on ${K} to move.`);
+    case "threat": return CCL(`💡 خطوة 1: الحل <b>نقلة هادية</b> بتهدد ${ckbP(e.threat.type)} في ${ckbS(e.threat.sq)}.`, `💡 Step 1: The solution is a <b>quiet move</b> that threatens ${ckbP(e.threat.type)} on ${ckbS(e.threat.sq)}.`);
+    case "winMaterial": return CCL("💡 خطوة 1: في سلسلة نقلات إجبارية <b>بتكسب خامات</b> في الآخر.", "💡 Step 1: A forcing sequence <b>wins material</b> at the end.");
+    default: return "";
+  }
+}
+// خطوة 2: القطعة بالظبط ودورها
+function coachTruthRole(e) {
+  switch (e.motive) {
+    case "mateNow": return CCL("هو اللي هيدّي الكش مات", "it delivers the mate");
+    case "mate": return CCL("هو اللي هيبدأ الهجوم القاتل", "it starts the mating attack");
+    case "fork": return CCL("هو اللي هيعمل الشوكة", "it makes the fork");
+    case "pin": return CCL("هو اللي هيعمل الربط", "it makes the pin");
+    case "skewer": return CCL("هو اللي هيعمل السيخ", "it makes the skewer");
+    case "discovered": return CCL("حركته هتفتح الخط للقطعة اللي وراه", "moving it opens the line behind it");
+    case "freeCapture": case "winCapture": return CCL("هو اللي هياكل", "it makes the capture");
+    case "deflection": case "decoy": case "removalGuard": return CCL("هو اللي هيشتت دفاع الخصم", "it breaks the defence");
+    case "sacrifice": return CCL("هيضحّي بنفسه عشان الخطة", "it sacrifices itself for the plan");
+    case "promotion": return CCL("هيترقّى", "it promotes");
+    case "check": return CCL("هو اللي هيكش", "it gives the check");
+    default: return CCL("فكّر فين أقوى مربع يروح له", "think where its strongest square is");
+  }
+}
+// خطوة 3: النقلة بالظبط + ليه (اللي حصل فعلاً بعد ما لعبناها على نسخة من الرقعة)
+function coachTruthWhy(e) {
+  const W = window.GrandmasterMoveClassifier;
+  switch (e.motive) {
+    case "mateNow": return CCL("<b>كش مات!</b>", "<b>checkmate!</b>");
+    case "mate": return CCL(`بتبدأ <b>كش مات في ${e.mateIn}</b>`, `it starts <b>mate in ${e.mateIn}</b>`);
+    case "fork": return CCL(`لأنها بتهدد ${coachPairs(e.fork.targets)} في نفس اللحظة ومفيش قطعة تقدر تحمي الاتنين!`, `because it hits ${coachPairs(e.fork.targets)} at once and nothing can guard both!`);
+    case "pin": return CCL(`بتربط ${ckbP(e.pin.front.type)} بـ${ckbP(e.pin.behind.type)} فمش هيقدر يتحرك`, `it pins ${ckbP(e.pin.front.type)} to ${ckbP(e.pin.behind.type)}`);
+    case "skewer": return CCL(`${ckbP(e.skewer.front.type)} لازم يهرب، و${ckbP(e.skewer.behind.type)} اللي وراه بيتاكل`, `${ckbP(e.skewer.front.type)} must move and ${ckbP(e.skewer.behind.type)} behind it falls`);
+    case "discovered": return CCL(`و${ckbP(e.discovered.by)} بيهاجم ${ckbP(e.discovered.target)} في نفس اللحظة`, `and ${ckbP(e.discovered.by)} hits ${ckbP(e.discovered.target)} at the same time`);
+    case "freeCapture": return CCL(`بتاكل ${ckbP(e.captured)} ببلاش`, `it takes ${ckbP(e.captured)} for free`);
+    case "winCapture": return CCL(`بتكسب خامات بعد سلسلة الأكل كلها (+${Math.round(e.see / 100)})`, `it wins material after all the captures (+${Math.round(e.see / 100)})`);
+    case "sacrifice": return CCL("تضحية — ولو الخصم أكل بتكسب أكتر", "a sacrifice — if it's taken you win more");
+    case "promotion": return CCL("وبيترقّى", "and promotes");
+    case "check": return CCL("كش، والخصم مجبر يرد عليه", "check — the opponent must answer it");
+    case "threat": return CCL(`وبتهدد ${ckbP(e.threat.type)} في ${ckbS(e.threat.sq)}`, `and threatens ${ckbP(e.threat.type)} on ${ckbS(e.threat.sq)}`);
+    default: return W && e.deflection && W.conceptText ? W.conceptText(e.deflection) : CCL("وفكّر ليه دي أقوى نقلة", "and think about why it's the strongest move");
+  }
+}
+function coachStep2Text(S, m) {
+  const e = coachTruth(S, m);
+  if (!e) return CCL("🎯 خطوة 2: القطعة المتحددة بالدهبي هي البطل هنا.. فكر إيه أقوى مربع تروح له!", "🎯 Step 2: The piece circled in gold is the hero here. Which square is strongest for it?");
+  return CCL(`🎯 خطوة 2: ${ckbP(e.piece)} في ${ckbS(e.from)} (المتحدد بالدهبي) هو البطل: ${coachTruthRole(e)}.`, `🎯 Step 2: ${ckbP(e.piece)} on ${ckbS(e.from)} (circled in gold) is the hero: ${coachTruthRole(e)}.`);
+}
+function coachStep3Text(S, m) {
+  const e = coachTruth(S, m);
+  if (!e) return CCL("✨ خطوة 3: نفّذ النقلة المشار إليها بالسهم وركّز ليه النقلة دي بتكسب!", "✨ Step 3: Play the move the arrow shows, and think about why it wins!");
+  return CCL(`✨ خطوة 3: العب ${ckbP(e.piece)} إلى ${ckbS(e.to)} — ${coachTruthWhy(e)}`, `✨ Step 3: Play ${ckbP(e.piece)} to ${ckbS(e.to)} — ${coachTruthWhy(e)}`);
+}
+// خطوة 1: من أثر نقلة الحل الحقيقي. ولو الحل نقلة هادية من غير أثر واضح: قراءة الموقف، وبعدها سؤال الفكرة
 function coachStep1Text(S, m) {
+  const gt = coachTruthStep1(coachTruth(S, m));
+  if (gt) return gt;
   const f = window.ChessPositionAnalyzer && S && S.game ? ChessPositionAnalyzer.features(S.game.fen()) : null, bits = [];
   if (f && f.aligned) bits.push(`${ckbP(f.aligned.a.type)} ${CCL("في", "on")} ${ckbS(f.aligned.a.sq)} ${CCL("و", "and")} ${ckbP(f.aligned.b.type)} ${CCL("في", "on")} ${ckbS(f.aligned.b.sq)} ${CCL("على نفس الخط", "are on the same line")}`);
   if (f && f.loose.length) bits.push(CCL(`في قطعة غير محمية في ${ckbS(f.loose[0].sq)}`, `there is an undefended piece on ${ckbS(f.loose[0].sq)}`));
@@ -411,8 +498,8 @@ function coachPaint() {
     if (st && here && want && live) {
       const a = coachSq(board, want.slice(0, 2)), b = coachSq(board, want.slice(2, 4));
       const text = st === 1 ? coachStep1Text(S, m)
-        : st === 2 ? CCL("🎯 خطوة 2: القطعة المتحددة بالدهبي هي البطل هنا.. فكر إيه أقوى مربع تروح له!", "🎯 Step 2: The piece circled in gold is the hero here. Which square is strongest for it?")
-        : CCL("✨ خطوة 3: نفّذ النقلة المشار إليها بالسهم وركّز ليه النقلة دي بتكسب!", "✨ Step 3: Play the move the arrow shows, and think about why it wins!");
+        : st === 2 ? coachStep2Text(S, m)
+        : coachStep3Text(S, m);
       above += `<div class="eca-coach-bubble eca-fs-keep" role="status"><span aria-hidden="true">🧑‍🏫</span><p>${text}</p></div>`;
       if (st === 2 && a) svg += `<circle class="eca-co-spot" cx="${a[0]}" cy="${a[1]}" r="46" /><circle class="eca-co-radar" cx="${a[0]}" cy="${a[1]}" r="46" /><circle class="eca-co-radar eca-co-radar2" cx="${a[0]}" cy="${a[1]}" r="46" />`;
       if (st === 3 && a && b) svg += `<defs><linearGradient id="ecaCoGrad" gradientUnits="userSpaceOnUse" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}"><stop offset="0" stop-color="#46D369" /><stop offset="1" stop-color="#F5C518" /></linearGradient></defs>` + coachArrow(a, b, "eca-co-hint", "url(#ecaCoGrad)");
@@ -427,5 +514,5 @@ function coachPaint() {
   render = function () { const out = _r.apply(this, arguments); try { coachPaint(); } catch (e) { console.warn("Coach overlay:", e); } return out; };
 }
 window.ecaCoach = { mode: coachMode, hintOk: coachHintOk, refuteOk: coachRefuteOk, state: coachState, stage: coachStage, want: coachWant, motif: coachMotif,
-  step1: k => CCL(...COACH_STEP1[k] || COACH_STEP1.default), step1Text: coachStep1Text, mult: COACH_MULT, amount: coachAmount, tags: COACH_TAGS, show: COACH_SHOW,
+  step1: k => CCL(...COACH_STEP1[k] || COACH_STEP1.default), step1Text: coachStep1Text, step2Text: coachStep2Text, step3Text: coachStep3Text, truth: coachTruth, live: coachLive, mult: COACH_MULT, amount: coachAmount, tags: COACH_TAGS, show: COACH_SHOW,
   isRefuting: () => { const m = coachMode(); return !!(m && coachState(m) && coachState(m).isRefuting); } };

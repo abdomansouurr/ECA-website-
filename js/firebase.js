@@ -1,7 +1,7 @@
 // ECA — firebase.js (اتفصل من index.html في eca-v3)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, linkWithPopup, deleteUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { initializeFirestore, writeBatch, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocFromServer, getDocs, getDocsFromServer, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot, serverTimestamp, orderBy, limit, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { initializeFirestore, writeBatch, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocFromServer, getDocs, getDocsFromServer, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot, serverTimestamp, orderBy, limit, runTransaction, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDofyiWsg2HmOQgigWeqUpOaSupoMQ1GKc",
@@ -684,6 +684,124 @@
       }
     };
     window.fbDuelDelete = id => deleteDoc(doc(firestore, "duels", id)).catch(e => console.warn("Duel delete failed:", e && e.code));
+    // ================= اللعب المباشر + بطولات الأرينا + أرشيف الأدوار =================
+    // ناقل المزامنة (LiveSyncTransport): مستند Firestore واحد لكل دور (liveMatches/{id}). Realtime Database أسرع شوية،
+    // بس محتاج databaseURL في الإعدادات وقواعد أمان منفصلة؛ لحد ما يتضافوا، Firestore هو الناقل (والقواعد بتحمي كل نقلة).
+    const lmView = (id, r, local) => ({ id, local: !!local, w: r.w || "", b: r.b || "", wn: cleanDeep(r.wn || ""), bn: cleanDeep(r.bn || ""), p: Array.isArray(r.p) ? r.p : [],
+      base: Number(r.base) || 0, inc: Number(r.inc) || 0, tc: String(r.tc || ""), mode: r.mode === "arena" ? "arena" : "pvp", tid: String(r.tid || ""), status: String(r.status || ""),
+      moves: Array.isArray(r.moves) ? r.moves.map(String) : [], n: Number(r.n) || 0, wt: Number(r.wt) || 0, bt: Number(r.bt) || 0, at: tsMs(r.at),
+      bzw: !!r.bzw, bzb: !!r.bzb, draw: String(r.draw || ""), res: String(r.res || ""), why: String(r.why || ""), hbw: tsMs(r.hbw), hbb: tsMs(r.hbb), created: tsMs(r.created) });
+    const myNick = () => (maps.core[me.uid] || {}).nickname || "";
+    window.ecaLiveSync = { kind: "firestore", rtdb: false };
+    window.fbLiveWatch = (id, onDoc) => listen("liveMatch", doc(firestore, "liveMatches", id), { includeMetadataChanges: true },
+      snap => onDoc(snap.exists() ? lmView(snap.id, snap.data({ serverTimestamps: "estimate" }), snap.metadata.hasPendingWrites) : null),
+      err => { if (auth.currentUser) console.warn("Live match watch failed:", err && err.code); });
+    window.fbLiveLobby = (onRows, onError) => listen("liveLobby", query(collection(firestore, "liveMatches"), where("status", "==", "open"), limit(25)),
+      snap => onRows(snap.docs.map(d => lmView(d.id, d.data({ serverTimestamps: "estimate" })))),
+      err => { console.warn("Live lobby failed:", err && err.code); if (onError) onError(); });
+    window.fbLiveCreate = async (base, inc, tc, color) => {
+      if (!me || me.role !== "student") throw new Error("not-student");
+      const ref = doc(collection(firestore, "liveMatches")), n = myNick(), white = color === "w";
+      await setDoc(ref, { w: white ? me.uid : "", b: white ? "" : me.uid, wn: white ? n : "", bn: white ? "" : n, p: [me.uid], base, inc, tc, mode: "pvp", tid: "", status: "open",
+        moves: [], n: 0, wt: base, bt: base, at: serverTimestamp(), bzw: false, bzb: false, draw: "", res: "", why: "", hbw: serverTimestamp(), hbb: serverTimestamp(), created: serverTimestamp() });
+      return ref.id;
+    };
+    window.fbLiveJoin = id => runTransaction(firestore, async tx => {
+      const ref = doc(firestore, "liveMatches", id), snap = await tx.get(ref);
+      if (!me || me.role !== "student" || !snap.exists()) return false;
+      const r = snap.data(), n = myNick();
+      if (r.status !== "open" || (r.p || []).includes(me.uid)) return false;
+      const seat = r.w ? { b: me.uid, bn: n, p: [r.w, me.uid] } : { w: me.uid, wn: n, p: [r.b, me.uid] };
+      tx.update(ref, Object.assign(seat, { status: "live", at: serverTimestamp(), hbw: serverTimestamp(), hbb: serverTimestamp() }));
+      return true;
+    });
+    window.fbLiveMove = (id, patch) => updateDoc(doc(firestore, "liveMatches", id), Object.assign({}, patch, { at: serverTimestamp() }));
+    window.fbLivePatch = (id, patch) => updateDoc(doc(firestore, "liveMatches", id), patch);
+    window.fbLiveBeat = (id, side) => updateDoc(doc(firestore, "liveMatches", id), { [side === "w" ? "hbw" : "hbb"]: serverTimestamp() });
+    window.fbLiveDelete = id => deleteDoc(doc(firestore, "liveMatches", id));
+
+    // بطولات الأرينا: الكوتش بيعملها، والطلاب بيدخلوا الطابور ويتوفّقوا مع بعض
+    const laView = (id, r) => ({ id, name: cleanDeep(r.name || ""), tc: String(r.tc || ""), base: Number(r.base) || 0, inc: Number(r.inc) || 0, minutes: Number(r.minutes) || 0, startAt: tsMs(r.startAt), endAt: tsMs(r.endAt) });
+    const lpView = (id, r) => ({ uid: id, n: cleanDeep(r.n || ""), pts: Number(r.pts) || 0, streak: Number(r.streak) || 0, fire: !!r.fire, games: Array.isArray(r.games) ? r.games : [], wait: !!r.wait, since: tsMs(r.since), cur: String(r.cur || ""), last: String(r.last || "") });
+    window.fbLaList = (onRows, onError) => listen("liveArenas", query(collection(firestore, "liveArenas"), where("endAt", ">", Timestamp.fromMillis(Date.now() - 6 * 3600000)), limit(12)),
+      snap => onRows(snap.docs.map(d => laView(d.id, d.data()))), err => { console.warn("Live arenas failed:", err && err.code); if (onError) onError(); });
+    window.fbLaWatch = (tid, onArena, onPlayers) => {
+      const a = listen("liveArena", doc(firestore, "liveArenas", tid), snap => onArena(snap.exists() ? laView(snap.id, snap.data()) : null), err => console.warn("Live arena failed:", err && err.code));
+      const p = listen("liveArenaPlayers", collection(firestore, "liveArenas", tid, "players"), snap => onPlayers(snap.docs.map(d => lpView(d.id, d.data({ serverTimestamps: "estimate" })))), err => console.warn("Arena players failed:", err && err.code));
+      return () => { a(); p(); };
+    };
+    window.fbLaCreate = async (name, base, inc, tc, minutes, startInMin) => {
+      if (!me || me.role === "student" || me.role === "parent") throw new Error("not-staff");
+      const ref = doc(collection(firestore, "liveArenas")), start = Date.now() + Math.max(0, startInMin || 0) * 60000;
+      await setDoc(ref, { name, tc, base, inc, minutes, startAt: Timestamp.fromMillis(start), endAt: Timestamp.fromMillis(start + minutes * 60000), by: me.uid, created: serverTimestamp() });
+      return ref.id;
+    };
+    window.fbLaDelete = tid => deleteDoc(doc(firestore, "liveArenas", tid));
+    window.fbLaQueue = async (tid, wait) => {
+      if (!me || me.role !== "student") throw new Error("not-student");
+      const ref = doc(firestore, "liveArenas", tid, "players", me.uid), snap = await getDoc(ref);
+      if (!snap.exists()) return setDoc(ref, { n: myNick(), pts: 0, streak: 0, fire: false, games: [], wait: !!wait, since: serverTimestamp(), cur: "", last: "" });
+      return updateDoc(ref, { wait: !!wait, since: serverTimestamp() });
+    };
+    // التوفيق: دور جديد + اللاعبين الاتنين في نفس العملية (القواعد بتتأكد إن الاتنين كانوا في الطابور)
+    window.fbLaPair = (tid, oppUid, whiteIsMe) => runTransaction(firestore, async tx => {
+      const aRef = doc(firestore, "liveArenas", tid), mRef = doc(firestore, "liveArenas", tid, "players", me.uid), oRef = doc(firestore, "liveArenas", tid, "players", oppUid);
+      const [aS, mS, oS] = [await tx.get(aRef), await tx.get(mRef), await tx.get(oRef)];
+      if (!aS.exists() || !mS.exists() || !oS.exists()) return "";
+      const A = aS.data(), M = mS.data(), O = oS.data(), now = Date.now();
+      if (!M.wait || !O.wait || M.cur || O.cur || now >= tsMs(A.endAt)) return "";
+      const gRef = doc(collection(firestore, "liveMatches")), w = whiteIsMe ? me.uid : oppUid, b = whiteIsMe ? oppUid : me.uid;
+      tx.set(gRef, { w, b, wn: whiteIsMe ? M.n : O.n, bn: whiteIsMe ? O.n : M.n, p: [w, b], base: A.base, inc: A.inc, tc: A.tc, mode: "arena", tid, status: "live",
+        moves: [], n: 0, wt: A.base, bt: A.base, at: serverTimestamp(), bzw: false, bzb: false, draw: "", res: "", why: "", hbw: serverTimestamp(), hbb: serverTimestamp(), created: serverTimestamp() });
+      tx.update(mRef, { wait: false, cur: gRef.id, last: oppUid });
+      tx.update(oRef, { wait: false, cur: gRef.id, last: me.uid });
+      return gRef.id;
+    });
+    // نقط الدور بتتسجل للاتنين مرة واحدة (أي واحد فيهم يسجّلها): فوز 2، تعادل 1، 🔥 بعد فوزين = 4، برزرك +1
+    window.fbLaScore = (tid, gid) => runTransaction(firestore, async tx => {
+      const gRef = doc(firestore, "liveMatches", gid), gS = await tx.get(gRef);
+      if (!gS.exists()) return null;
+      const m = gS.data(); if (m.status !== "over" || m.tid !== tid) return null;
+      const refs = [m.w, m.b].map(u => doc(firestore, "liveArenas", tid, "players", u)), snaps = [await tx.get(refs[0]), await tx.get(refs[1])], out = {};
+      snaps.forEach((s, i) => {
+        if (!s.exists()) return;
+        const o = s.data(), seat = i === 0 ? "w" : "b", games = Array.isArray(o.games) ? o.games : [];
+        if (o.cur !== gid || games.includes(gid)) return;
+        const won = (seat === "w" && m.res === "1-0") || (seat === "b" && m.res === "0-1"), drawn = m.res === "1/2-1/2", streak = Number(o.streak) || 0;
+        const pts = (Number(o.pts) || 0) + (!m.res ? 0 : won ? (streak >= 2 ? 4 : 2) + ((seat === "w" ? m.bzw : m.bzb) ? 1 : 0) : drawn ? 1 : 0);
+        const ns = !m.res ? streak : won ? streak + 1 : 0;
+        tx.update(refs[i], { pts, streak: ns, fire: ns >= 2, games: games.concat(gid), cur: "" });
+        out[seat] = pts;
+      });
+      return out;
+    });
+
+    // أرشيف الأدوار: مستند صغير لكل دور (للاعبين والكوتش بس)
+    const agView = (id, r) => ({ gameId: id, whiteUid: r.whiteUid || "", whiteName: cleanDeep(r.whiteName || ""), whiteRating: r.whiteRating == null ? null : Number(r.whiteRating), blackUid: r.blackUid || "", blackName: cleanDeep(r.blackName || ""),
+      blackRating: r.blackRating == null ? null : Number(r.blackRating), mode: String(r.mode || ""), timeControl: String(r.timeControl || ""), result: String(r.result || "*"), termination: String(r.termination || ""),
+      pgn: String(r.pgn || ""), uciMoves: String(r.uciMoves || ""), clockTimesCentisec: Array.isArray(r.clockTimesCentisec) ? r.clockTimesCentisec.map(Number) : [], openingNameAr: String(r.openingNameAr || ""),
+      analysisSummary: r.analysisSummary && typeof r.analysisSummary === "object" ? r.analysisSummary : null, playedAt: tsMs(r.playedAt), participantUids: Array.isArray(r.participantUids) ? r.participantUids : [] });
+    window.fbArchiveSave = async rec => {
+      const ref = doc(firestore, "archivedGames", rec.gameId);
+      try { await setDoc(ref, Object.assign({}, rec, { analysisSummary: null, playedAt: serverTimestamp() })); return "saved"; }
+      catch (e) {
+        // الخصم حفظ نفس الدور قبلك (مستند واحد للاتنين)
+        try { const s = await getDoc(ref); if (s.exists()) return "exists"; } catch (_) {}
+        throw e;
+      }
+    };
+    window.fbArchiveList = async (uid, o) => {
+      o = o || {};
+      const parts = [collection(firestore, "archivedGames"), where("participantUids", "array-contains", uid)];
+      if (o.after) parts.push(where("playedAt", ">", Timestamp.fromMillis(o.after)));
+      if (o.before) parts.push(where("playedAt", "<", Timestamp.fromMillis(o.before)));
+      parts.push(orderBy("playedAt", "desc"), limit(o.limit || 15));
+      const snap = await getDocs(query(...parts));
+      return snap.docs.map(d => agView(d.id, d.data()));
+    };
+    window.fbArchiveGet = async gid => { const s = await getDoc(doc(firestore, "archivedGames", gid)); return s.exists() ? agView(s.id, s.data()) : null; };
+    window.fbArchiveSummary = (gid, summary) => updateDoc(doc(firestore, "archivedGames", gid), { analysisSummary: summary });
+    window.fbMyUid = () => me ? me.uid : "";
     window.fbEconomy = async request => {
       if (!me || me.role !== "student" || !request || typeof request !== "object") return { ok: false };
       const uid = me.uid, userRef = doc(firestore, "users", uid), op = request.op;
